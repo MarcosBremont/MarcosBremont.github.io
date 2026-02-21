@@ -1,0 +1,329 @@
+Total FFFD: 208
+pos    168:  para Docentes de Educaci[?]f?n T[?]f?cnico Profesiona
+pos    174: Docentes de Educaci[?]f?n T[?]f?cnico Profesional
+ * R
+pos    201: ?cnico Profesional
+ * Rep[?]f?blica Dominicana
+ * ==
+pos    609: lic en Save. Tu app estar[?]f? en:
+ *    https://tu-
+pos    680: nificador-ra/
+ *
+ * Tambi[?]f?n funciona en Netlify 
+pos    952: ============
+// --- SECCI[?]f[?]?oN: DATOS GLOBALES --
+pos    954: ==========
+// --- SECCI[?]f[?]?oN: DATOS GLOBALES ---
+
+pos   1092:  de Bloom por nivel taxon[?]f?mico */
+const verbosBl
+pos   1222: "recordar","enunciar","se[?]f?alar","mencionar","des
+pos   1279: brevemente","clasificar b[?]f?sicamente"],
+  compren
+pos   1574: rollar","construir","dise[?]f?ar","producir","calcul
+pos   1839: antillas de secuencia did[?]f?ctica por nivel */
+con
+pos   1948: on: { nombre: "Anticipaci[?]f?n", descripcion: "Acti
+pos   2115: on: { nombre: "Construcci[?]f?n",  descripcion: "Exp
+pos   2145: ,  descripcion: "Exposici[?]f?n conceptual con apoyo
+pos   2219: de materiales y elaboraci[?]f?n de mapas conceptuale
+pos   2301: n: { nombre: "Consolidaci[?]f?n", descripcion: "Cues
+pos   2348: uestionario de verificaci[?]f?n, elaboraci[?]f?n de gl
+pos   2363: verificaci[?]f?n, elaboraci[?]f?n de glosario y retroa
+pos   2397: losario y retroalimentaci[?]f?n grupal.", pct: 25 }
+
+pos   2483: on: { nombre: "Anticipaci[?]f?n", descripcion: "Pres
+pos   2531: esentar un caso o situaci[?]f?n problem[?]f?tica para 
+pos   2543: aso o situaci[?]f?n problem[?]f?tica para generar disc
+pos   2571: tica para generar discusi[?]f?n y conectar con el RA
+pos   2650: on: { nombre: "Construcci[?]f?n",  descripcion: "An[?]
+pos   2674: i[?]f?n",  descripcion: "An[?]f?lisis de ejemplos comp
+pos   2716: los comparativos, discusi[?]f?n dirigida y elaboraci
+pos   2741: [?]f?n dirigida y elaboraci[?]f?n de esquemas explicat
+pos   2826: n: { nombre: "Consolidaci[?]f?n", descripcion: "Elab
+pos   2856: , descripcion: "Elaboraci[?]f?n de resumen propio, e
+pos   2888:  resumen propio, exposici[?]f?n breve y autoevaluaci
+pos   2913: [?]f?n breve y autoevaluaci[?]f?n mediante lista de co
+pos   3016: on: { nombre: "Anticipaci[?]f?n", descripcion: "Plan
+pos   3057: on: "Plantear una situaci[?]f?n real del campo profe
+pos   3108: ional que requiera soluci[?]f?n pr[?]f?ctica.", pct: 1
+pos   3115: ue requiera soluci[?]f?n pr[?]f?ctica.", pct: 10 },
+  
+pos   3177: on: { nombre: "Construcci[?]f?n",  descripcion: "Dem
+pos   3209:  descripcion: "Demostraci[?]f?n del docente, pr[?]f?ct
+pos   3229: traci[?]f?n del docente, pr[?]f?ctica guiada paso a pa
+pos   3266: ada paso a paso, resoluci[?]f?n de ejercicios reales
+pos   3347: n: { nombre: "Consolidaci[?]f?n", descripcion: "Pres
+pos   3378:  descripcion: "Presentaci[?]f?n de resultado, coeval
+pos   3407:  de resultado, coevaluaci[?]f?n mediante r[?]f?brica y
+pos   3422: coevaluaci[?]f?n mediante r[?]f?brica y reflexi[?]f?n so
+pos   3440: iante r[?]f?brica y reflexi[?]f?n sobre el proceso.", 
+pos   3536: on: { nombre: "Anticipaci[?]f?n", descripcion: "Refl
+pos   3564: n", descripcion: "Reflexi[?]f?n personal sobre valor
+pos   3624: udes relacionadas con el [?]f?mbito profesional.", p
+pos   3698: on: { nombre: "Construcci[?]f?n",  descripcion: "Tra
+pos   3744: "Trabajo colaborativo, an[?]f?lisis de casos [?]f?tico
+pos   3762: ivo, an[?]f?lisis de casos [?]f?ticos, debate argument
+pos   3861: n: { nombre: "Consolidaci[?]f?n", descripcion: "Diar
+pos   3936: escrito y retroalimentaci[?]f?n formativa grupal.", 
+pos   4029: res para instrumentos seg[?]f?n nivel */
+const crite
+pos   4187:    "Nombra y define los t[?]f?rminos t[?]f?cnicos con 
+pos   4198: y define los t[?]f?rminos t[?]f?cnicos con precisi[?]f?n
+pos   4219: os t[?]f?cnicos con precisi[?]f?n",
+    "Enumera los e
+pos   4268: elementos principales seg[?]f?n el contenido estudia
+pos   4324:    "Reconoce las caracter[?]f?sticas esenciales del 
+pos   4407:  y reproduce la informaci[?]f?n de manera organizada
+pos   4680: orrectamente la informaci[?]f?n presentada",
+    "Re
+pos   4873:  "Aplica los conceptos te[?]f?ricos en situaciones p
+pos   4899: f?ricos en situaciones pr[?]f?cticas reales",
+    "U
+pos   5004: 
+    "Resuelve la situaci[?]f?n planteada de forma e
+pos   5157:  [
+    "Muestra disposici[?]f?n positiva ante los re
+pos   5367: ora la importancia de la [?]f?tica profesional en el
+pos   5400: profesional en el campo t[?]f?cnico",
+    "Demuestra
+pos   5521:  global de la planificaci[?]f?n */
+let planificacion
+pos   5823: ============
+// --- SECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o
+pos   5825: ==========
+// --- SECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o A
+pos   5842:  SECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o AN[?]f?LISIS Y GENER
+pos   5844: ECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o AN[?]f?LISIS Y GENERAC
+pos   5845: CCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o AN[?]f?LISIS Y GENERACI
+pos   5851: ?oN: SERVICIOS ?[?],[?][?]?o AN[?]f?LISIS Y GENERACI[?]f[?]?oN
+pos   5870: [?]?o AN[?]f?LISIS Y GENERACI[?]f[?]?oN ---
+// ===========
+pos   5872: o AN[?]f?LISIS Y GENERACI[?]f[?]?oN ---
+// =============
+pos   6055: string} texto - Descripci[?]f?n del RA
+ * @returns {
+pos   6390: // Puntuar cada nivel seg[?]f?n verbos encontrados
+ 
+pos   6542: // Normalizar verbo tambi[?]f?n
+      const vNorm = 
+pos   6956: ]);
+
+  // Si no se detect[?]f? ning[?]f?n verbo, infer
+pos   6964: / Si no se detect[?]f? ning[?]f?n verbo, inferir por p
+pos   7430: on'; // defecto: aplicaci[?]f?n para m[?]f?dulos t[?]f?c
+pos   7441: ecto: aplicaci[?]f?n para m[?]f?dulos t[?]f?cnicos
+  }
+
+
+pos   7451: caci[?]f?n para m[?]f?dulos t[?]f?cnicos
+  }
+
+  return d
+pos   7583: m {string} ra - Descripci[?]f?n del RA
+ * @returns {
+pos   7726: gnorar (stopwords en espa[?]f?ol)
+  const stopwords 
+pos   7931: te","son","como","mas","m[?]f?s","mediante","trav[?]f?
+pos   7953: ,"m[?]f?s","mediante","trav[?]f?s","a","e","u","las","
+pos   8245: m {string} ra - Descripci[?]f?n del RA
+ * @param {st
+pos   8322:  de referencia (uno por l[?]f?nea)
+ * @param {object
+pos   8688: .moduloFormativo || 'el m[?]f?dulo formativo';
+  con
+pos   8783: ) || 'los conceptos del m[?]f?dulo';
+
+  // Construir
+pos   8810: ?dulo';
+
+  // Construir n[?]f?cleo tem[?]f?tico a part
+pos   8821: // Construir n[?]f?cleo tem[?]f?tico a partir del RA
+ 
+pos   9221: = listaCriterios[2] || `t[?]f?cnicas y herramientas 
+pos   9294: erminar el contexto del m[?]f?dulo para las condicio
+pos   9441:    : 'en situaciones del [?]f?mbito t[?]f?cnico profes
+pos   9451: ituaciones del [?]f?mbito t[?]f?cnico profesional';
+
+ 
+pos   9646: os, principios y caracter[?]f?sticas fundamentales d
+pos   9706: Tematico}, mediante el an[?]f?lisis de materiales cu
+pos   9753:  curriculares y fuentes t[?]f?cnicas especializadas,
+pos  10054: laciones y fundamentos te[?]f?ricos de ${nucleoTemat
+pos  10108: , comparando enfoques y t[?]f?cnicas mediante el an[?]
+pos  10132: t[?]f?cnicas mediante el an[?]f?lisis de casos reales,
+pos  10472: a resolver situaciones pr[?]f?cticas del campo t[?]f?c
+pos  10493: s pr[?]f?cticas del campo t[?]f?cnico, utilizando herr
+pos  10530: ilizando herramientas y t[?]f?cnicas adecuadas ${con
+pos  10821: importancia del dominio t[?]f?cnico y [?]f?tico de ${n
+pos  10832:  del dominio t[?]f?cnico y [?]f?tico de ${nucleoTemati
+pos  11017: das las actividades del m[?]f?dulo.`,
+      horasAsi
+pos  11203: entre inicio y fin
+ * seg[?]f?n los d[?]f?as seleccion
+pos  11213: io y fin
+ * seg[?]f?n los d[?]f?as seleccionados
+ * @p
+pos  13259:  SECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o ACTIVIDADES ---
+//
+pos  13261: ECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o ACTIVIDADES ---
+// =
+pos  13262: CCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o ACTIVIDADES ---
+// ==
+pos  13739: vamente entre los 4 EC (m[?]f?x 2 por EC)
+  const to
+pos  13810: se.length;
+  // Calcular [?]f?ndices de asignaci[?]f?n
+pos  13831: lar [?]f?ndices de asignaci[?]f?n proporcional
+  const
+pos  13978: (ec, idxEC) => {
+    // N[?]f?mero de actividades pa
+pos  14550: : null // se genera despu[?]f?s
+      };
+      act.i
+pos  14735: unciados de actividad seg[?]f?n el nivel del EC
+ */
+
+pos  14864: it(',')[0].replace(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]
+pos  14867: ',')[0].replace(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]
+pos  14869: ')[0].replace(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?
+pos  14871: [0].replace(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f
+pos  14872: 0].replace(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?
+pos  14875: replace(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?
+pos  14877: place(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f
+pos  14880: ce(/^[A-Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f?]+
+pos  14888: Z[?]f?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f?]+ /,'').t
+pos  14891: ?[?]f[?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f?]+ /,'').trim
+pos  14894: [?]?[?][?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f?]+ /,'').trim();
+pos  14897: [?]f?[?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f?]+ /,'').trim();
+  
+pos  14900: [?]f[?]?o[?]f?][a-z[?]f?[?]f?[?]f?[?]f?[?]f?]+ /,'').trim();
+  con
+pos  15100: rio escrito: Identificaci[?]f?n y definici[?]f?n de lo
+pos  15115: entificaci[?]f?n y definici[?]f?n de los conceptos cla
+pos  15187: campo}`,
+      `Elaboraci[?]f?n de mapa conceptual s
+pos  15235:  sobre los fundamentos te[?]f?ricos de ${campo}`
+   
+pos  15298: ension: [
+      `Exposici[?]f?n oral breve: Explicac
+pos  15324: f?n oral breve: Explicaci[?]f?n comparativa de los p
+pos  15402: po}`,
+      `Taller de an[?]f?lisis de casos: Interp
+pos  15433: is de casos: Interpretaci[?]f?n y relaci[?]f?n de conc
+pos  15446: Interpretaci[?]f?n y relaci[?]f?n de conceptos de ${ca
+pos  15511:   aplicacion: [
+      `Pr[?]f?ctica supervisada: Res
+pos  15541: ica supervisada: Resoluci[?]f?n de situaci[?]f?n real 
+pos  15556: : Resoluci[?]f?n de situaci[?]f?n real aplicando los p
+pos  15660: : Desarrollo y presentaci[?]f?n de producto t[?]f?cnic
+pos  15678: sentaci[?]f?n de producto t[?]f?cnico demostrando domi
+pos  15760: tudinal: [
+      `Reflexi[?]f?n y portafolio: Valora
+pos  15787: ?n y portafolio: Valoraci[?]f?n cr[?]f?tica de la pr[?]f
+pos  15794: rtafolio: Valoraci[?]f?n cr[?]f?tica de la pr[?]f?ctica 
+pos  15810: ci[?]f?n cr[?]f?tica de la pr[?]f?ctica profesional [?]f?t
+pos  15831: a pr[?]f?ctica profesional [?]f?tica en ${campo}`
+    
+pos  16026: ==========
+// --- SECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o I
+pos  16043:  SECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o INSTRUMENTOS ---
+/
+pos  16045: ECCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o INSTRUMENTOS ---
+// 
+pos  16046: CCI[?]f[?]?oN: SERVICIOS ?[?],[?][?]?o INSTRUMENTOS ---
+// =
+pos  16188: l instrumento de evaluaci[?]f?n para una actividad
+ 
+pos  16612: de conocimiento/comprensi[?]f?n
+ */
+function generar
+pos  16850: itulo: `Lista de Cotejo ?[?],[?][?]?o ${actividad.enunci
+pos  16852: ulo: `Lista de Cotejo ?[?],[?][?]?o ${actividad.enunciad
+pos  16853: lo: `Lista de Cotejo ?[?],[?][?]?o ${actividad.enunciado
+pos  17219: ciones: 'Marque con una ?[?]"[?]?o en la casilla corre
+pos  17221: ones: 'Marque con una ?[?]"[?]?o en la casilla corresp
+pos  17258: silla correspondiente seg[?]f?n la observaci[?]f?n del
+pos  17275: ente seg[?]f?n la observaci[?]f?n del desempe[?]f?o del 
+pos  17291: observaci[?]f?n del desempe[?]f?o del estudiante duran
+pos  17361: };
+}
+
+/**
+ * Genera una R[?]f?brica de evaluaci[?]f?n 
+pos  17381: una R[?]f?brica de evaluaci[?]f?n para actividades de 
+pos  17414: a actividades de aplicaci[?]f?n/actitudinal
+ */
+func
+pos  18163:  alcanzar los criterios m[?]f?nimos' }
+  ];
+
+  retur
+pos  18230: brica',
+    tipoLabel: 'R[?]f?brica de Evaluaci[?]f?n'
+pos  18250: l: 'R[?]f?brica de Evaluaci[?]f?n',
+    titulo: `R[?]f?b
+pos  18271: uaci[?]f?n',
+    titulo: `R[?]f?brica ?[?],[?][?]?o ${activi
+pos  18281: 
+    titulo: `R[?]f?brica ?[?],[?][?]?o ${actividad.enunci
+pos  18283:    titulo: `R[?]f?brica ?[?],[?][?]?o ${actividad.enunciad
+pos  18284:   titulo: `R[?]f?brica ?[?],[?][?]?o ${actividad.enunciado
+pos  18658: cione el nivel de desempe[?]f?o alcanzado por el est
+pos  18719: cada criterio de evaluaci[?]f?n.'
+  };
+}
+
+// =======
+pos  18814: ============
+// --- SECCI[?]"N: UI [?]?" RENDERIZADO D
+pos  18822: ====
+// --- SECCI[?]"N: UI [?]?" RENDERIZADO DE ELEMEN
+pos  21719: ====
+// --- SECCI[?]"N: UI [?]?" RENDERIZADO DE ACTIVI
+pos  23400: ============
+// --- SECCI[?]"N: UI [?]?" MODAL DE INST
+pos  23408: ====
+// --- SECCI[?]"N: UI [?]?" MODAL DE INSTRUMENTO 
+pos  29646: ============
+// --- SECCI[?]"N: UI [?]?" VISTA PREVIA 
+pos  29654: ====
+// --- SECCI[?]"N: UI [?]?" VISTA PREVIA ---
+// =
+pos  34620: ============
+// --- SECCI[?]"N: EXPORTACI[?]"N ---
+// 
+pos  34634: / --- SECCI[?]"N: EXPORTACI[?]"N ---
+// ==============
+pos  37235: ============
+// --- SECCI[?]"N: STORAGE [?]?" LOCALSTO
+pos  37248: // --- SECCI[?]"N: STORAGE [?]?" LOCALSTORAGE ---
+// =
+pos  40951: ============
+// --- SECCI[?]"N: UI [?]?" STEPPER Y NAV
+pos  40959: ====
+// --- SECCI[?]"N: UI [?]?" STEPPER Y NAVEGACI[?]"N
+pos  40981: UI [?]?" STEPPER Y NAVEGACI[?]"N ---
+// ==============
+pos  42691: ============
+// --- SECCI[?]"N: VALIDACI[?]"N DE FORMU
+pos  42704: // --- SECCI[?]"N: VALIDACI[?]"N DE FORMULARIOS ---
+//
+pos  44912: ============
+// --- SECCI[?]"N: RECOLECCI[?]"N Y GUARD
+pos  44926: / --- SECCI[?]"N: RECOLECCI[?]"N Y GUARDADO DE DATOS D
+pos  46626: ============
+// --- SECCI[?]"N: ORQUESTADOR PRINCIPA
+pos  46653: N: ORQUESTADOR PRINCIPAL [?]?" GENERAR PLANIFICACI[?]"
+pos  46676: L [?]?" GENERAR PLANIFICACI[?]"N ---
+// ==============
+pos  49418: ============
+// --- SECCI[?]"N: UI [?]?" HELPERS ---
+/
+pos  49426: ====
+// --- SECCI[?]"N: UI [?]?" HELPERS ---
+// ======
+pos  51968: ============
+// --- SECCI[?]"N: INICIALIZACI[?]"N DE L
+pos  51985: -- SECCI[?]"N: INICIALIZACI[?]"N DE LA APP ---
+// ====

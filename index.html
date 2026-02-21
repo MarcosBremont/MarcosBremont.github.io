@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planificador Educativo por RA | INFOTEP República Dominicana</title>
+  <meta name="description" content="Sistema de Planificación Educativa por Resultados de Aprendizaje para docentes de educación técnico profesional de la República Dominicana." />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ===== BANNER DE BORRADOR ===== -->
+  <div id="banner-borrador" class="banner-borrador hidden">
+    <span class="material-icons">restore</span>
+    <span>Se encontró un borrador guardado. ¿Deseas restaurarlo?</span>
+    <div class="banner-actions">
+      <button id="btn-restaurar" class="btn-banner btn-primary-banner">Restaurar borrador</button>
+      <button id="btn-descartar-borrador" class="btn-banner btn-secondary-banner">Descartar</button>
+    </div>
+  </div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="material-icons header-icon">school</span>
+        <div>
+          <h1 class="header-title">Planificador Educativo por RA</h1>
+          <p class="header-subtitle">Sistema de Educación Técnico Profesional · República Dominicana</p>
+        </div>
+      </div>
+      <button id="btn-nueva-planificacion" class="btn-nueva" title="Nueva Planificación">
+        <span class="material-icons">add_circle_outline</span>
+        <span class="btn-nueva-label">Nueva Planificación</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== STEPPER ===== -->
+  <div class="stepper-container">
+    <div class="stepper" id="stepper">
+      <div class="step active" data-step="1">
+        <div class="step-circle">
+          <span class="step-number">1</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Datos Generales</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="2">
+        <div class="step-circle">
+          <span class="step-number">2</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Resultado de Aprendizaje</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="3">
+        <div class="step-circle">
+          <span class="step-number">3</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Elementos de Capacidad</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="4">
+        <div class="step-circle">
+          <span class="step-number">4</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Actividades</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="5">
+        <div class="step-circle">
+          <span class="step-number">5</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Vista Previa</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTENIDO PRINCIPAL ===== -->
+  <main class="main-content">
+
+    <!-- =========================================
+         PASO 1: DATOS GENERALES
+         ========================================= -->
+    <section class="step-section active" id="section-1">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">assignment</span>
+          <h2>Datos Generales del Módulo</h2>
+        </div>
+
+        <div class="form-grid">
+          <!-- Familia Profesional -->
+          <div class="form-group">
+            <label for="familia-profesional">Familia Profesional *</label>
+            <input type="text" id="familia-profesional" placeholder="Ej: Informática y Comunicaciones" required />
+          </div>
+
+          <!-- Código FP -->
+          <div class="form-group">
+            <label for="codigo-fp">Código FP *</label>
+            <input type="text" id="codigo-fp" placeholder="Ej: IFC-001" required />
+          </div>
+
+          <!-- Nombre del Bachillerato Técnico -->
+          <div class="form-group form-group--full">
+            <label for="nombre-bachillerato">Nombre del Bachillerato Técnico *</label>
+            <input type="text" id="nombre-bachillerato" placeholder="Ej: Bachillerato Técnico en Desarrollo de Software" required />
+          </div>
+
+          <!-- Código del Título -->
+          <div class="form-group">
+            <label for="codigo-titulo">Código del Título *</label>
+            <input type="text" id="codigo-titulo" placeholder="Ej: BT-DS-2024" required />
+          </div>
+
+          <!-- Módulo Formativo -->
+          <div class="form-group">
+            <label for="modulo-formativo">Módulo Formativo *</label>
+            <input type="text" id="modulo-formativo" placeholder="Ej: Programación Web Avanzada" required />
+          </div>
+
+          <!-- Código del Módulo -->
+          <div class="form-group">
+            <label for="codigo-modulo">Código del Módulo *</label>
+            <input type="text" id="codigo-modulo" placeholder="Ej: MF-PWA-301" required />
+          </div>
+
+          <!-- Nombre del Docente -->
+          <div class="form-group">
+            <label for="nombre-docente">Nombre del Docente *</label>
+            <input type="text" id="nombre-docente" placeholder="Ej: Prof. Ana García Pérez" required />
+          </div>
+
+          <!-- Cantidad de RA del Módulo -->
+          <div class="form-group">
+            <label for="cantidad-ra">Cantidad de RA del Módulo *</label>
+            <input type="number" id="cantidad-ra" min="1" max="20" placeholder="Ej: 5" required />
+          </div>
+
+          <!-- Valor del RA (puntos) -->
+          <div class="form-group">
+            <label for="valor-ra">Valor del RA (puntos) *</label>
+            <input type="number" id="valor-ra" min="1" max="100" placeholder="Ej: 20" required />
+          </div>
+
+          <!-- Horas por semana -->
+          <div class="form-group">
+            <label for="horas-semana">Horas por Semana *</label>
+            <input type="number" id="horas-semana" min="1" max="40" placeholder="Ej: 6" required />
+          </div>
+
+          <!-- Fecha de Inicio -->
+          <div class="form-group">
+            <label for="fecha-inicio">Fecha de Inicio *</label>
+            <input type="date" id="fecha-inicio" required />
+          </div>
+
+          <!-- Fecha de Término -->
+          <div class="form-group">
+            <label for="fecha-termino">Fecha de Término *</label>
+            <input type="date" id="fecha-termino" required />
+          </div>
+        </div>
+
+        <!-- Días de clase + horas por día -->
+        <div class="dias-clase-section">
+          <h3 class="subsection-title">
+            <span class="material-icons">calendar_today</span>
+            Días de Clase por Semana
+          </h3>
+          <p class="subsection-hint">Selecciona los días y especifica las horas de clase cada día.</p>
+          <div class="dias-grid">
+            <!-- Lunes -->
+            <div class="dia-card" id="dia-card-lunes">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-lunes" class="dia-checkbox" value="lunes" />
+                <span class="dia-nombre">Lunes</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-lunes-wrap">
+                <input type="number" id="horas-lunes" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Martes -->
+            <div class="dia-card" id="dia-card-martes">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-martes" class="dia-checkbox" value="martes" />
+                <span class="dia-nombre">Martes</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-martes-wrap">
+                <input type="number" id="horas-martes" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Miércoles -->
+            <div class="dia-card" id="dia-card-miercoles">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-miercoles" class="dia-checkbox" value="miercoles" />
+                <span class="dia-nombre">Miércoles</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-miercoles-wrap">
+                <input type="number" id="horas-miercoles" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Jueves -->
+            <div class="dia-card" id="dia-card-jueves">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-jueves" class="dia-checkbox" value="jueves" />
+                <span class="dia-nombre">Jueves</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-jueves-wrap">
+                <input type="number" id="horas-jueves" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Viernes -->
+            <div class="dia-card" id="dia-card-viernes">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-viernes" class="dia-checkbox" value="viernes" />
+                <span class="dia-nombre">Viernes</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-viernes-wrap">
+                <input type="number" id="horas-viernes" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+          </div>
+          <!-- Resumen de horas calculadas -->
+          <div id="resumen-horas" class="resumen-horas hidden">
+            <span class="material-icons">schedule</span>
+            <span id="resumen-horas-texto"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <div></div>
+        <button class="btn-siguiente" onclick="irAlPaso(2)">
+          Siguiente
+          <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 2: RESULTADO DE APRENDIZAJE
+         ========================================= -->
+    <section class="step-section" id="section-2">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">psychology</span>
+          <h2>Resultado de Aprendizaje y Criterios</h2>
+        </div>
+
+        <div class="form-grid">
+          <!-- Descripción del RA -->
+          <div class="form-group form-group--full">
+            <label for="descripcion-ra">Descripción del Resultado de Aprendizaje (RA) *</label>
+            <textarea
+              id="descripcion-ra"
+              rows="5"
+              placeholder="Escribe aquí la descripción completa del RA. Ej: El/la estudiante será capaz de desarrollar aplicaciones web usando JavaScript moderno, aplicando principios de diseño responsivo y buenas prácticas de programación, demostrando compromiso con la calidad del código..."
+              required
+            ></textarea>
+            <div id="nivel-bloom-detectado" class="bloom-badge hidden"></div>
+          </div>
+
+          <!-- Criterios de Evaluación de Referencia -->
+          <div class="form-group form-group--full">
+            <label for="criterios-referencia">
+              Criterios de Evaluación de Referencia del Currículo
+              <span class="label-optional">(opcional, uno por línea)</span>
+            </label>
+            <textarea
+              id="criterios-referencia"
+              rows="5"
+              placeholder="Ingresa los criterios del currículo, uno por línea. Ej:&#10;Identifica los fundamentos de la programación orientada a objetos&#10;Desarrolla interfaces de usuario responsivas&#10;Aplica buenas prácticas de codificación"
+            ></textarea>
+          </div>
+
+          <!-- Recursos didácticos -->
+          <div class="form-group form-group--full">
+            <label for="recursos-didacticos">Recursos Didácticos Disponibles</label>
+            <textarea
+              id="recursos-didacticos"
+              rows="3"
+              placeholder="Ej: Computadoras con acceso a internet, proyector, pizarrón digital, plataforma Moodle, herramientas de desarrollo VS Code..."
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Info tip -->
+        <div class="info-tip">
+          <span class="material-icons">lightbulb</span>
+          <p>El sistema analizará el texto del RA para detectar su nivel de dominio según la <strong>Taxonomía de Bloom</strong> y generará automáticamente los Elementos de Capacidad (EC) adecuados.</p>
+        </div>
+
+      </div>
+
+      <!-- Botón Generar -->
+      <div class="generar-section">
+        <button id="btn-generar" class="btn-generar" onclick="generarPlanificacion()">
+          <span class="material-icons btn-generar-icon">auto_awesome</span>
+          <span id="btn-generar-texto">Generar Planificación</span>
+        </button>
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(1)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <button class="btn-siguiente" onclick="irAlPaso(3)" id="btn-paso2-siguiente" disabled>
+          Siguiente
+          <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 3: ELEMENTOS DE CAPACIDAD
+         ========================================= -->
+    <section class="step-section" id="section-3">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">layers</span>
+          <h2>Elementos de Capacidad (EC)</h2>
+        </div>
+
+        <div class="info-tip">
+          <span class="material-icons">edit_note</span>
+          <p>Los EC han sido generados automáticamente. Puedes <strong>editarlos</strong> haciendo clic en el texto. Los cambios se guardan automáticamente.</p>
+        </div>
+
+        <!-- Resumen de horas distribuidas -->
+        <div id="resumen-distribucion" class="resumen-distribucion hidden">
+          <div class="resumen-item">
+            <span class="material-icons">schedule</span>
+            <div>
+              <strong id="total-horas-display">--</strong>
+              <small>Horas totales</small>
+            </div>
+          </div>
+          <div class="resumen-item">
+            <span class="material-icons">calendar_month</span>
+            <div>
+              <strong id="total-semanas-display">--</strong>
+              <small>Semanas</small>
+            </div>
+          </div>
+          <div class="resumen-item">
+            <span class="material-icons">bar_chart</span>
+            <div>
+              <strong id="horas-por-ec-display">--</strong>
+              <small>Horas por EC</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjetas de EC -->
+        <div id="ec-container" class="ec-container">
+          <!-- Se genera dinámicamente por JS -->
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(2)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <button class="btn-siguiente" onclick="irAlPaso(4)">
+          Siguiente
+          <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 4: ACTIVIDADES E INSTRUMENTOS
+         ========================================= -->
+    <section class="step-section" id="section-4">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">event_note</span>
+          <h2>Actividades e Instrumentos de Evaluación</h2>
+        </div>
+
+        <div class="info-tip">
+          <span class="material-icons">info</span>
+          <p>Las actividades tienen fechas reales calculadas según los días de clase ingresados. Haz clic en <strong>"Ver instrumento"</strong> para visualizar la lista de cotejo o rúbrica correspondiente.</p>
+        </div>
+
+        <!-- Tabla de actividades -->
+        <div class="tabla-responsiva">
+          <table id="tabla-actividades" class="tabla-actividades">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>EC</th>
+                <th>Actividad</th>
+                <th>Instrumento</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-actividades-body">
+              <!-- Se llena dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(3)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <button class="btn-siguiente" onclick="irAlPaso(5)">
+          Ver Vista Previa
+          <span class="material-icons">preview</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 5: VISTA PREVIA Y EXPORTACIÓN
+         ========================================= -->
+    <section class="step-section" id="section-5">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">picture_as_pdf</span>
+          <h2>Vista Previa y Exportación</h2>
+        </div>
+
+        <!-- Botones de exportación -->
+        <div class="export-buttons">
+          <button class="btn-export btn-print" onclick="imprimirPDF()">
+            <span class="material-icons">print</span>
+            Imprimir / PDF
+          </button>
+          <button class="btn-export btn-word" onclick="exportarWord()">
+            <span class="material-icons">description</span>
+            Exportar a Word
+          </button>
+          <button class="btn-export btn-copy" onclick="copiarPortapapeles()">
+            <span class="material-icons">content_copy</span>
+            Copiar al portapapeles
+          </button>
+        </div>
+
+        <!-- Vista previa imprimible -->
+        <div id="vista-previa" class="vista-previa">
+          <!-- Se genera dinámicamente -->
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(4)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== MODAL DE INSTRUMENTO ===== -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="cerrarModal(event)">
+    <div class="modal-box" id="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">Instrumento de Evaluación</h3>
+        <button class="modal-close" onclick="cerrarModalBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Contenido del instrumento -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-export btn-print btn-sm" onclick="imprimirModal()">
+          <span class="material-icons">print</span>
+          Imprimir instrumento
+        </button>
+        <button class="btn-export btn-copy btn-sm" onclick="copiarModal()">
+          <span class="material-icons">content_copy</span>
+          Copiar
+        </button>
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast hidden">
+    <span class="material-icons" id="toast-icon">check_circle</span>
+    <span id="toast-mensaje"></span>
+  </div>
+
+  <!-- Script principal -->
+  <script src="app.js"></script>
+</body>
+</html>
