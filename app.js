@@ -10970,3 +10970,391 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+
+// ================================================================
+// --- MÓDULO: INTEGRACIÓN GEMINI AI ---
+// ================================================================
+
+const IA_KEY_STORAGE = 'planificadorRA_geminiKey';
+
+/** Retorna la API key guardada o null */
+function getApiKey() {
+  return localStorage.getItem(IA_KEY_STORAGE) || null;
+}
+
+/** Abre el modal de configuración de la IA */
+function abrirConfigIA() {
+  const keyActual = getApiKey();
+  const estado = keyActual
+    ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> Clave configurada</span>'
+    : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin clave configurada</span>';
+
+  document.getElementById('modal-title').textContent = 'Configuración de IA (Gemini)';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="config-ia-content">
+      <div>${estado}</div>
+      <label for="input-gemini-key">Clave API de Gemini</label>
+      <input type="password" id="input-gemini-key"
+             placeholder="AIza..."
+             value="${keyActual || ''}"
+             autocomplete="off" />
+      <div class="info-tip" style="margin:0;">
+        <span class="material-icons" style="color:#1565C0;">info</span>
+        <div>
+          <p style="margin:0;">Obtén tu clave gratuita en
+            <a href="https://aistudio.google.com/app/apikey" target="_blank"
+               style="color:#1565C0;font-weight:600;">aistudio.google.com</a>
+            (requiere cuenta Google).</p>
+          <p style="margin:4px 0 0;font-size:0.8rem;color:#757575;">
+            La clave se guarda solo en tu navegador. No se envía a ningún servidor externo.
+          </p>
+        </div>
+      </div>
+      ${keyActual ? '<button class="btn-secundario" style="align-self:flex-start;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar clave</button>' : ''}
+    </div>`;
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn-siguiente" onclick="guardarApiKey()">
+      <span class="material-icons">save</span> Guardar clave
+    </button>
+    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('input-gemini-key')?.focus(), 100);
+}
+
+function guardarApiKey() {
+  const key = document.getElementById('input-gemini-key')?.value?.trim();
+  if (!key) { mostrarToast('Ingresa una clave válida', 'error'); return; }
+  if (!key.startsWith('AIza')) { mostrarToast('La clave debe comenzar con "AIza..."', 'error'); return; }
+  localStorage.setItem(IA_KEY_STORAGE, key);
+  actualizarBtnConfigIA();
+  cerrarModalBtn();
+  mostrarToast('Clave guardada. La IA está lista para generar planificaciones.', 'success');
+}
+
+function borrarApiKey() {
+  localStorage.removeItem(IA_KEY_STORAGE);
+  actualizarBtnConfigIA();
+  cerrarModalBtn();
+  mostrarToast('Clave eliminada. Se usará generación local.', 'info');
+}
+
+function actualizarBtnConfigIA() {
+  const btn = document.getElementById('btn-config-ia');
+  if (!btn) return;
+  if (getApiKey()) {
+    btn.classList.add('ia-activa');
+    btn.title = 'IA configurada ✓ — clic para cambiar la clave';
+  } else {
+    btn.classList.remove('ia-activa');
+    btn.title = 'Configurar clave de IA (Gemini)';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONSTRUCTOR DEL PROMPT
+// ─────────────────────────────────────────────────────────────
+
+function construirPromptGemini(dg, ra, fechasClase) {
+  const diasStr = (dg.diasClase || [])
+    .map(d => `${d.dia} (${d.horas}h)`)
+    .join(', ');
+
+  const totalFechasSesion = fechasClase ? fechasClase.length : '?';
+
+  return `Eres docente experto en educación técnico profesional de la República Dominicana.
+Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, sin bloques de código markdown.
+
+DATOS DEL MÓDULO:
+- Familia profesional: ${dg.familiaProfesional || ''} (${dg.codigoFP || ''})
+- Bachillerato Técnico: ${dg.nombreBachillerato || ''}
+- Módulo Formativo: ${dg.moduloFormativo || ''} (${dg.codigoModulo || ''})
+- Docente: ${dg.nombreDocente || ''}
+- Período: ${dg.fechaInicio || ''} → ${dg.fechaTermino || ''}
+- Horario semanal: ${diasStr} (${dg.horasSemana || '?'} horas/semana)
+- Total de sesiones disponibles: ${totalFechasSesion}
+- Valor del RA: ${dg.valorRA || '10'} puntos
+- Cantidad de RA en el módulo: ${dg.cantidadRA || '?'}
+
+RESULTADO DE APRENDIZAJE (RA):
+${ra.descripcion || ''}
+
+CRITERIOS DE EVALUACIÓN (referencia para los EC):
+${ra.criterios || 'No especificados'}
+
+RECURSOS DIDÁCTICOS:
+${ra.recursosDid || 'Material de la asignatura, pizarrón, guías de trabajo'}
+
+INSTRUCCIONES PARA LA GENERACIÓN:
+1. Determina el nivel Bloom del RA completo (una sola palabra: conocimiento, comprension, aplicacion, sintesis, evaluacion o creacion).
+2. Genera EXACTAMENTE 4 Elementos de Capacidad (EC):
+   - E.C.1.1.1 → nivel: "conocimiento" (verbos: Identificar, Reconocer, Listar, Nombrar, Definir...)
+   - E.C.2.1.1 → nivel: "comprension" (verbos: Explicar, Comparar, Interpretar, Describir, Relacionar...)
+   - E.C.3.1.1 → nivel: "aplicacion" (verbos: Aplicar, Resolver, Ejecutar, Demostrar, Implementar...)
+   - E.C.4.1.1 → nivel: "actitudinal" (verbos: Valorar, Asumir, Demostrar, Comprometerse, Reflexionar...)
+   Cada enunciado debe tener: VERBO en infinitivo + OBJETO (qué aprende) + CONDICIONES (cómo/con qué) + "en correspondencia con [CE_X.X]."
+   Los enunciados deben ser específicos a la asignatura, NO genéricos.
+3. Genera de 1 a 2 actividades por EC (máximo 2, según tiempo disponible).
+   Formato de enunciado: "Tipo de actividad: Descripción específica y contextualizada al tema."
+   Tipos válidos: Cuestionario escrito, Mapa conceptual, Análisis de caso, Exposición oral, Práctica supervisada, Proyecto integrador, Reflexión y portafolio, Debate dirigido, Estudio de caso.
+4. Instrumento de evaluación: "cotejo" para conocimiento/comprensión, "rubrica" para aplicación/actitudinal.
+
+DEVUELVE EXACTAMENTE este JSON (sin modificar los nombres de los campos):
+{
+  "nivelBloomRA": "comprension",
+  "elementosCapacidad": [
+    {
+      "codigo": "E.C.1.1.1",
+      "nivel": "conocimiento",
+      "nivelBloom": "conocimiento",
+      "enunciado": "Identificar... objeto... condición..., en correspondencia con CE3.X."
+    },
+    {
+      "codigo": "E.C.2.1.1",
+      "nivel": "comprension",
+      "nivelBloom": "comprension",
+      "enunciado": "Explicar... objeto... condición..., en correspondencia con CE3.X."
+    },
+    {
+      "codigo": "E.C.3.1.1",
+      "nivel": "aplicacion",
+      "nivelBloom": "aplicacion",
+      "enunciado": "Aplicar... objeto... condición..., en correspondencia con CE3.X."
+    },
+    {
+      "codigo": "E.C.4.1.1",
+      "nivel": "actitudinal",
+      "nivelBloom": "actitudinal",
+      "enunciado": "Valorar... objeto... condición..., en correspondencia con CE3.X."
+    }
+  ],
+  "actividades": [
+    {
+      "ecCodigo": "E.C.1.1.1",
+      "enunciado": "Tipo: Descripción específica.",
+      "instrumento": "cotejo"
+    }
+  ]
+}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// LLAMADA A GEMINI API
+// ─────────────────────────────────────────────────────────────
+
+async function generarConGemini(dg, ra, fechasClase) {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+
+  const prompt = construirPromptGemini(dg, ra, fechasClase);
+
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.35,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json'
+    }
+  };
+
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!resp.ok) {
+    const errJson = await resp.json().catch(() => ({}));
+    const msg = errJson?.error?.message || resp.statusText;
+    throw new Error(`Gemini API error ${resp.status}: ${msg}`);
+  }
+
+  const data = await resp.json();
+  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText) throw new Error('Respuesta vacía de Gemini');
+
+  // Limpiar posibles bloques markdown que Gemini a veces añade
+  const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/,'').trim();
+  return JSON.parse(cleaned);
+}
+
+// ─────────────────────────────────────────────────────────────
+// APLICAR RESPUESTA DE GEMINI AL ESTADO DE LA APP
+// ─────────────────────────────────────────────────────────────
+
+function aplicarRespuestaGemini(aiData, fechasClase) {
+  const dg = planificacion.datosGenerales;
+
+  // 1. Nivel del RA
+  if (aiData.nivelBloomRA) {
+    planificacion.ra.nivelBloom = aiData.nivelBloomRA;
+    const el = document.getElementById('nivel-bloom-detectado');
+    if (el) el.textContent = aiData.nivelBloomRA.charAt(0).toUpperCase() + aiData.nivelBloomRA.slice(1);
+  }
+
+  // 2. Elementos de Capacidad
+  const totalHoras = planificacion.horasTotal || (parseFloat(dg.horasSemana || 2) * 2);
+  const horasPorEC = Math.floor(totalHoras / 4);
+  const horasResto = totalHoras - (horasPorEC * 4);
+
+  planificacion.elementosCapacidad = aiData.elementosCapacidad.map((ec, i) => ({
+    id: ec.codigo,
+    codigo: ec.codigo,
+    nivel: ec.nivel,
+    nivelBloom: ec.nivelBloom || ec.nivel,
+    enunciado: ec.enunciado,
+    horasAsignadas: horasPorEC + (i === 0 ? horasResto : 0),
+    descripcion: ec.enunciado,
+    secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion
+  }));
+
+  // 3. Actividades — combinar las generadas por IA con fechas reales
+  const actividadesAI = aiData.actividades || [];
+  let fechaIdx = 0;
+
+  planificacion.actividades = actividadesAI.map((act, i) => {
+    const ecObj = planificacion.elementosCapacidad.find(e => e.codigo === act.ecCodigo)
+                  || planificacion.elementosCapacidad[0];
+    const fecha = fechasClase[fechaIdx] || fechasClase[fechasClase.length - 1];
+    fechaIdx++;
+
+    const instrumento = act.instrumento === 'rubrica'
+      ? generarRubrica(ecObj, act.enunciado)
+      : generarListaCotejo(ecObj, act.enunciado);
+
+    return {
+      id: `act_${i}`,
+      ecCodigo: act.ecCodigo || ecObj.codigo,
+      enunciado: act.enunciado,
+      fecha: fecha.fecha,
+      fechaStr: fecha.fechaStr,
+      instrumento
+    };
+  });
+
+  // 4. Actualizar resumen de horas en pantalla
+  const resEl = document.getElementById('resumen-distribucion');
+  if (resEl) {
+    resEl.classList.remove('hidden');
+    const displayHoras  = document.getElementById('total-horas-display');
+    const displaySemanas = document.getElementById('total-semanas-display');
+    const displayXEC   = document.getElementById('horas-por-ec-display');
+    if (displayHoras)   displayHoras.textContent   = totalHoras + ' hrs';
+    if (displaySemanas) displaySemanas.textContent = Math.ceil(totalHoras / parseFloat(dg.horasSemana || 2)) + ' sem';
+    if (displayXEC)     displayXEC.textContent     = horasPorEC + ' hrs';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOBRESCRIBIR generarPlanificacion PARA USAR IA
+// ─────────────────────────────────────────────────────────────
+
+// Guardar referencia al generador local original
+const _generarPlanificacionLocal = generarPlanificacion;
+
+// Nueva versión con IA
+generarPlanificacion = async function() {
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+
+  // Leer datos del formulario
+  guardarDatosFormulario();
+
+  // Validación básica
+  const raDesc = document.getElementById('ra-descripcion')?.value?.trim() || '';
+  if (!raDesc) {
+    mostrarToast('Escribe el Resultado de Aprendizaje antes de generar', 'error');
+    return;
+  }
+
+  // Calcular fechas de clase (necesario para asignar fechas a actividades)
+  const fechasClase = calcularFechasClase(
+    planificacion.datosGenerales.fechaInicio,
+    planificacion.datosGenerales.fechaTermino,
+    planificacion.datosGenerales.diasClase
+  );
+  planificacion.fechasClase = fechasClase;
+
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    // Sin IA: usar generación local y avisar
+    mostrarToast('💡 Sin clave Gemini: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
+    // Llamar al generador local original
+    _generarPlanificacionLocal();
+    return;
+  }
+
+  // CON IA: mostrar spinner
+  const btnGenerar   = document.getElementById('btn-generar');
+  const btnTexto     = document.getElementById('btn-generar-texto');
+  const iconoGenerar = btnGenerar?.querySelector('.material-icons');
+
+  if (btnGenerar) btnGenerar.classList.add('btn-generando');
+  if (btnTexto)   btnTexto.textContent = 'Generando con IA...';
+  if (iconoGenerar) iconoGenerar.textContent = 'hourglass_top';
+
+  try {
+    mostrarToast('Consultando IA... esto tarda unos segundos ⏳', 'info');
+
+    const aiData = await generarConGemini(
+      planificacion.datosGenerales,
+      planificacion.ra,
+      fechasClase
+    );
+
+    if (!aiData || !aiData.elementosCapacidad) {
+      throw new Error('Respuesta inesperada de la IA');
+    }
+
+    // Aplicar resultados
+    aplicarRespuestaGemini(aiData, fechasClase);
+
+    // Renderizar
+    renderizarEC(planificacion.elementosCapacidad);
+    renderizarActividades(planificacion.actividades);
+
+    // Habilitar siguiente
+    document.getElementById('btn-paso2-siguiente').disabled = false;
+
+    guardarBorrador();
+    mostrarToast('¡Planificación generada con IA! Revisa y ajusta a tu criterio.', 'success');
+
+    // Avanzar al paso 3
+    setTimeout(() => irAlPaso(3, true), 600);
+
+  } catch (err) {
+    console.error('Error Gemini:', err);
+    const msg = err.message || String(err);
+
+    if (msg.includes('API_KEY_INVALID') || msg.includes('401')) {
+      mostrarToast('Clave inválida. Ve a ⚙️ y verifica tu API Key de Gemini.', 'error');
+    } else if (msg.includes('QUOTA') || msg.includes('429')) {
+      mostrarToast('Límite de cuota del plan gratuito alcanzado. Intenta en 1 minuto.', 'error');
+    } else {
+      mostrarToast('Error de IA: ' + msg.substring(0, 80) + '. Usando generación local.', 'error');
+      _generarPlanificacionLocal();
+    }
+  } finally {
+    // Restaurar botón
+    if (btnGenerar) btnGenerar.classList.remove('btn-generando');
+    if (btnTexto)   btnTexto.textContent = 'Generar planificación';
+    if (iconoGenerar) iconoGenerar.textContent = 'auto_awesome';
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// INICIALIZAR ESTADO DEL BOTÓN AL CARGAR
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  actualizarBtnConfigIA();
+  // Asegurar que modal-footer tiene id
+  const mf = document.querySelector('.modal-footer');
+  if (mf && !mf.id) mf.id = 'modal-footer';
+});
