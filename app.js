@@ -1,8 +1,8 @@
 /**
  * ================================================================
  * PLANIFICADOR EDUCATIVO POR RESULTADOS DE APRENDIZAJE (RA)
- * Sistema para Docentes de Educaci�f³n T�f©cnico Profesional
- * Rep�fºblica Dominicana
+ * Sistema para Docentes de Educación Técnico Profesional
+ * República Dominicana
  * ================================================================
  *
  * INSTRUCCIONES DE DESPLIEGUE EN GITHUB PAGES:
@@ -10,10 +10,10 @@
  * 2. Sube los 3 archivos: index.html, styles.css, app.js
  * 3. Ve a Settings > Pages > Source: "Deploy from a branch"
  * 4. Selecciona la rama "main" y la carpeta "/ (root)"
- * 5. Haz clic en Save. Tu app estar�f¡ en:
+ * 5. Haz clic en Save. Tu app estará en:
  *    https://tu-usuario.github.io/planificador-ra/
  *
- * Tambi�f©n funciona en Netlify arrastrando la carpeta, o
+ * También funciona en Netlify arrastrando la carpeta, o
  * abriendo index.html directamente en el navegador.
  * ================================================================
  */
@@ -21,74 +21,74 @@
 'use strict';
 
 // ================================================================
-// --- SECCI�f�?oN: DATOS GLOBALES ---
+// --- SECCIÓ?oN: DATOS GLOBALES ---
 // ================================================================
 
-/** Banco de verbos de Bloom por nivel taxon�f³mico */
+/** Banco de verbos de Bloom por nivel taxonómico */
 const verbosBloom = {
-  conocimiento: ["identificar","reconocer","listar","definir","nombrar","recordar","enunciar","se�f±alar","mencionar","describir brevemente","clasificar b�f¡sicamente"],
+  conocimiento: ["identificar","reconocer","listar","definir","nombrar","recordar","enunciar","señalar","mencionar","describir brevemente","clasificar básicamente"],
   comprension:  ["explicar","describir","interpretar","resumir","clasificar","comparar","relacionar","distinguir","inferir","parafrasear","ilustrar","traducir"],
-  aplicacion:   ["aplicar","demostrar","utilizar","resolver","ejecutar","implementar","desarrollar","construir","dise�f±ar","producir","calcular","experimentar"],
+  aplicacion:   ["aplicar","demostrar","utilizar","resolver","ejecutar","implementar","desarrollar","construir","diseñar","producir","calcular","experimentar"],
   actitudinal:  ["valorar","asumir","comprometerse","respetar","reflexionar","demostrar actitud hacia","mostrar","apreciar","participar activamente","colaborar","integrar","promover"]
 };
 
-/** Plantillas de secuencia did�f¡ctica por nivel */
+/** Plantillas de secuencia didáctica por nivel */
 const plantillasSecuencia = {
   conocimiento: {
-    anticipacion: { nombre: "Anticipaci�f³n", descripcion: "Activar conocimientos previos mediante preguntas detonadoras o lluvia de ideas sobre el tema.", pct: 20 },
-    construccion: { nombre: "Construcci�f³n",  descripcion: "Exposici�f³n conceptual con apoyo visual, lectura guiada de materiales y elaboraci�f³n de mapas conceptuales.", pct: 55 },
-    consolidacion: { nombre: "Consolidaci�f³n", descripcion: "Cuestionario de verificaci�f³n, elaboraci�f³n de glosario y retroalimentaci�f³n grupal.", pct: 25 }
+    anticipacion: { nombre: "Anticipación", descripcion: "Activar conocimientos previos mediante preguntas detonadoras o lluvia de ideas sobre el tema.", pct: 20 },
+    construccion: { nombre: "Construcción",  descripcion: "Exposición conceptual con apoyo visual, lectura guiada de materiales y elaboración de mapas conceptuales.", pct: 55 },
+    consolidacion: { nombre: "Consolidación", descripcion: "Cuestionario de verificación, elaboración de glosario y retroalimentación grupal.", pct: 25 }
   },
   comprension: {
-    anticipacion: { nombre: "Anticipaci�f³n", descripcion: "Presentar un caso o situaci�f³n problem�f¡tica para generar discusi�f³n y conectar con el RA.", pct: 15 },
-    construccion: { nombre: "Construcci�f³n",  descripcion: "An�f¡lisis de ejemplos comparativos, discusi�f³n dirigida y elaboraci�f³n de esquemas explicativos.", pct: 60 },
-    consolidacion: { nombre: "Consolidaci�f³n", descripcion: "Elaboraci�f³n de resumen propio, exposici�f³n breve y autoevaluaci�f³n mediante lista de cotejo.", pct: 25 }
+    anticipacion: { nombre: "Anticipación", descripcion: "Presentar un caso o situación problemática para generar discusión y conectar con el RA.", pct: 15 },
+    construccion: { nombre: "Construcción",  descripcion: "Análisis de ejemplos comparativos, discusión dirigida y elaboración de esquemas explicativos.", pct: 60 },
+    consolidacion: { nombre: "Consolidación", descripcion: "Elaboración de resumen propio, exposición breve y autoevaluación mediante lista de cotejo.", pct: 25 }
   },
   aplicacion: {
-    anticipacion: { nombre: "Anticipaci�f³n", descripcion: "Plantear una situaci�f³n real del campo profesional que requiera soluci�f³n pr�f¡ctica.", pct: 10 },
-    construccion: { nombre: "Construcci�f³n",  descripcion: "Demostraci�f³n del docente, pr�f¡ctica guiada paso a paso, resoluci�f³n de ejercicios reales.", pct: 65 },
-    consolidacion: { nombre: "Consolidaci�f³n", descripcion: "Presentaci�f³n de resultado, coevaluaci�f³n mediante r�fºbrica y reflexi�f³n sobre el proceso.", pct: 25 }
+    anticipacion: { nombre: "Anticipación", descripcion: "Plantear una situación real del campo profesional que requiera solución práctica.", pct: 10 },
+    construccion: { nombre: "Construcción",  descripcion: "Demostración del docente, práctica guiada paso a paso, resolución de ejercicios reales.", pct: 65 },
+    consolidacion: { nombre: "Consolidación", descripcion: "Presentación de resultado, coevaluación mediante rúbrica y reflexión sobre el proceso.", pct: 25 }
   },
   actitudinal: {
-    anticipacion: { nombre: "Anticipaci�f³n", descripcion: "Reflexi�f³n personal sobre valores y actitudes relacionadas con el �f¡mbito profesional.", pct: 20 },
-    construccion: { nombre: "Construcci�f³n",  descripcion: "Trabajo colaborativo, an�f¡lisis de casos �f©ticos, debate argumentado y role-playing.", pct: 50 },
-    consolidacion: { nombre: "Consolidaci�f³n", descripcion: "Diario reflexivo, compromiso escrito y retroalimentaci�f³n formativa grupal.", pct: 30 }
+    anticipacion: { nombre: "Anticipación", descripcion: "Reflexión personal sobre valores y actitudes relacionadas con el ámbito profesional.", pct: 20 },
+    construccion: { nombre: "Construcción",  descripcion: "Trabajo colaborativo, análisis de casos éticos, debate argumentado y role-playing.", pct: 50 },
+    consolidacion: { nombre: "Consolidación", descripcion: "Diario reflexivo, compromiso escrito y retroalimentación formativa grupal.", pct: 30 }
   }
 };
 
-/** Criterios y descriptores para instrumentos seg�fºn nivel */
+/** Criterios y descriptores para instrumentos según nivel */
 const criteriosInstrumento = {
   conocimiento: [
     "Identifica correctamente los conceptos fundamentales del tema",
-    "Nombra y define los t�f©rminos t�f©cnicos con precisi�f³n",
-    "Enumera los elementos principales seg�fºn el contenido estudiado",
-    "Reconoce las caracter�f­sticas esenciales del objeto de estudio",
-    "Recuerda y reproduce la informaci�f³n de manera organizada"
+    "Nombra y define los términos técnicos con precisión",
+    "Enumera los elementos principales según el contenido estudiado",
+    "Reconoce las características esenciales del objeto de estudio",
+    "Recuerda y reproduce la información de manera organizada"
   ],
   comprension: [
     "Explica con sus propias palabras el concepto o proceso",
     "Establece relaciones entre los elementos del tema",
     "Distingue las diferencias y similitudes entre conceptos",
-    "Interpreta correctamente la informaci�f³n presentada",
+    "Interpreta correctamente la información presentada",
     "Resume el contenido conservando las ideas principales"
   ],
   aplicacion: [
     "Ejecuta el procedimiento siguiendo los pasos correctamente",
-    "Aplica los conceptos te�f³ricos en situaciones pr�f¡cticas reales",
+    "Aplica los conceptos teóricos en situaciones prácticas reales",
     "Utiliza las herramientas y recursos de manera adecuada",
-    "Resuelve la situaci�f³n planteada de forma efectiva",
+    "Resuelve la situación planteada de forma efectiva",
     "Produce un resultado que cumple con las especificaciones requeridas"
   ],
   actitudinal: [
-    "Muestra disposici�f³n positiva ante los retos del aprendizaje",
+    "Muestra disposición positiva ante los retos del aprendizaje",
     "Respeta las normas de convivencia y trabajo colaborativo",
     "Asume responsabilidad por su propio proceso de aprendizaje",
-    "Valora la importancia de la �f©tica profesional en el campo t�f©cnico",
+    "Valora la importancia de la ética profesional en el campo técnico",
     "Demuestra compromiso y puntualidad en la entrega de trabajos"
   ]
 };
 
-/** Estado global de la planificaci�f³n */
+/** Estado global de la planificación */
 let planificacion = {
   datosGenerales: {},
   ra: { descripcion: '', criterios: '', recursos: '', nivelBloom: '' },
@@ -100,22 +100,22 @@ let planificacion = {
 };
 
 // ================================================================
-// --- SECCI�f�?oN: SERVICIOS â�,��?o AN�fLISIS Y GENERACI�f�?oN ---
+// --- SECCIÓ?oN: SERVICIOS – ANÁLISIS Y GENERACIÓ?oN ---
 // ================================================================
 
 /**
  * Analiza el texto del RA y detecta su nivel dominante en Bloom
- * @param {string} texto - Descripci�f³n del RA
+ * @param {string} texto - Descripción del RA
  * @returns {string} nivel - 'conocimiento'|'comprension'|'aplicacion'|'actitudinal'
  */
 function analizarNivelBloom(texto) {
   const t = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const puntajes = { conocimiento: 0, comprension: 0, aplicacion: 0, actitudinal: 0 };
 
-  // Puntuar cada nivel seg�fºn verbos encontrados
+  // Puntuar cada nivel según verbos encontrados
   for (const [nivel, verbos] of Object.entries(verbosBloom)) {
     for (const verbo of verbos) {
-      // Normalizar verbo tambi�f©n
+      // Normalizar verbo también
       const vNorm = verbo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (t.includes(vNorm)) {
         puntajes[nivel] += nivel === 'actitudinal' ? 2 : 1; // actitudinal con mayor peso
@@ -127,12 +127,12 @@ function analizarNivelBloom(texto) {
   const niveles = Object.entries(puntajes);
   let dominante = niveles.reduce((max, cur) => cur[1] > max[1] ? cur : max, ['aplicacion', 0]);
 
-  // Si no se detect�f³ ning�fºn verbo, inferir por palabras clave
+  // Si no se detectó ningún verbo, inferir por palabras clave
   if (dominante[1] === 0) {
     if (t.includes("desarrollar") || t.includes("construir") || t.includes("producir") || t.includes("implementar")) return 'aplicacion';
     if (t.includes("explicar") || t.includes("comparar") || t.includes("relacionar")) return 'comprension';
     if (t.includes("valorar") || t.includes("comprometer") || t.includes("respetar")) return 'actitudinal';
-    return 'aplicacion'; // defecto: aplicaci�f³n para m�f³dulos t�f©cnicos
+    return 'aplicacion'; // defecto: aplicación para módulos técnicos
   }
 
   return dominante[0];
@@ -140,12 +140,12 @@ function analizarNivelBloom(texto) {
 
 /**
  * Extrae palabras clave del RA para construir los EC
- * @param {string} ra - Descripci�f³n del RA
+ * @param {string} ra - Descripción del RA
  * @returns {string[]} palabras clave relevantes
  */
 function extraerPalabrasClave(ra) {
-  // Palabras a ignorar (stopwords en espa�f±ol)
-  const stopwords = new Set(["el","la","los","las","un","una","unos","unas","y","o","de","del","al","en","con","por","para","que","se","su","sus","es","son","ser","esta","este","son","como","mas","m�f¡s","mediante","trav�f©s","a","e","u","las","los","hay"]);
+  // Palabras a ignorar (stopwords en español)
+  const stopwords = new Set(["el","la","los","las","un","una","unos","unas","y","o","de","del","al","en","con","por","para","que","se","su","sus","es","son","ser","esta","este","son","como","mas","más","mediante","través","a","e","u","las","los","hay"]);
   return ra.toLowerCase()
     .replace(/[.,;:!?()]/g, '')
     .split(/\s+/)
@@ -155,18 +155,18 @@ function extraerPalabrasClave(ra) {
 
 /**
  * Genera los 4 Elementos de Capacidad a partir del RA y criterios
- * @param {string} ra - Descripci�f³n del RA
- * @param {string} criterios - Criterios de referencia (uno por l�f­nea)
+ * @param {string} ra - Descripción del RA
+ * @param {string} criterios - Criterios de referencia (uno por línea)
  * @param {object} datos - Datos generales para contextualizar
  * @returns {Array} Lista de 4 objetos EC
  */
 function generarElementosCapacidad(ra, criterios, datos) {
   const palabrasClave = extraerPalabrasClave(ra);
   const listaCriterios = criterios.split('\n').map(c => c.trim()).filter(c => c.length > 3);
-  const modulo = datos.moduloFormativo || 'el m�f³dulo formativo';
-  const campo = palabrasClave.slice(0,3).join(', ') || 'los conceptos del m�f³dulo';
+  const modulo = datos.moduloFormativo || 'el módulo formativo';
+  const campo = palabrasClave.slice(0,3).join(', ') || 'los conceptos del módulo';
 
-  // Construir n�fºcleo tem�f¡tico a partir del RA
+  // Construir núcleo temático a partir del RA
   const nucleoTematico = palabrasClave.length > 0
     ? palabrasClave.slice(0, 4).join(' y ')
     : modulo.toLowerCase();
@@ -174,19 +174,19 @@ function generarElementosCapacidad(ra, criterios, datos) {
   // Criterio base para usar si no hay criterios de referencia
   const criterio1 = listaCriterios[0] || `los fundamentos de ${campo}`;
   const criterio2 = listaCriterios[1] || `los procedimientos de ${campo}`;
-  const criterio3 = listaCriterios[2] || `t�f©cnicas y herramientas de ${campo}`;
+  const criterio3 = listaCriterios[2] || `técnicas y herramientas de ${campo}`;
 
-  // Determinar el contexto del m�f³dulo para las condiciones
+  // Determinar el contexto del módulo para las condiciones
   const contexto = datos.moduloFormativo
     ? `en el contexto de ${datos.moduloFormativo}`
-    : 'en situaciones del �f¡mbito t�f©cnico profesional';
+    : 'en situaciones del ámbito técnico profesional';
 
   const ec = [
     {
       codigo: 'E.C.1.1.1',
       nivel: 'conocimiento',
       verbo: 'Identificar',
-      enunciado: `Identificar los conceptos, principios y caracter�f­sticas fundamentales de ${nucleoTematico}, mediante el an�f¡lisis de materiales curriculares y fuentes t�f©cnicas especializadas, en correspondencia con ${criterio1}.`,
+      enunciado: `Identificar los conceptos, principios y características fundamentales de ${nucleoTematico}, mediante el análisis de materiales curriculares y fuentes técnicas especializadas, en correspondencia con ${criterio1}.`,
       horasAsignadas: 0,
       secuencia: plantillasSecuencia.conocimiento
     },
@@ -194,7 +194,7 @@ function generarElementosCapacidad(ra, criterios, datos) {
       codigo: 'E.C.2.1.1',
       nivel: 'comprension',
       verbo: 'Explicar',
-      enunciado: `Explicar los procesos, relaciones y fundamentos te�f³ricos de ${nucleoTematico}, comparando enfoques y t�f©cnicas mediante el an�f¡lisis de casos reales, en correspondencia con ${criterio2}.`,
+      enunciado: `Explicar los procesos, relaciones y fundamentos teóricos de ${nucleoTematico}, comparando enfoques y técnicas mediante el análisis de casos reales, en correspondencia con ${criterio2}.`,
       horasAsignadas: 0,
       secuencia: plantillasSecuencia.comprension
     },
@@ -202,7 +202,7 @@ function generarElementosCapacidad(ra, criterios, datos) {
       codigo: 'E.C.3.1.1',
       nivel: 'aplicacion',
       verbo: 'Aplicar',
-      enunciado: `Aplicar los conocimientos y procedimientos de ${nucleoTematico} para resolver situaciones pr�f¡cticas del campo t�f©cnico, utilizando herramientas y t�f©cnicas adecuadas ${contexto}, en correspondencia con ${criterio3}.`,
+      enunciado: `Aplicar los conocimientos y procedimientos de ${nucleoTematico} para resolver situaciones prácticas del campo técnico, utilizando herramientas y técnicas adecuadas ${contexto}, en correspondencia con ${criterio3}.`,
       horasAsignadas: 0,
       secuencia: plantillasSecuencia.aplicacion
     },
@@ -210,7 +210,7 @@ function generarElementosCapacidad(ra, criterios, datos) {
       codigo: 'E.C.4.1.1',
       nivel: 'actitudinal',
       verbo: 'Valorar',
-      enunciado: `Valorar la importancia del dominio t�f©cnico y �f©tico de ${nucleoTematico} asumiendo una actitud responsable, colaborativa y comprometida con la calidad del trabajo, demostrando integridad profesional en todas las actividades del m�f³dulo.`,
+      enunciado: `Valorar la importancia del dominio técnico y ético de ${nucleoTematico} asumiendo una actitud responsable, colaborativa y comprometida con la calidad del trabajo, demostrando integridad profesional en todas las actividades del módulo.`,
       horasAsignadas: 0,
       secuencia: plantillasSecuencia.actitudinal
     }
@@ -221,7 +221,7 @@ function generarElementosCapacidad(ra, criterios, datos) {
 
 /**
  * Calcula todas las fechas reales de clase entre inicio y fin
- * seg�fºn los d�f­as seleccionados
+ * según los días seleccionados
  * @param {object} diasConfig - { lunes: {horas:2}, martes: {horas:3}, ... }
  * @param {string} fechaInicio - 'YYYY-MM-DD'
  * @param {string} fechaFin - 'YYYY-MM-DD'
@@ -280,7 +280,7 @@ function calcularSemanas(fechaInicio, fechaFin) {
 }
 
 // ================================================================
-// --- SECCI�f�?oN: SERVICIOS â�,��?o ACTIVIDADES ---
+// --- SECCIÓ?oN: SERVICIOS – ACTIVIDADES ---
 // ================================================================
 
 /**
@@ -293,14 +293,14 @@ function generarActividades(listaEC, fechasClase) {
   if (fechasClase.length === 0) return [];
 
   const actividades = [];
-  // Distribuir fechas equitativamente entre los 4 EC (m�f¡x 2 por EC)
+  // Distribuir fechas equitativamente entre los 4 EC (máx 2 por EC)
   const totalFechas = fechasClase.length;
-  // Calcular �f­ndices de asignaci�f³n proporcional
+  // Calcular índices de asignación proporcional
   const porcentajes = [0.20, 0.25, 0.40, 0.15]; // mismo que horas
   let cursor = 0;
 
   listaEC.forEach((ec, idxEC) => {
-    // N�fºmero de actividades para este EC (1 o 2)
+    // Número de actividades para este EC (1 o 2)
     const numActs = ec.nivel === 'actitudinal' ? 1 : 2;
     const plantillasActs = obtenerPlantillasActividad(ec);
 
@@ -315,7 +315,7 @@ function generarActividades(listaEC, fechasClase) {
         fecha: fechaObj.fecha,
         fechaStr: fechaObj.fechaStr,
         horas: fechaObj.horas,
-        instrumento: null // se genera despu�f©s
+        instrumento: null // se genera después
       };
       act.instrumento = generarInstrumento(act, ec.nivel);
       actividades.push(act);
@@ -326,27 +326,27 @@ function generarActividades(listaEC, fechasClase) {
 }
 
 /**
- * Genera los enunciados de actividad seg�fºn el nivel del EC
+ * Genera los enunciados de actividad según el nivel del EC
  */
 function obtenerPlantillasActividad(ec) {
-  const textoCorto = ec.enunciado.split(',')[0].replace(/^[A-Z�f�f�?��f�f�?o�fš][a-z�f¡�f©�f­�f³�fº]+ /,'').trim();
+  const textoCorto = ec.enunciado.split(',')[0].replace(/^[A-ZÁÓ?ÍÓ?ofš][a-záéíóú]+ /,'').trim();
   const campo = textoCorto.length > 60 ? textoCorto.substring(0, 60) + '...' : textoCorto;
 
   const mapActividades = {
     conocimiento: [
-      `Cuestionario escrito: Identificaci�f³n y definici�f³n de los conceptos clave relacionados con ${campo}`,
-      `Elaboraci�f³n de mapa conceptual sobre los fundamentos te�f³ricos de ${campo}`
+      `Cuestionario escrito: Identificación y definición de los conceptos clave relacionados con ${campo}`,
+      `Elaboración de mapa conceptual sobre los fundamentos teóricos de ${campo}`
     ],
     comprension: [
-      `Exposici�f³n oral breve: Explicaci�f³n comparativa de los procesos y elementos de ${campo}`,
-      `Taller de an�f¡lisis de casos: Interpretaci�f³n y relaci�f³n de conceptos de ${campo}`
+      `Exposición oral breve: Explicación comparativa de los procesos y elementos de ${campo}`,
+      `Taller de análisis de casos: Interpretación y relación de conceptos de ${campo}`
     ],
     aplicacion: [
-      `Pr�f¡ctica supervisada: Resoluci�f³n de situaci�f³n real aplicando los procedimientos de ${campo}`,
-      `Proyecto integrador: Desarrollo y presentaci�f³n de producto t�f©cnico demostrando dominio de ${campo}`
+      `Práctica supervisada: Resolución de situación real aplicando los procedimientos de ${campo}`,
+      `Proyecto integrador: Desarrollo y presentación de producto técnico demostrando dominio de ${campo}`
     ],
     actitudinal: [
-      `Reflexi�f³n y portafolio: Valoraci�f³n cr�f­tica de la pr�f¡ctica profesional �f©tica en ${campo}`
+      `Reflexión y portafolio: Valoración crítica de la práctica profesional ética en ${campo}`
     ]
   };
 
@@ -354,11 +354,11 @@ function obtenerPlantillasActividad(ec) {
 }
 
 // ================================================================
-// --- SECCI�f�?oN: SERVICIOS â�,��?o INSTRUMENTOS ---
+// --- SECCIÓ?oN: SERVICIOS – INSTRUMENTOS ---
 // ================================================================
 
 /**
- * Determina y genera el instrumento de evaluaci�f³n para una actividad
+ * Determina y genera el instrumento de evaluación para una actividad
  * @param {object} actividad
  * @param {string} nivelEC
  * @returns {object} instrumento
@@ -372,14 +372,14 @@ function generarInstrumento(actividad, nivelEC) {
 }
 
 /**
- * Genera una Lista de Cotejo para actividades de conocimiento/comprensi�f³n
+ * Genera una Lista de Cotejo para actividades de conocimiento/comprensión
  */
 function generarListaCotejo(actividad, nivel) {
   const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.conocimiento;
   return {
     tipo: 'cotejo',
     tipoLabel: 'Lista de Cotejo',
-    titulo: `Lista de Cotejo â�,��?o ${actividad.enunciado.split(':')[0]}`,
+    titulo: `Lista de Cotejo – ${actividad.enunciado.split(':')[0]}`,
     actividad: actividad.enunciado,
     ecCodigo: actividad.ecCodigo,
     criterios: criterios.map((c, i) => ({
@@ -391,12 +391,12 @@ function generarListaCotejo(actividad, nivel) {
     })),
     escala: ['Logrado', 'No Logrado'],
     puntaje: 100,
-    instrucciones: 'Marque con una â�"�?o en la casilla correspondiente seg�fºn la observaci�f³n del desempe�f±o del estudiante durante la actividad.'
+    instrucciones: 'Marque con una âÓ en la casilla correspondiente según la observación del desempeño del estudiante durante la actividad.'
   };
 }
 
 /**
- * Genera una R�fºbrica de evaluaci�f³n para actividades de aplicaci�f³n/actitudinal
+ * Genera una Rúbrica de evaluación para actividades de aplicación/actitudinal
  */
 function generarRubrica(actividad, nivel) {
   const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
@@ -404,13 +404,13 @@ function generarRubrica(actividad, nivel) {
     { nombre: 'Excelente',    puntos: 4, clase: 'nivel-excelente',    descripcionSufijo: 'de manera excepcional, superando las expectativas' },
     { nombre: 'Bueno',        puntos: 3, clase: 'nivel-bueno',        descripcionSufijo: 'de manera satisfactoria, cumpliendo las expectativas' },
     { nombre: 'En proceso',   puntos: 2, clase: 'nivel-proceso',      descripcionSufijo: 'de manera parcial, con algunas deficiencias observadas' },
-    { nombre: 'Insuficiente', puntos: 1, clase: 'nivel-insuficiente', descripcionSufijo: 'de manera inadecuada, sin alcanzar los criterios m�f­nimos' }
+    { nombre: 'Insuficiente', puntos: 1, clase: 'nivel-insuficiente', descripcionSufijo: 'de manera inadecuada, sin alcanzar los criterios mínimos' }
   ];
 
   return {
     tipo: 'rubrica',
-    tipoLabel: 'R�fºbrica de Evaluaci�f³n',
-    titulo: `R�fºbrica â�,��?o ${actividad.enunciado.split(':')[0]}`,
+    tipoLabel: 'Rúbrica de Evaluación',
+    titulo: `Rúbrica – ${actividad.enunciado.split(':')[0]}`,
     actividad: actividad.enunciado,
     ecCodigo: actividad.ecCodigo,
     niveles,
@@ -420,12 +420,12 @@ function generarRubrica(actividad, nivel) {
       descriptores: niveles.map(n => `${c} ${n.descripcionSufijo}.`)
     })),
     puntajeMax: criterios.length * 4,
-    instrucciones: 'Seleccione el nivel de desempe�f±o alcanzado por el estudiante en cada criterio de evaluaci�f³n.'
+    instrucciones: 'Seleccione el nivel de desempeño alcanzado por el estudiante en cada criterio de evaluación.'
   };
 }
 
 // ================================================================
-// --- SECCI�"N: UI �?" RENDERIZADO DE ELEMENTOS DE CAPACIDAD ---
+// --- SECCIÓN: UI ?" RENDERIZADO DE ELEMENTOS DE CAPACIDAD ---
 // ================================================================
 
 /**
@@ -495,7 +495,7 @@ function renderizarEC(listaEC) {
 }
 
 // ================================================================
-// --- SECCI�"N: UI �?" RENDERIZADO DE ACTIVIDADES ---
+// --- SECCIÓN: UI ?" RENDERIZADO DE ACTIVIDADES ---
 // ================================================================
 
 /**
@@ -537,7 +537,7 @@ function renderizarActividades(listaActividades) {
 }
 
 // ================================================================
-// --- SECCI�"N: UI �?" MODAL DE INSTRUMENTO ---
+// --- SECCIÓN: UI ?" MODAL DE INSTRUMENTO ---
 // ================================================================
 
 /**
@@ -699,7 +699,7 @@ function copiarModal() {
 }
 
 // ================================================================
-// --- SECCI�"N: UI �?" VISTA PREVIA ---
+// --- SECCIÓN: UI ?" VISTA PREVIA ---
 // ================================================================
 
 /**
@@ -815,7 +815,7 @@ function renderizarVistaPrevia() {
 }
 
 // ================================================================
-// --- SECCI�"N: EXPORTACI�"N ---
+// --- SECCIÓN: EXPORTACIÓN ---
 // ================================================================
 
 /** Imprime / Guarda como PDF usando window.print() */
@@ -874,7 +874,7 @@ function copiarPortapapeles() {
 }
 
 // ================================================================
-// --- SECCI�"N: STORAGE �?" LOCALSTORAGE ---
+// --- SECCIÓN: STORAGE ?" LOCALSTORAGE ---
 // ================================================================
 
 const STORAGE_KEY = 'planificadorRA_borrador_v1';
@@ -980,7 +980,7 @@ function nuevaPlanificacion() {
 }
 
 // ================================================================
-// --- SECCI�"N: UI �?" STEPPER Y NAVEGACI�"N ---
+// --- SECCIÓN: UI ?" STEPPER Y NAVEGACIÓN ---
 // ================================================================
 
 let pasoActual = 1;
@@ -1038,7 +1038,7 @@ function actualizarStepper(pasoActivo) {
 }
 
 // ================================================================
-// --- SECCI�"N: VALIDACI�"N DE FORMULARIOS ---
+// --- SECCIÓN: VALIDACIÓN DE FORMULARIOS ---
 // ================================================================
 
 /** Valida el paso actual antes de avanzar */
@@ -1104,7 +1104,7 @@ function validarPaso2() {
 }
 
 // ================================================================
-// --- SECCI�"N: RECOLECCI�"N Y GUARDADO DE DATOS DEL FORMULARIO ---
+// --- SECCIÓN: RECOLECCIÓN Y GUARDADO DE DATOS DEL FORMULARIO ---
 // ================================================================
 
 function guardarDatosFormulario() {
@@ -1152,7 +1152,7 @@ function obtenerDiasClase() {
 }
 
 // ================================================================
-// --- SECCI�"N: ORQUESTADOR PRINCIPAL �?" GENERAR PLANIFICACI�"N ---
+// --- SECCIÓN: ORQUESTADOR PRINCIPAL ?" GENERAR PLANIFICACIÓN ---
 // ================================================================
 
 /**
@@ -1233,7 +1233,7 @@ function generarPlanificacion() {
 }
 
 // ================================================================
-// --- SECCI�"N: UI �?" HELPERS ---
+// --- SECCIÓN: UI ?" HELPERS ---
 // ================================================================
 
 /** Muestra/actualiza el badge de nivel Bloom detectado */
@@ -1296,7 +1296,7 @@ function mostrarToast(mensaje, tipo = 'success') {
 }
 
 // ================================================================
-// --- SECCI�"N: INICIALIZACI�"N DE LA APP ---
+// --- SECCIÓN: INICIALIZACIÓN DE LA APP ---
 // ================================================================
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Planificador Educativo por RA | INFOTEP República Dominicana</title>
-  <meta name="description" content="Sistema de Planificación Educativa por Resultados de Aprendizaje para docentes de educación técnico profesional de la República Dominicana." />
+  <title>El Gran Planificador</title>
+  <meta name="description"
+    content="Sistema de Planificación Educativa por Resultados de Aprendizaje para docentes de educación técnico profesional de la República Dominicana." />
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
   <!-- ===== BANNER DE BORRADOR ===== -->
@@ -117,7 +122,8 @@
           <!-- Nombre del Bachillerato Técnico -->
           <div class="form-group form-group--full">
             <label for="nombre-bachillerato">Nombre del Bachillerato Técnico *</label>
-            <input type="text" id="nombre-bachillerato" placeholder="Ej: Bachillerato Técnico en Desarrollo de Software" required />
+            <input type="text" id="nombre-bachillerato" placeholder="Ej: Bachillerato Técnico en Desarrollo de Software"
+              required />
           </div>
 
           <!-- Código del Título -->
@@ -273,12 +279,9 @@
           <!-- Descripción del RA -->
           <div class="form-group form-group--full">
             <label for="descripcion-ra">Descripción del Resultado de Aprendizaje (RA) *</label>
-            <textarea
-              id="descripcion-ra"
-              rows="5"
+            <textarea id="descripcion-ra" rows="5"
               placeholder="Escribe aquí la descripción completa del RA. Ej: El/la estudiante será capaz de desarrollar aplicaciones web usando JavaScript moderno, aplicando principios de diseño responsivo y buenas prácticas de programación, demostrando compromiso con la calidad del código..."
-              required
-            ></textarea>
+              required></textarea>
             <div id="nivel-bloom-detectado" class="bloom-badge hidden"></div>
           </div>
 
@@ -288,28 +291,23 @@
               Criterios de Evaluación de Referencia del Currículo
               <span class="label-optional">(opcional, uno por línea)</span>
             </label>
-            <textarea
-              id="criterios-referencia"
-              rows="5"
-              placeholder="Ingresa los criterios del currículo, uno por línea. Ej:&#10;Identifica los fundamentos de la programación orientada a objetos&#10;Desarrolla interfaces de usuario responsivas&#10;Aplica buenas prácticas de codificación"
-            ></textarea>
+            <textarea id="criterios-referencia" rows="5"
+              placeholder="Ingresa los criterios del currículo, uno por línea. Ej:&#10;Identifica los fundamentos de la programación orientada a objetos&#10;Desarrolla interfaces de usuario responsivas&#10;Aplica buenas prácticas de codificación"></textarea>
           </div>
 
           <!-- Recursos didácticos -->
           <div class="form-group form-group--full">
             <label for="recursos-didacticos">Recursos Didácticos Disponibles</label>
-            <textarea
-              id="recursos-didacticos"
-              rows="3"
-              placeholder="Ej: Computadoras con acceso a internet, proyector, pizarrón digital, plataforma Moodle, herramientas de desarrollo VS Code..."
-            ></textarea>
+            <textarea id="recursos-didacticos" rows="3"
+              placeholder="Ej: Computadoras con acceso a internet, proyector, pizarrón digital, plataforma Moodle, herramientas de desarrollo VS Code..."></textarea>
           </div>
         </div>
 
         <!-- Info tip -->
         <div class="info-tip">
           <span class="material-icons">lightbulb</span>
-          <p>El sistema analizará el texto del RA para detectar su nivel de dominio según la <strong>Taxonomía de Bloom</strong> y generará automáticamente los Elementos de Capacidad (EC) adecuados.</p>
+          <p>El sistema analizará el texto del RA para detectar su nivel de dominio según la <strong>Taxonomía de
+              Bloom</strong> y generará automáticamente los Elementos de Capacidad (EC) adecuados.</p>
         </div>
 
       </div>
@@ -348,7 +346,8 @@
 
         <div class="info-tip">
           <span class="material-icons">edit_note</span>
-          <p>Los EC han sido generados automáticamente. Puedes <strong>editarlos</strong> haciendo clic en el texto. Los cambios se guardan automáticamente.</p>
+          <p>Los EC han sido generados automáticamente. Puedes <strong>editarlos</strong> haciendo clic en el texto. Los
+            cambios se guardan automáticamente.</p>
         </div>
 
         <!-- Resumen de horas distribuidas -->
@@ -409,7 +408,9 @@
 
         <div class="info-tip">
           <span class="material-icons">info</span>
-          <p>Las actividades tienen fechas reales calculadas según los días de clase ingresados. Haz clic en <strong>"Ver instrumento"</strong> para visualizar la lista de cotejo o rúbrica correspondiente.</p>
+          <p>Las actividades tienen fechas reales calculadas según los días de clase ingresados. Haz clic en
+            <strong>"Ver instrumento"</strong> para visualizar la lista de cotejo o rúbrica correspondiente.
+          </p>
         </div>
 
         <!-- Tabla de actividades -->
@@ -526,4 +527,5 @@
   <!-- Script principal -->
   <script src="app.js"></script>
 </body>
+
 </html>
