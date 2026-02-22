@@ -579,37 +579,42 @@ function analizarNivelBloom(texto) {
 
 
 function extraerPalabrasClave(ra) {
+  // Stopwords ampliadas (incluye verbos en infinitivo comunes)
+  const stopwords = new Set([
+    // articulos / preposiciones / conjunciones
+    'el','la','los','las','un','una','unos','unas','y','o','de','del','al',
+    'en','con','por','para','que','se','su','sus','es','son','ser','esta',
+    'este','como','más','mas','mediante','través','traves','a','e','u',
+    'hay','dicho','dichos','dichas','dicha','cuyo','cuya','cuyos','cuyas',
+    'según','segun','cuanto','cuanta','cuantos','cuantas','todo','toda',
+    'todos','todas','cada','otro','otra','otros','otras','mismo','misma',
+    // verbos infinitivos muy frecuentes (a filtrar)
+    'identificar','reconocer','aplicar','analizar','explicar','valorar',
+    'evaluar','demostrar','utilizar','ejecutar','implementar','desarrollar',
+    'realizar','efectuar','llevar','hacer','tener','poder','deber','saber',
+    'conocer','comprender','interpretar','relacionar','comparar','definir',
+    'describir','establecer','determinar','calcular','diseñar','disenar',
+    'planificar','organizar','gestionar','administrar','controlar',
+    // palabras genéricas poco útiles para el enunciado
+    'manera','forma','modo','medio','tipo','nivel','proceso','procedimiento',
+    'actividad','tarea','trabajo','campo','área','area','técnicas','tecnicas',
+    'herramientas','herramienta','situaciones','situacion','situaciones',
+    'general','generales','básico','basico','específico','especifico',
+    'correspondencia','referencia','materiales','material','fuentes','fuente',
+    'análisis','analisis','síntesis','sintesis','criterios','criterio',
+    'mediante','través','partir','base','marco','acuerdo','relación'
+  ]);
 
-
-
-  // Palabras a ignorar (stopwords en español)
-
-
-
-  const stopwords = new Set(["el","la","los","las","un","una","unos","unas","y","o","de","del","al","en","con","por","para","que","se","su","sus","es","son","ser","esta","este","son","como","mas","más","mediante","través","a","e","u","las","los","hay"]);
-
-
-
-  return ra.toLowerCase()
-
-
-
-    .replace(/[.,;:!?()]/g, '')
-
-
-
+  // Extraer solo tokens de 4+ letras que no sean stopwords
+  const tokens = ra
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // quitar acentos para comparar
+    .replace(/[.,;:()\[\]{}'"\-!?]/g, ' ')
     .split(/\s+/)
+    .filter(w => w.length >= 4 && !stopwords.has(w) && !stopwords.has(w + 'r'));
 
-
-
-    .filter(w => w.length > 3 && !stopwords.has(w))
-
-
-
-    .slice(0, 8);
-
-
-
+  // Devolver maximo 5 tokens únicos
+  return [...new Set(tokens)].slice(0, 5);
 }
 
 
@@ -674,15 +679,12 @@ function generarElementosCapacidad(ra, criterios, datos) {
 
 
 
-  const nucleoTematico = palabrasClave.length > 0
-
-
-
-    ? palabrasClave.slice(0, 4).join(' y ')
-
-
-
-    : modulo.toLowerCase();
+  // Construir nucleo tematico: maximo 3 palabras clave (sustantivos/conceptos)
+  // unidas con coma para evitar frases comodines como "reconocer y sistema y gestion"
+  const topKeywords = palabrasClave.slice(0, 3);
+  const nucleoTematico = topKeywords.length > 0
+    ? topKeywords.join(', ')
+    : modulo.toLowerCase().split(' ').slice(0, 4).join(' ');
 
 
 
@@ -5540,6 +5542,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+// ── Helper: asegurar que planificacion.actividades esté disponible ──────────
+// Si el usuario abre un panel sin haber generado en esta sesión,
+// intentamos restaurar desde el borrador guardado.
+function _asegurarPlanificacion() {
+  if (planificacion.actividades && planificacion.actividades.length > 0) return true;
+  try {
+    const raw = localStorage.getItem('planificadorRA_borrador');
+    if (!raw) return false;
+    const b = JSON.parse(raw);
+    if (!b || !b.actividades || b.actividades.length === 0) return false;
+    planificacion = b;
+    // Restaurar fechas
+    (planificacion.actividades || []).forEach(a => {
+      if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
+    });
+    (planificacion.fechasClase || []).forEach(f => {
+      if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha);
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── Helper: mostrar/ocultar las secciones correctas ─────────────────────────
+function _mostrarPanel(panelId) {
+  // Ocultar area principal
+  document.querySelector('.stepper-container')?.classList.add('hidden');
+  document.querySelector('.main-content')?.classList.add('hidden');
+  // Ocultar otros paneles
+  ['panel-calificaciones','panel-planificaciones','panel-diarias'].forEach(id => {
+    if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
+  });
+  // Mostrar panel deseado
+  document.getElementById(panelId)?.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function _ocultarPaneles() {
+  document.querySelector('.stepper-container')?.classList.remove('hidden');
+  document.querySelector('.main-content')?.classList.remove('hidden');
+  ['panel-calificaciones','panel-planificaciones','panel-diarias'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 const CAL_STORAGE_KEY = 'planificadorRA_calificaciones_v1';
 
 
@@ -7349,70 +7397,12 @@ function escapeHTML(str) {
 
 
 function abrirCalificaciones() {
-
-
-
-    // Auto-cargar desde borrador si no hay planificacion activa
-  if (!planificacion.actividades || planificacion.actividades.length === 0) {
-    try {
-      const _b = JSON.parse(localStorage.getItem('planificadorRA_borrador') || 'null');
-      if (_b && _b.actividades && _b.actividades.length > 0) {
-        planificacion = _b;
-        (planificacion.actividades || []).forEach(a => {
-          if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
-        });
-      }
-    } catch(e) {}
-  }
-cargarCalificaciones();
-
-
-
-  // Si no hay curso activo y hay cursos, activar el primero
-
-
-
-  if (!calState.cursoActivoId) {
-
-
-
-    const ids = Object.keys(calState.cursos);
-
-
-
-    if (ids.length > 0) calState.cursoActivoId = ids[0];
-
-
-
-  }
-
-
-
-
-
-
-
-  document.querySelector('.stepper-container')?.classList.add('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-calificaciones')?.classList.remove('hidden');
-
-
-
+  _asegurarPlanificacion();
+  cargarCalificaciones();
+  _mostrarPanel('panel-calificaciones');
   renderizarCalificaciones();
-
-
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
 }
+// __old_abrirCalificaciones__
 
 
 
@@ -7425,26 +7415,9 @@ cargarCalificaciones();
 
 
 function cerrarCalificaciones() {
-
-
-
-  document.querySelector('.stepper-container')?.classList.remove('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.remove('hidden');
-
-
-
-  document.getElementById('panel-calificaciones')?.classList.add('hidden');
-
-
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
+  _ocultarPaneles();
 }
+// __old_cerrarCalificaciones__
 
 
 
@@ -8709,34 +8682,10 @@ function escHTML(s) {
 
 
 function abrirPlanificaciones() {
-
-
-
   renderizarBiblioteca();
-
-
-
-  document.querySelector('.stepper-container')?.classList.add('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-calificaciones')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-planificaciones')?.classList.remove('hidden');
-
-
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
+  _mostrarPanel('panel-planificaciones');
 }
+// __old_abrirPlanificaciones__
 
 
 
@@ -8745,26 +8694,9 @@ function abrirPlanificaciones() {
 
 
 function cerrarPlanificaciones() {
-
-
-
-  document.querySelector('.stepper-container')?.classList.remove('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.remove('hidden');
-
-
-
-  document.getElementById('panel-planificaciones')?.classList.add('hidden');
-
-
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
+  _ocultarPaneles();
 }
+// __old_cerrarPlanificaciones__
 
 
 
@@ -10929,54 +10861,12 @@ function imprimirDiarias() {
 
 
 function abrirDiarias() {
-
-
-
-    // Auto-cargar desde borrador si no hay planificacion activa
-  if (!planificacion.actividades || planificacion.actividades.length === 0) {
-    try {
-      const _b = JSON.parse(localStorage.getItem('planificadorRA_borrador') || 'null');
-      if (_b && _b.actividades && _b.actividades.length > 0) {
-        planificacion = _b;
-        (planificacion.actividades || []).forEach(a => {
-          if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
-        });
-      }
-    } catch(e) {}
-  }
-cargarDiarias();
-
-
-
-  document.querySelector('.stepper-container')?.classList.add('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-calificaciones')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-planificaciones')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-diarias')?.classList.remove('hidden');
-
-
-
+  _asegurarPlanificacion();
+  cargarDiarias();
+  _mostrarPanel('panel-diarias');
   renderizarDiarias();
-
-
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
 }
+// __old_abrirDiarias__
 
 
 
@@ -10985,30 +10875,10 @@ cargarDiarias();
 
 
 function cerrarDiarias() {
-
-
-
   guardarTodasDiarias();
-
-
-
-  document.querySelector('.stepper-container')?.classList.remove('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.remove('hidden');
-
-
-
-  document.getElementById('panel-diarias')?.classList.add('hidden');
-
-
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
+  _ocultarPaneles();
 }
+// __old_cerrarDiarias__
 
 
 
