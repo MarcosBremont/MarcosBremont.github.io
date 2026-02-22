@@ -652,230 +652,82 @@ function extraerPalabrasClave(ra) {
 
 
 function generarElementosCapacidad(ra, criterios, datos) {
+  // Extraer núcleo temático del RA (frase más importante)
+  // Tomar la primera oración completa, limpiar y recortar
+  const raLimpio = (ra || '').trim().replace(/\s+/g, ' ');
 
+  // Extraer el objeto directo del RA (lo que está después del primer verbo)
+  // Generalmente: "Reconocer UN SISTEMA DE GESTIÓN DE SEGURIDAD..."
+  const matchObjeto = raLimpio.match(
+    /^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+(?:\s+[a-záéíóúüñ]+)?\s+(.{10,80})(?:[,.]|$)/
+  );
+  const objetoRA = matchObjeto
+    ? matchObjeto[1].replace(/,.*$/, '').trim()
+    : raLimpio.split(/[,;.]/)[0].replace(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+/, '').trim().substring(0, 70);
 
+  // Parsear los Criterios de Evaluación (uno por línea)
+  const listaCE = (criterios || '').split('\n')
+    .map(c => c.trim())
+    .filter(c => c.length > 5);
 
-  const palabrasClave = extraerPalabrasClave(ra);
+  // Asignar criterios a cada EC
+  function getCE(idx) {
+    if (listaCE[idx]) return listaCE[idx];
+    if (listaCE[0])   return listaCE[0];
+    return 'los criterios del módulo';
+  }
 
+  // Contexto del módulo
+  const modulo = (datos.moduloFormativo || 'el módulo formativo').toLowerCase();
 
-
-  const listaCriterios = criterios.split('\n').map(c => c.trim()).filter(c => c.length > 3);
-
-
-
-  const modulo = datos.moduloFormativo || 'el módulo formativo';
-
-
-
-  const campo = palabrasClave.slice(0,3).join(', ') || 'los conceptos del módulo';
-
-
-
-
-
-
-
-  // Construir núcleo temático a partir del RA
-
-
-
-  // Construir nucleo tematico: maximo 3 palabras clave (sustantivos/conceptos)
-  // unidas con coma para evitar frases comodines como "reconocer y sistema y gestion"
-  const topKeywords = palabrasClave.slice(0, 3);
-  const nucleoTematico = topKeywords.length > 0
-    ? topKeywords.join(', ')
-    : modulo.toLowerCase().split(' ').slice(0, 4).join(' ');
-
-
-
-
-
-
-
-  // Criterio base para usar si no hay criterios de referencia
-
-
-
-  const criterio1 = listaCriterios[0] || `los fundamentos de ${campo}`;
-
-
-
-  const criterio2 = listaCriterios[1] || `los procedimientos de ${campo}`;
-
-
-
-  const criterio3 = listaCriterios[2] || `técnicas y herramientas de ${campo}`;
-
-
-
-
-
-
-
-  // Determinar el contexto del módulo para las condiciones
-
-
-
-  const contexto = datos.moduloFormativo
-
-
-
-    ? `en el contexto de ${datos.moduloFormativo}`
-
-
-
-    : 'en situaciones del ámbito técnico profesional';
-
-
-
-
-
-
+  // Condiciones pedagógicas por nivel
+  const condiciones = {
+    conocimiento: 'mediante el análisis de materiales curriculares y fuentes técnicas especializadas',
+    comprension:  'a través del análisis comparativo de casos reales relacionados con el entorno profesional',
+    aplicacion:   'utilizando herramientas y técnicas apropiadas en situaciones prácticas del ámbito laboral',
+    actitudinal:  'asumiendo una actitud reflexiva, comprometida y ética ante su práctica profesional'
+  };
 
   const ec = [
-
-
-
     {
-
-
-
       codigo: 'E.C.1.1.1',
-
-
-
       nivel: 'conocimiento',
-
-
-
+      nivelBloom: 'conocimiento',
       verbo: 'Identificar',
-
-
-
-      enunciado: `Identificar los conceptos, principios y características fundamentales de ${nucleoTematico}, mediante el análisis de materiales curriculares y fuentes técnicas especializadas, en correspondencia con ${criterio1}.`,
-
-
-
+      enunciado: `Identificar ${objetoRA}, ${condiciones.conocimiento}, en correspondencia con ${getCE(0)}.`,
       horasAsignadas: 0,
-
-
-
       secuencia: plantillasSecuencia.conocimiento
-
-
-
     },
-
-
-
     {
-
-
-
       codigo: 'E.C.2.1.1',
-
-
-
       nivel: 'comprension',
-
-
-
+      nivelBloom: 'comprension',
       verbo: 'Explicar',
-
-
-
-      enunciado: `Explicar los procesos, relaciones y fundamentos teóricos de ${nucleoTematico}, comparando enfoques y técnicas mediante el análisis de casos reales, en correspondencia con ${criterio2}.`,
-
-
-
+      enunciado: `Explicar los elementos, relaciones y responsabilidades asociadas a ${objetoRA}, ${condiciones.comprension}, en correspondencia con ${getCE(1)}.`,
       horasAsignadas: 0,
-
-
-
       secuencia: plantillasSecuencia.comprension
-
-
-
     },
-
-
-
     {
-
-
-
       codigo: 'E.C.3.1.1',
-
-
-
       nivel: 'aplicacion',
-
-
-
+      nivelBloom: 'aplicacion',
       verbo: 'Aplicar',
-
-
-
-      enunciado: `Aplicar los conocimientos y procedimientos de ${nucleoTematico} para resolver situaciones prácticas del campo técnico, utilizando herramientas y técnicas adecuadas ${contexto}, en correspondencia con ${criterio3}.`,
-
-
-
+      enunciado: `Aplicar los procedimientos y mecanismos de ${objetoRA}, ${condiciones.aplicacion}, en correspondencia con ${getCE(2)}.`,
       horasAsignadas: 0,
-
-
-
       secuencia: plantillasSecuencia.aplicacion
-
-
-
     },
-
-
-
     {
-
-
-
       codigo: 'E.C.4.1.1',
-
-
-
       nivel: 'actitudinal',
-
-
-
+      nivelBloom: 'actitudinal',
       verbo: 'Valorar',
-
-
-
-      enunciado: `Valorar la importancia del dominio técnico y ético de ${nucleoTematico} asumiendo una actitud responsable, colaborativa y comprometida con la calidad del trabajo, demostrando integridad profesional en todas las actividades del módulo.`,
-
-
-
+      enunciado: `Valorar la importancia ética y profesional de ${objetoRA}, ${condiciones.actitudinal}, en correspondencia con ${getCE(3)}.`,
       horasAsignadas: 0,
-
-
-
       secuencia: plantillasSecuencia.actitudinal
-
-
-
     }
-
-
-
   ];
 
-
-
-
-
-
-
   return ec;
-
-
-
 }
 
 
@@ -1321,51 +1173,37 @@ function generarActividades(listaEC, fechasClase) {
 
 
 function obtenerPlantillasActividad(ec) {
+  // Extraer el objeto directo del EC (tras el verbo inicial)
+  const enunciado = ec.enunciado || '';
+  const matchObj  = enunciado.match(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+(.+?),/);
+  let campo = matchObj
+    ? matchObj[1].trim()
+    : enunciado.replace(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+/, '').split(',')[0].trim();
 
-  /* Extraer la parte descriptiva del EC quitando el verbo inicial (ej: "Aplicar", "Identificar")
-     y limitando a max 55 chars para que los enunciados de actividad queden legibles */
-  const textoCompleto = ec.enunciado || '';
-
-  // Tomar solo hasta el primer signo de puntuacion o limite de palabras
-  const fragmento = textoCompleto.split(/[,;:.]/)[0].trim();
-
-  // Quitar el primer verbo (termina en -ar/-er/-ir o esta mayuscula seguida de minusculas)
-  const sinVerbo = fragmento.replace(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+/, '').trim();
-
-  // Limitar a 55 caracteres terminando en palabra completa para no cortar a mitad
-  let campo = sinVerbo;
-  if (campo.length > 55) {
-    campo = campo.substring(0, 55);
-    const lastSpace = campo.lastIndexOf(' ');
-    if (lastSpace > 30) campo = campo.substring(0, lastSpace);
+  // Limitar longitud
+  if (campo.length > 60) {
+    campo = campo.substring(0, 57) + '...';
   }
-  if (!campo) campo = textoCompleto.substring(0, 45);
 
   const mapActividades = {
-
     conocimiento: [
-      `Cuestionario escrito: Identificación y definición de los conceptos clave de ${campo}`,
-      `Elaboración de mapa conceptual sobre los fundamentos teóricos de ${campo}`
+      `Cuestionario escrito: Identificación y definición de los conceptos clave relacionados con ${campo}`,
+      `Elaboración de mapa conceptual: Representación gráfica de los fundamentos y elementos de ${campo}`
     ],
-
     comprension: [
-      `Exposición oral breve: Explicación comparativa de los procesos relacionados con ${campo}`,
-      `Taller de análisis de casos: Interpretación y relación de conceptos de ${campo}`
+      `Exposición oral breve: Explicación comparativa de los procesos y responsabilidades de ${campo}`,
+      `Análisis de caso: Interpretación de situaciones reales vinculadas a ${campo}`
     ],
-
     aplicacion: [
-      `Práctica supervisada: Resolución de situación real aplicando los procedimientos de ${campo}`,
-      `Proyecto integrador: Desarrollo y presentación de producto técnico demostrando dominio de ${campo}`
+      `Práctica supervisada: Aplicación de procedimientos de ${campo} en situaciones del entorno laboral`,
+      `Proyecto integrador: Diseño y presentación de solución técnica demostrando dominio de ${campo}`
     ],
-
     actitudinal: [
-      `Reflexión y portafolio: Valoración crítica de la práctica profesional ética en ${campo}`
+      `Reflexión y portafolio: Valoración crítica de la práctica profesional ética relacionada con ${campo}`
     ]
-
   };
 
-  return mapActividades[ec.nivel] || [`Actividad de ${ec.nivel}: ${campo}`];
-
+  return mapActividades[ec.nivel] || [`Actividad aplicada: Demostración de competencias de ${campo}`];
 }
 
 
@@ -11059,9 +10897,12 @@ function actualizarBtnConfigIA() {
 // ─────────────────────────────────────────────────────────────
 
 function construirPromptGemini(dg, ra, fechasClase) {
-  const diasStr = (dg.diasClase || [])
-    .map(d => `${d.dia} (${d.horas}h)`)
-    .join(', ');
+  // diasClase es un objeto {lunes:{activo,horas}, martes:{activo,horas}, ...}
+  const diasClaseObj = dg.diasClase || {};
+  const diasArr = Object.entries(diasClaseObj)
+    .filter(([, v]) => v && v.activo)
+    .map(([dia, v]) => `${dia} (${v.horas}h)`);
+  const diasStr = diasArr.length > 0 ? diasArr.join(', ') : (dg.horasSemana + ' hrs/semana');
 
   const totalFechasSesion = fechasClase ? fechasClase.length : '?';
 
@@ -11152,14 +10993,13 @@ async function generarConGemini(dg, ra, fechasClase) {
   const prompt = construirPromptGemini(dg, ra, fechasClase);
 
   const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.35,
-      maxOutputTokens: 2048,
-      responseMimeType: 'application/json'
+      maxOutputTokens: 2048
     }
   };
 
@@ -11337,13 +11177,19 @@ generarPlanificacion = async function() {
     const msg = err.message || String(err);
 
     if (msg.includes('API_KEY_INVALID') || msg.includes('401')) {
-      mostrarToast('Clave inválida. Ve a ⚙️ y verifica tu API Key de Gemini.', 'error');
+      mostrarToast('❌ Clave inválida. Ve a ⚙️ Config. IA y verifica tu clave.', 'error');
+    } else if (msg.includes('expired') || msg.includes('400')) {
+      mostrarToast(
+        '⚠️ API key rechazada. Abre la app desde http://localhost:8080 (no desde archivo) o crea la clave sin restricciones en AI Studio.',
+        'error'
+      );
     } else if (msg.includes('QUOTA') || msg.includes('429')) {
-      mostrarToast('Límite de cuota del plan gratuito alcanzado. Intenta en 1 minuto.', 'error');
+      mostrarToast('⏳ Límite gratuito alcanzado. Espera 1 minuto e intenta de nuevo.', 'error');
     } else {
-      mostrarToast('Error de IA: ' + msg.substring(0, 80) + '. Usando generación local.', 'error');
-      _generarPlanificacionLocal();
+      mostrarToast('Error IA: ' + msg.substring(0, 80), 'error');
     }
+    // Siempre usar generacion local como fallback
+    _generarPlanificacionLocal();
   } finally {
     // Restaurar botón
     if (btnGenerar) btnGenerar.classList.remove('btn-generando');
