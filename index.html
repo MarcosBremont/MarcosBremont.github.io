@@ -35,7 +35,9 @@
   <header class="app-header">
     <div class="header-inner">
       <div class="header-brand">
-        <span class="material-icons header-icon">school</span>
+        <button class="logo-btn" onclick="irAlHome()" title="Inicio – El Gran Planificador">
+          <img src="logo.png" alt="El Gran Planificador" class="header-logo" />
+        </button>
         <div>
           <h1 class="header-title">Planificador Educativo por RA</h1>
           <p class="header-subtitle">Sistema de Educación Técnico Profesional · República Dominicana</p>
@@ -489,6 +491,188 @@
         <div></div>
       </div>
     </section>
+
+
+    <!-- ===== PANEL CALIFICACIONES (outside stepper) ===== -->
+    <div id="panel-calificaciones" class="cal-panel hidden">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon" style="background:#E8F5E9;color:#2E7D32;">grade</span>
+          <h2>Libro de Calificaciones</h2>
+          <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
+              <span class="material-icons">description</span> Exportar Word
+            </button>
+            <button class="btn-export btn-print btn-sm" onclick="imprimirCalificaciones()">
+              <span class="material-icons">print</span> Imprimir
+            </button>
+          </div>
+        </div>
+
+        <!-- Selector / creador de cursos -->
+        <div class="cal-cursos-bar">
+          <div class="cal-cursos-label">
+            <span class="material-icons">class</span> Curso:
+          </div>
+          <div id="cal-tabs" class="cal-tabs"></div>
+          <button class="btn-cal-add-curso" id="btn-add-curso" onclick="abrirModalNuevoCurso()">
+            <span class="material-icons">add</span> Nuevo curso
+          </button>
+        </div>
+
+        <!-- Añadir estudiantes -->
+        <div class="cal-add-estudiantes" id="cal-add-estudiantes-area">
+          <div class="cal-field-group">
+            <span class="material-icons" style="color:#1565C0;">person_add</span>
+            <textarea id="input-estudiantes" rows="3"
+              placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
+            <button class="btn-siguiente" style="align-self:flex-end;white-space:nowrap;"
+              onclick="agregarEstudiantes()">
+              <span class="material-icons">group_add</span> Agregar
+            </button>
+          </div>
+          <p class="subsection-hint" style="margin-top:4px;">
+            También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
+            <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
+          </p>
+        </div>
+
+        <!-- Info si no hay actividades cargadas -->
+        <div id="cal-sin-actividades" class="info-tip hidden" style="margin-bottom:16px;">
+          <span class="material-icons">info</span>
+          <p>No hay actividades generadas todavía. Completa la planificación (pasos 1–4) y vuelve aquí para registrar
+            las calificaciones.</p>
+        </div>
+
+        <!-- Tabla de calificaciones -->
+        <div class="tabla-responsiva" id="cal-tabla-wrap">
+          <table id="tabla-calificaciones" class="tabla-cal">
+            <thead id="cal-thead"></thead>
+            <tbody id="cal-tbody"></tbody>
+            <tfoot id="cal-tfoot"></tfoot>
+          </table>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="cal-leyenda">
+          <span class="cal-badge cal-aprobado">≥ 70 Aprobado</span>
+          <span class="cal-badge cal-regular">60–69 Regular</span>
+          <span class="cal-badge cal-reprobado">
+            < 60 Reprobado</span>
+              <span style="margin-left:auto;font-size:0.78rem;color:#757575;">Las notas se guardan automáticamente en el
+                navegador.</span>
+        </div>
+      </div>
+
+      <!-- Botón para volver a la planificación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="cerrarCalificaciones()">
+          <span class="material-icons">arrow_back</span> Volver a la planificación
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ===== PANEL PLANIFICACIONES (Biblioteca) ===== -->
+    <div id="panel-planificaciones" class="pln-panel hidden">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon" style="background:#EDE7F6;color:#4527A0;">folder_special</span>
+          <h2>Mis Planificaciones Guardadas</h2>
+          <div style="margin-left:auto;">
+            <button class="btn-nueva" style="background:rgba(69,39,160,0.18);border-color:rgba(179,157,219,0.6);"
+              onclick="nuevaPlanificacion()">
+              <span class="material-icons">add_circle_outline</span>
+              <span class="btn-nueva-label">Nueva planificación</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="info-tip" style="border-color:#7E57C2;background:#EDE7F6;">
+          <span class="material-icons" style="color:#4527A0;">save</span>
+          <p>Guarda la planificación actual con el botón <strong>"Guardar planificación"</strong> en cualquier paso.
+            Aquí aparecerán todas las que hayas guardado para retomarlas cuando quieras.</p>
+        </div>
+
+        <!-- Buscador -->
+        <div class="pln-search-bar">
+          <span class="material-icons" style="color:#9E9E9E;">search</span>
+          <input type="text" id="pln-buscador" placeholder="Buscar por módulo, docente o bachillerato..."
+            oninput="filtrarPlanificaciones()" />
+        </div>
+
+        <!-- Grid de tarjetas -->
+        <div id="pln-grid" class="pln-grid">
+          <!-- Se llena dinámicamente -->
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="pln-vacio" class="pln-vacio hidden">
+          <span class="material-icons">folder_open</span>
+          <p>No hay planificaciones guardadas todavía.</p>
+          <p>Completa una planificación y haz clic en <strong>"Guardar planificación"</strong>.</p>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="cerrarPlanificaciones()">
+          <span class="material-icons">arrow_back</span> Volver
+        </button>
+      </div>
+    </div>
+
+
+  <!-- ===== PANEL PLANIFICACIONES DIARIAS ===== -->
+  <div id="panel-diarias" class="pd-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E3F2FD;color:#0D47A1;">today</span>
+        <h2>Planificaciones Diarias</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-export btn-word btn-sm" onclick="exportarDiariasWord()">
+            <span class="material-icons">description</span> Exportar Word
+          </button>
+          <button class="btn-export btn-print btn-sm" onclick="imprimirDiarias()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
+        </div>
+      </div>
+
+      <div class="info-tip" style="border-color:#1565C0;background:#E3F2FD;">
+        <span class="material-icons" style="color:#0D47A1;">lightbulb</span>
+        <p>Cada <strong>actividad</strong> de tu planificación general se convierte en una sesión diaria con sus
+           tres momentos pedagógicos. Haz clic en <strong>"Generar"</strong> para auto-generar el contenido, o
+           escribe directamente en los campos.</p>
+      </div>
+
+      <!-- Sin actividades -->
+      <div id="pd-sin-actividades" class="pln-vacio hidden">
+        <span class="material-icons">event_busy</span>
+        <p>No hay actividades generadas.</p>
+        <p>Completa los primeros 4 pasos de la planificación y vuelve aquí.</p>
+      </div>
+
+      <!-- Selector de EC -->
+      <div id="pd-filtro-bar" class="pd-filtro-bar hidden">
+        <span style="font-weight:600;color:#0D47A1;font-size:0.9rem;">Filtrar por EC:</span>
+        <div id="pd-filtro-chips" class="pd-filtro-chips">
+          <button class="pd-chip-flt activo" data-ec="todos" onclick="filtrarSesionesEC(this,'todos')">Todas</button>
+        </div>
+      </div>
+
+      <!-- Lista de sesiones -->
+      <div id="pd-sesiones-lista" class="pd-sesiones-lista"></div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarDiarias()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+      <button class="btn-guardar-plan" onclick="guardarTodasDiarias()">
+        <span class="material-icons">save</span> Guardar cambios
+      </button>
+    </div>
+  </div>
 
   </main>
 

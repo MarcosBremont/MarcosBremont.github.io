@@ -1388,3 +1388,1394 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('? Planificador Educativo por RA inicializado correctamente.');
   console.log('?? Para desplegar en GitHub Pages: sube los 3 archivos al repositorio y activa Pages en Settings.');
 });
+
+
+// ================================================================
+// --- MÓDULO: CALIFICACIONES (Libro de Notas) ---
+// Almacenamiento 100% en localStorage, sin backend.
+// ================================================================
+
+const CAL_STORAGE_KEY = 'planificadorRA_calificaciones_v1';
+
+/**
+ * Estado global del módulo de calificaciones.
+ * Estructura:
+ * {
+ *   cursos: {
+ *     "id_curso": {
+ *       id: "uuid",
+ *       nombre: "2do Año Sección A",
+ *       estudiantes: [{ id, nombre }],
+ *       notas: { "idEstudiante": { "idActividad": valor } }
+ *     }
+ *   },
+ *   cursoActivoId: null
+ * }
+ */
+let calState = {
+  cursos: {},
+  cursoActivoId: null
+};
+
+/** Carga el estado de calificaciones desde localStorage */
+function cargarCalificaciones() {
+  try {
+    const raw = localStorage.getItem(CAL_STORAGE_KEY);
+    if (raw) calState = JSON.parse(raw);
+  } catch(e) {
+    calState = { cursos: {}, cursoActivoId: null };
+  }
+}
+
+/** Guarda el estado completo de calificaciones en localStorage */
+function guardarCalificaciones() {
+  localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState));
+}
+
+/** Genera un ID único simple */
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ----------------------------------------------------------------
+// CURSOS
+// ----------------------------------------------------------------
+
+/** Abre el modal para crear un nuevo curso */
+function abrirModalNuevoCurso() {
+  document.getElementById('modal-title').textContent = 'Nuevo Curso';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-curso-content">
+      <label for="input-nombre-curso">Nombre del curso (ej: 2do Año Sección A)</label>
+      <input type="text" id="input-nombre-curso" placeholder="Ej: 2do B - Turno Matutino"
+             maxlength="60" autofocus />
+    </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn-siguiente" onclick="crearCurso()">
+      <span class="material-icons">add</span> Crear curso
+    </button>
+    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('input-nombre-curso')?.focus(), 100);
+
+  // Permitir Enter para crear
+  document.getElementById('input-nombre-curso').addEventListener('keydown', e => {
+    if (e.key === 'Enter') crearCurso();
+  });
+}
+
+/** Crea un nuevo curso y lo activa */
+function crearCurso() {
+  const nombre = document.getElementById('input-nombre-curso')?.value?.trim();
+  if (!nombre) { mostrarToast('Escribe un nombre para el curso', 'error'); return; }
+
+  const id = uid();
+  calState.cursos[id] = { id, nombre, estudiantes: [], notas: {} };
+  calState.cursoActivoId = id;
+  guardarCalificaciones();
+  cerrarModalBtn();
+  renderizarCalificaciones();
+  mostrarToast(`Curso "${nombre}" creado`, 'success');
+}
+
+/** Elimina un curso con confirmación */
+function eliminarCurso(id) {
+  const curso = calState.cursos[id];
+  if (!curso) return;
+  if (!confirm(`¿Eliminar el curso "${curso.nombre}" y todas sus calificaciones?`)) return;
+  delete calState.cursos[id];
+  const ids = Object.keys(calState.cursos);
+  calState.cursoActivoId = ids.length > 0 ? ids[0] : null;
+  guardarCalificaciones();
+  renderizarCalificaciones();
+  mostrarToast('Curso eliminado', 'info');
+}
+
+/** Cambia el curso activo */
+function activarCurso(id) {
+  if (!calState.cursos[id]) return;
+  calState.cursoActivoId = id;
+  guardarCalificaciones();
+  renderizarCalificaciones();
+}
+
+// ----------------------------------------------------------------
+// ESTUDIANTES
+// ----------------------------------------------------------------
+
+/** Agrega los estudiantes escritos en el textarea */
+function agregarEstudiantes() {
+  const raw = document.getElementById('input-estudiantes')?.value || '';
+  const nombres = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+
+  if (nombres.length === 0) {
+    mostrarToast('Escribe al menos un nombre', 'error');
+    return;
+  }
+
+  const cursoId = calState.cursoActivoId;
+  if (!cursoId || !calState.cursos[cursoId]) {
+    mostrarToast('Primero crea o selecciona un curso', 'error');
+    return;
+  }
+
+  const curso = calState.cursos[cursoId];
+  let agregados = 0;
+  nombres.forEach(nombre => {
+    // Evitar duplicados exactos
+    const existe = curso.estudiantes.some(e => e.nombre.toLowerCase() === nombre.toLowerCase());
+    if (!existe) {
+      curso.estudiantes.push({ id: uid(), nombre });
+      agregados++;
+    }
+  });
+
+  if (agregados === 0) {
+    mostrarToast('Todos los nombres ya existen en el curso', 'info');
+    return;
+  }
+
+  document.getElementById('input-estudiantes').value = '';
+  guardarCalificaciones();
+  renderizarCalificaciones();
+  mostrarToast(`${agregados} estudiante(s) agregado(s)`, 'success');
+}
+
+/** Elimina un estudiante del curso activo */
+function eliminarEstudiante(estudianteId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  curso.estudiantes = curso.estudiantes.filter(e => e.id !== estudianteId);
+  delete curso.notas[estudianteId];
+  guardarCalificaciones();
+  renderizarTablaCalificaciones();
+}
+
+/** Inicia edición inline del nombre de un estudiante */
+function editarNombreEstudiante(estudianteId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const est = curso.estudiantes.find(e => e.id === estudianteId);
+  if (!est) return;
+
+  const celda = document.getElementById(`nombre-${estudianteId}`);
+  if (!celda) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = est.nombre;
+  input.style.cssText = 'width:100%;border:1.5px solid #1565C0;border-radius:4px;padding:4px 6px;font-family:Roboto,sans-serif;font-size:0.9rem;';
+
+  celda.querySelector('.td-nombre-inner').replaceWith(input);
+  input.focus();
+  input.select();
+
+  const guardar = () => {
+    const nuevo = input.value.trim();
+    if (nuevo) est.nombre = nuevo;
+    guardarCalificaciones();
+    renderizarTablaCalificaciones();
+  };
+
+  input.addEventListener('blur', guardar);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') guardar(); });
+}
+
+// ----------------------------------------------------------------
+// NOTAS
+// ----------------------------------------------------------------
+
+/** Registra una nota para un estudiante en una actividad */
+function registrarNota(estudianteId, actividadId, valor) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+
+  if (!curso.notas[estudianteId]) curso.notas[estudianteId] = {};
+
+  const num = parseFloat(valor);
+  if (valor === '' || isNaN(num)) {
+    delete curso.notas[estudianteId][actividadId];
+  } else {
+    curso.notas[estudianteId][actividadId] = Math.min(100, Math.max(0, num));
+  }
+
+  guardarCalificaciones();
+  actualizarFilaPromedio(estudianteId);
+  actualizarPromedioActividad(actividadId);
+}
+
+/** Recalcula y actualiza el promedio de un estudiante en su fila */
+function actualizarFilaPromedio(estudianteId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+
+  const notas = curso.notas[estudianteId] || {};
+  const vals = Object.values(notas).filter(n => n !== null && n !== undefined);
+  const promedio = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+
+  const cell = document.getElementById(`prom-${estudianteId}`);
+  if (!cell) return;
+
+  if (promedio === null) {
+    cell.textContent = '—';
+    cell.className = 'td-promedio';
+  } else {
+    const p = Math.round(promedio * 10) / 10;
+    cell.textContent = p.toFixed(1);
+    cell.className = `td-promedio ${p >= 70 ? 'prom-aprobado' : p >= 60 ? 'prom-regular' : 'prom-reprobado'}`;
+  }
+
+  // Colorear el input
+  const actIds = (planificacion.actividades || []).map(a => a.id);
+  actIds.forEach(aId => {
+    const inp = document.getElementById(`nota-${estudianteId}-${aId}`);
+    if (!inp) return;
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) {
+      inp.className = `input-nota ${v >= 70 ? 'nota-aprobado' : v >= 60 ? 'nota-regular' : 'nota-reprobado'}`;
+    } else {
+      inp.className = 'input-nota';
+    }
+  });
+}
+
+/** Recalcula el promedio por columna (actividad) en el footer */
+function actualizarPromedioActividad(actividadId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+
+  const vals = curso.estudiantes
+    .map(e => curso.notas[e.id]?.[actividadId])
+    .filter(v => v !== undefined && v !== null);
+
+  const cell = document.getElementById(`foot-${actividadId}`);
+  if (!cell) return;
+
+  if (vals.length === 0) {
+    cell.textContent = '—';
+  } else {
+    const p = vals.reduce((a, b) => a + b, 0) / vals.length;
+    cell.textContent = (Math.round(p * 10) / 10).toFixed(1);
+    cell.style.color = p >= 70 ? '#2E7D32' : p >= 60 ? '#E65100' : '#C62828';
+  }
+}
+
+// ----------------------------------------------------------------
+// RENDERIZADO
+// ----------------------------------------------------------------
+
+/** Renderiza el panel completo de calificaciones */
+function renderizarCalificaciones() {
+  renderizarTabsCursos();
+  renderizarTablaCalificaciones();
+}
+
+/** Renderiza los tabs de cursos */
+function renderizarTabsCursos() {
+  const container = document.getElementById('cal-tabs');
+  if (!container) return;
+
+  container.innerHTML = '';
+  const cursos = Object.values(calState.cursos);
+
+  if (cursos.length === 0) {
+    container.innerHTML = '<span style="color:#9E9E9E;font-size:0.85rem;">Sin cursos. Crea uno →</span>';
+    return;
+  }
+
+  cursos.forEach(curso => {
+    const tab = document.createElement('button');
+    tab.className = `cal-tab${curso.id === calState.cursoActivoId ? ' activo' : ''}`;
+    tab.innerHTML = `
+      <span class="material-icons" style="font-size:16px;">class</span>
+      ${escapeHTML(curso.nombre)}
+      <button class="cal-tab-del" title="Eliminar curso"
+        onclick="event.stopPropagation();eliminarCurso('${curso.id}')">
+        <span class="material-icons" style="font-size:16px;">close</span>
+      </button>`;
+    tab.onclick = () => activarCurso(curso.id);
+    container.appendChild(tab);
+  });
+}
+
+/** Renderiza la tabla de calificaciones del curso activo */
+function renderizarTablaCalificaciones() {
+  const thead = document.getElementById('cal-thead');
+  const tbody = document.getElementById('cal-tbody');
+  const tfoot = document.getElementById('cal-tfoot');
+  const sinActs = document.getElementById('cal-sin-actividades');
+
+  if (!thead || !tbody || !tfoot) return;
+
+  const actividades = planificacion.actividades || [];
+  const cursoId = calState.cursoActivoId;
+  const curso = cursoId ? calState.cursos[cursoId] : null;
+
+  // Si no hay actividades generadas, mostrar aviso
+  if (actividades.length === 0) {
+    sinActs?.classList.remove('hidden');
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+    return;
+  }
+  sinActs?.classList.add('hidden');
+
+  if (!curso) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Crea o selecciona un curso para comenzar.</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  // Agrupar actividades por EC
+  const grupos = {};
+  actividades.forEach(a => {
+    if (!grupos[a.ecCodigo]) grupos[a.ecCodigo] = [];
+    grupos[a.ecCodigo].push(a);
+  });
+
+  // ---- ENCABEZADO ----
+  // Fila 1: EC agrupados (colspan)
+  let headRow1 = '<tr class="tr-ec-header"><th class="th-nombre">Estudiante</th>';
+  // Fila 2: actividades individuales
+  let headRow2 = '<tr><th class="th-nombre" style="position:sticky;left:0;z-index:10;background:var(--color-primario-dark);">Nombre</th>';
+
+  Object.entries(grupos).forEach(([ecCodigo, acts]) => {
+    headRow1 += `<th colspan="${acts.length}" style="text-align:center;">${escapeHTML(ecCodigo)}</th>`;
+    acts.forEach((a, i) => {
+      const label = `Act. ${i + 1}`;
+      const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
+      headRow2 += `<th title="${escapeHTML(a.enunciado)}">${label}<br><span style="font-weight:400;opacity:0.8;">${fechaCorta}</span></th>`;
+    });
+  });
+
+  headRow1 += '<th>Promedio</th></tr>';
+  headRow2 += '<th>Final</th></tr>';
+  thead.innerHTML = headRow1 + headRow2;
+
+  // ---- CUERPO ----
+  if (curso.estudiantes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${actividades.length + 2}" style="text-align:center;padding:2rem;color:#9E9E9E;">
+      Agrega estudiantes usando el formulario de arriba.
+    </td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  curso.estudiantes.forEach(est => {
+    const tr = document.createElement('tr');
+    let cells = `
+      <td class="td-nombre" id="nombre-${est.id}">
+        <div class="td-nombre-inner">
+          <span ondblclick="editarNombreEstudiante('${est.id}')" title="Doble clic para editar"
+            style="cursor:pointer;flex:1;">${escapeHTML(est.nombre)}</span>
+          <button class="btn-del-estudiante" onclick="eliminarEstudiante('${est.id}')" title="Eliminar">
+            <span class="material-icons" style="font-size:16px;">close</span>
+          </button>
+        </div>
+      </td>`;
+
+    actividades.forEach(a => {
+      const nota = curso.notas[est.id]?.[a.id];
+      const val = nota !== undefined ? nota : '';
+      const cls = nota !== undefined
+        ? (nota >= 70 ? 'nota-aprobado' : nota >= 60 ? 'nota-regular' : 'nota-reprobado')
+        : '';
+      cells += `<td><input type="number" class="input-nota ${cls}"
+        id="nota-${est.id}-${a.id}"
+        value="${val}" min="0" max="100" step="0.5"
+        placeholder="—"
+        onchange="registrarNota('${est.id}','${a.id}',this.value)"
+        oninput="registrarNota('${est.id}','${a.id}',this.value)"
+        title="Nota de ${escapeHTML(est.nombre)} en ${escapeHTML(a.enunciado.substring(0,50))}"
+        /></td>`;
+    });
+
+    // Promedio final del estudiante
+    const notas = curso.notas[est.id] || {};
+    const vals = Object.values(notas).filter(n => n !== null && n !== undefined);
+    const prom = vals.length > 0 ? vals.reduce((a,b) => a+b, 0) / vals.length : null;
+    const promStr = prom !== null ? (Math.round(prom * 10)/10).toFixed(1) : '—';
+    const promCls = prom !== null ? (prom >= 70 ? 'prom-aprobado' : prom >= 60 ? 'prom-regular' : 'prom-reprobado') : '';
+    cells += `<td class="td-promedio ${promCls}" id="prom-${est.id}">${promStr}</td>`;
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+
+  // ---- FOOTER (promedios por actividad) ----
+  let footerRow = '<tr><td class="td-foot-label">Promedio clase</td>';
+  actividades.forEach(a => {
+    const vals = curso.estudiantes
+      .map(e => curso.notas[e.id]?.[a.id])
+      .filter(v => v !== undefined && v !== null);
+    const prom = vals.length > 0 ? (vals.reduce((x,y) => x+y, 0) / vals.length) : null;
+    const color = prom !== null ? (prom >= 70 ? '#2E7D32' : prom >= 60 ? '#E65100' : '#C62828') : '';
+    footerRow += `<td id="foot-${a.id}" style="color:${color};">${prom !== null ? (Math.round(prom*10)/10).toFixed(1) : '—'}</td>`;
+  });
+  footerRow += '<td id="foot-prom-total" class="td-foot-label">—</td></tr>';
+  tfoot.innerHTML = footerRow;
+
+  // Calcular promedio general
+  const todosProms = curso.estudiantes.map(est => {
+    const stNotas = Object.values(curso.notas[est.id] || {}).filter(n => n !== undefined && n !== null);
+    return stNotas.length > 0 ? stNotas.reduce((a,b)=>a+b,0)/stNotas.length : null;
+  }).filter(p => p !== null);
+  const footProm = document.getElementById('foot-prom-total');
+  if (footProm && todosProms.length > 0) {
+    const gp = todosProms.reduce((a,b)=>a+b,0)/todosProms.length;
+    footProm.textContent = (Math.round(gp*10)/10).toFixed(1);
+    footProm.style.color = gp >= 70 ? '#2E7D32' : gp >= 60 ? '#E65100' : '#C62828';
+  }
+}
+
+/** Escapa HTML para evitar XSS en nombres */
+function escapeHTML(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ----------------------------------------------------------------
+// NAVEGACIÓN – mostrar/ocultar panel calificaciones
+// ----------------------------------------------------------------
+
+/** Muestra el panel de calificaciones y oculta el stepper/main */
+function abrirCalificaciones() {
+  cargarCalificaciones();
+  // Si no hay curso activo y hay cursos, activar el primero
+  if (!calState.cursoActivoId) {
+    const ids = Object.keys(calState.cursos);
+    if (ids.length > 0) calState.cursoActivoId = ids[0];
+  }
+
+  document.querySelector('.stepper-container')?.classList.add('hidden');
+  document.querySelector('.main-content')?.classList.add('hidden');
+  document.getElementById('panel-calificaciones')?.classList.remove('hidden');
+  renderizarCalificaciones();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Cierra el panel y vuelve a la planificación */
+function cerrarCalificaciones() {
+  document.querySelector('.stepper-container')?.classList.remove('hidden');
+  document.querySelector('.main-content')?.classList.remove('hidden');
+  document.getElementById('panel-calificaciones')?.classList.add('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ----------------------------------------------------------------
+// EXPORTACIÓN DE CALIFICACIONES
+// ----------------------------------------------------------------
+
+/** Exporta la tabla de calificaciones a Word */
+function exportarCalificacionesWord() {
+  if (!calState.cursoActivoId) { mostrarToast('No hay curso activo', 'error'); return; }
+  const tabla = document.getElementById('cal-tabla-wrap')?.innerHTML || '';
+  const curso = calState.cursos[calState.cursoActivoId];
+  const dg = planificacion.datosGenerales || {};
+  const hoy = new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'});
+
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"/>
+  <style>
+    body{font-family:Calibri,Arial;font-size:11pt;margin:1.5cm;}
+    h2{color:#0D47A1;} h3{color:#1565C0;}
+    table{width:100%;border-collapse:collapse;margin:8pt 0;}
+    th,td{border:1pt solid #bbb;padding:5pt 7pt;font-size:9pt;}
+    th{background:#1565C0;color:white;font-weight:bold;}
+  </style></head>
+  <body>
+    <h2>Calificaciones – ${escapeHTML(curso.nombre)}</h2>
+    <p><strong>Módulo:</strong> ${escapeHTML(dg.moduloFormativo||'-')}</p>
+    <p><strong>Docente:</strong> ${escapeHTML(dg.nombreDocente||'-')}</p>
+    <p><strong>Fecha:</strong> ${hoy}</p>
+    <hr/>
+    ${tabla}
+  </body></html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Calificaciones_${(curso.nombre||'').replace(/\s+/g,'_')}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Archivo Word descargado', 'success');
+}
+
+/** Imprime las calificaciones */
+function imprimirCalificaciones() {
+  // Guardar estado: ocultar todo menos el panel cal
+  const stepper = document.querySelector('.stepper-container');
+  const main = document.querySelector('.main-content');
+  const prevStepper = stepper?.style.display;
+  const prevMain = main?.style.display;
+  stepper && (stepper.style.display = 'none');
+  main && (main.style.display = 'none');
+  window.print();
+  stepper && (stepper.style.display = prevStepper || '');
+  main && (main.style.display = prevMain || '');
+}
+
+// ----------------------------------------------------------------
+// INICIALIZACIÓN DEL MÓDULO DE CALIFICACIONES
+// ----------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  // Inyectar botón en el header si no existe
+  const headerInner = document.querySelector('.header-inner');
+  if (headerInner && !document.getElementById('btn-calificaciones')) {
+    const btnCal = document.createElement('button');
+    btnCal.id = 'btn-calificaciones';
+    btnCal.className = 'btn-calificaciones';
+    btnCal.title = 'Libro de Calificaciones';
+    btnCal.innerHTML = '<span class="material-icons">grade</span><span class="btn-nueva-label">Calificaciones</span>';
+    btnCal.onclick = abrirCalificaciones;
+    // Insert before "Nueva Planificación" button
+    const btnNueva = document.getElementById('btn-nueva-planificacion');
+    if (btnNueva) {
+      headerInner.insertBefore(btnCal, btnNueva);
+    } else {
+      headerInner.appendChild(btnCal);
+    }
+  }
+
+  // Patch the modal footer to have an id (needed for dynamic buttons)
+  const modalFooter = document.querySelector('.modal-footer');
+  if (modalFooter && !modalFooter.id) modalFooter.id = 'modal-footer';
+
+  // Cargar datos de calificaciones al iniciar
+  cargarCalificaciones();
+}, { once: false });
+
+
+// ================================================================
+// --- MÓDULO: BIBLIOTECA DE PLANIFICACIONES ---
+// Guarda y carga múltiples planificaciones en localStorage.
+// ================================================================
+
+const BIBLIO_KEY = 'planificadorRA_biblioteca_v1';
+
+/** Carga todas las planificaciones guardadas */
+function cargarBiblioteca() {
+  try {
+    return JSON.parse(localStorage.getItem(BIBLIO_KEY) || '{"items":[]}');
+  } catch(e) {
+    return { items: [] };
+  }
+}
+
+/** Guarda el estado de la biblioteca */
+function persistirBiblioteca(biblio) {
+  localStorage.setItem(BIBLIO_KEY, JSON.stringify(biblio));
+}
+
+/** Guarda la planificación actual en la biblioteca */
+function guardarPlanificacionActual() {
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+
+  if (!dg.moduloFormativo && !ra.descripcion) {
+    mostrarToast('No hay datos suficientes para guardar. Completa al menos el Paso 1.', 'error');
+    return;
+  }
+
+  guardarDatosFormulario(); // asegurar que lo último del form esté en el estado
+
+  const biblio = cargarBiblioteca();
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const ahora = new Date();
+
+  const registro = {
+    id,
+    fechaGuardado: ahora.toISOString(),
+    fechaGuardadoLabel: ahora.toLocaleDateString('es-DO', {
+      day: '2-digit', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    }),
+    nombre: (dg.moduloFormativo || 'Sin módulo') + ' — ' + (dg.nombreDocente || 'Sin docente'),
+    planificacion: JSON.parse(JSON.stringify(planificacion, (k, v) =>
+      v instanceof Date ? v.toISOString() : v
+    ))
+  };
+
+  // Si ya existe uno con el mismo módulo + docente, preguntar si reemplazar
+  const idx = biblio.items.findIndex(i =>
+    i.planificacion?.datosGenerales?.moduloFormativo === dg.moduloFormativo &&
+    i.planificacion?.datosGenerales?.nombreDocente === dg.nombreDocente
+  );
+
+  if (idx >= 0) {
+    if (!confirm(
+      'Ya existe una planificación guardada para "' + (dg.moduloFormativo || '') +
+      '". ¿Deseas actualizarla con los datos actuales?'
+    )) return;
+    biblio.items[idx] = registro;
+    mostrarToast('Planificación actualizada en la biblioteca', 'success');
+  } else {
+    biblio.items.unshift(registro); // más reciente primero
+    mostrarToast('Planificación guardada correctamente', 'success');
+  }
+
+  persistirBiblioteca(biblio);
+}
+
+/** Carga una planificación guardada y la restaura como activa */
+function cargarPlanificacionGuardada(id) {
+  const biblio = cargarBiblioteca();
+  const registro = biblio.items.find(i => i.id === id);
+  if (!registro) return;
+
+  if (!confirm('¿Cargar la planificación "' + registro.nombre +
+               '"? Los datos actuales no guardados se perderán.')) return;
+
+  // Restaurar estado global
+  planificacion = registro.planificacion;
+
+  // Restaurar fechas
+  if (planificacion.actividades) {
+    planificacion.actividades.forEach(a => {
+      if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
+    });
+  }
+  if (planificacion.fechasClase) {
+    planificacion.fechasClase.forEach(f => {
+      if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha);
+    });
+  }
+
+  // Repoblar el formulario
+  poblarFormularioDesdeEstado();
+
+  // Regenerar vistas de EC y actividades si hay datos
+  if (planificacion.elementosCapacidad?.length) {
+    renderizarEC(planificacion.elementosCapacidad);
+    renderizarActividades(planificacion.actividades);
+    document.getElementById('btn-paso2-siguiente').disabled = false;
+  }
+
+  guardarBorrador(); // sincronizar con borrador activo
+
+  // Cerrar panel y volver al paso 1
+  cerrarPlanificaciones();
+  irAlPaso(1, false);
+  mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
+}
+
+/** Elimina una planificación de la biblioteca */
+function eliminarPlanificacionGuardada(id) {
+  const biblio = cargarBiblioteca();
+  const reg = biblio.items.find(i => i.id === id);
+  if (!reg) return;
+  if (!confirm('¿Eliminar la planificación "' + reg.nombre + '"? Esta acción no se puede deshacer.')) return;
+
+  biblio.items = biblio.items.filter(i => i.id !== id);
+  persistirBiblioteca(biblio);
+  renderizarBiblioteca();
+  mostrarToast('Planificación eliminada', 'info');
+}
+
+/** Filtra las tarjetas según el texto del buscador */
+function filtrarPlanificaciones() {
+  const q = (document.getElementById('pln-buscador')?.value || '').toLowerCase();
+  document.querySelectorAll('.pln-card').forEach(card => {
+    const texto = card.dataset.busqueda || '';
+    card.style.display = texto.includes(q) ? '' : 'none';
+  });
+}
+
+// ----------------------------------------------------------------
+// RENDERIZADO
+// ----------------------------------------------------------------
+
+/** Renderiza la cuadrícula de planificaciones guardadas */
+function renderizarBiblioteca() {
+  const grid = document.getElementById('pln-grid');
+  const vacio = document.getElementById('pln-vacio');
+  if (!grid || !vacio) return;
+
+  const biblio = cargarBiblioteca();
+  const items = biblio.items || [];
+
+  if (items.length === 0) {
+    grid.innerHTML = '';
+    vacio.classList.remove('hidden');
+    return;
+  }
+
+  vacio.classList.add('hidden');
+  grid.innerHTML = '';
+
+  items.forEach(reg => {
+    const dg = reg.planificacion?.datosGenerales || {};
+    const ra = reg.planificacion?.ra || {};
+    const ec = reg.planificacion?.elementosCapacidad || [];
+    const acts = reg.planificacion?.actividades || [];
+    const horasTotal = reg.planificacion?.horasTotal || 0;
+
+    const resumenRA = ra.descripcion
+      ? ra.descripcion.substring(0, 120) + (ra.descripcion.length > 120 ? '…' : '')
+      : 'Sin descripción del RA';
+
+    const busqueda = [
+      dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato,
+      dg.familiaProfesional, ra.descripcion
+    ].join(' ').toLowerCase();
+
+    const card = document.createElement('div');
+    card.className = 'pln-card';
+    card.dataset.busqueda = busqueda;
+
+    card.innerHTML = `
+      <div class="pln-card-date">
+        <span class="material-icons">schedule</span>
+        ${escHTML(reg.fechaGuardadoLabel || reg.fechaGuardado)}
+      </div>
+
+      <div class="pln-card-modulo">${escHTML(dg.moduloFormativo || 'Sin módulo')}</div>
+
+      <div class="pln-card-meta">
+        <span><span class="material-icons">person</span>${escHTML(dg.nombreDocente || '—')}</span>
+        <span><span class="material-icons">school</span>${escHTML(dg.nombreBachillerato || '—')}</span>
+        ${dg.fechaInicio ? '<span><span class="material-icons">date_range</span>' +
+          escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
+      </div>
+
+      <div class="pln-card-ra">${escHTML(resumenRA)}</div>
+
+      <div class="pln-card-chips">
+        ${ec.length ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
+        ${acts.length ? '<span class="pln-chip pln-chip-acts"><span class="material-icons" style="font-size:12px;">event_note</span>' + acts.length + ' actividades</span>' : ''}
+        ${horasTotal ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
+        ${dg.valorRA ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
+      </div>
+
+      <div class="pln-card-actions">
+        <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')">
+          <span class="material-icons">folder_open</span> Cargar
+        </button>
+        <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar">
+          <span class="material-icons">delete_outline</span>
+        </button>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+/** Escapa HTML básico (helper local para la biblioteca) */
+function escHTML(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ----------------------------------------------------------------
+// NAVEGACIÓN
+// ----------------------------------------------------------------
+
+function abrirPlanificaciones() {
+  renderizarBiblioteca();
+  document.querySelector('.stepper-container')?.classList.add('hidden');
+  document.querySelector('.main-content')?.classList.add('hidden');
+  document.getElementById('panel-calificaciones')?.classList.add('hidden');
+  document.getElementById('panel-planificaciones')?.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cerrarPlanificaciones() {
+  document.querySelector('.stepper-container')?.classList.remove('hidden');
+  document.querySelector('.main-content')?.classList.remove('hidden');
+  document.getElementById('panel-planificaciones')?.classList.add('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ----------------------------------------------------------------
+// INICIALIZACIÓN DEL MÓDULO
+// ----------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  const headerInner = document.querySelector('.header-inner');
+  if (!headerInner) return;
+
+  // Botón "Planificaciones" en el header (insertar antes del de Calificaciones)
+  if (!document.getElementById('btn-planificaciones')) {
+    const btn = document.createElement('button');
+    btn.id = 'btn-planificaciones';
+    btn.className = 'btn-planificaciones';
+    btn.title = 'Mis Planificaciones';
+    btn.innerHTML = '<span class="material-icons">folder_special</span>' +
+                    '<span class="btn-nueva-label">Planificaciones</span>';
+    btn.onclick = abrirPlanificaciones;
+    const btnCal = document.getElementById('btn-calificaciones');
+    if (btnCal) {
+      headerInner.insertBefore(btn, btnCal);
+    } else {
+      const btnNueva = document.getElementById('btn-nueva-planificacion');
+      if (btnNueva) headerInner.insertBefore(btn, btnNueva);
+      else headerInner.appendChild(btn);
+    }
+  }
+
+  // Botón "Guardar planificación" flotante en la barra de navegación del stepper
+  // Lo inyectamos en el footer del paso 5
+  const navPaso5 = document.querySelector('#section-5 .nav-buttons');
+  if (navPaso5 && !document.getElementById('btn-guardar-plan')) {
+    const btnG = document.createElement('button');
+    btnG.id = 'btn-guardar-plan';
+    btnG.className = 'btn-guardar-plan';
+    btnG.innerHTML = '<span class="material-icons">save</span> Guardar planificación';
+    btnG.onclick = guardarPlanificacionActual;
+    navPaso5.appendChild(btnG);
+  }
+
+  // También añadir "Guardar" al paso 4 (para guardar sin necesitar ir al 5)
+  const navPaso4 = document.querySelector('#section-4 .nav-buttons');
+  if (navPaso4 && !document.getElementById('btn-guardar-plan-4')) {
+    const btnG4 = document.createElement('button');
+    btnG4.id = 'btn-guardar-plan-4';
+    btnG4.className = 'btn-guardar-plan';
+    btnG4.style.fontSize = '0.82rem';
+    btnG4.style.padding = '7px 14px';
+    btnG4.innerHTML = '<span class="material-icons" style="font-size:16px;">save</span> Guardar';
+    btnG4.onclick = guardarPlanificacionActual;
+    navPaso4.appendChild(btnG4);
+  }
+});
+
+
+// ================================================================
+// --- FUNCIÓN: Volver al inicio (logo clickeable) ---
+// ================================================================
+function irAlHome() {
+  // Cerrar cualquier panel lateral abierto
+  document.getElementById('panel-calificaciones')?.classList.add('hidden');
+  document.getElementById('panel-planificaciones')?.classList.add('hidden');
+  // Mostrar stepper y contenido principal
+  document.querySelector('.stepper-container')?.classList.remove('hidden');
+  document.querySelector('.main-content')?.classList.remove('hidden');
+  // Ir al paso 1
+  irAlPaso(1, false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+// ================================================================
+// --- MÓDULO: PLANIFICACIONES DIARIAS ---
+// ================================================================
+
+const DIARIAS_KEY = 'planificadorRA_diarias_v1';
+
+/** Estado de las planificaciones diarias generadas/editadas */
+let estadoDiarias = {
+  sesiones: {} // { actividadId: { inicio:{...}, desarrollo:{...}, cierre:{...}, estrategias:'', recursos:'', tiempos:{ini:20,des:60,cie:20} } }
+};
+
+function cargarDiarias() {
+  try {
+    const raw = localStorage.getItem(DIARIAS_KEY);
+    if (raw) estadoDiarias = JSON.parse(raw);
+  } catch(e) { estadoDiarias = { sesiones: {} }; }
+}
+
+function persistirDiarias() {
+  localStorage.setItem(DIARIAS_KEY, JSON.stringify(estadoDiarias));
+}
+
+function guardarTodasDiarias() {
+  // Leer todos los textareas y volcar al estado
+  (planificacion.actividades || []).forEach(act => {
+    const s = estadoDiarias.sesiones[act.id] || {};
+    const read = (campo, sub) => {
+      const el = document.getElementById(`pd-${campo}-${sub}-${act.id}`);
+      return el ? el.value : (s[campo]?.[sub] || '');
+    };
+    const readT = (m) => {
+      const el = document.getElementById(`pd-t-${m}-${act.id}`);
+      return el ? parseInt(el.value) || (m==='ini'?20:m==='des'?55:15) : (s.tiempos?.[m] || (m==='ini'?20:m==='des'?55:15));
+    };
+    const readSec = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+
+    estadoDiarias.sesiones[act.id] = {
+      inicio: {
+        apertura:     read('inicio','apertura'),
+        encuadre:     read('inicio','encuadre'),
+        organizacion: read('inicio','organizacion')
+      },
+      desarrollo: {
+        procedimental:  read('desarrollo','procedimental'),
+        conceptual:     read('desarrollo','conceptual')
+      },
+      cierre: {
+        sintesis:    read('cierre','sintesis'),
+        conexion:    read('cierre','conexion'),
+        proximopaso: read('cierre','proximopaso')
+      },
+      estrategias: readSec(`pd-estrategias-${act.id}`),
+      recursos:    readSec(`pd-recursos-${act.id}`),
+      tiempos: { ini: readT('ini'), des: readT('des'), cie: readT('cie') }
+    };
+  });
+  persistirDiarias();
+  mostrarToast('Planificaciones diarias guardadas', 'success');
+}
+
+// ----------------------------------------------------------------
+// GENERACIÓN AUTOMÁTICA DE CONTENIDO
+// ----------------------------------------------------------------
+
+/** Genera el contenido de una sesión diaria basado en la actividad y su EC */
+function generarContenidoSesion(act, ec, horasSesion) {
+  const nivel = ec?.nivelBloom || 'aplicacion';
+  const campo = (planificacion.datosGenerales?.moduloFormativo || 'el módulo').toLowerCase();
+  const tema = act.enunciado || 'Actividad del módulo';
+  const temaCorto = tema.split(':')[1]?.trim() || tema.substring(0, 60);
+  const ecDesc = ec?.descripcion || '';
+
+  // Tiempos por defecto según horas de sesión (convirtiendo horas a minutos)
+  const minSesion = Math.round((horasSesion || 1.5) * 60);
+  const tIni = Math.round(minSesion * 0.20);
+  const tDes = Math.round(minSesion * 0.60);
+  const tCie = minSesion - tIni - tDes;
+
+  // Plantillas por nivel de Bloom
+  const plantillas = {
+    conocimiento: {
+      apertura:     `Saludo y activación de conocimientos previos a través de una pregunta exploratoria: ¿Qué saben sobre ${temaCorto}? Registro rápido de ideas en la pizarra (lluvia de ideas grupal).`,
+      encuadre:     `Presentación del propósito de la clase: identificar y nombrar los elementos fundamentales de ${temaCorto} dentro del campo de ${campo}, reconociendo su importancia en el contexto profesional.`,
+      organizacion: `Trabajo individual con apoyo grupal. Los estudiantes inician con una actividad de exploración propia y luego contrastan sus respuestas con un compañero (think-pair-share).`,
+      procedimental:`1. El docente presenta el tema con apoyo visual (diapositivas/pizarra).\n2. Los estudiantes leen el material de referencia e identifican los conceptos clave.\n3. Completan una guía de trabajo: definen, enumeran y clasifican los elementos de ${temaCorto}.\n4. Cada estudiante elabora un organizador gráfico (mapa de conceptos o lista organizada).\n5. Se realiza una revisión cruzada con el compañero de al lado.`,
+      conceptual:   `Reflexión guiada: ¿Por qué es importante conocer estos elementos en el ámbito de ${campo}? Los estudiantes comparten un ejemplo real donde este conocimiento es necesario. Se consolida con la definición colectiva del concepto central.`,
+      sintesis:     `Pregunta detonadora de cierre: "¿Cuál de los conceptos vistos hoy te parece más relevante para tu futuro desempeño profesional y por qué?" Respuesta oral de 2-3 estudiantes voluntarios.`,
+      conexion:     `Este conocimiento es la base de toda actuación técnica profesional en ${campo}. Los profesionales que dominan estos fundamentos toman mejores decisiones en situaciones reales de trabajo.`,
+      proximopaso:  `En la próxima sesión profundizaremos en la comprensión de estos conceptos, analizando casos y estableciendo relaciones entre ellos.`,
+      estrategias:  `• Activación de conocimientos previos (lluvia de ideas): fomenta la metacognición y conecta el nuevo aprendizaje con lo ya sabido.\n• Think-Pair-Share: promueve el aprendizaje colaborativo y la discusión entre pares.\n• Organizador gráfico (mapa conceptual): facilita la estructuración y retención del conocimiento declarativo.\n• Pregunta detonadora: estimula el pensamiento crítico y la reflexión individual al cierre.`,
+      recursos:     `• Pizarrón / pizarra digital\n• Guía de trabajo impresa o digital\n• Material de lectura del módulo (texto, apuntes o diapositivas)\n• Marcadores y papel para organizadores gráficos`
+    },
+    comprension: {
+      apertura:     `Saludo y presentación de un caso o situación cotidiana relacionada con ${temaCorto}. El docente lanza la pregunta: "¿Qué está ocurriendo aquí y por qué?" generando curiosidad y discusión inicial.`,
+      encuadre:     `El propósito de esta sesión es comprender a fondo ${temaCorto}, diferenciando sus componentes, estableciendo relaciones y siendo capaces de explicar el concepto con palabras propias en el contexto de ${campo}.`,
+      organizacion: `Trabajo en parejas o tríos. Cada grupo analiza un aspecto del tema, para luego compartir sus hallazgos con la clase en un formato de "mini-exposición" de 2 minutos.`,
+      procedimental:`1. El docente presenta 2-3 ejemplos contrastantes del tema y guía el análisis comparativo.\n2. Los estudiantes en parejas analizan un caso asignado: identifican características, causas y consecuencias.\n3. Construyen un cuadro comparativo o diagrama que explique las relaciones del tema.\n4. Cada pareja explica brevemente su análisis al grupo (2 min).\n5. El docente guía la síntesis colectiva de los hallazgos.`,
+      conceptual:   `Debate dirigido: ¿En qué situaciones reales de ${campo} se aplica este concepto? Los estudiantes argumentan sus respuestas. Se realiza una autoevaluación breve: ¿puedo explicar este tema a alguien que no lo conoce?`,
+      sintesis:     `Cierre con la técnica del "Exit Ticket": cada estudiante escribe en una tarjeta (física o digital) una frase que resume lo aprendido y una pregunta que aún tiene. Se retroalimenta de forma grupal.`,
+      conexion:     `La comprensión profunda de ${temaCorto} permite al profesional de ${campo} tomar decisiones fundamentadas, diagnosticar situaciones y proponer soluciones coherentes con la realidad del entorno laboral.`,
+      proximopaso:  `En la próxima sesión pasaremos de la comprensión a la aplicación: resolveremos situaciones prácticas usando este conocimiento en contextos reales del campo profesional.`,
+      estrategias:  `• Aprendizaje Basado en Análisis de Casos: desarrolla la capacidad de interpretar situaciones complejas.\n• Aprendizaje Cooperativo (parejas): favorece la construcción colectiva del conocimiento.\n• Mini-exposiciones entre pares: fortalece la comprensión al obligar a explicar el tema.\n• Exit Ticket: herramienta de evaluación formativa que promueve la metacognición.`,
+      recursos:     `• Casos de estudio impresos o digitales\n• Plantilla de cuadro comparativo\n• Tarjetas para Exit Ticket (físicas o formulario digital)\n• Proyector o pizarra para síntesis colectiva`
+    },
+    aplicacion: {
+      apertura:     `Saludo y presentación de un desafío o problema real del campo de ${campo} relacionado con ${temaCorto}. Se lanza la pregunta: "¿Cómo resolverían este problema con lo que saben?" Activando el pensamiento creativo y la motivación.`,
+      encuadre:     `Hoy aplicaremos los conocimientos sobre ${temaCorto} para resolver una situación práctica concreta del entorno profesional de ${campo}. El foco está en el proceso de resolución, no solo en la respuesta correcta.`,
+      organizacion: `Trabajo en equipos de 3-4 personas. Cada equipo recibe el mismo reto pero podrá proponer distintas soluciones. Al final se comparan los resultados y se discute la mejor estrategia.`,
+      procedimental:`1. El docente presenta el problema/reto y clarifca las instrucciones y criterios de evaluación (rúbrica compartida).\n2. Los equipos planifican su estrategia de resolución (5 min).\n3. Fase de ejecución: aplican los conceptos y herramientas disponibles para resolver el reto paso a paso.\n4. Documentan el proceso: anotan los pasos seguidos, herramientas usadas y decisiones tomadas.\n5. Presentan su solución al grupo con una breve explicación (3 min por equipo).\n6. Coevaluación: cada equipo evalúa brevemente la solución de otro usando la rúbrica.`,
+      conceptual:   `Reflexión metacognitiva: ¿Qué estrategia funcionó mejor y por qué? ¿Qué cambiarían en una segunda oportunidad? Los estudiantes identifican los principios aplicados en su solución y los conectan con la teoría vista.`,
+      sintesis:     `El docente guía la síntesis: ¿Qué aprendieron HOY que no sabían antes de resolver el problema? Cada equipo comparte una lección aprendida. Se registra en el pizarrón como resumen colectivo.`,
+      conexion:     `Esta misma metodología de resolución de problemas es la que usan los profesionales de ${campo} en su día a día. Dominar este proceso les permitirá enfrentarse con confianza a desafíos reales en la industria.`,
+      proximopaso:  `En la próxima sesión profundizaremos en las actitudes y valores profesionales que complementan estas competencias técnicas, explorando la dimensión ética del trabajo en ${campo}.`,
+      estrategias:  `• Aprendizaje Basado en Problemas (ABP): contextualiza el aprendizaje en situaciones reales y motiva la búsqueda activa de soluciones.\n• Aprendizaje Cooperativo por equipos: fomenta la comunicación efectiva y el trabajo colaborativo.\n• Coevaluación con rúbrica: desarrolla el juicio crítico y la autorregulación del aprendizaje.\n• Pensamiento visible (documentar el proceso): promueve la metacognición y el aprendizaje autónomo.`,
+      recursos:     `• Problema/reto impreso o en pantalla\n• Rúbrica de evaluación compartida con los estudiantes\n• Herramientas del campo (software, equipos, materiales según el módulo)\n• Acceso a recursos de referencia (manuales, guías técnicas, internet)\n• Hoja de registro del proceso de resolución`
+    },
+    actitudinal: {
+      apertura:     `Saludo y apertura con un dilema ético o profesional relacionado con ${campo}: se presenta un caso real o ficticio de toma de decisiones en el entorno laboral. Se lanza la pregunta: "¿Qué harías en esta situación y por qué?"`,
+      encuadre:     `Esta sesión está centrada en el desarrollo de actitudes y valores profesionales fundamentales para el desempeño en ${campo}. Reflexionaremos sobre la ética profesional, la responsabilidad y el compromiso con la calidad en nuestra práctica cotidiana.`,
+      organizacion: `Debate en círculo socrático: todos participan desde su perspectiva personal. Luego, trabajo individual de portafolio/reflexión escrita. No hay respuestas únicas; se valora la profundidad de la reflexión.`,
+      procedimental:`1. Lectura o presentación del dilema/caso ético (individual, 5 min).\n2. Ronda de opiniones: cada estudiante comparte su postura inicial (sin interrupciones).\n3. Debate guiado: el docente introduce preguntas que profundizan el análisis: ¿Qué valores están en juego? ¿Qué consecuencias tendría cada decisión?\n4. Los estudiantes redefinen su postura tras escuchar a sus compañeros.\n5. Cada uno redacta en su portafolio una reflexión personal: ¿Qué tipo de profesional de ${campo} quiero ser? ¿Qué valores guiarán mi práctica?`,
+      conceptual:   `Consolidación: análisis de referentes profesionales del campo que demuestran valores como la integridad, la innovación responsable y el compromiso social. Los estudiantes identifican actitudes a emular en su futura práctica.`,
+      sintesis:     `Cada estudiante escribe en una tarjeta (o comparte oralmente) UN compromiso personal que se lleva de esta clase para su desarrollo profesional. Se crea un "mural de compromisos" colectivo.`,
+      conexion:     `Las competencias técnicas son importantes, pero son los valores y la ética profesional los que distinguen a un buen técnico de un excelente profesional. En ${campo}, la confianza de los clientes y empleadores se construye sobre la base de la integridad y la responsabilidad.`,
+      proximopaso:  `En la próxima sesión integraremos las competencias técnicas y actitudinales en una actividad integradora que pondrá a prueba todas las capacidades desarrolladas durante este Elemento de Capacidad.`,
+      estrategias:  `• Diálogo Socrático / Debate ético: desarrolla el pensamiento crítico y la capacidad de argumentación fundamentada.\n• Portafolio reflexivo: promueve la metacognición, la autoevaluación y el desarrollo de la identidad profesional.\n• Aprendizaje Basado en Valores (ABV): conecta el aprendizaje con la dimensión humana y ética de la profesión.\n• Análisis de referentes profesionales: proporciona modelos de actuación profesional íntegra y motivadora.`,
+      recursos:     `• Caso/dilema ético impreso o proyectado\n• Portafolio del estudiante (cuaderno o carpeta digital)\n• Tarjetas o post-its para el mural de compromisos\n• Materiales sobre referentes del campo (artículos, videos breves, testimonios)`
+    }
+  };
+
+  const p = plantillas[nivel] || plantillas.aplicacion;
+  return {
+    inicio: { apertura: p.apertura, encuadre: p.encuadre, organizacion: p.organizacion },
+    desarrollo: { procedimental: p.procedimental, conceptual: p.conceptual },
+    cierre: { sintesis: p.sintesis, conexion: p.conexion, proximopaso: p.proximopaso },
+    estrategias: p.estrategias,
+    recursos: (planificacion.ra?.recursosDid || '') ?
+      p.recursos + '\n• ' + (planificacion.ra?.recursosDid || '').replace(/\n/g,'\n• ') :
+      p.recursos,
+    tiempos: { ini: tIni, des: tDes, cie: tCie }
+  };
+}
+
+// ----------------------------------------------------------------
+// BOTÓN GENERAR INDIVIDUAL
+// ----------------------------------------------------------------
+function generarSesion(actId) {
+  const act = (planificacion.actividades || []).find(a => a.id === actId);
+  if (!act) return;
+  const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+  const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades||[]).filter(a=>a.ecCodigo===ec.codigo).length)) : 1.5;
+
+  const gen = generarContenidoSesion(act, ec, horasAct);
+  estadoDiarias.sesiones[actId] = gen;
+  persistirDiarias();
+
+  // Actualizar textareas en vivo
+  const s = gen;
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+  set(`pd-inicio-apertura-${actId}`,      s.inicio.apertura);
+  set(`pd-inicio-encuadre-${actId}`,      s.inicio.encuadre);
+  set(`pd-inicio-organizacion-${actId}`,  s.inicio.organizacion);
+  set(`pd-desarrollo-procedimental-${actId}`, s.desarrollo.procedimental);
+  set(`pd-desarrollo-conceptual-${actId}`,    s.desarrollo.conceptual);
+  set(`pd-cierre-sintesis-${actId}`,     s.cierre.sintesis);
+  set(`pd-cierre-conexion-${actId}`,     s.cierre.conexion);
+  set(`pd-cierre-proximopaso-${actId}`,  s.cierre.proximopaso);
+  set(`pd-estrategias-${actId}`,         s.estrategias);
+  set(`pd-recursos-${actId}`,            s.recursos);
+
+  const setT = (m, v) => { const el = document.getElementById(`pd-t-${m}-${actId}`); if(el) el.value = v; };
+  setT('ini', s.tiempos.ini);
+  setT('des', s.tiempos.des);
+  setT('cie', s.tiempos.cie);
+
+  mostrarToast('Sesión generada automáticamente', 'success');
+}
+
+// ----------------------------------------------------------------
+// RENDERIZADO
+// ----------------------------------------------------------------
+
+function filtrarSesionesEC(btn, ecCodigo) {
+  document.querySelectorAll('.pd-chip-flt').forEach(b => b.classList.remove('activo'));
+  btn.classList.add('activo');
+  document.querySelectorAll('.pd-sesion-card').forEach(card => {
+    card.style.display = (ecCodigo === 'todos' || card.dataset.ec === ecCodigo) ? '' : 'none';
+  });
+}
+
+function toggleSesion(actId) {
+  const body = document.getElementById(`pd-body-${actId}`);
+  if (!body) return;
+  body.classList.toggle('open');
+  const btn = document.getElementById(`pd-toggle-${actId}`);
+  if (btn) {
+    const open = body.classList.contains('open');
+    btn.innerHTML = `<span class="material-icons" style="font-size:16px;">${open ? 'expand_less' : 'expand_more'}</span> ${open ? 'Contraer' : 'Ver / Editar'}`;
+  }
+}
+
+/** Renderiza toda la lista de sesiones */
+function renderizarDiarias() {
+  const lista = document.getElementById('pd-sesiones-lista');
+  const sinActs = document.getElementById('pd-sin-actividades');
+  const filtroBar = document.getElementById('pd-filtro-bar');
+  const filtroChips = document.getElementById('pd-filtro-chips');
+  if (!lista) return;
+
+  const actividades = planificacion.actividades || [];
+  if (actividades.length === 0) {
+    sinActs?.classList.remove('hidden');
+    filtroBar?.classList.add('hidden');
+    lista.innerHTML = '';
+    return;
+  }
+  sinActs?.classList.add('hidden');
+  filtroBar?.classList.remove('hidden');
+
+  // Chips de EC
+  const ecCodigos = [...new Set(actividades.map(a => a.ecCodigo).filter(Boolean))];
+  filtroChips.innerHTML = '<button class="pd-chip-flt activo" data-ec="todos" onclick="filtrarSesionesEC(this,\'todos\')">Todas</button>';
+  ecCodigos.forEach(ec => {
+    filtroChips.innerHTML += `<button class="pd-chip-flt" data-ec="${ec}" onclick="filtrarSesionesEC(this,'${ec}')">${ec}</button>`;
+  });
+
+  // Chips de color por nivel
+  const nivColores = { conocimiento:'#388E3C', comprension:'#1565C0', aplicacion:'#E65100', actitudinal:'#6A1B9A' };
+  const nivLabel   = { conocimiento:'Conocimiento', comprension:'Comprensión', aplicacion:'Aplicación', actitudinal:'Actitudinal' };
+
+  lista.innerHTML = '';
+  actividades.forEach((act, idx) => {
+    const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo) || {};
+    const nivel = ec.nivelBloom || 'aplicacion';
+    const color = nivColores[nivel] || '#1565C0';
+    const s = estadoDiarias.sesiones[act.id] || {};
+    const ti = s.tiempos?.ini ?? 20;
+    const td = s.tiempos?.des ?? 55;
+    const tc = s.tiempos?.cie ?? 15;
+    const total = ti + td + tc;
+
+    const card = document.createElement('div');
+    card.className = 'pd-sesion-card';
+    card.dataset.ec = act.ecCodigo || '';
+
+    const enunciadoCorto = (act.enunciado || '').substring(0, 80) + ((act.enunciado||'').length > 80 ? '…' : '');
+
+    card.innerHTML = `
+      <div class="pd-sesion-header" onclick="toggleSesion('${act.id}')">
+        <div class="pd-sesion-num">${idx + 1}</div>
+        <div class="pd-sesion-info">
+          <div class="pd-sesion-titulo">${enunciadoCorto}</div>
+          <div class="pd-sesion-meta">
+            <span><span class="material-icons">event</span>${act.fechaStr || 'Sin fecha'}</span>
+            <span><span class="material-icons">schedule</span>${total} min</span>
+            <span class="pd-ec-chip" style="background:${color}22;color:${color};">${act.ecCodigo || ''}</span>
+            <span class="pd-ec-chip" style="background:${color}22;color:${color};">${nivLabel[nivel] || nivel}</span>
+          </div>
+        </div>
+        <button class="btn-pd-generar" onclick="event.stopPropagation();generarSesion('${act.id}')" title="Generar contenido automáticamente">
+          <span class="material-icons">auto_awesome</span> Generar
+        </button>
+        <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
+                onclick="event.stopPropagation();toggleSesion('${act.id}')">
+          <span class="material-icons" style="font-size:16px;">expand_more</span> Ver / Editar
+        </button>
+      </div>
+
+      <div class="pd-sesion-body" id="pd-body-${act.id}">
+
+        <!-- Distribución de tiempos -->
+        <div class="pd-tiempo-row">
+          <div class="pd-tiempo-item">
+            <label>🟢 Inicio:</label>
+            <input type="number" id="pd-t-ini-${act.id}" value="${ti}" min="5" max="60">
+            <span style="font-size:0.8rem;color:#757575;">min</span>
+          </div>
+          <div class="pd-tiempo-item">
+            <label>🔵 Desarrollo:</label>
+            <input type="number" id="pd-t-des-${act.id}" value="${td}" min="20" max="120">
+            <span style="font-size:0.8rem;color:#757575;">min</span>
+          </div>
+          <div class="pd-tiempo-item">
+            <label>🟠 Cierre:</label>
+            <input type="number" id="pd-t-cie-${act.id}" value="${tc}" min="5" max="30">
+            <span style="font-size:0.8rem;color:#757575;">min</span>
+          </div>
+        </div>
+
+        <!-- 1er MOMENTO: INICIO -->
+        <div class="pd-momento inicio">
+          <div class="pd-momento-header">
+            <span class="material-icons">play_circle</span>
+            1er MOMENTO – INICIO
+            <span class="pd-momento-pct">${ti} min</span>
+          </div>
+          <div class="pd-momento-body">
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">record_voice_over</span>Apertura</div>
+              <textarea id="pd-inicio-apertura-${act.id}" rows="3" placeholder="Breve saludo y enganche con el tema...">${s.inicio?.apertura || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">flag</span>Encuadre</div>
+              <textarea id="pd-inicio-encuadre-${act.id}" rows="2" placeholder="Propósito de la clase...">${s.inicio?.encuadre || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">groups</span>Organización</div>
+              <textarea id="pd-inicio-organizacion-${act.id}" rows="2" placeholder="Cómo se trabajará: equipos, individual...">${s.inicio?.organizacion || ''}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2do MOMENTO: DESARROLLO -->
+        <div class="pd-momento desarrollo">
+          <div class="pd-momento-header">
+            <span class="material-icons">build</span>
+            2do MOMENTO – DESARROLLO
+            <span class="pd-momento-pct">${td} min</span>
+          </div>
+          <div class="pd-momento-body">
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">engineering</span>Procedimental / Actividad principal</div>
+              <textarea id="pd-desarrollo-procedimental-${act.id}" rows="6" placeholder="Paso a paso de lo que harán los estudiantes...">${s.desarrollo?.procedimental || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">psychology</span>Conceptual / Actitudinal</div>
+              <textarea id="pd-desarrollo-conceptual-${act.id}" rows="3" placeholder="Reflexión, debate, autoevaluación o consolidación...">${s.desarrollo?.conceptual || ''}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3er MOMENTO: CIERRE -->
+        <div class="pd-momento cierre">
+          <div class="pd-momento-header">
+            <span class="material-icons">flag_circle</span>
+            3er MOMENTO – CIERRE
+            <span class="pd-momento-pct">${tc} min</span>
+          </div>
+          <div class="pd-momento-body">
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">summarize</span>Síntesis</div>
+              <textarea id="pd-cierre-sintesis-${act.id}" rows="2" placeholder="Pregunta detonadora o resumen...">${s.cierre?.sintesis || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">public</span>Conexión con el mundo real</div>
+              <textarea id="pd-cierre-conexion-${act.id}" rows="2" placeholder="Cómo aplica al entorno profesional real...">${s.cierre?.conexion || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label"><span class="material-icons">navigate_next</span>Próximo paso</div>
+              <textarea id="pd-cierre-proximopaso-${act.id}" rows="2" placeholder="Breve introducción a la próxima clase...">${s.cierre?.proximopaso || ''}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ESTRATEGIAS -->
+        <div class="pd-estrategias">
+          <div class="pd-sec-header">
+            <span class="material-icons">lightbulb</span> ESTRATEGIA(S) UTILIZADA(S)
+          </div>
+          <div class="pd-sec-body">
+            <textarea id="pd-estrategias-${act.id}" rows="5"
+              placeholder="Lista las 3-4 estrategias pedagógicas aplicadas con una breve justificación cada una. Ej:
+• ABP: contextualiza el aprendizaje en situaciones reales...
+• Coevaluación: desarrolla el juicio crítico...">${s.estrategias || ''}</textarea>
+          </div>
+        </div>
+
+        <!-- RECURSOS -->
+        <div class="pd-recursos-sect">
+          <div class="pd-sec-header">
+            <span class="material-icons">inventory_2</span> RECURSOS
+          </div>
+          <div class="pd-sec-body">
+            <textarea id="pd-recursos-${act.id}" rows="4"
+              placeholder="Lista viñeteada de materiales físicos o digitales necesarios para la sesión...">${s.recursos || ''}</textarea>
+          </div>
+        </div>
+
+      </div><!-- fin pd-sesion-body -->
+    `;
+    lista.appendChild(card);
+  });
+}
+
+// ----------------------------------------------------------------
+// EXPORTAR
+// ----------------------------------------------------------------
+function exportarDiariasWord() {
+  guardarTodasDiarias();
+  const actividades = planificacion.actividades || [];
+  if (!actividades.length) { mostrarToast('No hay sesiones para exportar', 'error'); return; }
+
+  const dg = planificacion.datosGenerales || {};
+  const hoy = new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'});
+
+  let body = `<h2>Planificaciones Diarias</h2>
+  <p><strong>Módulo:</strong> ${escHTML(dg.moduloFormativo||'')}</p>
+  <p><strong>Docente:</strong> ${escHTML(dg.nombreDocente||'')}</p>
+  <p><strong>Bachillerato:</strong> ${escHTML(dg.nombreBachillerato||'')}</p>
+  <p><strong>Fecha de generación:</strong> ${hoy}</p><hr/>`;
+
+  actividades.forEach((act, idx) => {
+    const s = estadoDiarias.sesiones[act.id] || {};
+    const ti = s.tiempos?.ini ?? '—';
+    const td = s.tiempos?.des ?? '—';
+    const tc = s.tiempos?.cie ?? '—';
+    const total = (s.tiempos?.ini||0)+(s.tiempos?.des||0)+(s.tiempos?.cie||0);
+
+    body += `<h3>Sesión ${idx+1}: ${escHTML(act.enunciado||'')}</h3>
+    <p><strong>Fecha:</strong> ${escHTML(act.fechaStr||'—')} &nbsp;|&nbsp; <strong>EC:</strong> ${escHTML(act.ecCodigo||'')} &nbsp;|&nbsp; <strong>Duración total:</strong> ${total} min</p>
+
+    <h4>1er MOMENTO – INICIO (${ti} min)</h4>
+    <p><strong>Apertura:</strong> ${escHTML(s.inicio?.apertura||'—')}</p>
+    <p><strong>Encuadre:</strong> ${escHTML(s.inicio?.encuadre||'—')}</p>
+    <p><strong>Organización:</strong> ${escHTML(s.inicio?.organizacion||'—')}</p>
+
+    <h4>2do MOMENTO – DESARROLLO (${td} min)</h4>
+    <p><strong>Procedimental / Actividad principal:</strong><br>${escHTML(s.desarrollo?.procedimental||'—').replace(/\n/g,'<br>')}</p>
+    <p><strong>Conceptual / Actitudinal:</strong><br>${escHTML(s.desarrollo?.conceptual||'—').replace(/\n/g,'<br>')}</p>
+
+    <h4>3er MOMENTO – CIERRE (${tc} min)</h4>
+    <p><strong>Síntesis:</strong> ${escHTML(s.cierre?.sintesis||'—')}</p>
+    <p><strong>Conexión:</strong> ${escHTML(s.cierre?.conexion||'—')}</p>
+    <p><strong>Próximo paso:</strong> ${escHTML(s.cierre?.proximopaso||'—')}</p>
+
+    <p><strong>ESTRATEGIAS:</strong><br>${escHTML(s.estrategias||'—').replace(/\n/g,'<br>')}</p>
+    <p><strong>RECURSOS:</strong><br>${escHTML(s.recursos||'—').replace(/\n/g,'<br>')}</p>
+    <hr/>`;
+  });
+
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"/>
+  <style>
+    body{font-family:Calibri,Arial;font-size:11pt;margin:2cm;}
+    h2{color:#0D47A1;} h3{color:#0D47A1;margin-top:18pt;border-bottom:1pt solid #ccc;padding-bottom:4pt;}
+    h4{color:#1565C0;margin-top:12pt;margin-bottom:4pt;}
+    p{margin:4pt 0;line-height:1.5;}
+    hr{border:none;border-top:1pt solid #e0e0e0;margin:12pt 0;}
+  </style></head>
+  <body>${body}</body></html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `PlanificacionesDiarias_${(dg.moduloFormativo||'modulo').replace(/\s+/g,'_')}.doc`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  mostrarToast('Word descargado', 'success');
+}
+
+function imprimirDiarias() {
+  guardarTodasDiarias();
+  const stepper = document.querySelector('.stepper-container');
+  const main = document.querySelector('.main-content');
+  const prev = [stepper?.style.display, main?.style.display];
+  stepper && (stepper.style.display = 'none');
+  main && (main.style.display = 'none');
+  // Expandir todas las sesiones antes de imprimir
+  document.querySelectorAll('.pd-sesion-body').forEach(b => b.classList.add('open'));
+  window.print();
+  stepper && (stepper.style.display = prev[0] || '');
+  main && (main.style.display = prev[1] || '');
+}
+
+// ----------------------------------------------------------------
+// NAVEGACIÓN
+// ----------------------------------------------------------------
+function abrirDiarias() {
+  cargarDiarias();
+  document.querySelector('.stepper-container')?.classList.add('hidden');
+  document.querySelector('.main-content')?.classList.add('hidden');
+  document.getElementById('panel-calificaciones')?.classList.add('hidden');
+  document.getElementById('panel-planificaciones')?.classList.add('hidden');
+  document.getElementById('panel-diarias')?.classList.remove('hidden');
+  renderizarDiarias();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cerrarDiarias() {
+  guardarTodasDiarias();
+  document.querySelector('.stepper-container')?.classList.remove('hidden');
+  document.querySelector('.main-content')?.classList.remove('hidden');
+  document.getElementById('panel-diarias')?.classList.add('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ----------------------------------------------------------------
+// INICIALIZACIÓN
+// ----------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  const headerInner = document.querySelector('.header-inner');
+  if (!headerInner || document.getElementById('btn-diarias')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'btn-diarias';
+  btn.className = 'btn-diarias';
+  btn.title = 'Planificaciones Diarias';
+  btn.innerHTML = '<span class="material-icons">today</span><span class="btn-nueva-label">Plan. Diarias</span>';
+  btn.onclick = abrirDiarias;
+
+  const btnPln = document.getElementById('btn-planificaciones');
+  if (btnPln) headerInner.insertBefore(btn, btnPln);
+  else {
+    const btnCal = document.getElementById('btn-calificaciones');
+    headerInner.insertBefore(btn, btnCal || null);
+  }
+});
