@@ -11267,7 +11267,10 @@ generarPlanificacion = async function() {
   guardarDatosFormulario();
 
   // Validación básica
-  const raDesc = document.getElementById('ra-descripcion')?.value?.trim() || '';
+  // Leer el RA desde el estado (guardado por guardarDatosFormulario arriba)
+  // o directamente desde el campo con su ID real
+  const raDesc = planificacion.ra?.descripcion?.trim() ||
+                 document.getElementById('descripcion-ra')?.value?.trim() || '';
   if (!raDesc) {
     mostrarToast('Escribe el Resultado de Aprendizaje antes de generar', 'error');
     return;
