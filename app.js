@@ -110,19 +110,19 @@ const verbosBloom = {
 
 
 
-  conocimiento: ["identificar","reconocer","listar","definir","nombrar","recordar","enunciar","señalar","mencionar","describir brevemente","clasificar básicamente"],
+  conocimiento: ["identificar", "reconocer", "listar", "definir", "nombrar", "recordar", "enunciar", "señalar", "mencionar", "describir brevemente", "clasificar básicamente"],
 
 
 
-  comprension:  ["explicar","describir","interpretar","resumir","clasificar","comparar","relacionar","distinguir","inferir","parafrasear","ilustrar","traducir"],
+  comprension: ["explicar", "describir", "interpretar", "resumir", "clasificar", "comparar", "relacionar", "distinguir", "inferir", "parafrasear", "ilustrar", "traducir"],
 
 
 
-  aplicacion:   ["aplicar","demostrar","utilizar","resolver","ejecutar","implementar","desarrollar","construir","diseñar","producir","calcular","experimentar"],
+  aplicacion: ["aplicar", "demostrar", "utilizar", "resolver", "ejecutar", "implementar", "desarrollar", "construir", "diseñar", "producir", "calcular", "experimentar"],
 
 
 
-  actitudinal:  ["valorar","asumir","comprometerse","respetar","reflexionar","demostrar actitud hacia","mostrar","apreciar","participar activamente","colaborar","integrar","promover"]
+  actitudinal: ["valorar", "asumir", "comprometerse", "respetar", "reflexionar", "demostrar actitud hacia", "mostrar", "apreciar", "participar activamente", "colaborar", "integrar", "promover"]
 
 
 
@@ -150,7 +150,7 @@ const plantillasSecuencia = {
 
 
 
-    construccion: { nombre: "Construcción",  descripcion: "Exposición conceptual con apoyo visual, lectura guiada de materiales y elaboración de mapas conceptuales.", pct: 55 },
+    construccion: { nombre: "Construcción", descripcion: "Exposición conceptual con apoyo visual, lectura guiada de materiales y elaboración de mapas conceptuales.", pct: 55 },
 
 
 
@@ -170,7 +170,7 @@ const plantillasSecuencia = {
 
 
 
-    construccion: { nombre: "Construcción",  descripcion: "Análisis de ejemplos comparativos, discusión dirigida y elaboración de esquemas explicativos.", pct: 60 },
+    construccion: { nombre: "Construcción", descripcion: "Análisis de ejemplos comparativos, discusión dirigida y elaboración de esquemas explicativos.", pct: 60 },
 
 
 
@@ -190,7 +190,7 @@ const plantillasSecuencia = {
 
 
 
-    construccion: { nombre: "Construcción",  descripcion: "Demostración del docente, práctica guiada paso a paso, resolución de ejercicios reales.", pct: 65 },
+    construccion: { nombre: "Construcción", descripcion: "Demostración del docente, práctica guiada paso a paso, resolución de ejercicios reales.", pct: 65 },
 
 
 
@@ -210,7 +210,7 @@ const plantillasSecuencia = {
 
 
 
-    construccion: { nombre: "Construcción",  descripcion: "Trabajo colaborativo, análisis de casos éticos, debate argumentado y role-playing.", pct: 50 },
+    construccion: { nombre: "Construcción", descripcion: "Trabajo colaborativo, análisis de casos éticos, debate argumentado y role-playing.", pct: 50 },
 
 
 
@@ -582,27 +582,27 @@ function extraerPalabrasClave(ra) {
   // Stopwords ampliadas (incluye verbos en infinitivo comunes)
   const stopwords = new Set([
     // articulos / preposiciones / conjunciones
-    'el','la','los','las','un','una','unos','unas','y','o','de','del','al',
-    'en','con','por','para','que','se','su','sus','es','son','ser','esta',
-    'este','como','más','mas','mediante','través','traves','a','e','u',
-    'hay','dicho','dichos','dichas','dicha','cuyo','cuya','cuyos','cuyas',
-    'según','segun','cuanto','cuanta','cuantos','cuantas','todo','toda',
-    'todos','todas','cada','otro','otra','otros','otras','mismo','misma',
+    'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'y', 'o', 'de', 'del', 'al',
+    'en', 'con', 'por', 'para', 'que', 'se', 'su', 'sus', 'es', 'son', 'ser', 'esta',
+    'este', 'como', 'más', 'mas', 'mediante', 'través', 'traves', 'a', 'e', 'u',
+    'hay', 'dicho', 'dichos', 'dichas', 'dicha', 'cuyo', 'cuya', 'cuyos', 'cuyas',
+    'según', 'segun', 'cuanto', 'cuanta', 'cuantos', 'cuantas', 'todo', 'toda',
+    'todos', 'todas', 'cada', 'otro', 'otra', 'otros', 'otras', 'mismo', 'misma',
     // verbos infinitivos muy frecuentes (a filtrar)
-    'identificar','reconocer','aplicar','analizar','explicar','valorar',
-    'evaluar','demostrar','utilizar','ejecutar','implementar','desarrollar',
-    'realizar','efectuar','llevar','hacer','tener','poder','deber','saber',
-    'conocer','comprender','interpretar','relacionar','comparar','definir',
-    'describir','establecer','determinar','calcular','diseñar','disenar',
-    'planificar','organizar','gestionar','administrar','controlar',
+    'identificar', 'reconocer', 'aplicar', 'analizar', 'explicar', 'valorar',
+    'evaluar', 'demostrar', 'utilizar', 'ejecutar', 'implementar', 'desarrollar',
+    'realizar', 'efectuar', 'llevar', 'hacer', 'tener', 'poder', 'deber', 'saber',
+    'conocer', 'comprender', 'interpretar', 'relacionar', 'comparar', 'definir',
+    'describir', 'establecer', 'determinar', 'calcular', 'diseñar', 'disenar',
+    'planificar', 'organizar', 'gestionar', 'administrar', 'controlar',
     // palabras genéricas poco útiles para el enunciado
-    'manera','forma','modo','medio','tipo','nivel','proceso','procedimiento',
-    'actividad','tarea','trabajo','campo','área','area','técnicas','tecnicas',
-    'herramientas','herramienta','situaciones','situacion','situaciones',
-    'general','generales','básico','basico','específico','especifico',
-    'correspondencia','referencia','materiales','material','fuentes','fuente',
-    'análisis','analisis','síntesis','sintesis','criterios','criterio',
-    'mediante','través','partir','base','marco','acuerdo','relación'
+    'manera', 'forma', 'modo', 'medio', 'tipo', 'nivel', 'proceso', 'procedimiento',
+    'actividad', 'tarea', 'trabajo', 'campo', 'área', 'area', 'técnicas', 'tecnicas',
+    'herramientas', 'herramienta', 'situaciones', 'situacion', 'situaciones',
+    'general', 'generales', 'básico', 'basico', 'específico', 'especifico',
+    'correspondencia', 'referencia', 'materiales', 'material', 'fuentes', 'fuente',
+    'análisis', 'analisis', 'síntesis', 'sintesis', 'criterios', 'criterio',
+    'mediante', 'través', 'partir', 'base', 'marco', 'acuerdo', 'relación'
   ]);
 
   // Extraer solo tokens de 4+ letras que no sean stopwords
@@ -673,7 +673,7 @@ function generarElementosCapacidad(ra, criterios, datos) {
   // Asignar criterios a cada EC
   function getCE(idx) {
     if (listaCE[idx]) return listaCE[idx];
-    if (listaCE[0])   return listaCE[0];
+    if (listaCE[0]) return listaCE[0];
     return 'los criterios del módulo';
   }
 
@@ -683,9 +683,9 @@ function generarElementosCapacidad(ra, criterios, datos) {
   // Condiciones pedagógicas por nivel
   const condiciones = {
     conocimiento: 'mediante el análisis de materiales curriculares y fuentes técnicas especializadas',
-    comprension:  'a través del análisis comparativo de casos reales relacionados con el entorno profesional',
-    aplicacion:   'utilizando herramientas y técnicas apropiadas en situaciones prácticas del ámbito laboral',
-    actitudinal:  'asumiendo una actitud reflexiva, comprometida y ética ante su práctica profesional'
+    comprension: 'a través del análisis comparativo de casos reales relacionados con el entorno profesional',
+    aplicacion: 'utilizando herramientas y técnicas apropiadas en situaciones prácticas del ámbito laboral',
+    actitudinal: 'asumiendo una actitud reflexiva, comprometida y ética ante su práctica profesional'
   };
 
   const ec = [
@@ -772,7 +772,7 @@ function calcularFechasClase(diasConfig, fechaInicio, fechaFin) {
 
 
 
-  const mapaDia = { domingo:0, lunes:1, martes:2, miercoles:3, jueves:4, viernes:5, sabado:6 };
+  const mapaDia = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
 
 
 
@@ -804,7 +804,7 @@ function calcularFechasClase(diasConfig, fechaInicio, fechaFin) {
 
 
 
-  const fin    = new Date(fechaFin + 'T00:00:00');
+  const fin = new Date(fechaFin + 'T00:00:00');
 
 
 
@@ -852,7 +852,7 @@ function calcularFechasClase(diasConfig, fechaInicio, fechaFin) {
 
 
 
-        fechaStr: cursor.toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' })
+        fechaStr: cursor.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
 
 
 
@@ -1175,7 +1175,7 @@ function generarActividades(listaEC, fechasClase) {
 function obtenerPlantillasActividad(ec) {
   // Extraer el objeto directo del EC (tras el verbo inicial)
   const enunciado = ec.enunciado || '';
-  const matchObj  = enunciado.match(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+(.+?),/);
+  const matchObj = enunciado.match(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+(.+?),/);
   let campo = matchObj
     ? matchObj[1].trim()
     : enunciado.replace(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+/, '').split(',')[0].trim();
@@ -1404,15 +1404,15 @@ function generarRubrica(actividad, nivel) {
 
 
 
-    { nombre: 'Excelente',    puntos: 4, clase: 'nivel-excelente',    descripcionSufijo: 'de manera excepcional, superando las expectativas' },
+    { nombre: 'Excelente', puntos: 4, clase: 'nivel-excelente', descripcionSufijo: 'de manera excepcional, superando las expectativas' },
 
 
 
-    { nombre: 'Bueno',        puntos: 3, clase: 'nivel-bueno',        descripcionSufijo: 'de manera satisfactoria, cumpliendo las expectativas' },
+    { nombre: 'Bueno', puntos: 3, clase: 'nivel-bueno', descripcionSufijo: 'de manera satisfactoria, cumpliendo las expectativas' },
 
 
 
-    { nombre: 'En proceso',   puntos: 2, clase: 'nivel-proceso',      descripcionSufijo: 'de manera parcial, con algunas deficiencias observadas' },
+    { nombre: 'En proceso', puntos: 2, clase: 'nivel-proceso', descripcionSufijo: 'de manera parcial, con algunas deficiencias observadas' },
 
 
 
@@ -1548,7 +1548,7 @@ function renderizarEC(listaEC) {
 
 
 
-    const nombreNivel = { conocimiento:'Conocimiento', comprension:'Comprensión', aplicacion:'Aplicación', actitudinal:'Actitudinal' }[ec.nivel];
+    const nombreNivel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' }[ec.nivel];
 
 
 
@@ -1856,7 +1856,7 @@ function renderizarActividades(listaActividades) {
 
 
 
-    const icono     = act.instrumento?.tipo === 'cotejo' ? 'checklist' : 'table_chart';
+    const icono = act.instrumento?.tipo === 'cotejo' ? 'checklist' : 'table_chart';
 
 
 
@@ -2484,11 +2484,11 @@ function imprimirModal() {
 
 
 
-  const titulo    = document.getElementById('modal-title').textContent;
+  const titulo = document.getElementById('modal-title').textContent;
 
 
 
-  const ventana   = window.open('', '_blank', 'width=800,height=600');
+  const ventana = window.open('', '_blank', 'width=800,height=600');
 
 
 
@@ -2644,7 +2644,7 @@ function renderizarVistaPrevia() {
 
 
 
-  const fechaHoy = new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'});
+  const fechaHoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
 
 
@@ -2652,7 +2652,7 @@ function renderizarVistaPrevia() {
 
 
 
-  const nivelLabel = { conocimiento:'Conocimiento', comprension:'Comprensión', aplicacion:'Aplicación', actitudinal:'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
 
 
@@ -2752,7 +2752,7 @@ function renderizarVistaPrevia() {
 
 
 
-      <td>${a.instrumento?.tipoLabel||''}</td>
+      <td>${a.instrumento?.tipoLabel || ''}</td>
 
 
 
@@ -2800,7 +2800,7 @@ function renderizarVistaPrevia() {
 
 
 
-        <span class="material-icons" style="font-size:18px;">${a.instrumento.tipo==='cotejo'?'checklist':'table_chart'}</span>
+        <span class="material-icons" style="font-size:18px;">${a.instrumento.tipo === 'cotejo' ? 'checklist' : 'table_chart'}</span>
 
 
 
@@ -2888,35 +2888,35 @@ function renderizarVistaPrevia() {
 
 
 
-      <div class="vp-dato"><strong>Familia Profesional</strong><span>${dg.familiaProfesional||'-'} (${dg.codigoFP||'-'})</span></div>
+      <div class="vp-dato"><strong>Familia Profesional</strong><span>${dg.familiaProfesional || '-'} (${dg.codigoFP || '-'})</span></div>
 
 
 
-      <div class="vp-dato"><strong>Bachillerato Técnico</strong><span>${dg.nombreBachillerato||'-'}</span></div>
+      <div class="vp-dato"><strong>Bachillerato Técnico</strong><span>${dg.nombreBachillerato || '-'}</span></div>
 
 
 
-      <div class="vp-dato"><strong>Código Título</strong><span>${dg.codigoTitulo||'-'}</span></div>
+      <div class="vp-dato"><strong>Código Título</strong><span>${dg.codigoTitulo || '-'}</span></div>
 
 
 
-      <div class="vp-dato"><strong>Módulo Formativo</strong><span>${dg.moduloFormativo||'-'} (${dg.codigoModulo||'-'})</span></div>
+      <div class="vp-dato"><strong>Módulo Formativo</strong><span>${dg.moduloFormativo || '-'} (${dg.codigoModulo || '-'})</span></div>
 
 
 
-      <div class="vp-dato"><strong>Docente</strong><span>${dg.nombreDocente||'-'}</span></div>
+      <div class="vp-dato"><strong>Docente</strong><span>${dg.nombreDocente || '-'}</span></div>
 
 
 
-      <div class="vp-dato"><strong>Período</strong><span>${dg.fechaInicio||'-'} ? ${dg.fechaTermino||'-'}</span></div>
+      <div class="vp-dato"><strong>Período</strong><span>${dg.fechaInicio || '-'} ? ${dg.fechaTermino || '-'}</span></div>
 
 
 
-      <div class="vp-dato"><strong>Horas por semana / Total</strong><span>${dg.horasSemana||'-'} hrs / ${planificacion.horasTotal} hrs</span></div>
+      <div class="vp-dato"><strong>Horas por semana / Total</strong><span>${dg.horasSemana || '-'} hrs / ${planificacion.horasTotal} hrs</span></div>
 
 
 
-      <div class="vp-dato"><strong>RA N° / Valor</strong><span>${dg.cantidadRA||'-'} RA en el módulo · ${dg.valorRA||'-'} puntos</span></div>
+      <div class="vp-dato"><strong>RA N° / Valor</strong><span>${dg.cantidadRA || '-'} RA en el módulo · ${dg.valorRA || '-'} puntos</span></div>
 
 
 
@@ -2936,7 +2936,7 @@ function renderizarVistaPrevia() {
 
 
 
-    <div class="vp-ra-box">${ra.descripcion||'-'}</div>
+    <div class="vp-ra-box">${ra.descripcion || '-'}</div>
 
 
 
@@ -2944,7 +2944,7 @@ function renderizarVistaPrevia() {
 
 
 
-    ${ra.recursos  ? `<p style="font-size:0.85rem;color:#555;margin-top:0.5rem;"><strong>Recursos didácticos:</strong> ${ra.recursos}</p>` : ''}
+    ${ra.recursos ? `<p style="font-size:0.85rem;color:#555;margin-top:0.5rem;"><strong>Recursos didácticos:</strong> ${ra.recursos}</p>` : ''}
 
 
 
@@ -3032,7 +3032,7 @@ function renderizarVistaPrevia() {
 
 
 
-        <strong>${dg.nombreDocente||'Docente'}</strong>
+        <strong>${dg.nombreDocente || 'Docente'}</strong>
 
 
 
@@ -3112,7 +3112,7 @@ function exportarWord() {
 
 
 
-  const nombreArchivo = `Planificacion_RA_${(dg.moduloFormativo||'modulo').replace(/\s+/g,'_')}.doc`;
+  const nombreArchivo = `Planificacion_RA_${(dg.moduloFormativo || 'modulo').replace(/\s+/g, '_')}.doc`;
 
 
 
@@ -3216,15 +3216,15 @@ function exportarWord() {
 
 
 
-  const url  = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
 
 
 
-  const a    = document.createElement('a');
+  const a = document.createElement('a');
 
 
 
-  a.href     = url;
+  a.href = url;
 
 
 
@@ -3348,7 +3348,7 @@ function guardarBorrador() {
 
 
 
-  } catch(e) {
+  } catch (e) {
 
 
 
@@ -3464,7 +3464,7 @@ function restaurarBorrador() {
 
 
 
-  } catch(e) {
+  } catch (e) {
 
 
 
@@ -3508,7 +3508,7 @@ function poblarFormularioDesdeEstado() {
 
 
 
-  const setVal = (id, val) => { const el = document.getElementById(id); if(el && val !== undefined) el.value = val; };
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
 
 
 
@@ -3520,7 +3520,7 @@ function poblarFormularioDesdeEstado() {
 
 
 
-  setVal('codigo-fp',           dg.codigoFP);
+  setVal('codigo-fp', dg.codigoFP);
 
 
 
@@ -3528,47 +3528,47 @@ function poblarFormularioDesdeEstado() {
 
 
 
-  setVal('codigo-titulo',       dg.codigoTitulo);
+  setVal('codigo-titulo', dg.codigoTitulo);
 
 
 
-  setVal('modulo-formativo',    dg.moduloFormativo);
+  setVal('modulo-formativo', dg.moduloFormativo);
 
 
 
-  setVal('codigo-modulo',       dg.codigoModulo);
+  setVal('codigo-modulo', dg.codigoModulo);
 
 
 
-  setVal('nombre-docente',      dg.nombreDocente);
+  setVal('nombre-docente', dg.nombreDocente);
 
 
 
-  setVal('cantidad-ra',         dg.cantidadRA);
+  setVal('cantidad-ra', dg.cantidadRA);
 
 
 
-  setVal('valor-ra',            dg.valorRA);
+  setVal('valor-ra', dg.valorRA);
 
 
 
-  setVal('horas-semana',        dg.horasSemana);
+  setVal('horas-semana', dg.horasSemana);
 
 
 
-  setVal('fecha-inicio',        dg.fechaInicio);
+  setVal('fecha-inicio', dg.fechaInicio);
 
 
 
-  setVal('fecha-termino',       dg.fechaTermino);
+  setVal('fecha-termino', dg.fechaTermino);
 
 
 
-  setVal('descripcion-ra',      ra.descripcion);
+  setVal('descripcion-ra', ra.descripcion);
 
 
 
-  setVal('criterios-referencia',ra.criterios);
+  setVal('criterios-referencia', ra.criterios);
 
 
 
@@ -3912,7 +3912,7 @@ function actualizarStepper(pasoActivo) {
 
 
 
-    if (numPaso < pasoActivo)  step.classList.add('completed');
+    if (numPaso < pasoActivo) step.classList.add('completed');
 
 
 
@@ -4000,15 +4000,15 @@ function validarPaso1() {
 
 
 
-    'familia-profesional','codigo-fp','nombre-bachillerato','codigo-titulo',
+    'familia-profesional', 'codigo-fp', 'nombre-bachillerato', 'codigo-titulo',
 
 
 
-    'modulo-formativo','codigo-modulo','nombre-docente','cantidad-ra',
+    'modulo-formativo', 'codigo-modulo', 'nombre-docente', 'cantidad-ra',
 
 
 
-    'valor-ra','horas-semana','fecha-inicio','fecha-termino'
+    'valor-ra', 'horas-semana', 'fecha-inicio', 'fecha-termino'
 
 
 
@@ -4060,7 +4060,7 @@ function validarPaso1() {
 
 
 
-  const inicio  = document.getElementById('fecha-inicio').value;
+  const inicio = document.getElementById('fecha-inicio').value;
 
 
 
@@ -4096,7 +4096,7 @@ function validarPaso1() {
 
 
 
-  const diasActivos = ['lunes','martes','miercoles','jueves','viernes']
+  const diasActivos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 
 
 
@@ -4252,7 +4252,7 @@ function guardarDatosFormulario() {
 
 
 
-    codigoFP:           getVal('codigo-fp'),
+    codigoFP: getVal('codigo-fp'),
 
 
 
@@ -4260,43 +4260,43 @@ function guardarDatosFormulario() {
 
 
 
-    codigoTitulo:       getVal('codigo-titulo'),
+    codigoTitulo: getVal('codigo-titulo'),
 
 
 
-    moduloFormativo:    getVal('modulo-formativo'),
+    moduloFormativo: getVal('modulo-formativo'),
 
 
 
-    codigoModulo:       getVal('codigo-modulo'),
+    codigoModulo: getVal('codigo-modulo'),
 
 
 
-    nombreDocente:      getVal('nombre-docente'),
+    nombreDocente: getVal('nombre-docente'),
 
 
 
-    cantidadRA:         getVal('cantidad-ra'),
+    cantidadRA: getVal('cantidad-ra'),
 
 
 
-    valorRA:            getVal('valor-ra'),
+    valorRA: getVal('valor-ra'),
 
 
 
-    horasSemana:        getVal('horas-semana'),
+    horasSemana: getVal('horas-semana'),
 
 
 
-    fechaInicio:        getVal('fecha-inicio'),
+    fechaInicio: getVal('fecha-inicio'),
 
 
 
-    fechaTermino:       getVal('fecha-termino'),
+    fechaTermino: getVal('fecha-termino'),
 
 
 
-    diasClase:          obtenerDiasClase()
+    diasClase: obtenerDiasClase()
 
 
 
@@ -4320,15 +4320,15 @@ function guardarDatosFormulario() {
 
 
 
-    criterios:   getVal('criterios-referencia'),
+    criterios: getVal('criterios-referencia'),
 
 
 
-    recursos:    getVal('recursos-didacticos'),
+    recursos: getVal('recursos-didacticos'),
 
 
 
-    nivelBloom:  planificacion.ra?.nivelBloom || ''
+    nivelBloom: planificacion.ra?.nivelBloom || ''
 
 
 
@@ -4352,7 +4352,7 @@ function obtenerDiasClase() {
 
 
 
-  const dias = ['lunes','martes','miercoles','jueves','viernes'];
+  const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
 
 
 
@@ -4368,7 +4368,7 @@ function obtenerDiasClase() {
 
 
 
-    const horas    = document.getElementById('horas-' + d);
+    const horas = document.getElementById('horas-' + d);
 
 
 
@@ -4380,7 +4380,7 @@ function obtenerDiasClase() {
 
 
 
-      horas:  parseInt(horas?.value || '2', 10)
+      horas: parseInt(horas?.value || '2', 10)
 
 
 
@@ -4584,7 +4584,7 @@ function generarPlanificacion() {
 
 
 
-      planificacion.semanas    = calcularSemanas(dg.fechaInicio, dg.fechaTermino);
+      planificacion.semanas = calcularSemanas(dg.fechaInicio, dg.fechaTermino);
 
 
 
@@ -4680,7 +4680,7 @@ function generarPlanificacion() {
 
 
 
-    } catch(e) {
+    } catch (e) {
 
 
 
@@ -4768,23 +4768,23 @@ function actualizarBloomBadge(textoRA) {
 
 
 
-  const info  = {
+  const info = {
 
 
 
-    conocimiento: { label:'Nivel Bloom Detectado: Conocimiento', color:'#1565C0', bg:'#E3F2FD' },
+    conocimiento: { label: 'Nivel Bloom Detectado: Conocimiento', color: '#1565C0', bg: '#E3F2FD' },
 
 
 
-    comprension:  { label:'Nivel Bloom Detectado: Comprensión',  color:'#2E7D32', bg:'#E8F5E9' },
+    comprension: { label: 'Nivel Bloom Detectado: Comprensión', color: '#2E7D32', bg: '#E8F5E9' },
 
 
 
-    aplicacion:   { label:'Nivel Bloom Detectado: Aplicación',   color:'#E65100', bg:'#FFF3E0' },
+    aplicacion: { label: 'Nivel Bloom Detectado: Aplicación', color: '#E65100', bg: '#FFF3E0' },
 
 
 
-    actitudinal:  { label:'Nivel Bloom Detectado: Actitudinal',  color:'#6A1B9A', bg:'#F3E5F5' }
+    actitudinal: { label: 'Nivel Bloom Detectado: Actitudinal', color: '#6A1B9A', bg: '#F3E5F5' }
 
 
 
@@ -4840,7 +4840,7 @@ function actualizarResumenHoras() {
 
 
 
-  const fechaFin    = document.getElementById('fecha-termino')?.value;
+  const fechaFin = document.getElementById('fecha-termino')?.value;
 
 
 
@@ -4876,7 +4876,7 @@ function actualizarResumenHoras() {
 
 
 
-  const texto   = document.getElementById('resumen-horas-texto');
+  const texto = document.getElementById('resumen-horas-texto');
 
 
 
@@ -4928,7 +4928,7 @@ function mostrarToast(mensaje, tipo = 'success') {
 
 
 
-  const iconos = { success:'check_circle', error:'error', info:'info' };
+  const iconos = { success: 'check_circle', error: 'error', info: 'info' };
 
 
 
@@ -4996,6 +4996,71 @@ function mostrarToast(mensaje, tipo = 'success') {
 
 
 
+
+// ─────────────────────────────────────────────────────────────
+// SELECTORES DE PLANIFICACION PARA CALIFICACIONES Y DIARIAS
+// ─────────────────────────────────────────────────────────────
+
+function _getBiblioOpts() {
+  const biblio = cargarBiblioteca();
+  return (biblio.items || []).map(it => {
+    const dg = it.planificacion && it.planificacion.datosGenerales ? it.planificacion.datosGenerales : {};
+    const label = [dg.moduloFormativo, dg.nombreBachillerato, it.fechaGuardadoLabel].filter(Boolean).join(' — ');
+    return '<option value="' + it.id + '">' + label + '</option>';
+  }).join('');
+}
+
+function _cargarPlanDesdeSelector(selectorId, callback) {
+  var sel = document.getElementById(selectorId);
+  if (!sel || !sel.value) { mostrarToast('Selecciona una planificación', 'error'); return; }
+  var biblio = cargarBiblioteca();
+  var item = (biblio.items || []).find(function (it) { return it.id === sel.value; });
+  if (!item || !item.planificacion) { mostrarToast('No se encontró la planificación', 'error'); return; }
+  planificacion = item.planificacion;
+  (planificacion.actividades || []).forEach(function (a) { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
+  (planificacion.fechasClase || []).forEach(function (f) { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
+  mostrarToast('Planificación cargada correctamente.', 'success');
+  if (callback) callback();
+}
+
+function _actualizarSelectorPlanCal(tieneActividades) {
+  var area = document.getElementById('cal-sin-actividades');
+  if (!area) return;
+  if (tieneActividades) { area.classList.add('hidden'); return; }
+  var opts = _getBiblioOpts();
+  area.classList.remove('hidden');
+  if (!opts) {
+    area.innerHTML = '<span class="material-icons">info</span><p>No hay planificaciones guardadas. Completa una planificación y guárdala primero.</p>';
+    return;
+  }
+  area.innerHTML = '<span class="material-icons" style="color:#1565C0;">info</span>'
+    + '<div style="flex:1;"><p style="margin:0 0 8px;font-weight:600;">Selecciona la planificación para registrar calificaciones:</p>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    + '<select id="cal-selector-plan" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">'
+    + '<option value="">-- Selecciona --</option>' + opts + '</select>'
+    + '<button class="btn-siguiente" style="padding:8px 16px;" onclick="_cargarPlanDesdeSelector(\'cal-selector-plan\',function(){document.getElementById(\'cal-sin-actividades\').classList.add(\'hidden\');renderizarCalificaciones();});">'
+    + '<span class="material-icons">upload</span> Cargar</button></div></div>';
+}
+
+function _actualizarSelectorPlanDiarias(tieneActividades) {
+  var area = document.getElementById('pd-sin-actividades');
+  if (!area) return;
+  if (tieneActividades) { area.classList.add('hidden'); return; }
+  var opts = _getBiblioOpts();
+  area.classList.remove('hidden');
+  if (!opts) {
+    area.innerHTML = '<span class="material-icons">event_busy</span><p>No hay planificaciones guardadas. Completa y guarda una planificación primero.</p>';
+    return;
+  }
+  area.innerHTML = '<span class="material-icons" style="color:#0D47A1;">info</span>'
+    + '<div style="flex:1;"><p style="margin:0 0 8px;font-weight:600;">Selecciona una planificación guardada:</p>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    + '<select id="diarias-selector-plan" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">'
+    + '<option value="">-- Selecciona --</option>' + opts + '</select>'
+    + '<button class="btn-siguiente" style="padding:8px 16px;" onclick="_cargarPlanDesdeSelector(\'diarias-selector-plan\',function(){cargarDiarias();document.getElementById(\'pd-sin-actividades\').classList.add(\'hidden\');renderizarDiarias();});">'
+    + '<span class="material-icons">upload</span> Cargar</button></div></div>';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
 
@@ -5008,7 +5073,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  ['lunes','martes','miercoles','jueves','viernes'].forEach(dia => {
+  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
 
 
 
@@ -5016,11 +5081,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    const wrap     = document.getElementById('horas-' + dia + '-wrap');
+    const wrap = document.getElementById('horas-' + dia + '-wrap');
 
 
 
-    const card     = document.getElementById('dia-card-' + dia);
+    const card = document.getElementById('dia-card-' + dia);
 
 
 
@@ -5172,7 +5237,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  ['fecha-inicio','fecha-termino','horas-semana'].forEach(id => {
+  ['fecha-inicio', 'fecha-termino', 'horas-semana'].forEach(id => {
 
 
 
@@ -5400,16 +5465,22 @@ function _asegurarPlanificacion() {
       if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha);
     });
     return true;
-  } catch(e) { return false; }
+  } catch (e) { return false; }
 }
 
 // ── Helper: mostrar/ocultar las secciones correctas ─────────────────────────
+var _stepSectionsOcultas = false;
+
 function _mostrarPanel(panelId) {
-  // Ocultar area principal
+  // Ocultar stepper
   document.querySelector('.stepper-container')?.classList.add('hidden');
-  document.querySelector('.main-content')?.classList.add('hidden');
+  // Ocultar secciones de pasos por ID
+  ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
+  _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones','panel-planificaciones','panel-diarias'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -5419,10 +5490,17 @@ function _mostrarPanel(panelId) {
 
 function _ocultarPaneles() {
   document.querySelector('.stepper-container')?.classList.remove('hidden');
-  document.querySelector('.main-content')?.classList.remove('hidden');
-  ['panel-calificaciones','panel-planificaciones','panel-diarias'].forEach(id => {
+  // Restaurar secciones de pasos - solo la activa debe verse
+  ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
+    document.getElementById(id)?.classList.remove('hidden');
+  });
+  _stepSectionsOcultas = false;
+  // Ocultar paneles
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
+  // Re-aplicar visibilidad de pasos segun el paso actual
+  if (typeof irAlPaso === 'function') irAlPaso(pasoActual || 1, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -5534,7 +5612,7 @@ function cargarCalificaciones() {
 
 
 
-  } catch(e) {
+  } catch (e) {
 
 
 
@@ -6198,983 +6276,333 @@ function editarNombreEstudiante(estudianteId) {
 
 
 
-function registrarNota(estudianteId, actividadId, valor) {
+// ================================================================
+// SISTEMA DE CALIFICACIONES POR RA
+// ================================================================
 
-
-
-  const curso = calState.cursos[calState.cursoActivoId];
-
-
-
-  if (!curso) return;
-
-
-
-
-
-
-
-  if (!curso.notas[estudianteId]) curso.notas[estudianteId] = {};
-
-
-
-
-
-
-
-  const num = parseFloat(valor);
-
-
-
-  if (valor === '' || isNaN(num)) {
-
-
-
-    delete curso.notas[estudianteId][actividadId];
-
-
-
-  } else {
-
-
-
-    curso.notas[estudianteId][actividadId] = Math.min(100, Math.max(0, num));
-
-
-
-  }
-
-
-
-
-
-
-
-  guardarCalificaciones();
-
-
-
-  actualizarFilaPromedio(estudianteId);
-
-
-
-  actualizarPromedioActividad(actividadId);
-
-
-
+function _getRaKey() {
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const base = (dg.moduloFormativo || '') + '|' + (dg.codigoModulo || '') + '|' + (ra.descripcion || '').substring(0, 40);
+  try { return 'ra_' + btoa(unescape(encodeURIComponent(base))).substring(0, 16).replace(/[^a-zA-Z0-9]/g, '_'); }
+  catch (e) { return 'ra_' + Math.abs(base.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 999999; }
 }
 
-
-
-
-
-
-
-/** Recalcula y actualiza el promedio de un estudiante en su fila */
-
-
-
-function actualizarFilaPromedio(estudianteId) {
-
-
-
-  const curso = calState.cursos[calState.cursoActivoId];
-
-
-
-  if (!curso) return;
-
-
-
-
-
-
-
-  const notas = curso.notas[estudianteId] || {};
-
-
-
-  const vals = Object.values(notas).filter(n => n !== null && n !== undefined);
-
-
-
-  const promedio = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-
-
-
-
-
-
-
-  const cell = document.getElementById(`prom-${estudianteId}`);
-
-
-
-  if (!cell) return;
-
-
-
-
-
-
-
-  if (promedio === null) {
-
-
-
-    cell.textContent = '—';
-
-
-
-    cell.className = 'td-promedio';
-
-
-
-  } else {
-
-
-
-    const p = Math.round(promedio * 10) / 10;
-
-
-
-    cell.textContent = p.toFixed(1);
-
-
-
-    cell.className = `td-promedio ${p >= 70 ? 'prom-aprobado' : p >= 60 ? 'prom-regular' : 'prom-reprobado'}`;
-
-
-
-  }
-
-
-
-
-
-
-
-  // Colorear el input
-
-
-
-  const actIds = (planificacion.actividades || []).map(a => a.id);
-
-
-
-  actIds.forEach(aId => {
-
-
-
-    const inp = document.getElementById(`nota-${estudianteId}-${aId}`);
-
-
-
-    if (!inp) return;
-
-
-
-    const v = parseFloat(inp.value);
-
-
-
-    if (!isNaN(v)) {
-
-
-
-      inp.className = `input-nota ${v >= 70 ? 'nota-aprobado' : v >= 60 ? 'nota-regular' : 'nota-reprobado'}`;
-
-
-
-    } else {
-
-
-
-      inp.className = 'input-nota';
-
-
-
+function _ensureRA(curso, raKey) {
+  if (!curso.ras) curso.ras = {};
+  if (!curso.ras[raKey]) {
+    const dg = planificacion.datosGenerales || {};
+    const ra = planificacion.ra || {};
+    const acts = planificacion.actividades || [];
+    const valorTotal = parseFloat(dg.valorRA) || 10;
+    const valores = {};
+    if (acts.length > 0) {
+      const porAct = Math.floor((valorTotal / acts.length) * 10) / 10;
+      acts.forEach((a, i) => {
+        valores[a.id] = (i === acts.length - 1)
+          ? Math.round((valorTotal - porAct * (acts.length - 1)) * 10) / 10
+          : porAct;
+      });
     }
-
-
-
-  });
-
-
-
-}
-
-
-
-
-
-
-
-/** Recalcula el promedio por columna (actividad) en el footer */
-
-
-
-function actualizarPromedioActividad(actividadId) {
-
-
-
-  const curso = calState.cursos[calState.cursoActivoId];
-
-
-
-  if (!curso) return;
-
-
-
-
-
-
-
-  const vals = curso.estudiantes
-
-
-
-    .map(e => curso.notas[e.id]?.[actividadId])
-
-
-
-    .filter(v => v !== undefined && v !== null);
-
-
-
-
-
-
-
-  const cell = document.getElementById(`foot-${actividadId}`);
-
-
-
-  if (!cell) return;
-
-
-
-
-
-
-
-  if (vals.length === 0) {
-
-
-
-    cell.textContent = '—';
-
-
-
-  } else {
-
-
-
-    const p = vals.reduce((a, b) => a + b, 0) / vals.length;
-
-
-
-    cell.textContent = (Math.round(p * 10) / 10).toFixed(1);
-
-
-
-    cell.style.color = p >= 70 ? '#2E7D32' : p >= 60 ? '#E65100' : '#C62828';
-
-
-
+    curso.ras[raKey] = {
+      raKey,
+      label: (ra.descripcion || raKey).substring(0, 80),
+      modulo: dg.moduloFormativo || '',
+      valorTotal,
+      actividades: acts.map(a => a.id),
+      valores
+    };
   }
-
-
-
+  return curso.ras[raKey];
 }
 
+function registrarNota(estudianteId, actividadId, valor) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const raKey = _getRaKey();
+  _ensureRA(curso, raKey);
+  if (!curso.notas) curso.notas = {};
+  if (!curso.notas[estudianteId]) curso.notas[estudianteId] = {};
+  if (!curso.notas[estudianteId][raKey]) curso.notas[estudianteId][raKey] = {};
+  const num = parseFloat(valor);
+  if (valor === '' || isNaN(num)) {
+    delete curso.notas[estudianteId][raKey][actividadId];
+  } else {
+    const max = (curso.ras[raKey].valores[actividadId]) || 100;
+    curso.notas[estudianteId][raKey][actividadId] = Math.min(max, Math.max(0, num));
+  }
+  guardarCalificaciones();
+  _actualizarFilaRA(estudianteId, raKey);
+  _actualizarFooterRA(raKey);
+}
 
+function actualizarValorActividad(actividadId, nuevoValor) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const raKey = _getRaKey();
+  _ensureRA(curso, raKey);
+  const num = parseFloat(nuevoValor);
+  if (!isNaN(num) && num > 0) {
+    curso.ras[raKey].valores[actividadId] = num;
+    guardarCalificaciones();
+    renderizarTablaCalificaciones();
+  }
+}
 
+function _calcNotaRA(curso, estudianteId, raKey) {
+  const raInfo = curso.ras?.[raKey];
+  if (!raInfo) return null;
+  const notasEst = curso.notas?.[estudianteId]?.[raKey] || {};
+  let total = 0, hayNotas = false;
+  raInfo.actividades.forEach(actId => {
+    const n = notasEst[actId];
+    if (n !== undefined && n !== null) { total += n; hayNotas = true; }
+  });
+  return hayNotas ? Math.round(total * 10) / 10 : null;
+}
 
+function _calcNotaFinal(curso, estudianteId) {
+  if (!curso.ras) return null;
+  let total = 0, hayAlgo = false;
+  Object.keys(curso.ras).forEach(rk => {
+    const n = _calcNotaRA(curso, estudianteId, rk);
+    if (n !== null) { total += n; hayAlgo = true; }
+  });
+  return hayAlgo ? Math.round(total * 10) / 10 : null;
+}
 
+function _clsNota(n, max) {
+  if (n === null || n === undefined) return '';
+  const pct = max > 0 ? (n / max) * 100 : n;
+  return pct >= 70 ? 'nota-aprobado' : pct >= 60 ? 'nota-regular' : 'nota-reprobado';
+}
+function _clsProm(n) {
+  if (n === null || n === undefined) return '';
+  return n >= 70 ? 'prom-aprobado' : n >= 60 ? 'prom-regular' : 'prom-reprobado';
+}
 
+function _actualizarFilaRA(estudianteId, raKey) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const nota = _calcNotaRA(curso, estudianteId, raKey);
+  const max = curso.ras[raKey]?.valorTotal || 10;
+  const cell = document.getElementById('total-ra-' + estudianteId + '-' + raKey);
+  if (cell) { cell.textContent = nota !== null ? nota.toFixed(1) : '\u2014'; cell.className = 'td-total-ra ' + _clsNota(nota, max); }
+  const notaFinal = _calcNotaFinal(curso, estudianteId);
+  const cellFinal = document.getElementById('final-' + estudianteId);
+  if (cellFinal) { cellFinal.textContent = notaFinal !== null ? notaFinal.toFixed(1) : '\u2014'; cellFinal.className = 'td-promedio ' + _clsProm(notaFinal); }
+}
+
+function _actualizarFooterRA(raKey) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.ras?.[raKey]) return;
+  const raInfo = curso.ras[raKey];
+  raInfo.actividades.forEach(actId => {
+    const vals = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[actId]).filter(v => v !== undefined && v !== null);
+    const cell = document.getElementById('foot-' + raKey + '-' + actId);
+    if (!cell) return;
+    if (vals.length === 0) { cell.textContent = '\u2014'; cell.style.color = ''; return; }
+    const p = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const max = raInfo.valores[actId] || 10;
+    cell.textContent = p.toFixed(1);
+    cell.style.color = (p / max) >= 0.7 ? '#2E7D32' : (p / max) >= 0.6 ? '#E65100' : '#C62828';
+  });
+  const tots = curso.estudiantes.map(e => _calcNotaRA(curso, e.id, raKey)).filter(n => n !== null);
+  const cellTot = document.getElementById('foot-total-ra-' + raKey);
+  if (cellTot) {
+    if (tots.length === 0) { cellTot.textContent = '\u2014'; cellTot.style.color = ''; }
+    else {
+      const p = tots.reduce((a, b) => a + b, 0) / tots.length;
+      cellTot.textContent = p.toFixed(1);
+      cellTot.style.color = (p / raInfo.valorTotal) >= 0.7 ? '#2E7D32' : (p / raInfo.valorTotal) >= 0.6 ? '#E65100' : '#C62828';
+    }
+  }
+}
+
+function actualizarFilaPromedio(estudianteId) { _actualizarFilaRA(estudianteId, _getRaKey()); }
+function actualizarPromedioActividad(actividadId) { _actualizarFooterRA(_getRaKey()); }
 
 // ----------------------------------------------------------------
-
-
-
 // RENDERIZADO
-
-
-
 // ----------------------------------------------------------------
-
-
-
-
-
-
-
-/** Renderiza el panel completo de calificaciones */
-
-
 
 function renderizarCalificaciones() {
-
-
-
   renderizarTabsCursos();
-
-
-
   renderizarTablaCalificaciones();
-
-
-
 }
-
-
-
-
-
-
-
-/** Renderiza los tabs de cursos */
-
-
 
 function renderizarTabsCursos() {
-
-
-
   const container = document.getElementById('cal-tabs');
-
-
-
   if (!container) return;
-
-
-
-
-
-
-
   container.innerHTML = '';
-
-
-
   const cursos = Object.values(calState.cursos);
-
-
-
-
-
-
-
   if (cursos.length === 0) {
-
-
-
-    container.innerHTML = '<span style="color:#9E9E9E;font-size:0.85rem;">Sin cursos. Crea uno →</span>';
-
-
-
+    container.innerHTML = '<span style="color:#9E9E9E;font-size:0.85rem;">Sin cursos. Crea uno &rarr;</span>';
     return;
-
-
-
   }
-
-
-
-
-
-
-
   cursos.forEach(curso => {
-
-
-
     const tab = document.createElement('button');
-
-
-
-    tab.className = `cal-tab${curso.id === calState.cursoActivoId ? ' activo' : ''}`;
-
-
-
-    tab.innerHTML = `
-
-
-
-      <span class="material-icons" style="font-size:16px;">class</span>
-
-
-
-      ${escapeHTML(curso.nombre)}
-
-
-
-      <button class="cal-tab-del" title="Eliminar curso"
-
-
-
-        onclick="event.stopPropagation();eliminarCurso('${curso.id}')">
-
-
-
-        <span class="material-icons" style="font-size:16px;">close</span>
-
-
-
-      </button>`;
-
-
-
+    tab.className = 'cal-tab' + (curso.id === calState.cursoActivoId ? ' activo' : '');
+    tab.innerHTML = '<span class="material-icons" style="font-size:16px;">class</span>'
+      + escapeHTML(curso.nombre)
+      + '<button class="cal-tab-del" title="Eliminar curso" onclick="event.stopPropagation();eliminarCurso(\'' + curso.id + '\')">'
+      + '<span class="material-icons" style="font-size:16px;">close</span></button>';
     tab.onclick = () => activarCurso(curso.id);
-
-
-
     container.appendChild(tab);
-
-
-
   });
-
-
-
 }
-
-
-
-
-
-
-
-/** Renderiza la tabla de calificaciones del curso activo */
-
-
 
 function renderizarTablaCalificaciones() {
-
-
-
   const thead = document.getElementById('cal-thead');
-
-
-
   const tbody = document.getElementById('cal-tbody');
-
-
-
   const tfoot = document.getElementById('cal-tfoot');
-
-
-
   const sinActs = document.getElementById('cal-sin-actividades');
-
-
-
-
-
-
-
   if (!thead || !tbody || !tfoot) return;
 
-
-
-
-
-
-
   const actividades = planificacion.actividades || [];
-
-
-
   const cursoId = calState.cursoActivoId;
-
-
-
   const curso = cursoId ? calState.cursos[cursoId] : null;
 
-
-
-
-
-
-
-  // Si no hay actividades generadas, mostrar aviso
-
-
-
   if (actividades.length === 0) {
-
-
-
     sinActs?.classList.remove('hidden');
-
-
-
-    thead.innerHTML = '';
-
-
-
-    tbody.innerHTML = '';
-
-
-
-    tfoot.innerHTML = '';
-
-
-
+    thead.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = '';
     return;
-
-
-
   }
-
-
-
   sinActs?.classList.add('hidden');
 
-
-
-
-
-
-
   if (!curso) {
-
-
-
     thead.innerHTML = '';
-
-
-
     tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Crea o selecciona un curso para comenzar.</td></tr>';
-
-
-
     tfoot.innerHTML = '';
-
-
-
     return;
-
-
-
   }
 
+  const raKey = _getRaKey();
+  const raInfo = _ensureRA(curso, raKey);
+  const dg = planificacion.datosGenerales || {};
+  const rasKeys = Object.keys(curso.ras || {});
 
+  // ─── ENCABEZADO fila 1 ───
+  const raDescCorta = planificacion.ra && planificacion.ra.descripcion
+    ? escapeHTML(planificacion.ra.descripcion.substring(0, 65)) + (planificacion.ra.descripcion.length > 65 ? '&hellip;' : '')
+    : '';
+  const raLabel = escapeHTML((dg.moduloFormativo || 'RA').substring(0, 28))
+    + ' &mdash; RA&nbsp;(' + raInfo.valorTotal + '&nbsp;pts)'
+    + (raDescCorta ? '<br><small style="font-weight:400;opacity:0.88;font-size:0.72rem;">' + raDescCorta + '</small>' : '');
 
+  let h1 = '<tr class="tr-ec-header">'
+    + '<th class="th-nombre" rowspan="2">Estudiante</th>'
+    + '<th colspan="' + actividades.length + '" style="text-align:center;background:#1565C0;color:#fff;padding:6px 8px;">'
+    + raLabel + '</th>'
+    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small></th>';
 
-
-
-
-  // Agrupar actividades por EC
-
-
-
-  const grupos = {};
-
-
-
-  actividades.forEach(a => {
-
-
-
-    if (!grupos[a.ecCodigo]) grupos[a.ecCodigo] = [];
-
-
-
-    grupos[a.ecCodigo].push(a);
-
-
-
+  rasKeys.filter(rk => rk !== raKey).forEach(rk => {
+    const ri = curso.ras[rk];
+    h1 += '<th rowspan="2" style="background:#4527A0;color:#fff;min-width:72px;font-size:0.75rem;vertical-align:middle;text-align:center;white-space:nowrap;" title="' + escapeHTML(ri.label) + '">'
+      + escapeHTML(ri.modulo.substring(0, 14) || 'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
   });
 
+  h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th></tr>';
 
-
-
-
-
-
-  // ---- ENCABEZADO ----
-
-
-
-  // Fila 1: EC agrupados (colspan)
-
-
-
-  let headRow1 = '<tr class="tr-ec-header"><th class="th-nombre">Estudiante</th>';
-
-
-
-  // Fila 2: actividades individuales
-
-
-
-  let headRow2 = '<tr><th class="th-nombre" style="position:sticky;left:0;z-index:10;background:var(--color-primario-dark);">Nombre</th>';
-
-
-
-
-
-
-
-  Object.entries(grupos).forEach(([ecCodigo, acts]) => {
-
-
-
-    headRow1 += `<th colspan="${acts.length}" style="text-align:center;">${escapeHTML(ecCodigo)}</th>`;
-
-
-
-    acts.forEach((a, i) => {
-
-
-
-      const label = `Act. ${i + 1}`;
-
-
-
-      const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
-
-
-
-      headRow2 += `<th title="${escapeHTML(a.enunciado)}">${label}<br><span style="font-weight:400;opacity:0.8;">${fechaCorta}</span></th>`;
-
-
-
-    });
-
-
-
+  // Fila 2: actividades con valor editable
+  let h2 = '<tr>';
+  actividades.forEach((a, i) => {
+    const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
+    const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
+    const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '') : '';
+    h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
+      + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i + 1)
+      + ' <span style="opacity:0.65;font-weight:400;">' + ecCorto + '</span></div>'
+      + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + '</div>'
+      + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
+      + ' title="Valor m&aacute;ximo de esta actividad" placeholder="pts"'
+      + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value)"'
+      + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #90CAF9;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
+      + '</th>';
   });
+  h2 += '</tr>';
+  thead.innerHTML = h1 + h2;
 
-
-
-
-
-
-
-  headRow1 += '<th>Promedio</th></tr>';
-
-
-
-  headRow2 += '<th>Final</th></tr>';
-
-
-
-  thead.innerHTML = headRow1 + headRow2;
-
-
-
-
-
-
-
-  // ---- CUERPO ----
-
-
-
+  // ─── CUERPO ───
   if (curso.estudiantes.length === 0) {
-
-
-
-    tbody.innerHTML = `<tr><td colspan="${actividades.length + 2}" style="text-align:center;padding:2rem;color:#9E9E9E;">
-
-
-
-      Agrega estudiantes usando el formulario de arriba.
-
-
-
-    </td></tr>`;
-
-
-
+    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Agrega estudiantes usando el formulario de arriba.</td></tr>';
     tfoot.innerHTML = '';
-
-
-
     return;
-
-
-
   }
-
-
-
-
-
-
 
   tbody.innerHTML = '';
-
-
-
   curso.estudiantes.forEach(est => {
-
-
-
     const tr = document.createElement('tr');
-
-
-
-    let cells = `
-
-
-
-      <td class="td-nombre" id="nombre-${est.id}">
-
-
-
-        <div class="td-nombre-inner">
-
-
-
-          <span ondblclick="editarNombreEstudiante('${est.id}')" title="Doble clic para editar"
-
-
-
-            style="cursor:pointer;flex:1;">${escapeHTML(est.nombre)}</span>
-
-
-
-          <button class="btn-del-estudiante" onclick="eliminarEstudiante('${est.id}')" title="Eliminar">
-
-
-
-            <span class="material-icons" style="font-size:16px;">close</span>
-
-
-
-          </button>
-
-
-
-        </div>
-
-
-
-      </td>`;
-
-
-
-
-
-
+    let cells = '<td class="td-nombre" id="nombre-' + est.id + '">'
+      + '<div class="td-nombre-inner">'
+      + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
+      + '<button class="btn-del-estudiante" onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar"><span class="material-icons" style="font-size:16px;">close</span></button>'
+      + '</div></td>';
 
     actividades.forEach(a => {
-
-
-
-      const nota = curso.notas[est.id]?.[a.id];
-
-
-
+      const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
       const val = nota !== undefined ? nota : '';
-
-
-
-      const cls = nota !== undefined
-
-
-
-        ? (nota >= 70 ? 'nota-aprobado' : nota >= 60 ? 'nota-regular' : 'nota-reprobado')
-
-
-
-        : '';
-
-
-
-      cells += `<td><input type="number" class="input-nota ${cls}"
-
-
-
-        id="nota-${est.id}-${a.id}"
-
-
-
-        value="${val}" min="0" max="100" step="0.5"
-
-
-
-        placeholder="—"
-
-
-
-        onchange="registrarNota('${est.id}','${a.id}',this.value)"
-
-
-
-        oninput="registrarNota('${est.id}','${a.id}',this.value)"
-
-
-
-        title="Nota de ${escapeHTML(est.nombre)} en ${escapeHTML(a.enunciado.substring(0,50))}"
-
-
-
-        /></td>`;
-
-
-
+      const max = raInfo.valores[a.id] || 100;
+      const cls = nota !== undefined ? _clsNota(nota, max) : '';
+      cells += '<td><input type="number" class="input-nota ' + cls + '"'
+        + ' id="nota-' + est.id + '-' + a.id + '"'
+        + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="\u2014"'
+        + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
+        + ' oninput="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
+        + ' title="M&aacute;x: ' + max + ' pts | ' + escapeHTML(a.enunciado.substring(0, 40)) + '"'
+        + '/></td>';
     });
 
+    const notaRA = _calcNotaRA(curso, est.id, raKey);
+    cells += '<td class="td-total-ra ' + _clsNota(notaRA, raInfo.valorTotal) + '" id="total-ra-' + est.id + '-' + raKey + '">'
+      + (notaRA !== null ? notaRA.toFixed(1) : '\u2014') + '</td>';
 
+    rasKeys.filter(rk => rk !== raKey).forEach(rk => {
+      const ri = curso.ras[rk];
+      const n = _calcNotaRA(curso, est.id, rk);
+      cells += '<td class="td-total-ra ' + _clsNota(n, ri.valorTotal) + '" style="background:#F3E5F5;">'
+        + (n !== null ? n.toFixed(1) : '\u2014') + '</td>';
+    });
 
-
-
-
-
-    // Promedio final del estudiante
-
-
-
-    const notas = curso.notas[est.id] || {};
-
-
-
-    const vals = Object.values(notas).filter(n => n !== null && n !== undefined);
-
-
-
-    const prom = vals.length > 0 ? vals.reduce((a,b) => a+b, 0) / vals.length : null;
-
-
-
-    const promStr = prom !== null ? (Math.round(prom * 10)/10).toFixed(1) : '—';
-
-
-
-    const promCls = prom !== null ? (prom >= 70 ? 'prom-aprobado' : prom >= 60 ? 'prom-regular' : 'prom-reprobado') : '';
-
-
-
-    cells += `<td class="td-promedio ${promCls}" id="prom-${est.id}">${promStr}</td>`;
-
-
-
-
-
-
+    const notaFinal = _calcNotaFinal(curso, est.id);
+    cells += '<td class="td-promedio ' + _clsProm(notaFinal) + '" id="final-' + est.id + '">'
+      + (notaFinal !== null ? notaFinal.toFixed(1) : '\u2014') + '</td>';
 
     tr.innerHTML = cells;
-
-
-
     tbody.appendChild(tr);
-
-
-
   });
 
-
-
-
-
-
-
-  // ---- FOOTER (promedios por actividad) ----
-
-
-
-  let footerRow = '<tr><td class="td-foot-label">Promedio clase</td>';
-
-
-
+  // ─── FOOTER ───
+  let footerRow = '<tr><td class="td-foot-label">Prom. clase</td>';
   actividades.forEach(a => {
-
-
-
-    const vals = curso.estudiantes
-
-
-
-      .map(e => curso.notas[e.id]?.[a.id])
-
-
-
-      .filter(v => v !== undefined && v !== null);
-
-
-
-    const prom = vals.length > 0 ? (vals.reduce((x,y) => x+y, 0) / vals.length) : null;
-
-
-
-    const color = prom !== null ? (prom >= 70 ? '#2E7D32' : prom >= 60 ? '#E65100' : '#C62828') : '';
-
-
-
-    footerRow += `<td id="foot-${a.id}" style="color:${color};">${prom !== null ? (Math.round(prom*10)/10).toFixed(1) : '—'}</td>`;
-
-
-
+    const vals = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[a.id]).filter(v => v !== undefined && v !== null);
+    const p = vals.length > 0 ? vals.reduce((x, y) => x + y, 0) / vals.length : null;
+    const max = raInfo.valores[a.id] || 10;
+    footerRow += '<td id="foot-' + raKey + '-' + a.id + '" style="' + (p !== null ? 'color:' + ((p / max) >= 0.7 ? '#2E7D32' : (p / max) >= 0.6 ? '#E65100' : '#C62828') : '') + ';">'
+      + (p !== null ? p.toFixed(1) : '\u2014') + '</td>';
   });
 
+  const tots = curso.estudiantes.map(e => _calcNotaRA(curso, e.id, raKey)).filter(n => n !== null);
+  const avgRA = tots.length > 0 ? tots.reduce((a, b) => a + b, 0) / tots.length : null;
+  footerRow += '<td id="foot-total-ra-' + raKey + '" style="font-weight:700;' + (avgRA !== null ? 'color:' + ((avgRA / raInfo.valorTotal) >= 0.7 ? '#2E7D32' : (avgRA / raInfo.valorTotal) >= 0.6 ? '#E65100' : '#C62828') : '') + ';">'
+    + (avgRA !== null ? avgRA.toFixed(1) : '\u2014') + '</td>';
 
+  rasKeys.filter(rk => rk !== raKey).forEach(rk => {
+    const ri = curso.ras[rk];
+    const tt = curso.estudiantes.map(e => _calcNotaRA(curso, e.id, rk)).filter(n => n !== null);
+    const avg = tt.length > 0 ? tt.reduce((a, b) => a + b, 0) / tt.length : null;
+    footerRow += '<td style="background:#EDE7F6;font-weight:700;' + (avg !== null ? 'color:' + ((avg / ri.valorTotal) >= 0.7 ? '#2E7D32' : (avg / ri.valorTotal) >= 0.6 ? '#E65100' : '#C62828') : '') + ';">'
+      + (avg !== null ? avg.toFixed(1) : '\u2014') + '</td>';
+  });
 
-  footerRow += '<td id="foot-prom-total" class="td-foot-label">—</td></tr>';
+  const fins = curso.estudiantes.map(e => _calcNotaFinal(curso, e.id)).filter(n => n !== null);
+  const avgFin = fins.length > 0 ? fins.reduce((a, b) => a + b, 0) / fins.length : null;
+  footerRow += '<td style="font-weight:700;' + (avgFin !== null ? 'color:' + (avgFin >= 70 ? '#2E7D32' : avgFin >= 60 ? '#E65100' : '#C62828') : '') + ';">'
+    + (avgFin !== null ? avgFin.toFixed(1) : '\u2014') + '</td>';
 
-
-
+  footerRow += '</tr>';
   tfoot.innerHTML = footerRow;
-
-
-
-
-
-
-
-  // Calcular promedio general
-
-
-
-  const todosProms = curso.estudiantes.map(est => {
-
-
-
-    const stNotas = Object.values(curso.notas[est.id] || {}).filter(n => n !== undefined && n !== null);
-
-
-
-    return stNotas.length > 0 ? stNotas.reduce((a,b)=>a+b,0)/stNotas.length : null;
-
-
-
-  }).filter(p => p !== null);
-
-
-
-  const footProm = document.getElementById('foot-prom-total');
-
-
-
-  if (footProm && todosProms.length > 0) {
-
-
-
-    const gp = todosProms.reduce((a,b)=>a+b,0)/todosProms.length;
-
-
-
-    footProm.textContent = (Math.round(gp*10)/10).toFixed(1);
-
-
-
-    footProm.style.color = gp >= 70 ? '#2E7D32' : gp >= 60 ? '#E65100' : '#C62828';
-
-
-
-  }
-
-
-
 }
-
-
-
-
 
 
 
@@ -7190,19 +6618,19 @@ function escapeHTML(str) {
 
 
 
-    .replace(/&/g,'&amp;')
+    .replace(/&/g, '&amp;')
 
 
 
-    .replace(/</g,'&lt;')
+    .replace(/</g, '&lt;')
 
 
 
-    .replace(/>/g,'&gt;')
+    .replace(/>/g, '&gt;')
 
 
 
-    .replace(/"/g,'&quot;');
+    .replace(/"/g, '&quot;');
 
 
 
@@ -7235,9 +6663,13 @@ function escapeHTML(str) {
 
 
 function abrirCalificaciones() {
+  // Intentar cargar planificación, pero no bloquear si no existe
   _asegurarPlanificacion();
   cargarCalificaciones();
   _mostrarPanel('panel-calificaciones');
+  // Si no hay planificación activa, mostrar selector de planificaciones guardadas
+  const tieneActividades = (planificacion.actividades || []).length > 0;
+  _actualizarSelectorPlanCal(tieneActividades);
   renderizarCalificaciones();
 }
 // __old_abrirCalificaciones__
@@ -7303,7 +6735,7 @@ function exportarCalificacionesWord() {
 
 
 
-  const hoy = new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'});
+  const hoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
 
 
@@ -7363,11 +6795,11 @@ function exportarCalificacionesWord() {
 
 
 
-    <p><strong>Módulo:</strong> ${escapeHTML(dg.moduloFormativo||'-')}</p>
+    <p><strong>Módulo:</strong> ${escapeHTML(dg.moduloFormativo || '-')}</p>
 
 
 
-    <p><strong>Docente:</strong> ${escapeHTML(dg.nombreDocente||'-')}</p>
+    <p><strong>Docente:</strong> ${escapeHTML(dg.nombreDocente || '-')}</p>
 
 
 
@@ -7407,7 +6839,7 @@ function exportarCalificacionesWord() {
 
 
 
-  a.download = `Calificaciones_${(curso.nombre||'').replace(/\s+/g,'_')}.doc`;
+  a.download = `Calificaciones_${(curso.nombre || '').replace(/\s+/g, '_')}.doc`;
 
 
 
@@ -7663,7 +7095,7 @@ function cargarBiblioteca() {
 
 
 
-  } catch(e) {
+  } catch (e) {
 
 
 
@@ -7931,7 +7363,7 @@ function cargarPlanificacionGuardada(id) {
 
 
 
-               '"? Los datos actuales no guardados se perderán.')) return;
+    '"? Los datos actuales no guardados se perderán.')) return;
 
 
 
@@ -8375,7 +7807,7 @@ function renderizarBiblioteca() {
 
 
 
-          escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
+        escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
 
 
 
@@ -8487,11 +7919,11 @@ function escHTML(s) {
 
 
 
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
 
 
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 
 
@@ -8598,7 +8030,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-                    '<span class="btn-nueva-label">Planificaciones</span>';
+      '<span class="btn-nueva-label">Planificaciones</span>';
 
 
 
@@ -8767,45 +8199,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function irAlHome() {
-
-
-
-  // Cerrar cualquier panel lateral abierto
-
-
-
-  document.getElementById('panel-calificaciones')?.classList.add('hidden');
-
-
-
-  document.getElementById('panel-planificaciones')?.classList.add('hidden');
-
-
-
-  // Mostrar stepper y contenido principal
-
-
-
-  document.querySelector('.stepper-container')?.classList.remove('hidden');
-
-
-
-  document.querySelector('.main-content')?.classList.remove('hidden');
-
-
-
-  // Ir al paso 1
-
-
-
+  _ocultarPaneles();
   irAlPaso(1, false);
-
-
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
-
-
-
 }
 
 
@@ -8878,7 +8274,7 @@ function cargarDiarias() {
 
 
 
-  } catch(e) { estadoDiarias = { sesiones: {} }; }
+  } catch (e) { estadoDiarias = { sesiones: {} }; }
 
 
 
@@ -8946,7 +8342,7 @@ function guardarTodasDiarias() {
 
 
 
-      return el ? parseInt(el.value) || (m==='ini'?20:m==='des'?55:15) : (s.tiempos?.[m] || (m==='ini'?20:m==='des'?55:15));
+      return el ? parseInt(el.value) || (m === 'ini' ? 20 : m === 'des' ? 55 : 15) : (s.tiempos?.[m] || (m === 'ini' ? 20 : m === 'des' ? 55 : 15));
 
 
 
@@ -8970,15 +8366,15 @@ function guardarTodasDiarias() {
 
 
 
-        apertura:     read('inicio','apertura'),
+        apertura: read('inicio', 'apertura'),
 
 
 
-        encuadre:     read('inicio','encuadre'),
+        encuadre: read('inicio', 'encuadre'),
 
 
 
-        organizacion: read('inicio','organizacion')
+        organizacion: read('inicio', 'organizacion')
 
 
 
@@ -8990,11 +8386,11 @@ function guardarTodasDiarias() {
 
 
 
-        procedimental:  read('desarrollo','procedimental'),
+        procedimental: read('desarrollo', 'procedimental'),
 
 
 
-        conceptual:     read('desarrollo','conceptual')
+        conceptual: read('desarrollo', 'conceptual')
 
 
 
@@ -9006,15 +8402,15 @@ function guardarTodasDiarias() {
 
 
 
-        sintesis:    read('cierre','sintesis'),
+        sintesis: read('cierre', 'sintesis'),
 
 
 
-        conexion:    read('cierre','conexion'),
+        conexion: read('cierre', 'conexion'),
 
 
 
-        proximopaso: read('cierre','proximopaso')
+        proximopaso: read('cierre', 'proximopaso')
 
 
 
@@ -9026,7 +8422,7 @@ function guardarTodasDiarias() {
 
 
 
-      recursos:    readSec(`pd-recursos-${act.id}`),
+      recursos: readSec(`pd-recursos-${act.id}`),
 
 
 
@@ -9142,11 +8538,11 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      apertura:     `Saludo y activación de conocimientos previos a través de una pregunta exploratoria: ¿Qué saben sobre ${temaCorto}? Registro rápido de ideas en la pizarra (lluvia de ideas grupal).`,
+      apertura: `Saludo y activación de conocimientos previos a través de una pregunta exploratoria: ¿Qué saben sobre ${temaCorto}? Registro rápido de ideas en la pizarra (lluvia de ideas grupal).`,
 
 
 
-      encuadre:     `Presentación del propósito de la clase: identificar y nombrar los elementos fundamentales de ${temaCorto} dentro del campo de ${campo}, reconociendo su importancia en el contexto profesional.`,
+      encuadre: `Presentación del propósito de la clase: identificar y nombrar los elementos fundamentales de ${temaCorto} dentro del campo de ${campo}, reconociendo su importancia en el contexto profesional.`,
 
 
 
@@ -9154,31 +8550,31 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      procedimental:`1. El docente presenta el tema con apoyo visual (diapositivas/pizarra).\n2. Los estudiantes leen el material de referencia e identifican los conceptos clave.\n3. Completan una guía de trabajo: definen, enumeran y clasifican los elementos de ${temaCorto}.\n4. Cada estudiante elabora un organizador gráfico (mapa de conceptos o lista organizada).\n5. Se realiza una revisión cruzada con el compañero de al lado.`,
+      procedimental: `1. El docente presenta el tema con apoyo visual (diapositivas/pizarra).\n2. Los estudiantes leen el material de referencia e identifican los conceptos clave.\n3. Completan una guía de trabajo: definen, enumeran y clasifican los elementos de ${temaCorto}.\n4. Cada estudiante elabora un organizador gráfico (mapa de conceptos o lista organizada).\n5. Se realiza una revisión cruzada con el compañero de al lado.`,
 
 
 
-      conceptual:   `Reflexión guiada: ¿Por qué es importante conocer estos elementos en el ámbito de ${campo}? Los estudiantes comparten un ejemplo real donde este conocimiento es necesario. Se consolida con la definición colectiva del concepto central.`,
+      conceptual: `Reflexión guiada: ¿Por qué es importante conocer estos elementos en el ámbito de ${campo}? Los estudiantes comparten un ejemplo real donde este conocimiento es necesario. Se consolida con la definición colectiva del concepto central.`,
 
 
 
-      sintesis:     `Pregunta detonadora de cierre: "¿Cuál de los conceptos vistos hoy te parece más relevante para tu futuro desempeño profesional y por qué?" Respuesta oral de 2-3 estudiantes voluntarios.`,
+      sintesis: `Pregunta detonadora de cierre: "¿Cuál de los conceptos vistos hoy te parece más relevante para tu futuro desempeño profesional y por qué?" Respuesta oral de 2-3 estudiantes voluntarios.`,
 
 
 
-      conexion:     `Este conocimiento es la base de toda actuación técnica profesional en ${campo}. Los profesionales que dominan estos fundamentos toman mejores decisiones en situaciones reales de trabajo.`,
+      conexion: `Este conocimiento es la base de toda actuación técnica profesional en ${campo}. Los profesionales que dominan estos fundamentos toman mejores decisiones en situaciones reales de trabajo.`,
 
 
 
-      proximopaso:  `En la próxima sesión profundizaremos en la comprensión de estos conceptos, analizando casos y estableciendo relaciones entre ellos.`,
+      proximopaso: `En la próxima sesión profundizaremos en la comprensión de estos conceptos, analizando casos y estableciendo relaciones entre ellos.`,
 
 
 
-      estrategias:  `• Activación de conocimientos previos (lluvia de ideas): fomenta la metacognición y conecta el nuevo aprendizaje con lo ya sabido.\n• Think-Pair-Share: promueve el aprendizaje colaborativo y la discusión entre pares.\n• Organizador gráfico (mapa conceptual): facilita la estructuración y retención del conocimiento declarativo.\n• Pregunta detonadora: estimula el pensamiento crítico y la reflexión individual al cierre.`,
+      estrategias: `• Activación de conocimientos previos (lluvia de ideas): fomenta la metacognición y conecta el nuevo aprendizaje con lo ya sabido.\n• Think-Pair-Share: promueve el aprendizaje colaborativo y la discusión entre pares.\n• Organizador gráfico (mapa conceptual): facilita la estructuración y retención del conocimiento declarativo.\n• Pregunta detonadora: estimula el pensamiento crítico y la reflexión individual al cierre.`,
 
 
 
-      recursos:     `• Pizarrón / pizarra digital\n• Guía de trabajo impresa o digital\n• Material de lectura del módulo (texto, apuntes o diapositivas)\n• Marcadores y papel para organizadores gráficos`
+      recursos: `• Pizarrón / pizarra digital\n• Guía de trabajo impresa o digital\n• Material de lectura del módulo (texto, apuntes o diapositivas)\n• Marcadores y papel para organizadores gráficos`
 
 
 
@@ -9190,11 +8586,11 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      apertura:     `Saludo y presentación de un caso o situación cotidiana relacionada con ${temaCorto}. El docente lanza la pregunta: "¿Qué está ocurriendo aquí y por qué?" generando curiosidad y discusión inicial.`,
+      apertura: `Saludo y presentación de un caso o situación cotidiana relacionada con ${temaCorto}. El docente lanza la pregunta: "¿Qué está ocurriendo aquí y por qué?" generando curiosidad y discusión inicial.`,
 
 
 
-      encuadre:     `El propósito de esta sesión es comprender a fondo ${temaCorto}, diferenciando sus componentes, estableciendo relaciones y siendo capaces de explicar el concepto con palabras propias en el contexto de ${campo}.`,
+      encuadre: `El propósito de esta sesión es comprender a fondo ${temaCorto}, diferenciando sus componentes, estableciendo relaciones y siendo capaces de explicar el concepto con palabras propias en el contexto de ${campo}.`,
 
 
 
@@ -9202,31 +8598,31 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      procedimental:`1. El docente presenta 2-3 ejemplos contrastantes del tema y guía el análisis comparativo.\n2. Los estudiantes en parejas analizan un caso asignado: identifican características, causas y consecuencias.\n3. Construyen un cuadro comparativo o diagrama que explique las relaciones del tema.\n4. Cada pareja explica brevemente su análisis al grupo (2 min).\n5. El docente guía la síntesis colectiva de los hallazgos.`,
+      procedimental: `1. El docente presenta 2-3 ejemplos contrastantes del tema y guía el análisis comparativo.\n2. Los estudiantes en parejas analizan un caso asignado: identifican características, causas y consecuencias.\n3. Construyen un cuadro comparativo o diagrama que explique las relaciones del tema.\n4. Cada pareja explica brevemente su análisis al grupo (2 min).\n5. El docente guía la síntesis colectiva de los hallazgos.`,
 
 
 
-      conceptual:   `Debate dirigido: ¿En qué situaciones reales de ${campo} se aplica este concepto? Los estudiantes argumentan sus respuestas. Se realiza una autoevaluación breve: ¿puedo explicar este tema a alguien que no lo conoce?`,
+      conceptual: `Debate dirigido: ¿En qué situaciones reales de ${campo} se aplica este concepto? Los estudiantes argumentan sus respuestas. Se realiza una autoevaluación breve: ¿puedo explicar este tema a alguien que no lo conoce?`,
 
 
 
-      sintesis:     `Cierre con la técnica del "Exit Ticket": cada estudiante escribe en una tarjeta (física o digital) una frase que resume lo aprendido y una pregunta que aún tiene. Se retroalimenta de forma grupal.`,
+      sintesis: `Cierre con la técnica del "Exit Ticket": cada estudiante escribe en una tarjeta (física o digital) una frase que resume lo aprendido y una pregunta que aún tiene. Se retroalimenta de forma grupal.`,
 
 
 
-      conexion:     `La comprensión profunda de ${temaCorto} permite al profesional de ${campo} tomar decisiones fundamentadas, diagnosticar situaciones y proponer soluciones coherentes con la realidad del entorno laboral.`,
+      conexion: `La comprensión profunda de ${temaCorto} permite al profesional de ${campo} tomar decisiones fundamentadas, diagnosticar situaciones y proponer soluciones coherentes con la realidad del entorno laboral.`,
 
 
 
-      proximopaso:  `En la próxima sesión pasaremos de la comprensión a la aplicación: resolveremos situaciones prácticas usando este conocimiento en contextos reales del campo profesional.`,
+      proximopaso: `En la próxima sesión pasaremos de la comprensión a la aplicación: resolveremos situaciones prácticas usando este conocimiento en contextos reales del campo profesional.`,
 
 
 
-      estrategias:  `• Aprendizaje Basado en Análisis de Casos: desarrolla la capacidad de interpretar situaciones complejas.\n• Aprendizaje Cooperativo (parejas): favorece la construcción colectiva del conocimiento.\n• Mini-exposiciones entre pares: fortalece la comprensión al obligar a explicar el tema.\n• Exit Ticket: herramienta de evaluación formativa que promueve la metacognición.`,
+      estrategias: `• Aprendizaje Basado en Análisis de Casos: desarrolla la capacidad de interpretar situaciones complejas.\n• Aprendizaje Cooperativo (parejas): favorece la construcción colectiva del conocimiento.\n• Mini-exposiciones entre pares: fortalece la comprensión al obligar a explicar el tema.\n• Exit Ticket: herramienta de evaluación formativa que promueve la metacognición.`,
 
 
 
-      recursos:     `• Casos de estudio impresos o digitales\n• Plantilla de cuadro comparativo\n• Tarjetas para Exit Ticket (físicas o formulario digital)\n• Proyector o pizarra para síntesis colectiva`
+      recursos: `• Casos de estudio impresos o digitales\n• Plantilla de cuadro comparativo\n• Tarjetas para Exit Ticket (físicas o formulario digital)\n• Proyector o pizarra para síntesis colectiva`
 
 
 
@@ -9238,11 +8634,11 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      apertura:     `Saludo y presentación de un desafío o problema real del campo de ${campo} relacionado con ${temaCorto}. Se lanza la pregunta: "¿Cómo resolverían este problema con lo que saben?" Activando el pensamiento creativo y la motivación.`,
+      apertura: `Saludo y presentación de un desafío o problema real del campo de ${campo} relacionado con ${temaCorto}. Se lanza la pregunta: "¿Cómo resolverían este problema con lo que saben?" Activando el pensamiento creativo y la motivación.`,
 
 
 
-      encuadre:     `Hoy aplicaremos los conocimientos sobre ${temaCorto} para resolver una situación práctica concreta del entorno profesional de ${campo}. El foco está en el proceso de resolución, no solo en la respuesta correcta.`,
+      encuadre: `Hoy aplicaremos los conocimientos sobre ${temaCorto} para resolver una situación práctica concreta del entorno profesional de ${campo}. El foco está en el proceso de resolución, no solo en la respuesta correcta.`,
 
 
 
@@ -9250,31 +8646,31 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      procedimental:`1. El docente presenta el problema/reto y clarifca las instrucciones y criterios de evaluación (rúbrica compartida).\n2. Los equipos planifican su estrategia de resolución (5 min).\n3. Fase de ejecución: aplican los conceptos y herramientas disponibles para resolver el reto paso a paso.\n4. Documentan el proceso: anotan los pasos seguidos, herramientas usadas y decisiones tomadas.\n5. Presentan su solución al grupo con una breve explicación (3 min por equipo).\n6. Coevaluación: cada equipo evalúa brevemente la solución de otro usando la rúbrica.`,
+      procedimental: `1. El docente presenta el problema/reto y clarifca las instrucciones y criterios de evaluación (rúbrica compartida).\n2. Los equipos planifican su estrategia de resolución (5 min).\n3. Fase de ejecución: aplican los conceptos y herramientas disponibles para resolver el reto paso a paso.\n4. Documentan el proceso: anotan los pasos seguidos, herramientas usadas y decisiones tomadas.\n5. Presentan su solución al grupo con una breve explicación (3 min por equipo).\n6. Coevaluación: cada equipo evalúa brevemente la solución de otro usando la rúbrica.`,
 
 
 
-      conceptual:   `Reflexión metacognitiva: ¿Qué estrategia funcionó mejor y por qué? ¿Qué cambiarían en una segunda oportunidad? Los estudiantes identifican los principios aplicados en su solución y los conectan con la teoría vista.`,
+      conceptual: `Reflexión metacognitiva: ¿Qué estrategia funcionó mejor y por qué? ¿Qué cambiarían en una segunda oportunidad? Los estudiantes identifican los principios aplicados en su solución y los conectan con la teoría vista.`,
 
 
 
-      sintesis:     `El docente guía la síntesis: ¿Qué aprendieron HOY que no sabían antes de resolver el problema? Cada equipo comparte una lección aprendida. Se registra en el pizarrón como resumen colectivo.`,
+      sintesis: `El docente guía la síntesis: ¿Qué aprendieron HOY que no sabían antes de resolver el problema? Cada equipo comparte una lección aprendida. Se registra en el pizarrón como resumen colectivo.`,
 
 
 
-      conexion:     `Esta misma metodología de resolución de problemas es la que usan los profesionales de ${campo} en su día a día. Dominar este proceso les permitirá enfrentarse con confianza a desafíos reales en la industria.`,
+      conexion: `Esta misma metodología de resolución de problemas es la que usan los profesionales de ${campo} en su día a día. Dominar este proceso les permitirá enfrentarse con confianza a desafíos reales en la industria.`,
 
 
 
-      proximopaso:  `En la próxima sesión profundizaremos en las actitudes y valores profesionales que complementan estas competencias técnicas, explorando la dimensión ética del trabajo en ${campo}.`,
+      proximopaso: `En la próxima sesión profundizaremos en las actitudes y valores profesionales que complementan estas competencias técnicas, explorando la dimensión ética del trabajo en ${campo}.`,
 
 
 
-      estrategias:  `• Aprendizaje Basado en Problemas (ABP): contextualiza el aprendizaje en situaciones reales y motiva la búsqueda activa de soluciones.\n• Aprendizaje Cooperativo por equipos: fomenta la comunicación efectiva y el trabajo colaborativo.\n• Coevaluación con rúbrica: desarrolla el juicio crítico y la autorregulación del aprendizaje.\n• Pensamiento visible (documentar el proceso): promueve la metacognición y el aprendizaje autónomo.`,
+      estrategias: `• Aprendizaje Basado en Problemas (ABP): contextualiza el aprendizaje en situaciones reales y motiva la búsqueda activa de soluciones.\n• Aprendizaje Cooperativo por equipos: fomenta la comunicación efectiva y el trabajo colaborativo.\n• Coevaluación con rúbrica: desarrolla el juicio crítico y la autorregulación del aprendizaje.\n• Pensamiento visible (documentar el proceso): promueve la metacognición y el aprendizaje autónomo.`,
 
 
 
-      recursos:     `• Problema/reto impreso o en pantalla\n• Rúbrica de evaluación compartida con los estudiantes\n• Herramientas del campo (software, equipos, materiales según el módulo)\n• Acceso a recursos de referencia (manuales, guías técnicas, internet)\n• Hoja de registro del proceso de resolución`
+      recursos: `• Problema/reto impreso o en pantalla\n• Rúbrica de evaluación compartida con los estudiantes\n• Herramientas del campo (software, equipos, materiales según el módulo)\n• Acceso a recursos de referencia (manuales, guías técnicas, internet)\n• Hoja de registro del proceso de resolución`
 
 
 
@@ -9286,11 +8682,11 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      apertura:     `Saludo y apertura con un dilema ético o profesional relacionado con ${campo}: se presenta un caso real o ficticio de toma de decisiones en el entorno laboral. Se lanza la pregunta: "¿Qué harías en esta situación y por qué?"`,
+      apertura: `Saludo y apertura con un dilema ético o profesional relacionado con ${campo}: se presenta un caso real o ficticio de toma de decisiones en el entorno laboral. Se lanza la pregunta: "¿Qué harías en esta situación y por qué?"`,
 
 
 
-      encuadre:     `Esta sesión está centrada en el desarrollo de actitudes y valores profesionales fundamentales para el desempeño en ${campo}. Reflexionaremos sobre la ética profesional, la responsabilidad y el compromiso con la calidad en nuestra práctica cotidiana.`,
+      encuadre: `Esta sesión está centrada en el desarrollo de actitudes y valores profesionales fundamentales para el desempeño en ${campo}. Reflexionaremos sobre la ética profesional, la responsabilidad y el compromiso con la calidad en nuestra práctica cotidiana.`,
 
 
 
@@ -9298,31 +8694,31 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      procedimental:`1. Lectura o presentación del dilema/caso ético (individual, 5 min).\n2. Ronda de opiniones: cada estudiante comparte su postura inicial (sin interrupciones).\n3. Debate guiado: el docente introduce preguntas que profundizan el análisis: ¿Qué valores están en juego? ¿Qué consecuencias tendría cada decisión?\n4. Los estudiantes redefinen su postura tras escuchar a sus compañeros.\n5. Cada uno redacta en su portafolio una reflexión personal: ¿Qué tipo de profesional de ${campo} quiero ser? ¿Qué valores guiarán mi práctica?`,
+      procedimental: `1. Lectura o presentación del dilema/caso ético (individual, 5 min).\n2. Ronda de opiniones: cada estudiante comparte su postura inicial (sin interrupciones).\n3. Debate guiado: el docente introduce preguntas que profundizan el análisis: ¿Qué valores están en juego? ¿Qué consecuencias tendría cada decisión?\n4. Los estudiantes redefinen su postura tras escuchar a sus compañeros.\n5. Cada uno redacta en su portafolio una reflexión personal: ¿Qué tipo de profesional de ${campo} quiero ser? ¿Qué valores guiarán mi práctica?`,
 
 
 
-      conceptual:   `Consolidación: análisis de referentes profesionales del campo que demuestran valores como la integridad, la innovación responsable y el compromiso social. Los estudiantes identifican actitudes a emular en su futura práctica.`,
+      conceptual: `Consolidación: análisis de referentes profesionales del campo que demuestran valores como la integridad, la innovación responsable y el compromiso social. Los estudiantes identifican actitudes a emular en su futura práctica.`,
 
 
 
-      sintesis:     `Cada estudiante escribe en una tarjeta (o comparte oralmente) UN compromiso personal que se lleva de esta clase para su desarrollo profesional. Se crea un "mural de compromisos" colectivo.`,
+      sintesis: `Cada estudiante escribe en una tarjeta (o comparte oralmente) UN compromiso personal que se lleva de esta clase para su desarrollo profesional. Se crea un "mural de compromisos" colectivo.`,
 
 
 
-      conexion:     `Las competencias técnicas son importantes, pero son los valores y la ética profesional los que distinguen a un buen técnico de un excelente profesional. En ${campo}, la confianza de los clientes y empleadores se construye sobre la base de la integridad y la responsabilidad.`,
+      conexion: `Las competencias técnicas son importantes, pero son los valores y la ética profesional los que distinguen a un buen técnico de un excelente profesional. En ${campo}, la confianza de los clientes y empleadores se construye sobre la base de la integridad y la responsabilidad.`,
 
 
 
-      proximopaso:  `En la próxima sesión integraremos las competencias técnicas y actitudinales en una actividad integradora que pondrá a prueba todas las capacidades desarrolladas durante este Elemento de Capacidad.`,
+      proximopaso: `En la próxima sesión integraremos las competencias técnicas y actitudinales en una actividad integradora que pondrá a prueba todas las capacidades desarrolladas durante este Elemento de Capacidad.`,
 
 
 
-      estrategias:  `• Diálogo Socrático / Debate ético: desarrolla el pensamiento crítico y la capacidad de argumentación fundamentada.\n• Portafolio reflexivo: promueve la metacognición, la autoevaluación y el desarrollo de la identidad profesional.\n• Aprendizaje Basado en Valores (ABV): conecta el aprendizaje con la dimensión humana y ética de la profesión.\n• Análisis de referentes profesionales: proporciona modelos de actuación profesional íntegra y motivadora.`,
+      estrategias: `• Diálogo Socrático / Debate ético: desarrolla el pensamiento crítico y la capacidad de argumentación fundamentada.\n• Portafolio reflexivo: promueve la metacognición, la autoevaluación y el desarrollo de la identidad profesional.\n• Aprendizaje Basado en Valores (ABV): conecta el aprendizaje con la dimensión humana y ética de la profesión.\n• Análisis de referentes profesionales: proporciona modelos de actuación profesional íntegra y motivadora.`,
 
 
 
-      recursos:     `• Caso/dilema ético impreso o proyectado\n• Portafolio del estudiante (cuaderno o carpeta digital)\n• Tarjetas o post-its para el mural de compromisos\n• Materiales sobre referentes del campo (artículos, videos breves, testimonios)`
+      recursos: `• Caso/dilema ético impreso o proyectado\n• Portafolio del estudiante (cuaderno o carpeta digital)\n• Tarjetas o post-its para el mural de compromisos\n• Materiales sobre referentes del campo (artículos, videos breves, testimonios)`
 
 
 
@@ -9366,7 +8762,7 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-      p.recursos + '\n• ' + (planificacion.ra?.recursosDid || '').replace(/\n/g,'\n• ') :
+      p.recursos + '\n• ' + (planificacion.ra?.recursosDid || '').replace(/\n/g, '\n• ') :
 
 
 
@@ -9418,7 +8814,7 @@ function generarSesion(actId) {
 
 
 
-  const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades||[]).filter(a=>a.ecCodigo===ec.codigo).length)) : 1.5;
+  const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
 
 
 
@@ -9426,7 +8822,36 @@ function generarSesion(actId) {
 
 
 
-  const gen = generarContenidoSesion(act, ec, horasAct);
+  // Si la actividad tiene sesión generada por IA, usarla; si no, generar local
+  let gen;
+  if (act.sesionIA) {
+    const s = act.sesionIA;
+    const minSesion = Math.round((horasAct || 1.5) * 60);
+    const tIni = Math.round(minSesion * 0.20);
+    const tDes = Math.round(minSesion * 0.60);
+    const tCie = minSesion - tIni - tDes;
+    gen = {
+      inicio: {
+        apertura: s.apertura || '',
+        encuadre: s.encuadre || '',
+        organizacion: s.organizacion || 'Trabajo individual y grupal según la dinámica de la actividad.'
+      },
+      desarrollo: {
+        procedimental: s.procedimental || '',
+        conceptual: s.conceptual || ''
+      },
+      cierre: {
+        sintesis: s.sintesis || '',
+        conexion: s.conceptual || '',
+        proximopaso: s.proximopaso || 'Continuar con la siguiente actividad del EC.'
+      },
+      estrategias: s.estrategias || '',
+      recursos: planificacion.ra?.recursosDid || 'Material del módulo, pizarrón, guías de trabajo.',
+      tiempos: { ini: tIni, des: tDes, cie: tCie }
+    };
+  } else {
+    gen = generarContenidoSesion(act, ec, horasAct);
+  }
 
 
 
@@ -9450,19 +8875,19 @@ function generarSesion(actId) {
 
 
 
-  const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
 
 
 
-  set(`pd-inicio-apertura-${actId}`,      s.inicio.apertura);
+  set(`pd-inicio-apertura-${actId}`, s.inicio.apertura);
 
 
 
-  set(`pd-inicio-encuadre-${actId}`,      s.inicio.encuadre);
+  set(`pd-inicio-encuadre-${actId}`, s.inicio.encuadre);
 
 
 
-  set(`pd-inicio-organizacion-${actId}`,  s.inicio.organizacion);
+  set(`pd-inicio-organizacion-${actId}`, s.inicio.organizacion);
 
 
 
@@ -9470,27 +8895,27 @@ function generarSesion(actId) {
 
 
 
-  set(`pd-desarrollo-conceptual-${actId}`,    s.desarrollo.conceptual);
+  set(`pd-desarrollo-conceptual-${actId}`, s.desarrollo.conceptual);
 
 
 
-  set(`pd-cierre-sintesis-${actId}`,     s.cierre.sintesis);
+  set(`pd-cierre-sintesis-${actId}`, s.cierre.sintesis);
 
 
 
-  set(`pd-cierre-conexion-${actId}`,     s.cierre.conexion);
+  set(`pd-cierre-conexion-${actId}`, s.cierre.conexion);
 
 
 
-  set(`pd-cierre-proximopaso-${actId}`,  s.cierre.proximopaso);
+  set(`pd-cierre-proximopaso-${actId}`, s.cierre.proximopaso);
 
 
 
-  set(`pd-estrategias-${actId}`,         s.estrategias);
+  set(`pd-estrategias-${actId}`, s.estrategias);
 
 
 
-  set(`pd-recursos-${actId}`,            s.recursos);
+  set(`pd-recursos-${actId}`, s.recursos);
 
 
 
@@ -9498,7 +8923,7 @@ function generarSesion(actId) {
 
 
 
-  const setT = (m, v) => { const el = document.getElementById(`pd-t-${m}-${actId}`); if(el) el.value = v; };
+  const setT = (m, v) => { const el = document.getElementById(`pd-t-${m}-${actId}`); if (el) el.value = v; };
 
 
 
@@ -9726,11 +9151,11 @@ function renderizarDiarias() {
 
 
 
-  const nivColores = { conocimiento:'#388E3C', comprension:'#1565C0', aplicacion:'#E65100', actitudinal:'#6A1B9A' };
+  const nivColores = { conocimiento: '#388E3C', comprension: '#1565C0', aplicacion: '#E65100', actitudinal: '#6A1B9A' };
 
 
 
-  const nivLabel   = { conocimiento:'Conocimiento', comprension:'Comprensión', aplicacion:'Aplicación', actitudinal:'Actitudinal' };
+  const nivLabel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
 
 
@@ -9798,7 +9223,7 @@ function renderizarDiarias() {
 
 
 
-    const enunciadoCorto = (act.enunciado || '').substring(0, 80) + ((act.enunciado||'').length > 80 ? '…' : '');
+    const enunciadoCorto = (act.enunciado || '').substring(0, 80) + ((act.enunciado || '').length > 80 ? '…' : '');
 
 
 
@@ -10014,7 +9439,7 @@ function renderizarDiarias() {
 
 
 
-              <textarea id="pd-inicio-apertura-${act.id}" rows="3" placeholder="Breve saludo y enganche con el tema...">${s.inicio?.apertura || ''}</textarea>
+              <textarea id="pd-inicio-apertura-${act.id}" rows="7" placeholder="Breve saludo y enganche con el tema...">${s.inicio?.apertura || ''}</textarea>
 
 
 
@@ -10106,7 +9531,7 @@ function renderizarDiarias() {
 
 
 
-              <textarea id="pd-desarrollo-procedimental-${act.id}" rows="6" placeholder="Paso a paso de lo que harán los estudiantes...">${s.desarrollo?.procedimental || ''}</textarea>
+              <textarea id="pd-desarrollo-procedimental-${act.id}" rows="12" placeholder="Paso a paso de lo que harán los estudiantes...">${s.desarrollo?.procedimental || ''}</textarea>
 
 
 
@@ -10182,7 +9607,7 @@ function renderizarDiarias() {
 
 
 
-              <textarea id="pd-cierre-sintesis-${act.id}" rows="2" placeholder="Pregunta detonadora o resumen...">${s.cierre?.sintesis || ''}</textarea>
+              <textarea id="pd-cierre-sintesis-${act.id}" rows="8" placeholder="Pregunta detonadora o resumen...">${s.cierre?.sintesis || ''}</textarea>
 
 
 
@@ -10258,7 +9683,7 @@ function renderizarDiarias() {
 
 
 
-            <textarea id="pd-estrategias-${act.id}" rows="5"
+            <textarea id="pd-estrategias-${act.id}" rows="8"
 
 
 
@@ -10390,7 +9815,7 @@ function exportarDiariasWord() {
 
 
 
-  const hoy = new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric'});
+  const hoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
 
 
@@ -10402,15 +9827,15 @@ function exportarDiariasWord() {
 
 
 
-  <p><strong>Módulo:</strong> ${escHTML(dg.moduloFormativo||'')}</p>
+  <p><strong>Módulo:</strong> ${escHTML(dg.moduloFormativo || '')}</p>
 
 
 
-  <p><strong>Docente:</strong> ${escHTML(dg.nombreDocente||'')}</p>
+  <p><strong>Docente:</strong> ${escHTML(dg.nombreDocente || '')}</p>
 
 
 
-  <p><strong>Bachillerato:</strong> ${escHTML(dg.nombreBachillerato||'')}</p>
+  <p><strong>Bachillerato:</strong> ${escHTML(dg.nombreBachillerato || '')}</p>
 
 
 
@@ -10442,7 +9867,7 @@ function exportarDiariasWord() {
 
 
 
-    const total = (s.tiempos?.ini||0)+(s.tiempos?.des||0)+(s.tiempos?.cie||0);
+    const total = (s.tiempos?.ini || 0) + (s.tiempos?.des || 0) + (s.tiempos?.cie || 0);
 
 
 
@@ -10450,11 +9875,11 @@ function exportarDiariasWord() {
 
 
 
-    body += `<h3>Sesión ${idx+1}: ${escHTML(act.enunciado||'')}</h3>
+    body += `<h3>Sesión ${idx + 1}: ${escHTML(act.enunciado || '')}</h3>
 
 
 
-    <p><strong>Fecha:</strong> ${escHTML(act.fechaStr||'—')} &nbsp;|&nbsp; <strong>EC:</strong> ${escHTML(act.ecCodigo||'')} &nbsp;|&nbsp; <strong>Duración total:</strong> ${total} min</p>
+    <p><strong>Fecha:</strong> ${escHTML(act.fechaStr || '—')} &nbsp;|&nbsp; <strong>EC:</strong> ${escHTML(act.ecCodigo || '')} &nbsp;|&nbsp; <strong>Duración total:</strong> ${total} min</p>
 
 
 
@@ -10466,15 +9891,15 @@ function exportarDiariasWord() {
 
 
 
-    <p><strong>Apertura:</strong> ${escHTML(s.inicio?.apertura||'—')}</p>
+    <p><strong>Apertura:</strong> ${escHTML(s.inicio?.apertura || '—')}</p>
 
 
 
-    <p><strong>Encuadre:</strong> ${escHTML(s.inicio?.encuadre||'—')}</p>
+    <p><strong>Encuadre:</strong> ${escHTML(s.inicio?.encuadre || '—')}</p>
 
 
 
-    <p><strong>Organización:</strong> ${escHTML(s.inicio?.organizacion||'—')}</p>
+    <p><strong>Organización:</strong> ${escHTML(s.inicio?.organizacion || '—')}</p>
 
 
 
@@ -10486,11 +9911,11 @@ function exportarDiariasWord() {
 
 
 
-    <p><strong>Procedimental / Actividad principal:</strong><br>${escHTML(s.desarrollo?.procedimental||'—').replace(/\n/g,'<br>')}</p>
+    <p><strong>Procedimental / Actividad principal:</strong><br>${escHTML(s.desarrollo?.procedimental || '—').replace(/\n/g, '<br>')}</p>
 
 
 
-    <p><strong>Conceptual / Actitudinal:</strong><br>${escHTML(s.desarrollo?.conceptual||'—').replace(/\n/g,'<br>')}</p>
+    <p><strong>Conceptual / Actitudinal:</strong><br>${escHTML(s.desarrollo?.conceptual || '—').replace(/\n/g, '<br>')}</p>
 
 
 
@@ -10502,15 +9927,15 @@ function exportarDiariasWord() {
 
 
 
-    <p><strong>Síntesis:</strong> ${escHTML(s.cierre?.sintesis||'—')}</p>
+    <p><strong>Síntesis:</strong> ${escHTML(s.cierre?.sintesis || '—')}</p>
 
 
 
-    <p><strong>Conexión:</strong> ${escHTML(s.cierre?.conexion||'—')}</p>
+    <p><strong>Conexión:</strong> ${escHTML(s.cierre?.conexion || '—')}</p>
 
 
 
-    <p><strong>Próximo paso:</strong> ${escHTML(s.cierre?.proximopaso||'—')}</p>
+    <p><strong>Próximo paso:</strong> ${escHTML(s.cierre?.proximopaso || '—')}</p>
 
 
 
@@ -10518,11 +9943,11 @@ function exportarDiariasWord() {
 
 
 
-    <p><strong>ESTRATEGIAS:</strong><br>${escHTML(s.estrategias||'—').replace(/\n/g,'<br>')}</p>
+    <p><strong>ESTRATEGIAS:</strong><br>${escHTML(s.estrategias || '—').replace(/\n/g, '<br>')}</p>
 
 
 
-    <p><strong>RECURSOS:</strong><br>${escHTML(s.recursos||'—').replace(/\n/g,'<br>')}</p>
+    <p><strong>RECURSOS:</strong><br>${escHTML(s.recursos || '—').replace(/\n/g, '<br>')}</p>
 
 
 
@@ -10606,7 +10031,7 @@ function exportarDiariasWord() {
 
 
 
-  a.download = `PlanificacionesDiarias_${(dg.moduloFormativo||'modulo').replace(/\s+/g,'_')}.doc`;
+  a.download = `PlanificacionesDiarias_${(dg.moduloFormativo || 'modulo').replace(/\s+/g, '_')}.doc`;
 
 
 
@@ -10702,6 +10127,8 @@ function abrirDiarias() {
   _asegurarPlanificacion();
   cargarDiarias();
   _mostrarPanel('panel-diarias');
+  const tieneActividades = (planificacion.actividades || []).length > 0;
+  _actualizarSelectorPlanDiarias(tieneActividades);
   renderizarDiarias();
 }
 // __old_abrirDiarias__
@@ -10814,42 +10241,44 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- MÓDULO: INTEGRACIÓN GEMINI AI ---
 // ================================================================
 
-const IA_KEY_STORAGE = 'planificadorRA_geminiKey';
+const GROQ_KEY_STORAGE = 'planificadorRA_groqKey';
 
-/** Retorna la API key guardada o null */
-function getApiKey() {
-  return localStorage.getItem(IA_KEY_STORAGE) || null;
+/** Retorna la API key de Groq guardada o null */
+function getGroqKey() {
+  return localStorage.getItem(GROQ_KEY_STORAGE) || null;
 }
+
+/** Alias para compatibilidad interna */
+function getApiKey() { return null; }
 
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
-  const keyActual = getApiKey();
-  const estado = keyActual
+  const groqKeyActual = getGroqKey();
+  const estado = groqKeyActual
     ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> Clave configurada</span>'
     : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin clave configurada</span>';
 
-  document.getElementById('modal-title').textContent = 'Configuración de IA (Gemini)';
+  document.getElementById('modal-title').textContent = 'Configuración de IA (Groq)';
   document.getElementById('modal-body').innerHTML = `
     <div class="config-ia-content">
       <div>${estado}</div>
-      <label for="input-gemini-key">Clave API de Gemini</label>
-      <input type="password" id="input-gemini-key"
-             placeholder="AIza..."
-             value="${keyActual || ''}"
+      <label for="input-groq-key">🟢 Clave API de Groq</label>
+      <input type="password" id="input-groq-key"
+             placeholder="gsk_..."
+             value="${groqKeyActual || ''}"
              autocomplete="off" />
       <div class="info-tip" style="margin:0;">
-        <span class="material-icons" style="color:#1565C0;">info</span>
+        <span class="material-icons" style="color:#2E7D32;font-size:16px;">info</span>
         <div>
           <p style="margin:0;">Obtén tu clave gratuita en
-            <a href="https://aistudio.google.com/app/apikey" target="_blank"
-               style="color:#1565C0;font-weight:600;">aistudio.google.com</a>
-            (requiere cuenta Google).</p>
+            <a href="https://console.groq.com/keys" target="_blank" style="color:#2E7D32;font-weight:600;">console.groq.com</a>
+            (sin tarjeta de crédito).</p>
           <p style="margin:4px 0 0;font-size:0.8rem;color:#757575;">
             La clave se guarda solo en tu navegador. No se envía a ningún servidor externo.
           </p>
         </div>
       </div>
-      ${keyActual ? '<button class="btn-secundario" style="align-self:flex-start;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar clave</button>' : ''}
+      ${groqKeyActual ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar clave</button>' : ''}
     </div>`;
 
   document.getElementById('modal-footer').innerHTML = `
@@ -10860,21 +10289,21 @@ function abrirConfigIA() {
 
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('input-gemini-key')?.focus(), 100);
+  setTimeout(() => document.getElementById('input-groq-key')?.focus(), 100);
 }
 
 function guardarApiKey() {
-  const key = document.getElementById('input-gemini-key')?.value?.trim();
-  if (!key) { mostrarToast('Ingresa una clave válida', 'error'); return; }
-  if (!key.startsWith('AIza')) { mostrarToast('La clave debe comenzar con "AIza..."', 'error'); return; }
-  localStorage.setItem(IA_KEY_STORAGE, key);
+  const groqKey = document.getElementById('input-groq-key')?.value?.trim();
+  if (!groqKey) { mostrarToast('Ingresa una clave válida', 'error'); return; }
+  if (!groqKey.startsWith('gsk_')) { mostrarToast('La clave debe comenzar con "gsk_..."', 'error'); return; }
+  localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
   actualizarBtnConfigIA();
   cerrarModalBtn();
   mostrarToast('Clave guardada. La IA está lista para generar planificaciones.', 'success');
 }
 
 function borrarApiKey() {
-  localStorage.removeItem(IA_KEY_STORAGE);
+  localStorage.removeItem(GROQ_KEY_STORAGE);
   actualizarBtnConfigIA();
   cerrarModalBtn();
   mostrarToast('Clave eliminada. Se usará generación local.', 'info');
@@ -10883,12 +10312,12 @@ function borrarApiKey() {
 function actualizarBtnConfigIA() {
   const btn = document.getElementById('btn-config-ia');
   if (!btn) return;
-  if (getApiKey()) {
+  if (getGroqKey()) {
     btn.classList.add('ia-activa');
     btn.title = 'IA configurada ✓ — clic para cambiar la clave';
   } else {
     btn.classList.remove('ia-activa');
-    btn.title = 'Configurar clave de IA (Gemini)';
+    btn.title = 'Configurar clave de IA (Groq)';
   }
 }
 
@@ -10896,104 +10325,319 @@ function actualizarBtnConfigIA() {
 // CONSTRUCTOR DEL PROMPT
 // ─────────────────────────────────────────────────────────────
 
-function construirPromptGemini(dg, ra, fechasClase) {
-  // diasClase es un objeto {lunes:{activo,horas}, martes:{activo,horas}, ...}
+function construirPromptBase(dg, ra) {
   const diasClaseObj = dg.diasClase || {};
   const diasArr = Object.entries(diasClaseObj)
     .filter(([, v]) => v && v.activo)
     .map(([dia, v]) => `${dia} (${v.horas}h)`);
   const diasStr = diasArr.length > 0 ? diasArr.join(', ') : (dg.horasSemana + ' hrs/semana');
 
-  const totalFechasSesion = fechasClase ? fechasClase.length : '?';
+  return `Eres docente experto en educación técnico profesional de República Dominicana.
+Responde SOLO con JSON válido, sin markdown, sin texto extra.
 
-  return `Eres docente experto en educación técnico profesional de la República Dominicana.
-Responde ÚNICAMENTE con un objeto JSON válido, sin explicaciones adicionales, sin bloques de código markdown.
+MÓDULO: ${dg.moduloFormativo || ''} | Familia: ${dg.familiaProfesional || ''} | Horario: ${diasStr}
+RA: ${ra.descripcion || ''}
+TEMAS DE REFERENCIA (NO copiar, usar como inspiración temática): ${ra.criterios || 'No especificados'}
+RECURSOS: ${ra.recursosDid || 'Pizarrón, guías'}
 
-DATOS DEL MÓDULO:
-- Familia profesional: ${dg.familiaProfesional || ''} (${dg.codigoFP || ''})
-- Bachillerato Técnico: ${dg.nombreBachillerato || ''}
-- Módulo Formativo: ${dg.moduloFormativo || ''} (${dg.codigoModulo || ''})
-- Docente: ${dg.nombreDocente || ''}
-- Período: ${dg.fechaInicio || ''} → ${dg.fechaTermino || ''}
-- Horario semanal: ${diasStr} (${dg.horasSemana || '?'} horas/semana)
-- Total de sesiones disponibles: ${totalFechasSesion}
-- Valor del RA: ${dg.valorRA || '10'} puntos
-- Cantidad de RA en el módulo: ${dg.cantidadRA || '?'}
+REGLAS IMPORTANTES para los Elementos de Capacidad (EC):
+- NUNCA copies textualmente frases de los criterios dados
+- Usa los temas de referencia solo para entender el contexto del módulo
+- Redacta enunciados ORIGINALES con estructura: VERBO + QUÉ aprende + CÓMO o PARA QUÉ
+- El EC de conocimiento usa verbo de conocimiento (Identificar, Reconocer, Clasificar, Enumerar...)
+- El EC de comprensión usa verbo de comprensión (Explicar, Describir, Comparar, Interpretar...)
+- El EC de aplicación usa verbo de acción práctica (Aplicar, Implementar, Ejecutar, Demostrar...)
+- El EC actitudinal usa verbo de valor/actitud (Valorar, Asumir, Demostrar compromiso con, Integrar...)
+- NO uses "CE3.X" literalmente; usa el número de CE más relevante según el tema (CE1, CE2, CE3...)
+- Los 4 EC deben cubrir ASPECTOS DISTINTOS del módulo, no repetir el mismo concepto con diferente verbo
 
-RESULTADO DE APRENDIZAJE (RA):
-${ra.descripcion || ''}
-
-CRITERIOS DE EVALUACIÓN (referencia para los EC):
-${ra.criterios || 'No especificados'}
-
-RECURSOS DIDÁCTICOS:
-${ra.recursosDid || 'Material de la asignatura, pizarrón, guías de trabajo'}
-
-INSTRUCCIONES PARA LA GENERACIÓN:
-1. Determina el nivel Bloom del RA completo (una sola palabra: conocimiento, comprension, aplicacion, sintesis, evaluacion o creacion).
-2. Genera EXACTAMENTE 4 Elementos de Capacidad (EC):
-   - E.C.1.1.1 → nivel: "conocimiento" (verbos: Identificar, Reconocer, Listar, Nombrar, Definir...)
-   - E.C.2.1.1 → nivel: "comprension" (verbos: Explicar, Comparar, Interpretar, Describir, Relacionar...)
-   - E.C.3.1.1 → nivel: "aplicacion" (verbos: Aplicar, Resolver, Ejecutar, Demostrar, Implementar...)
-   - E.C.4.1.1 → nivel: "actitudinal" (verbos: Valorar, Asumir, Demostrar, Comprometerse, Reflexionar...)
-   Cada enunciado debe tener: VERBO en infinitivo + OBJETO (qué aprende) + CONDICIONES (cómo/con qué) + "en correspondencia con [CE_X.X]."
-   Los enunciados deben ser específicos a la asignatura, NO genéricos.
-3. Genera de 1 a 2 actividades por EC (máximo 2, según tiempo disponible).
-   Formato de enunciado: "Tipo de actividad: Descripción específica y contextualizada al tema."
-   Tipos válidos: Cuestionario escrito, Mapa conceptual, Análisis de caso, Exposición oral, Práctica supervisada, Proyecto integrador, Reflexión y portafolio, Debate dirigido, Estudio de caso.
-4. Instrumento de evaluación: "cotejo" para conocimiento/comprensión, "rubrica" para aplicación/actitudinal.
-
-DEVUELVE EXACTAMENTE este JSON (sin modificar los nombres de los campos):
+Genera EXACTAMENTE este JSON:
 {
   "nivelBloomRA": "comprension",
   "elementosCapacidad": [
-    {
-      "codigo": "E.C.1.1.1",
-      "nivel": "conocimiento",
-      "nivelBloom": "conocimiento",
-      "enunciado": "Identificar... objeto... condición..., en correspondencia con CE3.X."
-    },
-    {
-      "codigo": "E.C.2.1.1",
-      "nivel": "comprension",
-      "nivelBloom": "comprension",
-      "enunciado": "Explicar... objeto... condición..., en correspondencia con CE3.X."
-    },
-    {
-      "codigo": "E.C.3.1.1",
-      "nivel": "aplicacion",
-      "nivelBloom": "aplicacion",
-      "enunciado": "Aplicar... objeto... condición..., en correspondencia con CE3.X."
-    },
-    {
-      "codigo": "E.C.4.1.1",
-      "nivel": "actitudinal",
-      "nivelBloom": "actitudinal",
-      "enunciado": "Valorar... objeto... condición..., en correspondencia con CE3.X."
-    }
+    {"codigo":"E.C.1.1.1","nivel":"conocimiento","nivelBloom":"conocimiento","enunciado":"[Verbo conocimiento] [objeto específico y original del módulo] [condición concreta], en correspondencia con CE1."},
+    {"codigo":"E.C.2.1.1","nivel":"comprension","nivelBloom":"comprension","enunciado":"[Verbo comprensión] [objeto específico y original diferente al EC1] [condición concreta], en correspondencia con CE2."},
+    {"codigo":"E.C.3.1.1","nivel":"aplicacion","nivelBloom":"aplicacion","enunciado":"[Verbo aplicación] [objeto específico y original diferente a EC1 y EC2] [condición práctica], en correspondencia con CE3."},
+    {"codigo":"E.C.4.1.1","nivel":"actitudinal","nivelBloom":"actitudinal","enunciado":"[Verbo actitudinal] [valor o actitud profesional específica diferente a los anteriores] [en qué contexto], en correspondencia con CE4."}
   ],
   "actividades": [
-    {
-      "ecCodigo": "E.C.1.1.1",
-      "enunciado": "Tipo: Descripción específica.",
-      "instrumento": "cotejo"
-    }
+    {"ecCodigo":"E.C.1.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"cotejo"},
+    {"ecCodigo":"E.C.2.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"cotejo"},
+    {"ecCodigo":"E.C.3.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"rubrica"},
+    {"ecCodigo":"E.C.4.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"rubrica"}
   ]
 }`;
 }
 
+function construirPromptInstrumentos(dg, ra, actividades, elementosCapacidad) {
+  const acts = actividades.map(a => {
+    const ec = elementosCapacidad.find(e => e.codigo === a.ecCodigo) || {};
+    return `- [${a.ecCodigo}] "${a.enunciado}" | tipo: ${a.instrumento} | nivel: ${ec.nivel || ''}`;
+  }).join('\n');
+
+  return `Eres docente experto en educación técnico profesional.
+Responde SOLO con JSON válido, sin markdown.
+
+MÓDULO: ${dg.moduloFormativo || ''} | RA: ${ra.descripcion || ''}
+
+Para cada actividad genera instrumento personalizado Y sesión diaria específica al tema.
+ACTIVIDADES:
+${acts}
+
+JSON requerido (un objeto por actividad en el mismo orden):
+{
+  "detalles": [
+    {
+      "ecCodigo": "E.C.1.1.1",
+      "instrumentoDetalle": {
+        "titulo": "Lista de Cotejo – [título específico]",
+        "instrucciones": "Marque con ✓ según lo observado.",
+        "criterios": ["Indicador 1 específico","Indicador 2 específico","Indicador 3 específico","Indicador 4 específico","Indicador 5 específico"]
+      },
+      "sesionDiaria": {
+        "apertura": "Cómo inicia la clase específicamente.",
+        "encuadre": "Propósito específico.",
+        "procedimental": "1. Paso 1.\n2. Paso 2.\n3. Paso 3.",
+        "conceptual": "Reflexión con la práctica profesional.",
+        "sintesis": "Cómo cierra la clase.",
+        "estrategias": "Metodologías con justificación."
+      }
+    }
+  ]
+}
+Para rúbrica usa criterios con: {"criterio":"...","descriptores":["Excelente: ...","Bueno: ...","En proceso: ...","Insuficiente: ..."]}`;
+}
+
+// Alias para compatibilidad con generarConGemini si quedara algún uso
+function construirPromptGemini(dg, ra, fechasClase) {
+  return construirPromptBase(dg, ra);
+}
+
 // ─────────────────────────────────────────────────────────────
-// LLAMADA A GEMINI API
+// LLAMADA A GEMINI API (con reintento automático por rate limit)
 // ─────────────────────────────────────────────────────────────
 
-async function generarConGemini(dg, ra, fechasClase) {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
+/** Espera `ms` milisegundos mostrando un countdown en el toast */
+function _esperarConCountdown(ms, mensajeBase) {
+  return new Promise(resolve => {
+    let restante = Math.ceil(ms / 1000);
+    mostrarToast(`${mensajeBase} (${restante}s)`, 'info');
+    const interval = setInterval(() => {
+      restante--;
+      if (restante <= 0) {
+        clearInterval(interval);
+        resolve();
+      } else {
+        mostrarToast(`${mensajeBase} (${restante}s)`, 'info');
+      }
+    }, 1000);
+  });
+}
 
-  const prompt = construirPromptGemini(dg, ra, fechasClase);
+/** Modelos a intentar en orden (si uno da rate-limit, prueba el siguiente) */
+const MODELOS_GEMINI = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite'
+];
 
+/** Modelos de Groq a intentar en orden */
+const MODELOS_GROQ = [
+  'llama-3.3-70b-versatile',
+  'meta-llama/llama-4-maverick-17b-128e-instruct',
+  'qwen/qwen-3-32b',
+  'llama-3.1-8b-instant'
+];
+
+/** Llama a la API de Groq con un modelo especifico */
+async function _llamarModeloGroq(modelo, groqKey, prompt) {
+  const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+  const body = {
+    model: modelo,
+    messages: [
+      { role: 'system', content: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.40,
+    max_tokens: 8192
+  };
+
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (resp.ok) {
+    const data = await resp.json();
+    const rawText = data?.choices?.[0]?.message?.content;
+    if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de Groq' };
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    try {
+      return { ok: true, data: JSON.parse(cleaned) };
+    } catch (e) {
+      // Intentar extraer JSON aunque venga con texto extra
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
+      }
+      console.error('JSON inválido de Groq:', cleaned.substring(0, 300));
+      return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de Groq. Intenta de nuevo.' };
+    }
+  }
+
+  const errJson = await resp.json().catch(() => ({}));
+  const msg = errJson?.error?.message || errJson?.error?.code || resp.statusText;
+  const esRateLimit = resp.status === 429;
+  console.error('Groq error detalle:', resp.status, JSON.stringify(errJson));
+  return { ok: false, esRateLimit, error: `Groq (${modelo}) error ${resp.status}: ${msg}` };
+}
+
+/** Llama a Groq con fallback entre modelos. Devuelve datos parseados o lanza error. */
+async function _llamarGroqConFallback(prompt, mensajeToast) {
+  const groqKey = getGroqKey();
+  let ultimoError = '';
+  for (let m = 0; m < MODELOS_GROQ.length; m++) {
+    const modelo = MODELOS_GROQ[m];
+    mostrarToast(`🟢 ${mensajeToast} (${modelo})…`, 'info');
+    for (let intento = 0; intento < 2; intento++) {
+      const resultado = await _llamarModeloGroq(modelo, groqKey, prompt);
+      if (resultado.ok) return resultado.data;
+      if (!resultado.esRateLimit) { ultimoError = resultado.error; break; }
+      ultimoError = resultado.error;
+      if (intento === 0 && m < MODELOS_GROQ.length - 1) {
+        mostrarToast(`⏳ ${modelo} sin cuota, probando siguiente...`, 'info');
+        break;
+      } else if (intento === 0) {
+        await _esperarConCountdown(20000, '⏳ Reintentando en');
+      }
+    }
+  }
+  throw new Error(ultimoError || 'Groq: todos los modelos fallaron');
+}
+
+/** Genera detalle (instrumento + sesión) para UNA sola actividad */
+function construirPromptDetalleUno(dg, ra, act, ec) {
+  const tipo = act.instrumento === 'rubrica' ? 'rubrica' : 'cotejo';
+  const horasSesion = ec && ec.horasAsignadas ? Math.round((ec.horasAsignadas / 2) * 10) / 10 : 1.5;
+  const minTotal = Math.round(horasSesion * 60);
+  const minInicio = Math.round(minTotal * 0.20);
+  const minDesarrollo = Math.round(minTotal * 0.60);
+  const minCierre = minTotal - minInicio - minDesarrollo;
+
+  const instPrompt = tipo === 'cotejo'
+    ? `"instrumentoDetalle": {
+    "titulo": "Lista de Cotejo – [título específico al tema]",
+    "instrucciones": "Marque con ✓ según lo observado durante la actividad.",
+    "criterios": [
+      "Indicador 1 muy específico al tema y la actividad",
+      "Indicador 2 muy específico al tema y la actividad",
+      "Indicador 3 muy específico al tema y la actividad",
+      "Indicador 4 muy específico al tema y la actividad",
+      "Indicador 5 muy específico al tema y la actividad"
+    ]
+  }`
+    : `"instrumentoDetalle": {
+    "titulo": "Rúbrica – [título específico al tema]",
+    "instrucciones": "Seleccione el nivel de desempeño alcanzado en cada criterio.",
+    "criterios": [
+      {"criterio":"Criterio 1 específico","descriptores":["Excelente: descripción detallada y específica al tema","Bueno: descripción detallada","En proceso: descripción detallada","Insuficiente: descripción detallada"]},
+      {"criterio":"Criterio 2 específico","descriptores":["Excelente: ...","Bueno: ...","En proceso: ...","Insuficiente: ..."]},
+      {"criterio":"Criterio 3 específico","descriptores":["Excelente: ...","Bueno: ...","En proceso: ...","Insuficiente: ..."]},
+      {"criterio":"Criterio 4 específico","descriptores":["Excelente: ...","Bueno: ...","En proceso: ...","Insuficiente: ..."]}
+    ]
+  }`;
+
+  return `Eres docente experto en educación técnico-profesional. Responde SOLO con JSON válido, sin markdown.
+
+MÓDULO: ${dg.moduloFormativo || ''}
+FAMILIA PROFESIONAL: ${dg.familiaProfesional || ''}
+RA: ${ra.descripcion || ''}
+ACTIVIDAD: ${act.enunciado}
+EC: ${ec?.enunciado || ''} | Nivel Bloom: ${ec?.nivel || ''}
+RECURSOS DISPONIBLES: ${ra.recursosDid || 'pizarrón, guías de trabajo, computadoras'}
+DURACIÓN TOTAL: ${minTotal} minutos (Inicio: ${minInicio} min | Desarrollo: ${minDesarrollo} min | Cierre: ${minCierre} min)
+
+INSTRUCCIÓN PRINCIPAL:
+Genera una planificación de sesión diaria MUY DETALLADA Y EXTENSA, como si fuera una guía didáctica completa.
+Cada momento debe tener subtemas, pasos numerados, preguntas concretas, dinámicas específicas y tiempos parciales.
+
+REFERENCIA DE NIVEL DE DETALLE (adapta al tema del módulo, NO copies esto):
+- INICIO debe incluir: bienvenida con pregunta detonante específica al tema, activación de conocimientos previos con preguntas concretas, presentación del objetivo y metodología
+- DESARROLLO debe incluir: bloques temáticos numerados con tiempos, actividades paso a paso, preguntas de verificación de comprensión, ejemplos concretos del campo profesional, dinámicas (individual, parejas, equipos)
+- CIERRE debe incluir: síntesis con pregunta reflexiva específica, evaluación formativa rápida (quiz verbal o escrito con preguntas concretas), tarea para casa si aplica, anuncio del próximo tema
+
+IMPORTANTE:
+- Usa vocabulario específico del módulo "${dg.moduloFormativo || ''}" y la familia profesional "${dg.familiaProfesional || ''}"
+- Las preguntas deben ser CONCRETAS al tema, no genéricas
+- Los pasos del desarrollo deben ser ESPECÍFICOS con tiempos parciales (Ej: "Bloque 1 (15 min): ...")
+- Incluye al menos 3 preguntas detonantes específicas al tema
+- El campo "procedimental" debe tener mínimo 5 pasos detallados con subtemas
+- El campo "apertura" debe tener mínimo 3 secciones: bienvenida/contexto, activación de saberes previos, presentación del objetivo
+
+Genera exactamente este JSON:
+{
+  ${instPrompt},
+  "sesionDiaria": {
+    "apertura": "INICIO (${minInicio} minutos)\\n\\n1. Bienvenida y contextualización (X min)\\n   • [Descripción específica del saludo y conexión con el tema]\\n   • Pregunta motivadora: \\"[pregunta concreta al tema]\\"\\n\\n2. Activación de conocimientos previos (X min)\\n   • Pregunta detonante: \\"[pregunta específica al campo profesional]\\"\\n   • [Dinámica específica: lluvia de ideas, preguntas orales, etc.]\\n   • [Segunda pregunta de exploración]\\n\\n3. Presentación del objetivo y metodología (X min)\\n   • Objetivo de la sesión: [objetivo específico]\\n   • Dinámica de trabajo: [individual/parejas/equipos con justificación]\\n   • Criterios de evaluación: [mencionar el instrumento que se usará]",
+
+    "encuadre": "Propósito específico y detallado de la sesión en relación con el EC y el RA. Explica QUÉ van a aprender, POR QUÉ es importante para su perfil profesional y CÓMO se conecta con competencias previas o futuras. Mínimo 3-4 oraciones concretas al tema.",
+
+    "organizacion": "Describe la organización pedagógica completa: cómo se forman los grupos o si es individual, roles de cada integrante si aplica, materiales que necesita cada quien, normas de participación específicas para esta actividad, y criterios de evaluación compartidos con los estudiantes.",
+
+    "procedimental": "DESARROLLO (${minDesarrollo} minutos)\\n\\nBloque 1: [Nombre del primer bloque temático] (X min)\\n• [Descripción detallada del contenido teórico con ejemplos]\\n• Demostración práctica: [qué hace el docente paso a paso]\\n• Pregunta de verificación: \\"[pregunta concreta]\\"\\n\\nBloque 2: [Nombre del segundo bloque] (X min)\\n• Actividad de investigación/práctica: [descripción detallada]\\n• Paso 1: [acción específica que hacen los estudiantes]\\n• Paso 2: [siguiente acción]\\n• Paso 3: [siguiente acción]\\n• Paso 4: [siguiente acción]\\n• Puesta en común: [cómo comparten resultados]\\n\\nBloque 3: [Nombre del tercer bloque si aplica] (X min)\\n• [Actividad integradora o de profundización]\\n• [Análisis comparativo o reflexión guiada]",
+
+    "conceptual": "Reflexión conceptual profunda: explica la conexión del tema con el entorno laboral real del ${dg.familiaProfesional || 'campo profesional'}. Incluye: (1) un ejemplo de caso real de la profesión, (2) cómo este conocimiento se aplica en el día a día laboral, (3) pregunta reflexiva metacognitiva: [pregunta concreta]. Mínimo 4-5 oraciones.",
+
+    "sintesis": "CIERRE (${minCierre} minutos)\\n\\n1. Síntesis y consolidación (X min)\\n   • Recapitulación: [conceptos clave aprendidos listados]\\n   • Pregunta reflexiva final: \\"[pregunta específica al tema]\\"\\n   • [Actividad de cierre: mural de compromisos, tarjeta de salida, etc.]\\n\\n2. Evaluación formativa rápida (X min)\\n   • Preguntas orales o escritas:\\n     - [Pregunta 1 específica al tema]\\n     - [Pregunta 2 específica al tema]\\n     - [Pregunta 3 específica al tema]\\n   • Modalidad: [verbal/escrita/Kahoot/Mentimeter]\\n\\n3. Tarea y próximos pasos (X min)\\n   • Asignación: [tarea específica relacionada al tema si aplica]\\n   • Próxima clase: [tema siguiente]\\n   • Feedback: \\"¿Qué les pareció más interesante de hoy?\\"",
+
+    "estrategias": "• [Estrategia 1 con nombre]: [descripción de cómo se aplica en esta sesión y justificación pedagógica de por qué es adecuada para este nivel Bloom: ${ec?.nivel || 'aplicacion'}]\\n• [Estrategia 2 con nombre]: [descripción y justificación]\\n• [Estrategia 3 con nombre]: [descripción y justificación]\\n• [Estrategia 4 con nombre si aplica]: [descripción y justificación]"
+  }
+}`;
+}
+
+
+
+/** Genera planificación completa con Groq: 1 llamada para EC/actividades + 1 por cada actividad */
+async function generarConGroq(dg, ra, fechasClase) {
+  const groqKey = getGroqKey();
+  if (!groqKey) return null;
+
+  // --- LLAMADA 1: EC y Actividades ---
+  const promptBase = construirPromptBase(dg, ra);
+  const datosBase = await _llamarGroqConFallback(promptBase, 'Generando estructura');
+
+  if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
+    throw new Error('Groq no devolvió la estructura esperada de EC y actividades');
+  }
+
+  // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
+  for (let i = 0; i < datosBase.actividades.length; i++) {
+    const act = datosBase.actividades[i];
+    const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
+    mostrarToast(`🟢 Generando instrumento ${i + 1}/${datosBase.actividades.length}…`, 'info');
+    try {
+      const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
+      const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
+      if (det) {
+        act.instrumentoDetalle = det.instrumentoDetalle || null;
+        act.sesionDiaria = det.sesionDiaria || null;
+      }
+    } catch (e) {
+      console.warn(`Instrumento ${i + 1} no generado con IA, usará generación local:`, e.message);
+    }
+  }
+
+  return datosBase;
+}
+
+/** Intenta llamar a UN modelo específico. Devuelve {ok, data, esRateLimit, error} */
+async function _llamarModelo(modelo, apiKey, prompt) {
   const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -11009,19 +10653,68 @@ async function generarConGemini(dg, ra, fechasClase) {
     body: JSON.stringify(body)
   });
 
-  if (!resp.ok) {
-    const errJson = await resp.json().catch(() => ({}));
-    const msg = errJson?.error?.message || resp.statusText;
-    throw new Error(`Gemini API error ${resp.status}: ${msg}`);
+  if (resp.ok) {
+    const data = await resp.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de Gemini' };
+
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    try {
+      return { ok: true, data: JSON.parse(cleaned) };
+    } catch (e) {
+      return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de Gemini' };
+    }
   }
 
-  const data = await resp.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) throw new Error('Respuesta vacía de Gemini');
+  const errJson = await resp.json().catch(() => ({}));
+  const msg = errJson?.error?.message || resp.statusText;
+  const esRateLimit = resp.status === 429 || msg.includes('QUOTA') || msg.includes('RESOURCE_EXHAUSTED');
+  return { ok: false, esRateLimit, error: `Gemini (${modelo}) error ${resp.status}: ${msg}` };
+}
 
-  // Limpiar posibles bloques markdown que Gemini a veces añade
-  const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/,'').trim();
-  return JSON.parse(cleaned);
+async function generarConGemini(dg, ra, fechasClase) {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+
+  const prompt = construirPromptGemini(dg, ra, fechasClase);
+  let ultimoError = '';
+
+  // Probar cada modelo; si uno da rate-limit, pasar al siguiente
+  for (let m = 0; m < MODELOS_GEMINI.length; m++) {
+    const modelo = MODELOS_GEMINI[m];
+    mostrarToast(`🤖 Consultando ${modelo}…`, 'info');
+
+    // Hasta 2 reintentos por modelo (espera 15s entre cada uno)
+    for (let intento = 0; intento < 2; intento++) {
+      const resultado = await _llamarModelo(modelo, apiKey, prompt);
+
+      if (resultado.ok) {
+        if (m > 0) mostrarToast(`✅ Generado con modelo alternativo (${modelo})`, 'success');
+        return resultado.data;
+      }
+
+      if (!resultado.esRateLimit) {
+        // Error que no es rate-limit → no reintentar este modelo
+        ultimoError = resultado.error;
+        break;
+      }
+
+      // Rate limit en este modelo
+      ultimoError = resultado.error;
+
+      if (intento === 0 && m < MODELOS_GEMINI.length - 1) {
+        // Primer intento fallido → pasar al siguiente modelo sin esperar mucho
+        mostrarToast(`⏳ ${modelo} bloqueado por cuota. Probando modelo alternativo...`, 'info');
+        break;
+      } else if (intento === 0) {
+        // Último modelo, primer intento → esperar 20s y reintentar
+        await _esperarConCountdown(20000, '⏳ Último modelo — reintentando en');
+      }
+    }
+  }
+
+  // Todos los modelos de Gemini fallaron
+  throw new Error(ultimoError || 'Todos los modelos de Gemini están bloqueados por cuota');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -11056,25 +10749,80 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
 
   // 3. Actividades — combinar las generadas por IA con fechas reales
   const actividadesAI = aiData.actividades || [];
+  const fechasValidas = (fechasClase && fechasClase.length > 0) ? fechasClase : null;
   let fechaIdx = 0;
 
   planificacion.actividades = actividadesAI.map((act, i) => {
     const ecObj = planificacion.elementosCapacidad.find(e => e.codigo === act.ecCodigo)
-                  || planificacion.elementosCapacidad[0];
-    const fecha = fechasClase[fechaIdx] || fechasClase[fechasClase.length - 1];
+      || planificacion.elementosCapacidad[0];
+
+    // Proteger contra fechasClase vacio o undefined
+    const fechaObj = fechasValidas
+      ? (fechasValidas[fechaIdx] || fechasValidas[fechasValidas.length - 1])
+      : null;
     fechaIdx++;
 
-    const instrumento = act.instrumento === 'rubrica'
-      ? generarRubrica(ecObj, act.enunciado)
-      : generarListaCotejo(ecObj, act.enunciado);
+    // Usar instrumento personalizado de la IA si viene, si no generar local
+    let instrumento;
+    const det = act.instrumentoDetalle;
+    if (det && det.criterios && det.criterios.length > 0) {
+      if (act.instrumento === 'rubrica') {
+        const niveles = [
+          { nombre: 'Excelente', puntos: 4, clase: 'nivel-excelente' },
+          { nombre: 'Bueno', puntos: 3, clase: 'nivel-bueno' },
+          { nombre: 'En proceso', puntos: 2, clase: 'nivel-proceso' },
+          { nombre: 'Insuficiente', puntos: 1, clase: 'nivel-insuficiente' }
+        ];
+        instrumento = {
+          tipo: 'rubrica',
+          tipoLabel: 'Rúbrica de Evaluación',
+          titulo: det.titulo || `Rúbrica – ${act.enunciado.split(':')[0]}`,
+          actividad: act.enunciado,
+          ecCodigo: act.ecCodigo,
+          niveles,
+          criterios: det.criterios.map((c, ci) => ({
+            numero: ci + 1,
+            criterio: typeof c === 'string' ? c : c.criterio,
+            descriptores: typeof c === 'string'
+              ? niveles.map(n => `${c} – ${n.nombre}.`)
+              : (c.descriptores || niveles.map(n => `${c.criterio} – ${n.nombre}.`))
+          })),
+          puntajeMax: det.criterios.length * 4,
+          instrucciones: det.instrucciones || 'Seleccione el nivel de desempeño alcanzado en cada criterio.'
+        };
+      } else {
+        instrumento = {
+          tipo: 'cotejo',
+          tipoLabel: 'Lista de Cotejo',
+          titulo: det.titulo || `Lista de Cotejo – ${act.enunciado.split(':')[0]}`,
+          actividad: act.enunciado,
+          ecCodigo: act.ecCodigo,
+          criterios: det.criterios.map((c, ci) => ({
+            numero: ci + 1,
+            indicador: typeof c === 'string' ? c : c.criterio,
+            logrado: false,
+            noLogrado: false,
+            observacion: ''
+          })),
+          escala: ['Logrado', 'No Logrado'],
+          puntaje: 100,
+          instrucciones: det.instrucciones || 'Marque con ✓ según el desempeño observado.'
+        };
+      }
+    } else {
+      instrumento = act.instrumento === 'rubrica'
+        ? generarRubrica(ecObj, act.enunciado)
+        : generarListaCotejo(ecObj, act.enunciado);
+    }
 
     return {
       id: `act_${i}`,
       ecCodigo: act.ecCodigo || ecObj.codigo,
       enunciado: act.enunciado,
-      fecha: fecha.fecha,
-      fechaStr: fecha.fechaStr,
-      instrumento
+      fecha: fechaObj ? fechaObj.fecha : null,
+      fechaStr: fechaObj ? fechaObj.fechaStr : 'Sin fecha asignada',
+      instrumento,
+      sesionIA: act.sesionDiaria || null
     };
   });
 
@@ -11082,12 +10830,12 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
   const resEl = document.getElementById('resumen-distribucion');
   if (resEl) {
     resEl.classList.remove('hidden');
-    const displayHoras  = document.getElementById('total-horas-display');
+    const displayHoras = document.getElementById('total-horas-display');
     const displaySemanas = document.getElementById('total-semanas-display');
-    const displayXEC   = document.getElementById('horas-por-ec-display');
-    if (displayHoras)   displayHoras.textContent   = totalHoras + ' hrs';
+    const displayXEC = document.getElementById('horas-por-ec-display');
+    if (displayHoras) displayHoras.textContent = totalHoras + ' hrs';
     if (displaySemanas) displaySemanas.textContent = Math.ceil(totalHoras / parseFloat(dg.horasSemana || 2)) + ' sem';
-    if (displayXEC)     displayXEC.textContent     = horasPorEC + ' hrs';
+    if (displayXEC) displayXEC.textContent = horasPorEC + ' hrs';
   }
 }
 
@@ -11099,7 +10847,7 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
 const _generarPlanificacionLocal = generarPlanificacion;
 
 // Nueva versión con IA
-generarPlanificacion = async function() {
+generarPlanificacion = async function () {
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
 
@@ -11110,43 +10858,44 @@ generarPlanificacion = async function() {
   // Leer el RA desde el estado (guardado por guardarDatosFormulario arriba)
   // o directamente desde el campo con su ID real
   const raDesc = planificacion.ra?.descripcion?.trim() ||
-                 document.getElementById('descripcion-ra')?.value?.trim() || '';
+    document.getElementById('descripcion-ra')?.value?.trim() || '';
   if (!raDesc) {
     mostrarToast('Escribe el Resultado de Aprendizaje antes de generar', 'error');
     return;
   }
 
   // Calcular fechas de clase (necesario para asignar fechas a actividades)
+  // ORDEN CORRECTO: (diasClase, fechaInicio, fechaTermino)
   const fechasClase = calcularFechasClase(
+    planificacion.datosGenerales.diasClase,
     planificacion.datosGenerales.fechaInicio,
-    planificacion.datosGenerales.fechaTermino,
-    planificacion.datosGenerales.diasClase
+    planificacion.datosGenerales.fechaTermino
   );
   planificacion.fechasClase = fechasClase;
 
-  const apiKey = getApiKey();
+  const groqKey = getGroqKey();
 
-  if (!apiKey) {
+  if (!groqKey) {
     // Sin IA: usar generación local y avisar
-    mostrarToast('💡 Sin clave Gemini: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
-    // Llamar al generador local original
+    mostrarToast('💡 Sin clave Groq: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
     _generarPlanificacionLocal();
     return;
   }
 
   // CON IA: mostrar spinner
-  const btnGenerar   = document.getElementById('btn-generar');
-  const btnTexto     = document.getElementById('btn-generar-texto');
+  const btnGenerar = document.getElementById('btn-generar');
+  const btnTexto = document.getElementById('btn-generar-texto');
   const iconoGenerar = btnGenerar?.querySelector('.material-icons');
 
   if (btnGenerar) btnGenerar.classList.add('btn-generando');
-  if (btnTexto)   btnTexto.textContent = 'Generando con IA...';
+  if (btnTexto) btnTexto.textContent = 'Generando con IA...';
   if (iconoGenerar) iconoGenerar.textContent = 'hourglass_top';
 
   try {
     mostrarToast('Consultando IA... esto tarda unos segundos ⏳', 'info');
 
-    const aiData = await generarConGemini(
+    // Generar con Groq
+    const aiData = await generarConGroq(
       planificacion.datosGenerales,
       planificacion.ra,
       fechasClase
@@ -11163,6 +10912,27 @@ generarPlanificacion = async function() {
     renderizarEC(planificacion.elementosCapacidad);
     renderizarActividades(planificacion.actividades);
 
+    // Auto-aplicar sesiones de IA al estado de planificaciones diarias
+    (planificacion.actividades || []).forEach(act => {
+      if (act.sesionIA && !estadoDiarias.sesiones[act.id]) {
+        const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+        const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
+        const minSesion = Math.round(horasAct * 60);
+        const tIni = Math.round(minSesion * 0.20);
+        const tDes = Math.round(minSesion * 0.60);
+        const s = act.sesionIA;
+        estadoDiarias.sesiones[act.id] = {
+          inicio: { apertura: s.apertura || '', encuadre: s.encuadre || '', organizacion: s.organizacion || 'Trabajo individual y grupal.' },
+          desarrollo: { procedimental: s.procedimental || '', conceptual: s.conceptual || '' },
+          cierre: { sintesis: s.sintesis || '', conexion: s.conceptual || '', proximopaso: s.proximopaso || '' },
+          estrategias: s.estrategias || '',
+          recursos: planificacion.ra?.recursosDid || '',
+          tiempos: { ini: tIni, des: tDes, cie: minSesion - tIni - tDes }
+        };
+      }
+    });
+    persistirDiarias();
+
     // Habilitar siguiente
     document.getElementById('btn-paso2-siguiente').disabled = false;
 
@@ -11173,27 +10943,25 @@ generarPlanificacion = async function() {
     setTimeout(() => irAlPaso(3, true), 600);
 
   } catch (err) {
-    console.error('Error Gemini:', err);
+    console.error('Error Groq:', err);
     const msg = err.message || String(err);
 
-    if (msg.includes('API_KEY_INVALID') || msg.includes('401')) {
-      mostrarToast('❌ Clave inválida. Ve a ⚙️ Config. IA y verifica tu clave.', 'error');
-    } else if (msg.includes('expired') || msg.includes('400')) {
-      mostrarToast(
-        '⚠️ API key rechazada. Abre la app desde http://localhost:8080 (no desde archivo) o crea la clave sin restricciones en AI Studio.',
-        'error'
-      );
-    } else if (msg.includes('QUOTA') || msg.includes('429')) {
-      mostrarToast('⏳ Límite gratuito alcanzado. Espera 1 minuto e intenta de nuevo.', 'error');
+    if (msg.includes('401') || msg.includes('invalid_api_key') || msg.includes('API_KEY_INVALID')) {
+      mostrarToast('❌ Clave de Groq inválida. Ve a ⚙️ Config. IA y verifica que empiece con "gsk_".', 'error');
+    } else if (msg.includes('429') || msg.includes('Groq: todos') || msg.includes('rate_limit')) {
+      mostrarToast('⏳ Cuota de Groq agotada. Intenta en unos minutos o crea otra clave en console.groq.com.', 'error');
+    } else if (msg.includes('400') || msg.includes('bad_request')) {
+      mostrarToast('⚠️ Error en la solicitud a Groq. Verifica tu clave en ⚙️ Config. IA.', 'error');
     } else {
-      mostrarToast('Error IA: ' + msg.substring(0, 80), 'error');
+      console.error('Error IA completo:', msg);
+      mostrarToast('Error IA: ' + msg.substring(0, 120), 'error');
     }
     // Siempre usar generacion local como fallback
     _generarPlanificacionLocal();
   } finally {
     // Restaurar botón
     if (btnGenerar) btnGenerar.classList.remove('btn-generando');
-    if (btnTexto)   btnTexto.textContent = 'Generar planificación';
+    if (btnTexto) btnTexto.textContent = 'Generar planificación';
     if (iconoGenerar) iconoGenerar.textContent = 'auto_awesome';
   }
 };
@@ -11207,3 +10975,588 @@ document.addEventListener('DOMContentLoaded', () => {
   const mf = document.querySelector('.modal-footer');
   if (mf && !mf.id) mf.id = 'modal-footer';
 });
+
+// ================================================================
+// WIZARD: IMPORTAR PLANIFICACIÓN DESDE WORD
+// ================================================================
+
+var impState = {
+  paso: 1,
+  totalPasos: 4,
+  datos: {
+    dg: {}, ra: {},
+    ecs: [],      // [{codigo, enunciado, nivel, horasAsignadas}]
+    actividades: [] // [{ecCodigo, enunciado, fecha, instrumento}]
+  }
+};
+
+function abrirImportarPlanificacion() {
+  impState.paso = 1;
+  impState.datos = { dg: {}, ra: {}, ecs: [], actividades: [] };
+  document.getElementById('imp-overlay').classList.remove('hidden');
+  imp_renderizarPaso();
+}
+
+function imp_cerrar() {
+  document.getElementById('imp-overlay').classList.add('hidden');
+}
+
+function imp_cerrarSiClick(e) {
+  if (e.target === document.getElementById('imp-overlay')) imp_cerrar();
+}
+
+function imp_renderizarTabs() {
+  const bar = document.getElementById('imp-steps-bar');
+  const labels = ['1. Datos Generales', '2. RA y Criterios', '3. EC y Actividades', '4. Confirmar'];
+  bar.innerHTML = '';
+  labels.forEach((lbl, i) => {
+    const n = i + 1;
+    const div = document.createElement('div');
+    div.className = 'imp-step-tab' +
+      (n === impState.paso ? ' activo' : '') +
+      (n < impState.paso ? ' completado' : '');
+    div.textContent = (n < impState.paso ? '✓ ' : '') + lbl;
+    bar.appendChild(div);
+  });
+
+  const btnPrev = document.getElementById('imp-btn-prev');
+  const btnNext = document.getElementById('imp-btn-next');
+  btnPrev.style.display = impState.paso > 1 ? 'inline-flex' : 'none';
+  if (impState.paso === impState.totalPasos) {
+    btnNext.innerHTML = '<span class="material-icons">save</span> Guardar planificación';
+  } else {
+    btnNext.innerHTML = 'Siguiente <span class="material-icons">arrow_forward</span>';
+  }
+}
+
+function imp_renderizarPaso() {
+  imp_renderizarTabs();
+  const body = document.getElementById('imp-body');
+  if (impState.paso === 1) body.innerHTML = imp_htmlPaso1();
+  else if (impState.paso === 2) body.innerHTML = imp_htmlPaso2();
+  else if (impState.paso === 3) body.innerHTML = imp_htmlPaso3();
+  else body.innerHTML = imp_htmlPaso4();
+  // Restaurar valores guardados
+  if (impState.paso === 1) imp_poblarPaso1();
+  else if (impState.paso === 2) imp_poblarPaso2();
+  else if (impState.paso === 3) imp_poblarPaso3();
+}
+
+// ─── PASO 1: DATOS GENERALES ───────────────────────────────────
+function imp_htmlPaso1() {
+  return `
+  <div class="imp-section">
+    <div class="imp-section-title"><span class="material-icons">school</span>Institución y Módulo</div>
+    <div class="imp-grid-2">
+      <div class="imp-field"><label>Familia Profesional</label><input id="imp-familiaProfesional" placeholder="Ej: Informática y Comunicaciones"></div>
+      <div class="imp-field"><label>Código FP</label><input id="imp-codigoFP" placeholder="Ej: IFC"></div>
+      <div class="imp-field"><label>Nombre del Bachillerato</label><input id="imp-nombreBachillerato" placeholder="Ej: Técnico en Desarrollo de Aplicaciones Web"></div>
+      <div class="imp-field"><label>Código Título</label><input id="imp-codigoTitulo" placeholder="Ej: T-IFC-001"></div>
+      <div class="imp-field full"><label>Módulo Formativo</label><input id="imp-moduloFormativo" placeholder="Ej: Programación Web en Entorno Cliente"></div>
+      <div class="imp-field"><label>Código del Módulo</label><input id="imp-codigoModulo" placeholder="Ej: MF0491_3"></div>
+      <div class="imp-field"><label>Nombre del Docente</label><input id="imp-nombreDocente" placeholder="Ej: Lic. Ana Torres"></div>
+    </div>
+  </div>
+
+  <div class="imp-section">
+    <div class="imp-section-title"><span class="material-icons">calendar_today</span>Horario y Fechas</div>
+    <div class="imp-grid-2">
+      <div class="imp-field"><label>Cantidad de RA en el módulo</label><input id="imp-cantidadRA" type="number" min="1" max="20" placeholder="Ej: 3"></div>
+      <div class="imp-field"><label>Valor de este RA (puntos)</label><input id="imp-valorRA" type="number" min="1" max="100" step="0.5" placeholder="Ej: 10"></div>
+      <div class="imp-field"><label>Horas semanales totales</label><input id="imp-horasSemana" type="number" min="1" max="40" placeholder="Ej: 6"></div>
+      <div class="imp-field"></div>
+      <div class="imp-field"><label>Fecha de inicio</label><input id="imp-fechaInicio" type="date"></div>
+      <div class="imp-field"><label>Fecha de término</label><input id="imp-fechaTermino" type="date"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:8px;">Días de clase y horas por día:</label>
+      <div class="imp-dias-grid">
+        ${['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map(d => `
+          <div class="imp-dia-item">
+            <label><input type="checkbox" id="imp-dia-${d}" style="margin-right:4px;">${d.charAt(0).toUpperCase() + d.slice(1)}</label>
+            <input type="number" id="imp-hrs-${d}" min="1" max="8" value="2" title="Horas ese día">
+            <span style="font-size:0.7rem;color:#9E9E9E;">hrs</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function imp_poblarPaso1() {
+  const dg = impState.datos.dg;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  set('imp-familiaProfesional', dg.familiaProfesional);
+  set('imp-codigoFP', dg.codigoFP);
+  set('imp-nombreBachillerato', dg.nombreBachillerato);
+  set('imp-codigoTitulo', dg.codigoTitulo);
+  set('imp-moduloFormativo', dg.moduloFormativo);
+  set('imp-codigoModulo', dg.codigoModulo);
+  set('imp-nombreDocente', dg.nombreDocente);
+  set('imp-cantidadRA', dg.cantidadRA);
+  set('imp-valorRA', dg.valorRA);
+  set('imp-horasSemana', dg.horasSemana);
+  set('imp-fechaInicio', dg.fechaInicio);
+  set('imp-fechaTermino', dg.fechaTermino);
+  if (dg.diasClase) {
+    ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(d => {
+      const cfg = dg.diasClase[d];
+      if (!cfg) return;
+      const cb = document.getElementById('imp-dia-' + d);
+      const hr = document.getElementById('imp-hrs-' + d);
+      if (cb) cb.checked = cfg.activo;
+      if (hr) hr.value = cfg.horas || 2;
+    });
+  }
+}
+
+function imp_leerPaso1() {
+  const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const diasClase = {};
+  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(d => {
+    const cb = document.getElementById('imp-dia-' + d);
+    const hr = document.getElementById('imp-hrs-' + d);
+    diasClase[d] = { activo: cb ? cb.checked : false, horas: parseInt(hr?.value || '2', 10) };
+  });
+  impState.datos.dg = {
+    familiaProfesional: get('imp-familiaProfesional'),
+    codigoFP: get('imp-codigoFP'),
+    nombreBachillerato: get('imp-nombreBachillerato'),
+    codigoTitulo: get('imp-codigoTitulo'),
+    moduloFormativo: get('imp-moduloFormativo'),
+    codigoModulo: get('imp-codigoModulo'),
+    nombreDocente: get('imp-nombreDocente'),
+    cantidadRA: get('imp-cantidadRA'),
+    valorRA: get('imp-valorRA'),
+    horasSemana: get('imp-horasSemana'),
+    fechaInicio: get('imp-fechaInicio'),
+    fechaTermino: get('imp-fechaTermino'),
+    diasClase
+  };
+}
+
+function imp_validarPaso1() {
+  const dg = impState.datos.dg;
+  if (!dg.moduloFormativo) { mostrarToast('El Módulo Formativo es obligatorio', 'error'); return false; }
+  if (!dg.nombreDocente) { mostrarToast('El Nombre del Docente es obligatorio', 'error'); return false; }
+  if (!dg.fechaInicio) { mostrarToast('La Fecha de inicio es obligatoria', 'error'); return false; }
+  const diasActivos = Object.values(dg.diasClase || {}).filter(d => d.activo);
+  if (diasActivos.length === 0) { mostrarToast('Selecciona al menos un día de clase', 'error'); return false; }
+  return true;
+}
+
+// ─── PASO 2: RA Y CRITERIOS ────────────────────────────────────
+function imp_htmlPaso2() {
+  return `
+  <div class="imp-section">
+    <div class="imp-section-title"><span class="material-icons">psychology</span>Resultado de Aprendizaje (RA)</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="imp-field">
+        <label>Descripción completa del RA</label>
+        <textarea id="imp-ra-descripcion" rows="4" placeholder="Ej: Elabora aplicaciones web en el entorno cliente aplicando lenguajes de marcas y estándares web con criterios de usabilidad y accesibilidad…"></textarea>
+      </div>
+      <div class="imp-field">
+        <label>Criterios de evaluación / temas de referencia (uno por línea)</label>
+        <textarea id="imp-ra-criterios" rows="5" placeholder="CE1. Identifica las herramientas de diseño web y su función
+CE2. Describe la estructura básica de HTML y sus etiquetas principales
+CE3. Aplica estilos CSS para dar formato visual a páginas web
+CE4. Desarrolla páginas web accesibles siguiendo estándares W3C"></textarea>
+      </div>
+      <div class="imp-field">
+        <label>Recursos didácticos disponibles</label>
+        <input id="imp-ra-recursos" placeholder="Ej: Computadoras con internet, proyector, guías de trabajo, VS Code">
+      </div>
+      <div class="imp-field">
+        <label>Nivel de Bloom predominante del RA</label>
+        <select id="imp-ra-nivel">
+          <option value="conocimiento">Conocimiento – Identificar, Reconocer</option>
+          <option value="comprension">Comprensión – Explicar, Describir</option>
+          <option value="aplicacion" selected>Aplicación – Aplicar, Demostrar</option>
+          <option value="actitudinal">Actitudinal – Valorar, Comprometerse</option>
+        </select>
+      </div>
+    </div>
+  </div>`;
+}
+
+function imp_poblarPaso2() {
+  const ra = impState.datos.ra;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+  set('imp-ra-descripcion', ra.descripcion);
+  set('imp-ra-criterios', ra.criterios);
+  set('imp-ra-recursos', ra.recursos);
+  set('imp-ra-nivel', ra.nivelBloom);
+}
+
+function imp_leerPaso2() {
+  const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  impState.datos.ra = {
+    descripcion: get('imp-ra-descripcion'),
+    criterios: get('imp-ra-criterios'),
+    recursos: get('imp-ra-recursos'),
+    nivelBloom: get('imp-ra-nivel')
+  };
+}
+
+function imp_validarPaso2() {
+  if (!impState.datos.ra.descripcion) { mostrarToast('La descripción del RA es obligatoria', 'error'); return false; }
+  return true;
+}
+
+// ─── PASO 3: EC Y ACTIVIDADES ──────────────────────────────────
+function imp_htmlPaso3() {
+  // Si no hay ECs creados aún, inicializar con 1 vacío
+  if (impState.datos.ecs.length === 0) {
+    impState.datos.ecs = [{ codigo: 'CE1', enunciado: '', nivel: impState.datos.ra.nivelBloom || 'aplicacion', horasAsignadas: 2 }];
+    impState.datos.actividades = [[]]; // un array de actividades por EC
+  }
+
+  let html = `
+  <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-size:0.88rem;color:#616161;">Define los Elementos de Capacidad (EC) y las actividades de evaluación de tu planificación.</div>
+    <button class="btn-siguiente" style="padding:7px 14px;font-size:0.82rem;" onclick="imp_agregarEC()">
+      <span class="material-icons" style="font-size:16px;">add</span> Agregar EC
+    </button>
+  </div>`;
+
+  impState.datos.ecs.forEach((ec, i) => {
+    const acts = impState.datos.actividades[i] || [];
+    html += `
+    <div class="imp-ec-card" id="imp-ec-card-${i}">
+      <div class="imp-ec-card-header">
+        <span class="material-icons" style="font-size:18px;color:#1565C0;">task_alt</span>
+        Elemento de Capacidad ${i + 1}
+        ${impState.datos.ecs.length > 1 ? `<button onclick="imp_eliminarEC(${i})" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#C62828;display:flex;align-items:center;" title="Eliminar EC"><span class="material-icons" style="font-size:18px;">delete</span></button>` : ''}
+      </div>
+      <div class="imp-ec-grid">
+        <div class="imp-field">
+          <label>Código del EC</label>
+          <input id="imp-ec-cod-${i}" value="${escHTML(ec.codigo || '')}" placeholder="Ej: CE1" onchange="imp_actualizarEC(${i})">
+        </div>
+        <div class="imp-field">
+          <label>Nivel Bloom</label>
+          <select id="imp-ec-nivel-${i}" onchange="imp_actualizarEC(${i})">
+            ${['conocimiento', 'comprension', 'aplicacion', 'actitudinal'].map(n =>
+      `<option value="${n}" ${ec.nivel === n ? 'selected' : ''}>${n.charAt(0).toUpperCase() + n.slice(1)}</option>`
+    ).join('')}
+          </select>
+        </div>
+        <div class="imp-field" style="grid-column:1/-1;">
+          <label>Enunciado del Elemento de Capacidad</label>
+          <textarea id="imp-ec-enun-${i}" rows="2" placeholder="Ej: Selecciona herramientas de desarrollo web según sus características y caso de uso…" onchange="imp_actualizarEC(${i})">${escHTML(ec.enunciado || '')}</textarea>
+        </div>
+        <div class="imp-field">
+          <label>Horas asignadas a este EC</label>
+          <input id="imp-ec-hrs-${i}" type="number" min="1" max="100" value="${ec.horasAsignadas || 2}" onchange="imp_actualizarEC(${i})">
+        </div>
+        <div class="imp-field">
+          <label>Instrumento de evaluación preferido</label>
+          <select id="imp-ec-inst-${i}" onchange="imp_actualizarEC(${i})">
+            <option value="cotejo" ${ec.instrumento !== 'rubrica' ? 'selected' : ''}>Lista de Cotejo</option>
+            <option value="rubrica" ${ec.instrumento === 'rubrica' ? 'selected' : ''}>Rúbrica</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;font-size:0.78rem;font-weight:700;color:#4527A0;margin-bottom:6px;">
+        <span class="material-icons" style="font-size:14px;vertical-align:middle;">assignment</span>
+        Actividades de evaluación
+      </div>
+      <div id="imp-acts-${i}">
+        ${acts.map((act, j) => imp_htmlActRow(i, j, act)).join('')}
+      </div>
+      <button class="imp-add-act-btn" onclick="imp_agregarActividad(${i})">
+        <span class="material-icons" style="font-size:16px;">add</span> Agregar actividad
+      </button>
+    </div>`;
+  });
+
+  return html;
+}
+
+function imp_htmlActRow(ecIdx, actIdx, act) {
+  return `<div class="imp-act-row" id="imp-act-${ecIdx}-${actIdx}">
+    <span class="imp-act-num">Act.${actIdx + 1}</span>
+    <textarea rows="2" id="imp-act-enun-${ecIdx}-${actIdx}" placeholder="Describe la actividad de evaluación…"
+      onchange="imp_actualizarAct(${ecIdx},${actIdx})">${escHTML((act && act.enunciado) || '')}</textarea>
+    <input type="date" id="imp-act-fecha-${ecIdx}-${actIdx}" value="${(act && act.fecha) || ''}"
+      onchange="imp_actualizarAct(${ecIdx},${actIdx})" title="Fecha de la sesión">
+    <button class="btn-del-act" onclick="imp_eliminarActividad(${ecIdx},${actIdx})" title="Eliminar">
+      <span class="material-icons" style="font-size:16px;">close</span>
+    </button>
+  </div>`;
+}
+
+function imp_actualizarEC(i) {
+  const ec = impState.datos.ecs[i];
+  if (!ec) return;
+  ec.codigo = document.getElementById('imp-ec-cod-' + i)?.value.trim() || ec.codigo;
+  ec.enunciado = document.getElementById('imp-ec-enun-' + i)?.value.trim() || ec.enunciado;
+  ec.nivel = document.getElementById('imp-ec-nivel-' + i)?.value || ec.nivel;
+  ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-' + i)?.value) || ec.horasAsignadas;
+  ec.instrumento = document.getElementById('imp-ec-inst-' + i)?.value || 'cotejo';
+}
+
+function imp_actualizarAct(ecIdx, actIdx) {
+  if (!impState.datos.actividades[ecIdx]) return;
+  const act = impState.datos.actividades[ecIdx][actIdx] || {};
+  act.enunciado = document.getElementById(`imp-act-enun-${ecIdx}-${actIdx}`)?.value.trim() || '';
+  act.fecha = document.getElementById(`imp-act-fecha-${ecIdx}-${actIdx}`)?.value || '';
+  impState.datos.actividades[ecIdx][actIdx] = act;
+}
+
+function imp_agregarEC() {
+  imp_leerPaso3();
+  const n = impState.datos.ecs.length + 1;
+  impState.datos.ecs.push({ codigo: 'CE' + n, enunciado: '', nivel: 'aplicacion', horasAsignadas: 2, instrumento: 'cotejo' });
+  impState.datos.actividades.push([]);
+  document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
+}
+
+function imp_eliminarEC(i) {
+  imp_leerPaso3();
+  if (impState.datos.ecs.length <= 1) { mostrarToast('Debe haber al menos 1 EC', 'error'); return; }
+  impState.datos.ecs.splice(i, 1);
+  impState.datos.actividades.splice(i, 1);
+  document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
+}
+
+function imp_agregarActividad(ecIdx) {
+  imp_leerPaso3();
+  if (!impState.datos.actividades[ecIdx]) impState.datos.actividades[ecIdx] = [];
+  impState.datos.actividades[ecIdx].push({ enunciado: '', fecha: '' });
+  document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
+}
+
+function imp_eliminarActividad(ecIdx, actIdx) {
+  imp_leerPaso3();
+  impState.datos.actividades[ecIdx].splice(actIdx, 1);
+  document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
+}
+
+function imp_leerPaso3() {
+  impState.datos.ecs.forEach((ec, i) => {
+    ec.codigo = document.getElementById('imp-ec-cod-' + i)?.value.trim() || ec.codigo;
+    ec.enunciado = document.getElementById('imp-ec-enun-' + i)?.value.trim() || '';
+    ec.nivel = document.getElementById('imp-ec-nivel-' + i)?.value || 'aplicacion';
+    ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-' + i)?.value) || 2;
+    ec.instrumento = document.getElementById('imp-ec-inst-' + i)?.value || 'cotejo';
+    if (!impState.datos.actividades[i]) impState.datos.actividades[i] = [];
+    impState.datos.actividades[i].forEach((act, j) => {
+      act.enunciado = document.getElementById(`imp-act-enun-${i}-${j}`)?.value.trim() || '';
+      act.fecha = document.getElementById(`imp-act-fecha-${i}-${j}`)?.value || '';
+    });
+  });
+}
+
+function imp_validarPaso3() {
+  imp_leerPaso3();
+  for (let i = 0; i < impState.datos.ecs.length; i++) {
+    if (!impState.datos.ecs[i].enunciado) {
+      mostrarToast(`El EC ${i + 1} necesita un enunciado`, 'error'); return false;
+    }
+    const acts = impState.datos.actividades[i] || [];
+    if (acts.length === 0) {
+      mostrarToast(`El EC ${i + 1} debe tener al menos 1 actividad`, 'error'); return false;
+    }
+    for (let j = 0; j < acts.length; j++) {
+      if (!acts[j].enunciado) {
+        mostrarToast(`La actividad ${j + 1} del EC ${i + 1} necesita descripción`, 'error'); return false;
+      }
+    }
+  }
+  return true;
+}
+
+// ─── PASO 4: RESUMEN / CONFIRMACIÓN ───────────────────────────
+function imp_htmlPaso4() {
+  const dg = impState.datos.dg;
+  const ra = impState.datos.ra;
+  const ecs = impState.datos.ecs;
+  const acts = impState.datos.actividades;
+  const totalActs = acts.reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
+  const diasActivos = Object.entries(dg.diasClase || {}).filter(([, v]) => v.activo).map(([k]) => k).join(', ');
+
+  let ecResumen = ecs.map((ec, i) => {
+    const aa = (acts[i] || []);
+    return `<div style="margin:6px 0 2px;font-size:0.82rem;">
+      <span style="font-weight:700;color:#1565C0;">${escHTML(ec.codigo)}</span>
+      <span style="color:#616161;"> · ${ec.nivel} · ${ec.horasAsignadas}h</span><br>
+      <span style="color:#424242;">${escHTML((ec.enunciado || '').substring(0, 80))}${ec.enunciado.length > 80 ? '…' : ''}</span>
+      <span style="font-size:0.75rem;color:#9E9E9E;"> (${aa.length} actividad${aa.length !== 1 ? 'es' : ''})</span>
+    </div>`;
+  }).join('');
+
+  return `
+  <div style="background:#E8F5E9;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+    <span class="material-icons" style="color:#2E7D32;font-size:28px;">check_circle</span>
+    <div>
+      <div style="font-weight:700;color:#1B5E20;margin-bottom:4px;">¡Planificación lista para guardar!</div>
+      <div style="font-size:0.82rem;color:#2E7D32;">Revisa el resumen y confirma. Quedará guardada en tu biblioteca.</div>
+    </div>
+  </div>
+
+  <div class="imp-resumen-card">
+    <h4><span class="material-icons" style="font-size:16px;">assignment</span>Datos Generales</h4>
+    <div class="imp-resumen-row"><strong>Módulo:</strong><span>${escHTML(dg.moduloFormativo || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Bachillerato:</strong><span>${escHTML(dg.nombreBachillerato || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Familia Profesional:</strong><span>${escHTML(dg.familiaProfesional || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Docente:</strong><span>${escHTML(dg.nombreDocente || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Período:</strong><span>${dg.fechaInicio || '—'} → ${dg.fechaTermino || '—'}</span></div>
+    <div class="imp-resumen-row"><strong>Días de clase:</strong><span>${diasActivos || '—'}</span></div>
+    <div class="imp-resumen-row"><strong>Horas semanales:</strong><span>${dg.horasSemana || '—'}</span></div>
+    <div class="imp-resumen-row"><strong>Valor del RA:</strong><span>${dg.valorRA || '—'} pts</span></div>
+  </div>
+
+  <div class="imp-resumen-card">
+    <h4><span class="material-icons" style="font-size:16px;">psychology</span>Resultado de Aprendizaje</h4>
+    <div style="font-size:0.82rem;color:#424242;line-height:1.5;">${escHTML((ra.descripcion || '—').substring(0, 200))}${(ra.descripcion || '').length > 200 ? '…' : ''}</div>
+    <div class="imp-resumen-row" style="margin-top:8px;"><strong>Nivel Bloom:</strong><span>${ra.nivelBloom || '—'}</span></div>
+  </div>
+
+  <div class="imp-resumen-card">
+    <h4><span class="material-icons" style="font-size:16px;">task_alt</span>${ecs.length} Elemento${ecs.length !== 1 ? 's' : ''} de Capacidad · ${totalActs} Actividad${totalActs !== 1 ? 'es' : ''}</h4>
+    ${ecResumen}
+  </div>`;
+}
+
+// ─── NAVEGACIÓN ────────────────────────────────────────────────
+function imp_siguiente() {
+  if (impState.paso === 1) {
+    imp_leerPaso1();
+    if (!imp_validarPaso1()) return;
+  } else if (impState.paso === 2) {
+    imp_leerPaso2();
+    if (!imp_validarPaso2()) return;
+  } else if (impState.paso === 3) {
+    if (!imp_validarPaso3()) return;
+  } else if (impState.paso === 4) {
+    imp_guardar();
+    return;
+  }
+  impState.paso++;
+  imp_renderizarPaso();
+  document.getElementById('imp-body').scrollTop = 0;
+}
+
+function imp_anterior() {
+  if (impState.paso <= 1) return;
+  // Guardar estado actual antes de retroceder
+  if (impState.paso === 2) imp_leerPaso2();
+  else if (impState.paso === 3) imp_leerPaso3();
+  impState.paso--;
+  imp_renderizarPaso();
+  document.getElementById('imp-body').scrollTop = 0;
+}
+
+// ─── GUARDAR ───────────────────────────────────────────────────
+function imp_guardar() {
+  const dg = impState.datos.dg;
+  const ra = impState.datos.ra;
+  const ecs = impState.datos.ecs;
+
+  // Construir elementosCapacidad
+  const elementosCapacidad = ecs.map((ec, i) => ({
+    id: ec.codigo,
+    codigo: ec.codigo,
+    nivel: ec.nivel,
+    nivelBloom: ec.nivel,
+    enunciado: ec.enunciado,
+    descripcion: ec.enunciado,
+    horasAsignadas: ec.horasAsignadas,
+    secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion
+  }));
+
+  // Construir actividades
+  const actividades = [];
+  ecs.forEach((ec, ecIdx) => {
+    const actsEC = impState.datos.actividades[ecIdx] || [];
+    actsEC.forEach((act, actIdx) => {
+      const fechaObj = act.fecha ? new Date(act.fecha + 'T12:00:00') : null;
+      const fechaStr = fechaObj
+        ? fechaObj.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+        : '';
+      const actObj = {
+        id: `ACT-IMP-${ecIdx + 1}-${actIdx + 1}-${Date.now()}`,
+        ecCodigo: ec.codigo,
+        ecNivel: ec.nivel,
+        enunciado: act.enunciado,
+        fecha: fechaObj ? fechaObj.toISOString() : null,
+        fechaStr,
+        horas: ec.horasAsignadas,
+        instrumento: ec.instrumento || 'cotejo'
+      };
+      // Generar instrumento básico
+      actObj.instrumento = generarInstrumento(actObj, ec.nivel);
+      actividades.push(actObj);
+    });
+  });
+
+  // Construir fechasClase desde diasClase y fechas
+  const fechasClase = _generarFechasDesde(dg);
+
+  // Objeto planificacion completo
+  const planImportada = {
+    datosGenerales: dg,
+    ra: { ...ra },
+    elementosCapacidad,
+    actividades,
+    fechasClase,
+    horasTotal: elementosCapacidad.reduce((s, e) => s + (e.horasAsignadas || 0), 0),
+    _importada: true
+  };
+
+  // Guardar en biblioteca
+  const ahora = new Date();
+  const id = 'IMP-' + ahora.getTime();
+  const registro = {
+    id,
+    fechaGuardado: ahora.toISOString(),
+    fechaGuardadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    nombre: (dg.moduloFormativo || 'Sin módulo') + ' — ' + (dg.nombreDocente || 'Sin docente'),
+    planificacion: planImportada
+  };
+
+  const biblio = cargarBiblioteca();
+  const idxExistente = (biblio.items || []).findIndex(i =>
+    i.planificacion?.datosGenerales?.moduloFormativo === dg.moduloFormativo &&
+    i.planificacion?.datosGenerales?.nombreDocente === dg.nombreDocente
+  );
+
+  if (idxExistente >= 0) {
+    if (!confirm('Ya existe una planificación de "' + (dg.moduloFormativo || '') + '". ¿Reemplazarla?')) return;
+    biblio.items[idxExistente] = registro;
+    mostrarToast('Planificación actualizada en la biblioteca', 'success');
+  } else {
+    biblio.items.unshift(registro);
+    mostrarToast('Planificación importada y guardada correctamente', 'success');
+  }
+
+  persistirBiblioteca(biblio);
+  imp_cerrar();
+  renderizarBiblioteca();
+}
+
+/** Genera fechas de clase a partir de diasClase + fechaInicio + fechaTermino */
+function _generarFechasDesde(dg) {
+  if (!dg.fechaInicio || !dg.fechaTermino) return [];
+  const DIAS = { lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5 };
+  const activosDias = Object.entries(dg.diasClase || {})
+    .filter(([, v]) => v.activo)
+    .map(([k, v]) => ({ dia: DIAS[k], horas: v.horas || 2 }));
+  if (activosDias.length === 0) return [];
+
+  const inicio = new Date(dg.fechaInicio + 'T12:00:00');
+  const fin = new Date(dg.fechaTermino + 'T12:00:00');
+  const result = [];
+  const cur = new Date(inicio);
+  while (cur <= fin) {
+    const dow = cur.getDay(); // 0=dom
+    const cfg = activosDias.find(d => d.dia === dow);
+    if (cfg) {
+      const fechaStr = cur.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+      result.push({ fecha: new Date(cur), fechaStr, horas: cfg.horas });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return result;
+}
