@@ -11560,3 +11560,146 @@ function _generarFechasDesde(dg) {
   }
   return result;
 }
+
+
+// ================================================================
+// BACKUP: EXPORTAR / IMPORTAR TODOS LOS DATOS
+// ================================================================
+
+var _backupFileData = null;
+
+function abrirBackup() {
+  _backupFileData = null;
+  document.getElementById('backup-overlay').classList.remove('hidden');
+  document.getElementById('backup-file-name').textContent = 'Seleccionar archivo .json';
+  document.getElementById('backup-preview').classList.add('hidden');
+  document.getElementById('backup-preview').innerHTML = '';
+  document.getElementById('backup-btn-importar').style.display = 'none';
+  document.getElementById('backup-file-input').value = '';
+
+  // Resumen de datos actuales
+  const biblio = cargarBiblioteca();
+  const nPlans = (biblio.items || []).length;
+  const cal = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}');
+  const nCursos = Object.keys(cal.cursos || {}).length;
+  const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
+  const nSesiones = Object.keys(diarias.sesiones || {}).length;
+  const tieneKey = !!getGroqKey();
+
+  document.getElementById('backup-resumen').innerHTML =
+    '<div style="background:#F1F8E9;border-radius:8px;padding:10px 12px;display:flex;gap:16px;flex-wrap:wrap;">' +
+    '<span><strong>' + nPlans + '</strong> planificacion' + (nPlans !== 1 ? 'es' : '') + '</span>' +
+    '<span><strong>' + nCursos + '</strong> curso' + (nCursos !== 1 ? 's' : '') + '</span>' +
+    '<span><strong>' + nSesiones + '</strong> sesion' + (nSesiones !== 1 ? 'es' : '') + ' diarias</span>' +
+    '<span>' + (tieneKey ? '✓ API Key guardada' : 'Sin API Key') + '</span>' +
+    '</div>';
+}
+
+function cerrarBackup() {
+  document.getElementById('backup-overlay').classList.add('hidden');
+}
+
+function exportarDatos() {
+  const ahora = new Date();
+  const backup = {
+    _meta: {
+      app: 'El Gran Planificador',
+      version: '2.0',
+      exportado: ahora.toISOString(),
+      exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    },
+    biblioteca: localStorage.getItem(BIBLIO_KEY) || '{"items":[]}',
+    calificaciones: localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}',
+    diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
+    borrador: localStorage.getItem(STORAGE_KEY) || 'null',
+    groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || ''
+  };
+
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = ahora.toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'backup-planificador-' + fecha + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Backup descargado correctamente', 'success');
+}
+
+function onBackupFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('backup-file-name').textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Validar que es un backup válido
+      if (!data._meta || !data.biblioteca) {
+        mostrarToast('El archivo no parece ser un backup válido', 'error');
+        return;
+      }
+
+      _backupFileData = data;
+
+      // Generar preview
+      const biblio = JSON.parse(data.biblioteca || '{"items":[]}');
+      const cal = JSON.parse(data.calificaciones || '{"cursos":{}}');
+      const nPlans = (biblio.items || []).length;
+      const nCursos = Object.keys(cal.cursos || {}).length;
+      const diariasData = JSON.parse(data.diarias || '{"sesiones":{}}');
+      const nSes = Object.keys(diariasData.sesiones || {}).length;
+
+      document.getElementById('backup-preview').innerHTML =
+        '<div style="font-weight:700;margin-bottom:6px;color:#0D47A1;">Contenido del backup:</div>' +
+        '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
+        '<span>📅 <strong>' + data._meta.exportadoLabel + '</strong></span>' +
+        '<span>📁 <strong>' + nPlans + '</strong> planificacion' + (nPlans !== 1 ? 'es' : '') + '</span>' +
+        '<span>🏫 <strong>' + nCursos + '</strong> curso' + (nCursos !== 1 ? 's' : '') + '</span>' +
+        '<span>📝 <strong>' + nSes + '</strong> sesiones diarias</span>' +
+        (data.groqKey ? '<span>🔑 API Key incluida</span>' : '') +
+        '</div>';
+      document.getElementById('backup-preview').classList.remove('hidden');
+      document.getElementById('backup-btn-importar').style.display = 'flex';
+
+    } catch (err) {
+      mostrarToast('Error al leer el archivo: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importarDatos() {
+  if (!_backupFileData) return;
+
+  if (!confirm(
+    '¿Restaurar este backup?\n\n' +
+    'Esto reemplazará TODOS tus datos actuales (planificaciones, calificaciones y sesiones diarias) ' +
+    'con los del archivo seleccionado.\n\n' +
+    'Esta acción no se puede deshacer.'
+  )) return;
+
+  try {
+    const d = _backupFileData;
+
+    if (d.biblioteca) localStorage.setItem(BIBLIO_KEY, d.biblioteca);
+    if (d.calificaciones) localStorage.setItem(CAL_STORAGE_KEY, d.calificaciones);
+    if (d.diarias) localStorage.setItem(DIARIAS_KEY, d.diarias);
+    if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
+    if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
+
+    mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
+    cerrarBackup();
+
+    // Recargar la página para que todo se inicialice desde localStorage
+    setTimeout(() => location.reload(), 1200);
+
+  } catch (err) {
+    mostrarToast('Error al restaurar: ' + err.message, 'error');
+  }
+}

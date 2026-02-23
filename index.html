@@ -43,10 +43,14 @@
           <p class="header-subtitle">Sistema de Educación Técnico Profesional · República Dominicana</p>
         </div>
       </div>
-      <button id="btn-config-ia" class="btn-config-ia" onclick="abrirConfigIA()"
-        title="Configurar clave de IA (Gemini)">
+      <button id="btn-config-ia" class="btn-config-ia" onclick="abrirConfigIA()" title="Configurar clave de IA (Groq)">
         <span class="material-icons">settings</span>
         <span class="btn-nueva-label">Config. IA</span>
+      </button>
+      <button id="btn-backup" class="btn-config-ia" onclick="abrirBackup()" title="Exportar / Importar todos los datos"
+        style="background:rgba(230,81,0,0.1);border-color:rgba(230,81,0,0.3);color:#E65100;">
+        <span class="material-icons">backup</span>
+        <span class="btn-nueva-label">Mis datos</span>
       </button>
       <button id="btn-nueva-planificacion" class="btn-nueva" title="Nueva Planificación">
         <span class="material-icons">add_circle_outline</span>
@@ -740,6 +744,61 @@
         <button class="btn-siguiente" id="imp-btn-next" onclick="imp_siguiente()">
           Siguiente <span class="material-icons">arrow_forward</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== MODAL BACKUP / RESTAURAR DATOS ===== -->
+  <div id="backup-overlay" class="modal-overlay hidden">
+    <div class="modal-box" style="max-width:560px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Mis Datos &mdash; Exportar / Importar</h3>
+        <button class="modal-close" onclick="cerrarBackup()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <!-- Exportar -->
+        <div class="backup-section">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#2E7D32;">cloud_download</span>
+            Exportar mis datos
+          </div>
+          <p class="backup-desc">Descarga un archivo <strong>.json</strong> con todas tus planificaciones,
+            calificaciones y sesiones diarias. Úsalo como respaldo o para cambiar de navegador/dispositivo.</p>
+          <div id="backup-resumen" style="margin:10px 0;font-size:0.82rem;color:#616161;"></div>
+          <button class="btn-siguiente" onclick="exportarDatos()" style="width:100%;justify-content:center;">
+            <span class="material-icons">download</span> Descargar backup completo
+          </button>
+        </div>
+
+        <div class="backup-divider"></div>
+
+        <!-- Importar -->
+        <div class="backup-section">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#1565C0;">cloud_upload</span>
+            Importar / Restaurar datos
+          </div>
+          <p class="backup-desc">Selecciona un archivo de backup generado anteriormente. <strong>Los datos actuales
+              serán reemplazados</strong> por los del archivo.</p>
+          <label class="backup-file-label" id="backup-file-label-btn">
+            <span class="material-icons">attach_file</span>
+            <span id="backup-file-name">Seleccionar archivo .json</span>
+            <input type="file" id="backup-file-input" accept=".json" onchange="onBackupFileSelected(this)"
+              style="display:none;">
+          </label>
+          <div id="backup-preview" class="hidden"
+            style="margin:10px 0;background:#E3F2FD;border-radius:8px;padding:12px;font-size:0.82rem;"></div>
+          <button class="btn-siguiente" id="backup-btn-importar" onclick="importarDatos()"
+            style="width:100%;justify-content:center;display:none;background:linear-gradient(135deg,#1565C0,#1976D2);">
+            <span class="material-icons">restore</span> Restaurar este backup
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn-secundario" onclick="cerrarBackup()">Cerrar</button>
       </div>
     </div>
   </div>

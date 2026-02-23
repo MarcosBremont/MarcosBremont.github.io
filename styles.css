@@ -3367,3 +3367,53 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ====================================================
+   MODAL BACKUP / RESTAURAR DATOS
+   ==================================================== */
+.backup-section {
+  margin-bottom: 4px;
+}
+
+.backup-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #212121;
+  margin-bottom: 8px;
+}
+
+.backup-desc {
+  font-size: 0.82rem;
+  color: #616161;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.backup-divider {
+  border: none;
+  border-top: 1.5px dashed #E0E0E0;
+  margin: 20px 0;
+}
+
+.backup-file-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px dashed #90CAF9;
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #1565C0;
+  font-weight: 600;
+  transition: background 0.2s, border-color 0.2s;
+  margin-bottom: 10px;
+}
+
+.backup-file-label:hover {
+  background: #E3F2FD;
+  border-color: #1565C0;
+}
