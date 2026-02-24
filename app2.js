@@ -38,82 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // Botón "Planificaciones" en el header (insertar antes del de Calificaciones)
-
-
-
-  if (!document.getElementById('btn-planificaciones')) {
-
-
-
-    const btn = document.createElement('button');
-
-
-
-    btn.id = 'btn-planificaciones';
-
-
-
-    btn.className = 'btn-planificaciones';
-
-
-
-    btn.title = 'Mis Planificaciones';
-
-
-
-    btn.innerHTML = '<span class="material-icons">folder_special</span>' +
-
-
-
-      '<span class="btn-nueva-label">Planificaciones</span>';
-
-
-
-    btn.onclick = abrirPlanificaciones;
-
-
-
-    const btnCal = document.getElementById('btn-calificaciones');
-
-
-
-    if (btnCal) {
-
-
-
-      headerInner.insertBefore(btn, btnCal);
-
-
-
-    } else {
-
-
-
-      const btnNueva = document.getElementById('btn-nueva-planificacion');
-
-
-
-      if (btnNueva) headerInner.insertBefore(btn, btnNueva);
-
-
-
-      else headerInner.appendChild(btn);
-
-
-
-    }
-
-
-
-  }
-
-
-
-
-
-
-
   // Botón "Guardar planificación" flotante en la barra de navegación del stepper
 
 
@@ -235,6 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function irAlHome() {
+  abrirDashboard();
+}
+
+function irAlHomeBase() {
   _ocultarPaneles();
   irAlPaso(1, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1791,21 +1719,30 @@ function renderizarDiarias() {
 
 
 
+        <!-- INSTRUMENTO DE EVALUACION -->
+        <div class="pd-instrumento-sect">
+          <div class="pd-sec-header" style="background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#fff;border-radius:8px 8px 0 0;padding:10px 14px;margin-top:0;">
+            <span class="material-icons">assignment_turned_in</span>
+            INSTRUMENTO DE EVALUACION
+            <span style="margin-left:auto;font-size:0.78rem;font-weight:400;opacity:0.9;">${act.instrumento ? act.instrumento.tipoLabel : 'Sin instrumento'}</span>
+          </div>
+          <div style="border:1.5px solid #C8E6C9;border-top:none;border-radius:0 0 8px 8px;padding:16px;">
+            ${act.instrumento
+              ? (act.instrumento.tipo === 'cotejo'
+                  ? renderizarListaCotejoHTML(act.instrumento)
+                  : renderizarRubricaHTML(act.instrumento))
+              : '<p style=\"color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;\">No hay instrumento generado para esta actividad.</p>'
+            }
+          </div>
+        </div>
+
       </div><!-- fin pd-sesion-body -->
-
-
 
     `;
 
-
-
     lista.appendChild(card);
 
-
-
   });
-
-
 
 }
 
@@ -1828,267 +1765,225 @@ function renderizarDiarias() {
 
 
 function exportarDiariasWord() {
-
-
-
   guardarTodasDiarias();
-
-
-
   const actividades = planificacion.actividades || [];
-
-
-
   if (!actividades.length) { mostrarToast('No hay sesiones para exportar', 'error'); return; }
 
-
-
-
-
-
-
-  const dg = planificacion.datosGenerales || {};
-
-
-
-  const hoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
-
-
-
-
-
-
-
-  let body = `<h2>Planificaciones Diarias</h2>
-
-
-
-  <p><strong>Módulo:</strong> ${escHTML(dg.moduloFormativo || '')}</p>
-
-
-
-  <p><strong>Docente:</strong> ${escHTML(dg.nombreDocente || '')}</p>
-
-
-
-  <p><strong>Bachillerato:</strong> ${escHTML(dg.nombreBachillerato || '')}</p>
-
-
-
-  <p><strong>Fecha de generación:</strong> ${hoy}</p><hr/>`;
-
-
-
-
-
-
-
-  actividades.forEach((act, idx) => {
-
-
-
-    const s = estadoDiarias.sesiones[act.id] || {};
-
-
-
-    const ti = s.tiempos?.ini ?? '—';
-
-
-
-    const td = s.tiempos?.des ?? '—';
-
-
-
-    const tc = s.tiempos?.cie ?? '—';
-
-
-
-    const total = (s.tiempos?.ini || 0) + (s.tiempos?.des || 0) + (s.tiempos?.cie || 0);
-
-
-
-
-
-
-
-    body += `<h3>Sesión ${idx + 1}: ${escHTML(act.enunciado || '')}</h3>
-
-
-
-    <p><strong>Fecha:</strong> ${escHTML(act.fechaStr || '—')} &nbsp;|&nbsp; <strong>EC:</strong> ${escHTML(act.ecCodigo || '')} &nbsp;|&nbsp; <strong>Duración total:</strong> ${total} min</p>
-
-
-
-
-
-
-
-    <h4>1er MOMENTO – INICIO (${ti} min)</h4>
-
-
-
-    <p><strong>Apertura:</strong> ${escHTML(s.inicio?.apertura || '—')}</p>
-
-
-
-    <p><strong>Encuadre:</strong> ${escHTML(s.inicio?.encuadre || '—')}</p>
-
-
-
-    <p><strong>Organización:</strong> ${escHTML(s.inicio?.organizacion || '—')}</p>
-
-
-
-
-
-
-
-    <h4>2do MOMENTO – DESARROLLO (${td} min)</h4>
-
-
-
-    <p><strong>Procedimental / Actividad principal:</strong><br>${escHTML(s.desarrollo?.procedimental || '—').replace(/\n/g, '<br>')}</p>
-
-
-
-    <p><strong>Conceptual / Actitudinal:</strong><br>${escHTML(s.desarrollo?.conceptual || '—').replace(/\n/g, '<br>')}</p>
-
-
-
-
-
-
-
-    <h4>3er MOMENTO – CIERRE (${tc} min)</h4>
-
-
-
-    <p><strong>Síntesis:</strong> ${escHTML(s.cierre?.sintesis || '—')}</p>
-
-
-
-    <p><strong>Conexión:</strong> ${escHTML(s.cierre?.conexion || '—')}</p>
-
-
-
-    <p><strong>Próximo paso:</strong> ${escHTML(s.cierre?.proximopaso || '—')}</p>
-
-
-
-
-
-
-
-    <p><strong>ESTRATEGIAS:</strong><br>${escHTML(s.estrategias || '—').replace(/\n/g, '<br>')}</p>
-
-
-
-    <p><strong>RECURSOS:</strong><br>${escHTML(s.recursos || '—').replace(/\n/g, '<br>')}</p>
-
-
-
-    <hr/>`;
-
-
-
-  });
-
-
-
-
-
-
-
-  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
-
-
-
-    xmlns:w='urn:schemas-microsoft-com:office:word'
-
-
-
-    xmlns='http://www.w3.org/TR/REC-html40'>
-
-
-
-  <head><meta charset="utf-8"/>
-
-
-
-  <style>
-
-
-
-    body{font-family:Calibri,Arial;font-size:11pt;margin:2cm;}
-
-
-
-    h2{color:#0D47A1;} h3{color:#0D47A1;margin-top:18pt;border-bottom:1pt solid #ccc;padding-bottom:4pt;}
-
-
-
-    h4{color:#1565C0;margin-top:12pt;margin-bottom:4pt;}
-
-
-
-    p{margin:4pt 0;line-height:1.5;}
-
-
-
-    hr{border:none;border-top:1pt solid #e0e0e0;margin:12pt 0;}
-
-
-
-  </style></head>
-
-
-
-  <body>${body}</body></html>`;
-
-
-
-
-
-
-
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-
-
-
-  const url = URL.createObjectURL(blob);
-
-
-
-  const a = document.createElement('a');
-
-
-
-  a.href = url;
-
-
-
-  a.download = `PlanificacionesDiarias_${(dg.moduloFormativo || 'modulo').replace(/\s+/g, '_')}.doc`;
-
-
-
-  document.body.appendChild(a); a.click();
-
-
-
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-
-
-
-  mostrarToast('Word descargado', 'success');
-
-
-
+  mostrarToast('Generando planificaciones con la plantilla del centro...', 'info');
+
+  const {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    ImageRun, AlignmentType, PageOrientation, BorderStyle, WidthType,
+    ShadingType, VerticalAlign, TableLayoutType
+  } = docx;
+
+  const dg  = planificacion.datosGenerales || {};
+  const ra  = planificacion.ra || {};
+
+  // Cargar logos institucionales (deben estar en la misma carpeta que index.html)
+  function fetchImg(url) {
+    return fetch(url).then(r => r.arrayBuffer()).then(b => new Uint8Array(b));
+  }
+
+  Promise.all([fetchImg('logo1.jpg'), fetchImg('logo2.jpg')])
+    .then(([img1, img2]) => _generarDocxDiarias(img1, img2))
+    .catch(() => _generarDocxDiarias(null, null));
+
+  function textParas(text, opts) {
+    if (!text) text = '\u2014';
+    opts = opts || {};
+    return String(text).split('\n').map((line, i) => new Paragraph({
+      spacing: { before: i === 0 ? 0 : 40, after: 0 },
+      children: [new TextRun({
+        text: line || ' ',
+        font: 'Arial',
+        size: opts.size || 20,
+        bold: !!opts.bold,
+        color: opts.color || '000000'
+      })]
+    }));
+  }
+
+  function mkLabel(text) {
+    return new TableCell({
+      borders: BDRS, margins: MARG,
+      width: { size: COL1, type: WidthType.DXA },
+      shading: { fill: 'D9E1F2', type: ShadingType.CLEAR },
+      verticalAlign: VerticalAlign.CENTER,
+      children: [new Paragraph({ children: [new TextRun({ text: text, bold: true, font: 'Arial', size: 20, color: '1F3864' })] })]
+    });
+  }
+
+  function mkContent(paras, w) {
+    return new TableCell({
+      borders: BDRS, margins: MARG,
+      width: { size: w || COL2, type: WidthType.DXA },
+      children: paras
+    });
+  }
+
+  function mkMomento(title, mins) {
+    return new TableCell({
+      borders: BDRS, margins: MARG,
+      width: { size: COL1, type: WidthType.DXA },
+      shading: { fill: '1F3864', type: ShadingType.CLEAR },
+      verticalAlign: VerticalAlign.CENTER,
+      children: [
+        new Paragraph({ children: [new TextRun({ text: title, bold: true, italics: true, font: 'Arial', size: 20, color: 'FFFFFF' })] }),
+        new Paragraph({ children: [new TextRun({ text: mins + ' minutos', font: 'Arial', size: 18, color: 'BDD7EE' })] })
+      ]
+    });
+  }
+
+  function instTexto(inst) {
+    if (!inst) return '\u2014';
+    var txt = (inst.tipoLabel || '') + ': ' + (inst.titulo || '') + '\n';
+    if (inst.tipo === 'cotejo') {
+      (inst.criterios || []).forEach(function(c, i) { txt += (i+1) + '. ' + (c.indicador || c) + '\n'; });
+    } else if (inst.tipo === 'rubrica') {
+      (inst.criterios || []).forEach(function(c, i) {
+        txt += (i+1) + '. ' + c.criterio + '\n';
+        (c.descriptores || []).forEach(function(d) { txt += '   \u2022 ' + d + '\n'; });
+      });
+    }
+    return txt;
+  }
+
+  // Constantes de layout (landscape A4)
+  const PAGE_W = 16838, PAGE_H = 11906, MARGIN = 720;
+  const TABLE_W = PAGE_W - MARGIN * 2;
+  const COL1 = 2700, COL2 = TABLE_W - COL1;
+  const MARG = { top: 80, bottom: 80, left: 120, right: 120 };
+  const bdr = { style: BorderStyle.SINGLE, size: 4, color: '4472C4' };
+  const BDRS = { top: bdr, bottom: bdr, left: bdr, right: bdr };
+
+  function _generarDocxDiarias(img1, img2) {
+    const sections = actividades.map(function(act) {
+      const s   = estadoDiarias.sesiones[act.id] || {};
+      const ti  = (s.tiempos && s.tiempos.ini) || 20;
+      const td  = (s.tiempos && s.tiempos.des) || 55;
+      const tc  = (s.tiempos && s.tiempos.cie) || 15;
+      const tot = ti + td + tc;
+      const raW = Math.round(COL2 * 0.68);
+      const tW  = COL2 - raW;
+
+      var headerChildren = [];
+      if (img1) headerChildren.push(new ImageRun({ data: img1, transformation: { width: 115, height: 48 }, type: 'jpg' }));
+      headerChildren.push(new TextRun({ text: '   ', size: 20 }));
+      if (img2) headerChildren.push(new ImageRun({ data: img2, transformation: { width: 310, height: 43 }, type: 'jpg' }));
+
+      const headerPara = new Paragraph({ spacing: { after: 0 }, children: headerChildren });
+
+      const titlePara = new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 100, after: 100 },
+        children: [new TextRun({ text: 'Matriz de Planificaci\u00f3n Diaria o por Actividad de Aprendizaje', bold: true, italics: true, font: 'Arial', size: 24, color: '1F3864' })]
+      });
+
+      const inicio   = s.inicio   || {};
+      const desarrollo = s.desarrollo || {};
+      const cierre   = s.cierre   || {};
+
+      const tabla = new Table({
+        width: { size: TABLE_W, type: WidthType.DXA },
+        columnWidths: [COL1, raW, tW],
+        layout: TableLayoutType.FIXED,
+        rows: [
+          new TableRow({ children: [ mkLabel('M\u00f3dulo formativo (MF)'),               mkContent(textParas(dg.moduloFormativo), COL2) ] }),
+          new TableRow({ children: [ mkLabel('Nombre del docente'),                         mkContent(textParas(dg.nombreDocente),    COL2) ] }),
+          new TableRow({ children: [ mkLabel('Fecha'),                                       mkContent(textParas(act.fechaStr),         COL2) ] }),
+          new TableRow({ children: [ mkLabel('Actividad'),                                   mkContent(textParas(act.enunciado),        COL2) ] }),
+          // RA + Tiempo (3 columnas)
+          new TableRow({ children: [
+            mkLabel('Resultado de Aprendizaje (RA)'),
+            mkContent(textParas(ra.descripcion), raW),
+            new TableCell({
+              borders: BDRS, margins: MARG,
+              width: { size: tW, type: WidthType.DXA },
+              shading: { fill: 'FFF2CC', type: ShadingType.CLEAR },
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tiempo', bold: true, font: 'Arial', size: 20, color: '7F6000' })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: tot + ' minutos', bold: true, font: 'Arial', size: 20, color: 'BF8F00' })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'I:'+ti+' D:'+td+' C:'+tc+' min', font: 'Arial', size: 16, color: '7F6000' })] }),
+              ]
+            })
+          ]}),
+          // 1er momento
+          new TableRow({ children: [
+            mkMomento('1er momento.\nInicio', ti),
+            mkContent([
+              ...textParas('Apertura:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(inicio.apertura),
+              new Paragraph({ spacing: { before: 60 }, children: [] }),
+              ...textParas('Encuadre:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(inicio.encuadre),
+              new Paragraph({ spacing: { before: 60 }, children: [] }),
+              ...textParas('Organizaci\u00f3n:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(inicio.organizacion),
+            ], COL2)
+          ]}),
+          // 2do momento
+          new TableRow({ children: [
+            mkMomento('2do momento.\nDesarrollo (conceptual, procedimental y/o actitudinal)', td),
+            mkContent([
+              ...textParas('Procedimental / Actividad principal:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(desarrollo.procedimental),
+              new Paragraph({ spacing: { before: 80 }, children: [] }),
+              ...textParas('Conceptual / Actitudinal:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(desarrollo.conceptual),
+            ], COL2)
+          ]}),
+          // 3er momento
+          new TableRow({ children: [
+            mkMomento('3er momento.\nCierre', tc),
+            mkContent([
+              ...textParas('S\u00edntesis:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(cierre.sintesis),
+              new Paragraph({ spacing: { before: 60 }, children: [] }),
+              ...textParas('Conexi\u00f3n con el mundo real:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(cierre.conexion),
+              new Paragraph({ spacing: { before: 60 }, children: [] }),
+              ...textParas('Pr\u00f3ximo paso:', { bold: true, size: 19, color: '1F3864' }),
+              ...textParas(cierre.proximopaso),
+            ], COL2)
+          ]}),
+          new TableRow({ children: [ mkLabel('Estrategia(s) utilizada(s):'),        mkContent(textParas(s.estrategias), COL2) ] }),
+          new TableRow({ children: [ mkLabel('Recursos:'),                            mkContent(textParas(s.recursos),    COL2) ] }),
+          new TableRow({ children: [ mkLabel('Instrumentos de evaluaci\u00f3n'),      mkContent(textParas(instTexto(act.instrumento)), COL2) ] }),
+        ]
+      });
+
+      return {
+        properties: {
+          page: {
+            size: { width: PAGE_H, height: PAGE_W, orientation: PageOrientation.LANDSCAPE },
+            margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN }
+          }
+        },
+        children: [headerPara, titlePara, tabla]
+      };
+    });
+
+    const docObj = new Document({
+      styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
+      sections: sections
+    });
+
+    Packer.toBlob(docObj).then(function(blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'PlanificacionesDiarias_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      mostrarToast('\u00a1Planificaciones exportadas con la plantilla del centro!', 'success');
+    }).catch(function(e) {
+      console.error(e);
+      mostrarToast('Error al generar Word: ' + e.message, 'error');
+    });
+  }
 }
-
-
-
-
-
 
 
 function imprimirDiarias() {
@@ -2780,7 +2675,8 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
     enunciado: ec.enunciado,
     horasAsignadas: horasPorEC + (i === 0 ? horasResto : 0),
     descripcion: ec.enunciado,
-    secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion
+    secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion,
+    instrumento: undefined
   }));
 
   // 3. Actividades — combinar las generadas por IA con fechas reales
@@ -3007,9 +2903,10 @@ generarPlanificacion = async function () {
 // ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   actualizarBtnConfigIA();
-  // Asegurar que modal-footer tiene id
   const mf = document.querySelector('.modal-footer');
   if (mf && !mf.id) mf.id = 'modal-footer';
+  // Mostrar dashboard al iniciar
+  setTimeout(() => abrirDashboard(), 50);
 });
 
 // ================================================================
@@ -3081,6 +2978,14 @@ function imp_renderizarPaso() {
 // ─── PASO 1: DATOS GENERALES ───────────────────────────────────
 function imp_htmlPaso1() {
   return `
+  <div class="imp-section" id="imp-sec-curso">
+    <div class="imp-section-title"><span class="material-icons">class</span>Curso al que pertenece</div>
+    <div class="imp-grid-2">
+      <div class="imp-field full" id="imp-curso-field">
+        <!-- Se genera dinámicamente en imp_poblarPaso1 -->
+      </div>
+    </div>
+  </div>
   <div class="imp-section">
     <div class="imp-section-title"><span class="material-icons">school</span>Institución y Módulo</div>
     <div class="imp-grid-2">
@@ -3121,6 +3026,21 @@ function imp_htmlPaso1() {
 function imp_poblarPaso1() {
   const dg = impState.datos.dg;
   const set = (id, val) => { const el = document.getElementById(id); if(el && val !== undefined) el.value = val; };
+  // Renderizar selector de curso
+  const cf = document.getElementById('imp-curso-field');
+  if (cf) {
+    const cursos = Object.values(calState.cursos);
+    if (cursos.length === 0) {
+      cf.innerHTML = '<p style="font-size:0.85rem;color:#78909C;margin:0;">No tienes cursos creados. Podrás asignar esta planificación a un curso desde el <strong>Libro de Calificaciones</strong> después de guardarla.</p>';
+    } else {
+      const opts = '<option value="">— Sin asignar —</option>' + cursos.map(c =>
+        `<option value="${c.id}" ${impState.datos.cursoId === c.id ? 'selected' : ''}>${escHTML(c.nombre)}</option>`
+      ).join('');
+      cf.innerHTML = '<label>Asignar al curso</label>'
+        + '<select id="imp-cursoId" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">' + opts + '</select>'
+        + '<p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Las actividades de esta planificación aparecerán en el libro de calificaciones de ese curso.</p>';
+    }
+  }
   set('imp-familiaProfesional', dg.familiaProfesional);
   set('imp-codigoFP', dg.codigoFP);
   set('imp-nombreBachillerato', dg.nombreBachillerato);
@@ -3147,6 +3067,7 @@ function imp_poblarPaso1() {
 
 function imp_leerPaso1() {
   const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  impState.datos.cursoId = document.getElementById('imp-cursoId')?.value || null;
   const diasClase = {};
   ['lunes','martes','miercoles','jueves','viernes'].forEach(d => {
     const cb = document.getElementById('imp-dia-'+d);
@@ -3203,24 +3124,37 @@ CE4. Desarrolla páginas web accesibles siguiendo estándares W3C"></textarea>
       </div>
       <div class="imp-field">
         <label>Nivel de Bloom predominante del RA</label>
-        <select id="imp-ra-nivel">
-          <option value="conocimiento">Conocimiento – Identificar, Reconocer</option>
-          <option value="comprension">Comprensión – Explicar, Describir</option>
-          <option value="aplicacion" selected>Aplicación – Aplicar, Demostrar</option>
-          <option value="actitudinal">Actitudinal – Valorar, Comprometerse</option>
+        <select id="imp-ra-nivel" onchange="imp_onBloomChange()">
+          <option value="conocimiento">Conocimiento – Identificar, Reconocer, Nombrar</option>
+          <option value="comprension">Comprensión – Explicar, Describir, Interpretar</option>
+          <option value="aplicacion" selected>Aplicación – Aplicar, Demostrar, Ejecutar</option>
+          <option value="analisis">Análisis – Analizar, Comparar, Diferenciar</option>
+          <option value="evaluacion">Evaluación – Evaluar, Juzgar, Justificar</option>
+          <option value="creacion">Creación – Crear, Diseñar, Construir</option>
+          <option value="actitudinal">Actitudinal – Valorar, Comprometerse, Respetar</option>
+          <option value="otro">Otro (escribir abajo)…</option>
         </select>
-      </div>
+        <input id="imp-ra-nivel-otro" placeholder="Especifica el nivel de Bloom…"
+          style="display:none;margin-top:6px;" onchange="imp_onBloomOtroChange()">
     </div>
   </div>`;
 }
 
 function imp_poblarPaso2() {
   const ra = impState.datos.ra;
+  // Resolver bloom personalizado
+  if (ra.nivelBloom === 'otro') {
+    ra.nivelBloom = document.getElementById('imp-ra-nivel-otro')?.value.trim() || 'otro';
+  }
   const set = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
   set('imp-ra-descripcion', ra.descripcion);
   set('imp-ra-criterios', ra.criterios);
   set('imp-ra-recursos', ra.recursos);
-  set('imp-ra-nivel', ra.nivelBloom);
+  set('imp-ra-nivel', ra.nivelBloom && ['conocimiento','comprension','aplicacion','analisis','evaluacion','creacion','actitudinal'].includes(ra.nivelBloom) ? ra.nivelBloom : (ra.nivelBloom ? 'otro' : 'aplicacion'));
+  if (ra.nivelBloom && !['conocimiento','comprension','aplicacion','analisis','evaluacion','creacion','actitudinal'].includes(ra.nivelBloom)) {
+    const otrEl = document.getElementById('imp-ra-nivel-otro');
+    if (otrEl) { otrEl.value = ra.nivelBloom; otrEl.style.display = ''; }
+  }
 }
 
 function imp_leerPaso2() {
@@ -3229,7 +3163,10 @@ function imp_leerPaso2() {
     descripcion: get('imp-ra-descripcion'),
     criterios: get('imp-ra-criterios'),
     recursos: get('imp-ra-recursos'),
-    nivelBloom: get('imp-ra-nivel')
+    nivelBloom: (function() {
+      const v = get('imp-ra-nivel');
+      return v === 'otro' ? (document.getElementById('imp-ra-nivel-otro')?.value.trim() || 'otro') : v;
+    })()
   };
 }
 
@@ -3284,13 +3221,6 @@ function imp_htmlPaso3() {
           <label>Horas asignadas a este EC</label>
           <input id="imp-ec-hrs-${i}" type="number" min="1" max="100" value="${ec.horasAsignadas || 2}" onchange="imp_actualizarEC(${i})">
         </div>
-        <div class="imp-field">
-          <label>Instrumento de evaluación preferido</label>
-          <select id="imp-ec-inst-${i}" onchange="imp_actualizarEC(${i})">
-            <option value="cotejo" ${ec.instrumento!=='rubrica'?'selected':''}>Lista de Cotejo</option>
-            <option value="rubrica" ${ec.instrumento==='rubrica'?'selected':''}>Rúbrica</option>
-          </select>
-        </div>
       </div>
 
       <div style="margin-top:8px;font-size:0.78rem;font-weight:700;color:#4527A0;margin-bottom:6px;">
@@ -3310,12 +3240,28 @@ function imp_htmlPaso3() {
 }
 
 function imp_htmlActRow(ecIdx, actIdx, act) {
+  const INST_OPTS = [
+    { v: 'cotejo',  l: 'Lista de Cotejo' },
+    { v: 'rubrica', l: 'Rúbrica'         },
+  ];
+  const instSel = (v) => INST_OPTS.map(o =>
+    `<option value="${o.v}" ${(act && act.instrumento) === o.v ? 'selected' : ''}>${o.l}</option>`
+  ).join('');
   return `<div class="imp-act-row" id="imp-act-${ecIdx}-${actIdx}">
-    <span class="imp-act-num">Act.${actIdx+1}</span>
+    <div class="imp-act-num">Act.${actIdx+1}</div>
     <textarea rows="2" id="imp-act-enun-${ecIdx}-${actIdx}" placeholder="Describe la actividad de evaluación…"
       onchange="imp_actualizarAct(${ecIdx},${actIdx})">${escHTML((act && act.enunciado) || '')}</textarea>
     <input type="date" id="imp-act-fecha-${ecIdx}-${actIdx}" value="${(act && act.fecha) || ''}"
       onchange="imp_actualizarAct(${ecIdx},${actIdx})" title="Fecha de la sesión">
+    <select id="imp-act-inst-${ecIdx}-${actIdx}" onchange="imp_actualizarAct(${ecIdx},${actIdx})"
+      title="Instrumento de evaluación" style="font-size:0.78rem;padding:4px 6px;border-radius:6px;border:1.5px solid #90CAF9;">
+      ${instSel()}
+    </select>
+    <input type="number" id="imp-act-valor-${ecIdx}-${actIdx}"
+      value="${(act && act.valor) || ''}" min="0.5" max="100" step="0.5" placeholder="pts"
+      onchange="imp_actualizarAct(${ecIdx},${actIdx})"
+      title="Valor en puntos de esta actividad"
+      style="width:52px;font-size:0.78rem;padding:4px 6px;border-radius:6px;border:1.5px solid #90CAF9;text-align:center;">
     <button class="btn-del-act" onclick="imp_eliminarActividad(${ecIdx},${actIdx})" title="Eliminar">
       <span class="material-icons" style="font-size:16px;">close</span>
     </button>
@@ -3329,21 +3275,36 @@ function imp_actualizarEC(i) {
   ec.enunciado = document.getElementById('imp-ec-enun-'+i)?.value.trim() || ec.enunciado;
   ec.nivel = document.getElementById('imp-ec-nivel-'+i)?.value || ec.nivel;
   ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-'+i)?.value) || ec.horasAsignadas;
-  ec.instrumento = document.getElementById('imp-ec-inst-'+i)?.value || 'cotejo';
 }
 
 function imp_actualizarAct(ecIdx, actIdx) {
   if (!impState.datos.actividades[ecIdx]) return;
   const act = impState.datos.actividades[ecIdx][actIdx] || {};
-  act.enunciado = document.getElementById(`imp-act-enun-${ecIdx}-${actIdx}`)?.value.trim() || '';
-  act.fecha = document.getElementById(`imp-act-fecha-${ecIdx}-${actIdx}`)?.value || '';
+  act.enunciado   = document.getElementById(`imp-act-enun-${ecIdx}-${actIdx}`)?.value.trim() || '';
+  act.fecha       = document.getElementById(`imp-act-fecha-${ecIdx}-${actIdx}`)?.value || '';
+  act.instrumento = document.getElementById(`imp-act-inst-${ecIdx}-${actIdx}`)?.value || 'cotejo';
+  const valRaw    = document.getElementById(`imp-act-valor-${ecIdx}-${actIdx}`)?.value;
+  act.valor       = valRaw !== '' && !isNaN(parseFloat(valRaw)) ? parseFloat(valRaw) : null;
   impState.datos.actividades[ecIdx][actIdx] = act;
+}
+
+function imp_onBloomChange() {
+  const sel = document.getElementById('imp-ra-nivel');
+  const inp = document.getElementById('imp-ra-nivel-otro');
+  if (!sel || !inp) return;
+  inp.style.display = sel.value === 'otro' ? '' : 'none';
+  if (sel.value !== 'otro') inp.value = '';
+}
+
+function imp_onBloomOtroChange() {
+  const inp = document.getElementById('imp-ra-nivel-otro');
+  if (impState.datos.ra) impState.datos.ra.nivelBloom = inp?.value.trim() || 'otro';
 }
 
 function imp_agregarEC() {
   imp_leerPaso3();
   const n = impState.datos.ecs.length + 1;
-  impState.datos.ecs.push({ codigo: 'CE'+n, enunciado: '', nivel: 'aplicacion', horasAsignadas: 2, instrumento: 'cotejo' });
+  impState.datos.ecs.push({ codigo: 'CE'+n, enunciado: '', nivel: 'aplicacion', horasAsignadas: 2 });
   impState.datos.actividades.push([]);
   document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
 }
@@ -3359,7 +3320,7 @@ function imp_eliminarEC(i) {
 function imp_agregarActividad(ecIdx) {
   imp_leerPaso3();
   if (!impState.datos.actividades[ecIdx]) impState.datos.actividades[ecIdx] = [];
-  impState.datos.actividades[ecIdx].push({ enunciado: '', fecha: '' });
+  impState.datos.actividades[ecIdx].push({ enunciado: '', fecha: '', instrumento: 'cotejo', valor: null });
   document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
 }
 
@@ -3375,11 +3336,13 @@ function imp_leerPaso3() {
     ec.enunciado = document.getElementById('imp-ec-enun-'+i)?.value.trim() || '';
     ec.nivel = document.getElementById('imp-ec-nivel-'+i)?.value || 'aplicacion';
     ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-'+i)?.value) || 2;
-    ec.instrumento = document.getElementById('imp-ec-inst-'+i)?.value || 'cotejo';
     if (!impState.datos.actividades[i]) impState.datos.actividades[i] = [];
     impState.datos.actividades[i].forEach((act, j) => {
-      act.enunciado = document.getElementById(`imp-act-enun-${i}-${j}`)?.value.trim() || '';
-      act.fecha = document.getElementById(`imp-act-fecha-${i}-${j}`)?.value || '';
+      act.enunciado   = document.getElementById(`imp-act-enun-${i}-${j}`)?.value.trim() || '';
+      act.fecha       = document.getElementById(`imp-act-fecha-${i}-${j}`)?.value || '';
+      act.instrumento = document.getElementById(`imp-act-inst-${i}-${j}`)?.value || 'cotejo';
+      const valRaw    = document.getElementById(`imp-act-valor-${i}-${j}`)?.value;
+      act.valor       = valRaw !== '' && !isNaN(parseFloat(valRaw)) ? parseFloat(valRaw) : null;
     });
   });
 }
@@ -3499,7 +3462,8 @@ function imp_guardar() {
     enunciado: ec.enunciado,
     descripcion: ec.enunciado,
     horasAsignadas: ec.horasAsignadas,
-    secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion
+    secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion,
+    instrumento: undefined
   }));
 
   // Construir actividades
@@ -3519,10 +3483,11 @@ function imp_guardar() {
         fecha: fechaObj ? fechaObj.toISOString() : null,
         fechaStr,
         horas: ec.horasAsignadas,
-        instrumento: ec.instrumento || 'cotejo'
+        valor: act.valor || null,
+        _instTipo: act.instrumento || 'cotejo'
       };
-      // Generar instrumento básico
-      actObj.instrumento = generarInstrumento(actObj, ec.nivel);
+      // Generar instrumento con el tipo elegido por actividad
+      actObj.instrumento = generarInstrumento(actObj, ec.nivel, act.instrumento || 'cotejo');
       actividades.push(actObj);
     });
   });
@@ -3568,6 +3533,18 @@ function imp_guardar() {
   }
 
   persistirBiblioteca(biblio);
+
+  // Asignar al curso elegido
+  const cursoIdElegido = impState.datos.cursoId;
+  if (cursoIdElegido && calState.cursos[cursoIdElegido]) {
+    const cursoAsig = calState.cursos[cursoIdElegido];
+    if (!cursoAsig.planIds) cursoAsig.planIds = [];
+    if (!cursoAsig.planIds.includes(id)) {
+      cursoAsig.planIds.push(id);
+      if (!cursoAsig.planActivaId) cursoAsig.planActivaId = id;
+      guardarCalificaciones();
+    }
+  }
   imp_cerrar();
   renderizarBiblioteca();
 }
@@ -3739,3 +3716,207 @@ function importarDatos() {
     mostrarToast('Error al restaurar: ' + err.message, 'error');
   }
 }
+
+// ================================================================
+// DASHBOARD PRINCIPAL
+// ================================================================
+
+function abrirDashboard() {
+  _mostrarPanel('panel-dashboard');
+  renderizarDashboard();
+}
+
+function renderizarDashboard() {
+  _renderizarSaludo();
+  _renderizarHoy();
+}
+
+function _renderizarSaludo() {
+  var ahora = new Date();
+  var DIAS  = ['Domingo','Lunes','Martes','Mi\u00e9rcoles','Jueves','Viernes','S\u00e1bado'];
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var hora  = ahora.getHours();
+  var saludo = hora < 12 ? '\u00a1Buenos d\u00edas' : hora < 18 ? '\u00a1Buenas tardes' : '\u00a1Buenas noches';
+  var dg = planificacion.datosGenerales || {};
+  var nombre = dg.nombreDocente ? ', ' + dg.nombreDocente.split(' ').slice(-1)[0] + '!' : '!';
+  var fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' de ' + ahora.getFullYear();
+
+  var biblio = cargarBiblioteca();
+  var items  = biblio.items || [];
+  var nPlans = items.length;
+  var calData = {};
+  try { calData = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}'); } catch(e) {}
+  var nCursos = Object.keys(calData.cursos || {}).length;
+
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var nHoy = 0;
+  items.forEach(function(reg) {
+    var acts = (reg.planificacion && reg.planificacion.actividades) || [];
+    acts.forEach(function(act) {
+      if (!act.fecha) return;
+      var fa = new Date(act.fecha); fa.setHours(0,0,0,0);
+      if (fa.getTime() === hoy.getTime()) nHoy++;
+    });
+  });
+
+  var el = document.getElementById('dash-greeting');
+  if (!el) return;
+
+  el.innerHTML =
+    '<div class="dash-greeting-left">' +
+      '<div class="dash-greeting-date">' + fechaStr + '</div>' +
+      '<div class="dash-greeting-title">' + saludo + nombre + '</div>' +
+      '<div class="dash-greeting-sub">Sistema de Planificaci\u00f3n Educativa \u00b7 Rep\u00fablica Dominicana</div>' +
+    '</div>' +
+    '<div class="dash-stats-row">' +
+      '<div class="dash-stat-pill"><div class="dash-stat-num">' + nPlans + '</div><div class="dash-stat-lbl">Planific.</div></div>' +
+      '<div class="dash-stat-pill"><div class="dash-stat-num">' + nCursos + '</div><div class="dash-stat-lbl">Cursos</div></div>' +
+      '<div class="dash-stat-pill"><div class="dash-stat-num">' + nHoy + '</div><div class="dash-stat-lbl">Sesi' + '\u00f3' + 'n hoy</div></div>' +
+    '</div>';
+}
+
+function _renderizarHoy() {
+  var cont = document.getElementById('dash-hoy');
+  if (!cont) return;
+
+  var DIAS  = ['Domingo','Lunes','Martes','Mi\u00e9rcoles','Jueves','Viernes','S\u00e1bado'];
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var COLORES = ['#1565C0','#00695C','#4527A0','#E65100','#AD1457','#BF360C','#1B5E20','#6A1B9A'];
+
+  var biblio = cargarBiblioteca();
+  var items  = biblio.items || [];
+
+  var ahora = new Date();
+  var hoy   = new Date(); hoy.setHours(0,0,0,0);
+  var fechaHoyStr = DIAS[ahora.getDay()] + ' ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()];
+
+  if (items.length === 0) {
+    cont.innerHTML =
+      '<div class="dash-hoy-wrapper">' +
+        '<div class="dash-hoy-header"><span class="material-icons">today</span>' +
+          '<span class="dash-hoy-header-title">Lo que tienes hoy</span>' +
+          '<span class="dash-hoy-header-date">' + fechaHoyStr + '</span>' +
+        '</div>' +
+        '<div class="dash-sin-planificacion">' +
+          '<span class="material-icons">event_busy</span>' +
+          '<h3>No hay planificaciones guardadas</h3>' +
+          '<p>Crea o importa una planificaci\u00f3n para ver el resumen de tu d\u00eda aqu\u00ed.</p>' +
+        '</div>' +
+      '</div>';
+    return;
+  }
+
+  var sesionesHoy = [];
+  var sesionesFuturas = [];
+
+  items.forEach(function(reg, regIdx) {
+    var plan  = reg.planificacion;
+    if (!plan) return;
+    var dg    = plan.datosGenerales || {};
+    var ra    = plan.ra || {};
+    var acts  = plan.actividades || [];
+    var color = COLORES[regIdx % COLORES.length];
+    acts.forEach(function(act) {
+      if (!act.fecha) return;
+      var fa = new Date(act.fecha); fa.setHours(0,0,0,0);
+      var item = { act: act, dg: dg, ra: ra, color: color, fecha: fa };
+      if (fa.getTime() === hoy.getTime()) sesionesHoy.push(item);
+      else if (fa > hoy) sesionesFuturas.push(item);
+    });
+  });
+
+  sesionesFuturas.sort(function(a,b) { return a.fecha - b.fecha; });
+  var proxima = sesionesFuturas[0] || null;
+
+  function cortar(txt, n) {
+    if (!txt) return '\u2014';
+    txt = String(txt).replace(/\n/g, ' ');
+    return txt.length > n ? txt.substring(0, n) + '\u2026' : txt;
+  }
+
+  var bodyHtml = '';
+
+  if (sesionesHoy.length === 0) {
+    bodyHtml =
+      '<div class="dash-hoy-empty">' +
+        '<span class="material-icons">event_available</span>' +
+        'No tienes sesiones programadas para hoy.' +
+      '</div>';
+  } else {
+    sesionesHoy.forEach(function(item) {
+      var act  = item.act;
+      var dg   = item.dg;
+      var s    = estadoDiarias.sesiones[act.id] || {};
+      var ti   = (s.tiempos && s.tiempos.ini) || 20;
+      var td   = (s.tiempos && s.tiempos.des) || 55;
+      var tc   = (s.tiempos && s.tiempos.cie) || 15;
+      var inst = act.instrumento;
+
+      bodyHtml +=
+        '<div class="dash-sesion-card" style="--plan-color:' + item.color + '">' +
+          '<div class="dash-sesion-header">' +
+            '<div class="dash-sesion-icon"><span class="material-icons">school</span></div>' +
+            '<div class="dash-sesion-meta">' +
+              '<div class="dash-sesion-modulo">' + escapeHTML(dg.moduloFormativo || '') + '</div>' +
+              '<div class="dash-sesion-act">' + escapeHTML(act.enunciado || '') + '</div>' +
+              '<div class="dash-sesion-chips">' +
+                '<span class="dash-chip">' + escapeHTML(act.ecCodigo || '') + '</span>' +
+                '<span class="dash-chip green">' + (ti+td+tc) + ' min</span>' +
+                (inst ? '<span class="dash-chip orange">' + escapeHTML(inst.tipoLabel || '') + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<button onclick="abrirDiarias()" style="background:var(--plan-color);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">' +
+              '<span class="material-icons" style="font-size:14px;vertical-align:middle;">open_in_new</span> Ver' +
+            '</button>' +
+          '</div>' +
+          '<div class="dash-sesion-body">' +
+            '<div class="dash-momento inicio">' +
+              '<div class="dash-momento-lbl">1\u00ba Inicio \u00b7 ' + ti + ' min</div>' +
+              '<div class="dash-momento-txt">' + escapeHTML(cortar((s.inicio && s.inicio.apertura) || '', 120)) + '</div>' +
+            '</div>' +
+            '<div class="dash-momento des">' +
+              '<div class="dash-momento-lbl">2\u00ba Desarrollo \u00b7 ' + td + ' min</div>' +
+              '<div class="dash-momento-txt">' + escapeHTML(cortar((s.desarrollo && s.desarrollo.procedimental) || '', 120)) + '</div>' +
+            '</div>' +
+            '<div class="dash-momento cierre">' +
+              '<div class="dash-momento-lbl">3\u00ba Cierre \u00b7 ' + tc + ' min</div>' +
+              '<div class="dash-momento-txt">' + escapeHTML(cortar((s.cierre && s.cierre.sintesis) || '', 120)) + '</div>' +
+            '</div>' +
+          '</div>' +
+          (inst ?
+            '<div class="dash-sesion-inst">' +
+              '<span class="material-icons">' + (inst.tipo === 'rubrica' ? 'table_chart' : 'checklist') + '</span>' +
+              '<span><strong>' + escapeHTML(inst.tipoLabel || '') + ':</strong> ' + escapeHTML(inst.titulo || '') + '</span>' +
+            '</div>'
+          : '') +
+        '</div>';
+    });
+  }
+
+  var proximaHtml = '';
+  if (proxima) {
+    var fdStr = DIAS[proxima.fecha.getDay()] + ' ' + proxima.fecha.getDate() + ' de ' + MESES[proxima.fecha.getMonth()];
+    proximaHtml =
+      '<div class="dash-proxima-wrapper">' +
+        '<div class="dash-proxima">' +
+          '<span class="material-icons">navigate_next</span>' +
+          '<div>' +
+            '<strong>Pr\u00f3xima sesi\u00f3n:</strong> ' + escapeHTML(proxima.act.enunciado || '') + ' &mdash; <em>' + fdStr + '</em>' +
+            '<div style="font-size:0.75rem;color:#546E7A;margin-top:2px;">' + escapeHTML(proxima.dg.moduloFormativo || '') + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  cont.innerHTML =
+    '<div class="dash-hoy-wrapper">' +
+      '<div class="dash-hoy-header">' +
+        '<span class="material-icons">today</span>' +
+        '<span class="dash-hoy-header-title">Lo que tienes hoy</span>' +
+        '<span class="dash-hoy-header-date">' + fechaHoyStr + '</span>' +
+      '</div>' +
+      bodyHtml +
+      proximaHtml +
+    '</div>';
+}
+

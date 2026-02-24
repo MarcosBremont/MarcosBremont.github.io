@@ -61,6 +61,57 @@
     </div>
   </header>
 
+  <!-- ===== DASHBOARD ===== -->
+  <div id="panel-dashboard" class="dashboard-panel hidden">
+    <div class="dash-main">
+
+      <!-- Saludo + estadisticas -->
+      <div class="dash-greeting" id="dash-greeting"></div>
+
+      <!-- Accesos rapidos -->
+      <div class="dash-section-label">
+        <span class="material-icons">apps</span>Accesos rápidos
+      </div>
+      <div class="dash-nav-grid">
+        <button class="dash-nav-btn" onclick="irAlHomeBase()" style="--accent:#1565C0;">
+          <span class="material-icons">add_circle_outline</span>
+          <span>Nueva Planificación</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirPlanificaciones()" style="--accent:#4527A0;">
+          <span class="material-icons">folder_special</span>
+          <span>Mis Planificaciones</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirDiarias()" style="--accent:#00695C;">
+          <span class="material-icons">today</span>
+          <span>Planificaciones Diarias</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirCalificaciones()" style="--accent:#E65100;">
+          <span class="material-icons">grade</span>
+          <span>Libro de Calificaciones</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirConfigIA()" style="--accent:#AD1457;">
+          <span class="material-icons">auto_awesome</span>
+          <span>Configurar IA</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirImportarPlanificacion()" style="--accent:#1B5E20;">
+          <span class="material-icons">upload_file</span>
+          <span>Importar Planificación</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirBackup()" style="--accent:#BF360C;">
+          <span class="material-icons">backup</span>
+          <span>Mis Datos</span>
+        </button>
+      </div>
+
+      <!-- Hoy -->
+      <div class="dash-section-label" style="margin-top:28px;">
+        <span class="material-icons">today</span>Lo que tienes hoy
+      </div>
+      <div id="dash-hoy"></div>
+
+    </div>
+  </div>
+
   <!-- ===== STEPPER ===== -->
   <div class="stepper-container">
     <div class="stepper" id="stepper">
@@ -548,11 +599,13 @@
           </p>
         </div>
 
+        <!-- Planificaciones del curso activo -->
+        <div id="cal-planes-bar" style="margin-bottom:12px;"></div>
+
         <!-- Info si no hay actividades cargadas -->
         <div id="cal-sin-actividades" class="info-tip hidden" style="margin-bottom:16px;">
           <span class="material-icons">info</span>
-          <p>No hay actividades generadas todavía. Completa la planificación (pasos 1–4) y vuelve aquí para registrar
-            las calificaciones.</p>
+          <p>Asigna una planificación a este curso para comenzar a registrar calificaciones.</p>
         </div>
 
         <!-- Tabla de calificaciones -->
@@ -704,7 +757,7 @@
       <div class="modal-body" id="modal-body">
         <!-- Contenido del instrumento -->
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" id="modal-footer">
         <button class="btn-export btn-print btn-sm" onclick="imprimirModal()">
           <span class="material-icons">print</span>
           Imprimir instrumento
@@ -797,6 +850,7 @@
   </div>
 
   <!-- Script principal -->
+  <script src="docx.js"></script>
   <script src="app1.js"></script>
   <script src="app2.js"></script>
 </body>

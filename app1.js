@@ -1,3 +1,147 @@
+function escapeHTML(s) { if(s===null||s===undefined) return ""; return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+// ─── Funciones de gestión de cursos ───────────────────────────────
+function eliminarCurso(id) {
+  const curso = calState.cursos[id];
+  if (!curso) return;
+  if (!confirm(`¿Eliminar el curso "${curso.nombre}" y todas sus calificaciones?`)) return;
+  delete calState.cursos[id];
+  if (calState.cursoActivoId === id) {
+    const ids = Object.keys(calState.cursos);
+    calState.cursoActivoId = ids.length ? ids[0] : null;
+  }
+  guardarCalificaciones();
+  renderizarCalificaciones();
+  mostrarToast(`Curso eliminado`, 'success');
+}
+
+// ─── Funciones de estudiantes ─────────────────────────────────────
+function agregarEstudiantes() {
+  const raw = document.getElementById('input-estudiantes')?.value || '';
+  const nombres = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+  if (!nombres.length) { mostrarToast('Escribe al menos un nombre', 'error'); return; }
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) { mostrarToast('Selecciona un curso primero', 'error'); return; }
+  if (!curso.estudiantes) curso.estudiantes = [];
+  nombres.forEach(nombre => {
+    curso.estudiantes.push({ id: uid(), nombre });
+  });
+  guardarCalificaciones();
+  if (document.getElementById('input-estudiantes'))
+    document.getElementById('input-estudiantes').value = '';
+  renderizarTablaCalificaciones();
+  mostrarToast(`${nombres.length} estudiante(s) agregado(s)`, 'success');
+}
+
+function eliminarEstudiante(estudianteId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const est = curso.estudiantes.find(e => e.id === estudianteId);
+  if (!est) return;
+  if (!confirm(`¿Eliminar a "${est.nombre}"?`)) return;
+  curso.estudiantes = curso.estudiantes.filter(e => e.id !== estudianteId);
+  // Limpiar notas
+  if (curso.notas && curso.notas[estudianteId]) delete curso.notas[estudianteId];
+  guardarCalificaciones();
+  renderizarTablaCalificaciones();
+}
+
+function editarNombreEstudiante(estudianteId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const est = curso.estudiantes.find(e => e.id === estudianteId);
+  if (!est) return;
+  const nuevoNombre = prompt('Nuevo nombre:', est.nombre);
+  if (!nuevoNombre || !nuevoNombre.trim()) return;
+  est.nombre = nuevoNombre.trim();
+  guardarCalificaciones();
+  const el = document.getElementById('nombre-' + estudianteId);
+  if (el) el.querySelector('span').textContent = est.nombre;
+}
+
+// ─── Helpers de notas ─────────────────────────────────────────────
+function _clsNota(nota, max) {
+  if (nota === null || nota === undefined) return '';
+  const pct = max > 0 ? (nota / max) * 100 : 0;
+  if (pct >= 70) return 'nota-aprobado';
+  if (pct >= 60) return 'nota-regular';
+  return 'nota-reprobado';
+}
+
+function _clsProm(prom) {
+  if (prom === null || prom === undefined) return '';
+  if (prom >= 70) return 'prom-aprobado';
+  if (prom >= 60) return 'prom-regular';
+  return 'prom-reprobado';
+}
+
+function _calcNotaRA(curso, estudianteId, raKey) {
+  const raInfo = curso.ras?.[raKey];
+  if (!raInfo) return null;
+  const notasEst = curso.notas?.[estudianteId]?.[raKey] || {};
+  let total = 0, hayNotas = false;
+  raInfo.actividades.forEach(actId => {
+    const n = notasEst[actId];
+    if (n !== undefined && n !== null) { total += n; hayNotas = true; }
+  });
+  return hayNotas ? Math.round(total * 10) / 10 : null;
+}
+
+function _calcNotaFinal(curso, estudianteId) {
+  const rasKeys = Object.keys(curso.ras || {});
+  if (!rasKeys.length) return null;
+  let total = 0, hayNotas = false;
+  rasKeys.forEach(rk => {
+    const n = _calcNotaRA(curso, estudianteId, rk);
+    if (n !== null) { total += n; hayNotas = true; }
+  });
+  return hayNotas ? Math.round(total * 10) / 10 : null;
+}
+
+function _promedioColRA(curso, raKey) {
+  if (!curso.estudiantes?.length) return null;
+  const notas = curso.estudiantes
+    .map(e => _calcNotaRA(curso, e.id, raKey))
+    .filter(n => n !== null);
+  if (!notas.length) return null;
+  return Math.round((notas.reduce((s, n) => s + n, 0) / notas.length) * 10) / 10;
+}
+
+function _promedioFinal(curso) {
+  if (!curso.estudiantes?.length) return null;
+  const notas = curso.estudiantes
+    .map(e => _calcNotaFinal(curso, e.id))
+    .filter(n => n !== null);
+  if (!notas.length) return null;
+  return Math.round((notas.reduce((s, n) => s + n, 0) / notas.length) * 10) / 10;
+}
+
+function _actualizarFilaRA(estudianteId, raKey) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const notaRA = _calcNotaRA(curso, estudianteId, raKey);
+  const raInfo = curso.ras?.[raKey];
+  const el = document.getElementById(`total-ra-${estudianteId}-${raKey}`);
+  if (el) {
+    el.textContent = notaRA !== null ? notaRA.toFixed(1) : '—';
+    el.className = 'td-total-ra ' + _clsNota(notaRA, raInfo?.valorTotal || 100);
+  }
+  const notaFinal = _calcNotaFinal(curso, estudianteId);
+  const elFinal = document.getElementById(`final-${estudianteId}`);
+  if (elFinal) {
+    elFinal.textContent = notaFinal !== null ? notaFinal.toFixed(1) : '—';
+    elFinal.className = 'td-promedio ' + _clsProm(notaFinal);
+  }
+}
+
+function _actualizarFooterRA(raKey) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  renderizarTablaCalificaciones(); // re-render completo del footer
+}
+
+
+
 /**
 
 
@@ -1528,6 +1672,7 @@ function generarRubrica(actividad, nivel) {
 
 
 
+
 function renderizarEC(listaEC) {
 
 
@@ -1729,6 +1874,18 @@ function renderizarEC(listaEC) {
 
 
     });
+
+/** Guarda un momento de la secuencia didáctica al editar inline */
+function _guardarMomento(el) {
+  const idx     = parseInt(el.dataset.idx);
+  const momento = el.dataset.momento;
+  const valor   = el.innerText.trim();
+  if (!isNaN(idx) && momento && planificacion.elementosCapacidad?.[idx]?.secuencia) {
+    planificacion.elementosCapacidad[idx].secuencia[momento].descripcion = valor;
+    guardarBorrador();
+  }
+}
+
 
 
 
@@ -1975,6 +2132,122 @@ function renderizarActividades(listaActividades) {
  */
 
 
+
+
+// ─── EDICIÓN COMPLETA DE ACTIVIDAD ───────────────────────────────
+function abrirEditarActividad(idx) {
+  const act = planificacion.actividades[idx];
+  if (!act) return;
+  const ecs = planificacion.elementosCapacidad || [];
+
+  // Opciones de EC para el select
+  const optsEC = ecs.map(ec =>
+    `<option value="${ec.codigo}" ${act.ecCodigo === ec.codigo ? 'selected' : ''}>${ec.codigo} — ${ec.enunciado.substring(0,50)}…</option>`
+  ).join('');
+
+  // Tipo de instrumento actual
+  const tipoInst = act.instrumento?.tipo || 'cotejo';
+
+  document.getElementById('modal-title').textContent = `Editar Actividad ${idx + 1}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Enunciado de la actividad</label>
+        <textarea id="edit-act-enunciado" rows="3"
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"
+        >${escapeHTML(act.enunciado)}</textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Fecha</label>
+          <input type="date" id="edit-act-fecha"
+            value="${act.fecha ? (act.fecha instanceof Date ? act.fecha.toISOString().split('T')[0] : String(act.fecha).split('T')[0]) : ''}"
+            style="width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Instrumento</label>
+          <select id="edit-act-instrumento"
+            style="width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+            <option value="cotejo" ${tipoInst==='cotejo'?'selected':''}>Lista de Cotejo</option>
+            <option value="rubrica" ${tipoInst==='rubrica'?'selected':''}>Rúbrica</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Elemento de Capacidad (EC)</label>
+        <select id="edit-act-ec"
+          style="width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+          ${optsEC}
+        </select>
+      </div>
+      <div style="background:#FFF8E1;border-radius:8px;padding:10px 12px;font-size:0.78rem;color:#795548;display:flex;gap:6px;align-items:flex-start;">
+        <span class="material-icons" style="font-size:16px;color:#F57F17;margin-top:1px;">info</span>
+        Al guardar, el instrumento se regenerará automáticamente con el nuevo enunciado.
+      </div>
+    </div>`;
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn-siguiente" onclick="guardarEdicionActividad(${idx})">
+      <span class="material-icons">save</span> Guardar cambios
+    </button>
+    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('edit-act-enunciado')?.focus(), 80);
+}
+
+function guardarEdicionActividad(idx) {
+  const act = planificacion.actividades[idx];
+  if (!act) return;
+
+  const nuevoEnunciado = document.getElementById('edit-act-enunciado')?.value.trim();
+  const nuevaFechaStr  = document.getElementById('edit-act-fecha')?.value;
+  const nuevoEC        = document.getElementById('edit-act-ec')?.value;
+  const nuevoInst      = document.getElementById('edit-act-instrumento')?.value;
+
+  if (!nuevoEnunciado) { mostrarToast('El enunciado no puede estar vacío', 'error'); return; }
+
+  // Actualizar enunciado y EC
+  act.enunciado = nuevoEnunciado;
+  if (nuevoEC && nuevoEC !== act.ecCodigo) {
+    act.ecCodigo = nuevoEC;
+    // Sincronizar nivel del EC
+    const ec = planificacion.elementosCapacidad.find(e => e.codigo === nuevoEC);
+    if (ec) act.ecNivel = ec.nivel;
+  }
+
+  // Actualizar fecha si cambió
+  if (nuevaFechaStr) {
+    const fd = new Date(nuevaFechaStr + 'T12:00:00');
+    act.fecha   = fd;
+    act.fechaStr = fd.toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  // Regenerar instrumento
+  const ec = planificacion.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
+  const nivelEC = ec ? ec.nivel : (act.ecNivel || 'aplicacion');
+  act.instrumento = generarInstrumento(act, nivelEC, nuevoInst);
+
+  guardarBorrador();
+  cerrarModalBtn();
+
+  // Actualizar fila en tabla sin re-render completo
+  const tipoLabel = act.instrumento.tipoLabel;
+  const badgeClass = act.instrumento.tipo === 'cotejo' ? 'badge-cotejo' : 'badge-rubrica';
+  const icono = act.instrumento.tipo === 'cotejo' ? 'checklist' : 'table_chart';
+  const elFecha = document.getElementById('act-fecha-' + idx);
+  const elEC    = document.getElementById('act-ec-' + idx);
+  const elEnunc = document.getElementById('act-enunciado-' + idx);
+  const elInst  = document.getElementById('act-inst-' + idx);
+  if (elFecha) elFecha.textContent = act.fechaStr;
+  if (elEC)    elEC.textContent    = act.ecCodigo;
+  if (elEnunc) elEnunc.textContent = act.enunciado;
+  if (elInst)  elInst.innerHTML    = `<span class="material-icons" style="font-size:14px;">${icono}</span> ${tipoLabel}`;
+  if (elInst)  elInst.className    = `instrumento-badge ${badgeClass}`;
+
+  mostrarToast('Actividad actualizada', 'success');
+}
 
 function abrirModalInstrumento(idxActividad) {
 
@@ -5023,24 +5296,7 @@ function _cargarPlanDesdeSelector(selectorId, callback) {
   if (callback) callback();
 }
 
-function _actualizarSelectorPlanCal(tieneActividades) {
-  var area = document.getElementById('cal-sin-actividades');
-  if (!area) return;
-  if (tieneActividades) { area.classList.add('hidden'); return; }
-  var opts = _getBiblioOpts();
-  area.classList.remove('hidden');
-  if (!opts) {
-    area.innerHTML = '<span class="material-icons">info</span><p>No hay planificaciones guardadas. Completa una planificación y guárdala primero.</p>';
-    return;
-  }
-  area.innerHTML = '<span class="material-icons" style="color:#1565C0;">info</span>'
-    + '<div style="flex:1;"><p style="margin:0 0 8px;font-weight:600;">Selecciona la planificación para registrar calificaciones:</p>'
-    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-    + '<select id="cal-selector-plan" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">'
-    + '<option value="">-- Selecciona --</option>' + opts + '</select>'
-    + '<button class="btn-siguiente" style="padding:8px 16px;" onclick="_cargarPlanDesdeSelector(\'cal-selector-plan\',function(){document.getElementById(\'cal-sin-actividades\').classList.add(\'hidden\');renderizarCalificaciones();});">'
-    + '<span class="material-icons">upload</span> Cargar</button></div></div>';
-}
+function _actualizarSelectorPlanCal() { /* obsoleto - ver nuevo flujo curso/plan */ }
 
 function _actualizarSelectorPlanDiarias(tieneActividades) {
   var area = document.getElementById('pd-sin-actividades');
@@ -5480,7 +5736,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -5496,7 +5752,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -5692,595 +5948,165 @@ function uid() {
 
 
 
+// ═══════════════════════════════════════════════════════════════════
+// NUEVO SISTEMA: Cursos ↔ Planificaciones vinculadas
+// ═══════════════════════════════════════════════════════════════════
+
+// calState ahora incluye cursoActivoId y planActivaId dentro del curso
+// Estructura:
+//   calState.cursos[id] = {
+//     id, nombre, estudiantes,
+//     planIds: ['PLN-xxx', 'PLN-yyy'],   ← planificaciones asignadas
+//     notas: { planId: { estudianteId: { actId: nota } } }
+//   }
+
 function abrirModalNuevoCurso() {
-
-
+  const biblio = cargarBiblioteca();
+  const planes = biblio.items || [];
+  const optsPlanes = planes.map(p =>
+    `<option value="${p.id}">${escHTML(p.planificacion?.datosGenerales?.moduloFormativo || p.nombre || p.id)}</option>`
+  ).join('');
 
   document.getElementById('modal-title').textContent = 'Nuevo Curso';
-
-
-
   document.getElementById('modal-body').innerHTML = `
-
-
-
     <div class="modal-curso-content">
-
-
-
-      <label for="input-nombre-curso">Nombre del curso (ej: 2do Año Sección A)</label>
-
-
-
-      <input type="text" id="input-nombre-curso" placeholder="Ej: 2do B - Turno Matutino"
-
-
-
-             maxlength="60" autofocus />
-
-
-
+      <label for="input-nombre-curso">Nombre del curso</label>
+      <input type="text" id="input-nombre-curso" placeholder="Ej: 2do B – Turno Matutino" maxlength="60" autofocus>
+      ${planes.length ? `
+      <label style="margin-top:12px;" for="sel-plan-curso">Planificación a asignar (opcional)</label>
+      <select id="sel-plan-curso" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+        <option value="">— Sin planificación por ahora —</option>
+        ${optsPlanes}
+      </select>` : '<p style="margin-top:10px;font-size:0.82rem;color:#78909C;">Podrás asignar planificaciones desde la Biblioteca luego.</p>'}
     </div>`;
-
-
-
   document.getElementById('modal-footer').innerHTML = `
-
-
-
     <button class="btn-siguiente" onclick="crearCurso()">
-
-
-
       <span class="material-icons">add</span> Crear curso
-
-
-
     </button>
-
-
-
     <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
-
-
-
-
-
-
-
   document.getElementById('modal-overlay').classList.remove('hidden');
-
-
-
   document.body.style.overflow = 'hidden';
-
-
-
   setTimeout(() => document.getElementById('input-nombre-curso')?.focus(), 100);
-
-
-
-
-
-
-
-  // Permitir Enter para crear
-
-
-
   document.getElementById('input-nombre-curso').addEventListener('keydown', e => {
-
-
-
     if (e.key === 'Enter') crearCurso();
-
-
-
   });
-
-
-
 }
-
-
-
-
-
-
-
-/** Crea un nuevo curso y lo activa */
-
-
 
 function crearCurso() {
-
-
-
   const nombre = document.getElementById('input-nombre-curso')?.value?.trim();
-
-
-
   if (!nombre) { mostrarToast('Escribe un nombre para el curso', 'error'); return; }
-
-
-
-
-
-
-
+  const planId = document.getElementById('sel-plan-curso')?.value || '';
   const id = uid();
-
-
-
-  calState.cursos[id] = { id, nombre, estudiantes: [], notas: {} };
-
-
-
+  calState.cursos[id] = { id, nombre, estudiantes: [], notas: {}, planIds: planId ? [planId] : [], planActivaId: planId || null };
   calState.cursoActivoId = id;
-
-
-
   guardarCalificaciones();
-
-
-
   cerrarModalBtn();
-
-
-
   renderizarCalificaciones();
-
-
-
   mostrarToast(`Curso "${nombre}" creado`, 'success');
-
-
-
 }
-
-
-
-
-
-
-
-/** Elimina un curso con confirmación */
-
-
-
-function eliminarCurso(id) {
-
-
-
-  const curso = calState.cursos[id];
-
-
-
-  if (!curso) return;
-
-
-
-  if (!confirm(`¿Eliminar el curso "${curso.nombre}" y todas sus calificaciones?`)) return;
-
-
-
-  delete calState.cursos[id];
-
-
-
-  const ids = Object.keys(calState.cursos);
-
-
-
-  calState.cursoActivoId = ids.length > 0 ? ids[0] : null;
-
-
-
-  guardarCalificaciones();
-
-
-
-  renderizarCalificaciones();
-
-
-
-  mostrarToast('Curso eliminado', 'info');
-
-
-
-}
-
-
-
-
-
-
-
-/** Cambia el curso activo */
-
-
 
 function activarCurso(id) {
-
-
-
   if (!calState.cursos[id]) return;
-
-
-
   calState.cursoActivoId = id;
-
-
-
+  // Activar primera planificación disponible si no hay ninguna activa
+  const curso = calState.cursos[id];
+  if (curso.planIds && curso.planIds.length && !curso.planActivaId) {
+    curso.planActivaId = curso.planIds[0];
+  }
   guardarCalificaciones();
-
-
-
   renderizarCalificaciones();
-
-
-
 }
 
-
-
-
-
-
-
-// ----------------------------------------------------------------
-
-
-
-// ESTUDIANTES
-
-
-
-// ----------------------------------------------------------------
-
-
-
-
-
-
-
-/** Agrega los estudiantes escritos en el textarea */
-
-
-
-function agregarEstudiantes() {
-
-
-
-  const raw = document.getElementById('input-estudiantes')?.value || '';
-
-
-
-  const nombres = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
-
-
-
-
-
-
-
-  if (nombres.length === 0) {
-
-
-
-    mostrarToast('Escribe al menos un nombre', 'error');
-
-
-
-    return;
-
-
-
-  }
-
-
-
-
-
-
-
-  const cursoId = calState.cursoActivoId;
-
-
-
-  if (!cursoId || !calState.cursos[cursoId]) {
-
-
-
-    mostrarToast('Primero crea o selecciona un curso', 'error');
-
-
-
-    return;
-
-
-
-  }
-
-
-
-
-
-
-
-  const curso = calState.cursos[cursoId];
-
-
-
-  let agregados = 0;
-
-
-
-  nombres.forEach(nombre => {
-
-
-
-    // Evitar duplicados exactos
-
-
-
-    const existe = curso.estudiantes.some(e => e.nombre.toLowerCase() === nombre.toLowerCase());
-
-
-
-    if (!existe) {
-
-
-
-      curso.estudiantes.push({ id: uid(), nombre });
-
-
-
-      agregados++;
-
-
-
-    }
-
-
-
-  });
-
-
-
-
-
-
-
-  if (agregados === 0) {
-
-
-
-    mostrarToast('Todos los nombres ya existen en el curso', 'info');
-
-
-
-    return;
-
-
-
-  }
-
-
-
-
-
-
-
-  document.getElementById('input-estudiantes').value = '';
-
-
-
-  guardarCalificaciones();
-
-
-
-  renderizarCalificaciones();
-
-
-
-  mostrarToast(`${agregados} estudiante(s) agregado(s)`, 'success');
-
-
-
-}
-
-
-
-
-
-
-
-/** Elimina un estudiante del curso activo */
-
-
-
-function eliminarEstudiante(estudianteId) {
-
-
-
+function activarPlanEnCurso(planId) {
   const curso = calState.cursos[calState.cursoActivoId];
-
-
-
   if (!curso) return;
-
-
-
-  curso.estudiantes = curso.estudiantes.filter(e => e.id !== estudianteId);
-
-
-
-  delete curso.notas[estudianteId];
-
-
-
+  curso.planActivaId = planId;
   guardarCalificaciones();
-
-
-
   renderizarTablaCalificaciones();
-
-
-
+  renderizarTabsPlanesDelCurso();
 }
 
+/** Asigna una planificación a un curso desde la biblioteca */
+function asignarPlanACurso(planId) {
+  const cursos = Object.values(calState.cursos);
+  if (cursos.length === 0) {
+    mostrarToast('Primero crea un curso en el Libro de Calificaciones', 'error');
+    return;
+  }
+  const biblio = cargarBiblioteca();
+  const reg = biblio.items.find(i => i.id === planId);
+  if (!reg) return;
 
+  // Construir select de cursos
+  const opsCursos = cursos.map(c => `<option value="${c.id}">${escHTML(c.nombre)}</option>`).join('');
+  document.getElementById('modal-title').textContent = 'Asignar al libro de calificaciones';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-curso-content">
+      <p style="margin-bottom:12px;font-size:0.9rem;color:#37474F;">
+        <strong>${escHTML(reg.planificacion?.datosGenerales?.moduloFormativo || reg.nombre)}</strong><br>
+        <span style="font-size:0.82rem;color:#78909C;">${(reg.planificacion?.actividades||[]).length} actividades · ${reg.planificacion?.datosGenerales?.valorRA || '?'} pts</span>
+      </p>
+      <label for="sel-curso-destino">Asignar al curso:</label>
+      <select id="sel-curso-destino" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
+        ${opsCursos}
+      </select>
+    </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn-siguiente" onclick="_confirmarAsignarPlan('${planId}')">
+      <span class="material-icons">link</span> Asignar
+    </button>
+    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
 
-
-
-
-
-/** Inicia edición inline del nombre de un estudiante */
-
-
-
-function editarNombreEstudiante(estudianteId) {
-
-
-
-  const curso = calState.cursos[calState.cursoActivoId];
-
-
-
+function _confirmarAsignarPlan(planId) {
+  const cursoId = document.getElementById('sel-curso-destino')?.value;
+  if (!cursoId) return;
+  const curso = calState.cursos[cursoId];
   if (!curso) return;
-
-
-
-  const est = curso.estudiantes.find(e => e.id === estudianteId);
-
-
-
-  if (!est) return;
-
-
-
-
-
-
-
-  const celda = document.getElementById(`nombre-${estudianteId}`);
-
-
-
-  if (!celda) return;
-
-
-
-
-
-
-
-  const input = document.createElement('input');
-
-
-
-  input.type = 'text';
-
-
-
-  input.value = est.nombre;
-
-
-
-  input.style.cssText = 'width:100%;border:1.5px solid #1565C0;border-radius:4px;padding:4px 6px;font-family:Roboto,sans-serif;font-size:0.9rem;';
-
-
-
-
-
-
-
-  celda.querySelector('.td-nombre-inner').replaceWith(input);
-
-
-
-  input.focus();
-
-
-
-  input.select();
-
-
-
-
-
-
-
-  const guardar = () => {
-
-
-
-    const nuevo = input.value.trim();
-
-
-
-    if (nuevo) est.nombre = nuevo;
-
-
-
-    guardarCalificaciones();
-
-
-
-    renderizarTablaCalificaciones();
-
-
-
-  };
-
-
-
-
-
-
-
-  input.addEventListener('blur', guardar);
-
-
-
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') guardar(); });
-
-
-
+  if (!curso.planIds) curso.planIds = [];
+  if (!curso.planIds.includes(planId)) {
+    curso.planIds.push(planId);
+    if (!curso.planActivaId) curso.planActivaId = planId;
+  }
+  guardarCalificaciones();
+  cerrarModalBtn();
+  renderizarBiblioteca();
+  mostrarToast('Planificación asignada al curso', 'success');
 }
 
+function desasignarPlanDeCurso(planId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  if (!confirm('¿Quitar esta planificación del curso? Las notas registradas no se eliminarán.')) return;
+  curso.planIds = (curso.planIds || []).filter(id => id !== planId);
+  if (curso.planActivaId === planId) {
+    curso.planActivaId = curso.planIds[0] || null;
+  }
+  guardarCalificaciones();
+  renderizarCalificaciones();
+  mostrarToast('Planificación quitada del curso', 'info');
+}
 
+// ─── Obtener planificación activa del curso ───────────────────────
+function _getPlanActivaDeCurso() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) return null;
+  const biblio = cargarBiblioteca();
+  const reg = biblio.items.find(i => i.id === curso.planActivaId);
+  return reg ? reg.planificacion : null;
+}
 
-
-
-
-
-// ----------------------------------------------------------------
-
-
-
-// NOTAS
-
-
-
-// ----------------------------------------------------------------
-
-
-
-
-
-
-
-/** Registra una nota para un estudiante en una actividad */
-
-
-
-// ================================================================
-// SISTEMA DE CALIFICACIONES POR RA
-// ================================================================
+function _getPlanIdClave(planId) {
+  // Clave estable para RA basada en el ID de planificación
+  return 'ra_plan_' + String(planId).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+}
 
 function _getRaKey() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (curso && curso.planActivaId) return _getPlanIdClave(curso.planActivaId);
+  // Fallback al sistema anterior
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
   const base = (dg.moduloFormativo||'')+'|'+(dg.codigoModulo||'')+'|'+(ra.descripcion||'').substring(0,40);
@@ -6291,16 +6117,23 @@ function _getRaKey() {
 function _ensureRA(curso, raKey) {
   if (!curso.ras) curso.ras = {};
   if (!curso.ras[raKey]) {
-    const dg = planificacion.datosGenerales || {};
-    const ra = planificacion.ra || {};
-    const acts = planificacion.actividades || [];
+    // Intentar obtener la planificación activa del curso
+    let plan = _getPlanActivaDeCurso();
+    if (!plan) plan = planificacion; // fallback
+    const dg   = plan.datosGenerales || {};
+    const ra   = plan.ra || {};
+    const acts = plan.actividades || [];
     const valorTotal = parseFloat(dg.valorRA) || 10;
     const valores = {};
-    if (acts.length > 0) {
-      const porAct = Math.floor((valorTotal / acts.length) * 10) / 10;
-      acts.forEach((a, i) => {
-        valores[a.id] = (i === acts.length - 1)
-          ? Math.round((valorTotal - porAct * (acts.length - 1)) * 10) / 10
+    let sumaCustom = 0;
+    acts.forEach(a => { if (a.valor) { valores[a.id] = a.valor; sumaCustom += a.valor; } });
+    const sinValor = acts.filter(a => !a.valor);
+    if (sinValor.length) {
+      const resto = Math.max(0, valorTotal - sumaCustom);
+      const porAct = Math.floor((resto / sinValor.length) * 10) / 10;
+      sinValor.forEach((a, i) => {
+        valores[a.id] = (i === sinValor.length - 1)
+          ? Math.round((resto - porAct * (sinValor.length - 1)) * 10) / 10
           : porAct;
       });
     }
@@ -6310,12 +6143,255 @@ function _ensureRA(curso, raKey) {
       modulo: dg.moduloFormativo || '',
       valorTotal,
       actividades: acts.map(a => a.id),
-      valores
+      valores,
+      _actividadesSnapshot: acts.map(a => ({
+        id: a.id, enunciado: a.enunciado,
+        ecCodigo: a.ecCodigo, fechaStr: a.fechaStr
+      }))
     };
   }
   return curso.ras[raKey];
 }
 
+// ─── Renderizado principal ────────────────────────────────────────
+function renderizarCalificaciones() {
+  renderizarTabsCursos();
+  renderizarTabsPlanesDelCurso();
+  renderizarTablaCalificaciones();
+}
+
+function renderizarTabsCursos() {
+  const container = document.getElementById('cal-tabs');
+  if (!container) return;
+  container.innerHTML = '';
+  const cursos = Object.values(calState.cursos);
+  if (cursos.length === 0) {
+    container.innerHTML = '<span style="color:#9E9E9E;font-size:0.85rem;">Sin cursos. Crea uno →</span>';
+    return;
+  }
+  cursos.forEach(curso => {
+    const tab = document.createElement('button');
+    tab.className = 'cal-tab' + (curso.id === calState.cursoActivoId ? ' activo' : '');
+    const nPlanes = (curso.planIds || []).length;
+    tab.innerHTML = '<span class="material-icons" style="font-size:16px;">class</span>'
+      + escapeHTML(curso.nombre)
+      + (nPlanes ? ` <span style="background:#E3F2FD;color:#1565C0;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700;">${nPlanes}</span>` : '')
+      + '<button class="cal-tab-del" title="Eliminar curso" onclick="event.stopPropagation();eliminarCurso(\'' + curso.id + '\')">'
+      + '<span class="material-icons" style="font-size:16px;">close</span></button>';
+    tab.onclick = () => activarCurso(curso.id);
+    container.appendChild(tab);
+  });
+}
+
+function renderizarTabsPlanesDelCurso() {
+  const area = document.getElementById('cal-planes-bar');
+  if (!area) return;
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) { area.innerHTML = ''; return; }
+
+  const planIds = curso.planIds || [];
+  if (planIds.length === 0) {
+    area.innerHTML = `
+      <div style="padding:10px 0;font-size:0.85rem;color:#78909C;display:flex;align-items:center;gap:8px;">
+        <span class="material-icons" style="font-size:18px;">info</span>
+        Este curso no tiene planificaciones asignadas. 
+        <button onclick="abrirPlanificaciones()" style="background:none;border:none;color:#1565C0;cursor:pointer;font-weight:600;font-size:0.85rem;text-decoration:underline;">Ir a Mis Planificaciones</button>
+        para asignar una.
+      </div>`;
+    return;
+  }
+
+  const biblio = cargarBiblioteca();
+  let html = '<div class="cal-planes-tabs">';
+  planIds.forEach(pid => {
+    const reg = biblio.items.find(i => i.id === pid);
+    if (!reg) return;
+    const dg = reg.planificacion?.datosGenerales || {};
+    const activo = pid === curso.planActivaId;
+    html += `<button class="cal-plan-tab${activo ? ' activo' : ''}" onclick="activarPlanEnCurso('${pid}')">
+      <span class="material-icons" style="font-size:15px;">assignment</span>
+      <span>${escHTML((dg.moduloFormativo || reg.nombre || pid).substring(0,30))}</span>
+      <span style="font-size:0.7rem;opacity:0.7;margin-left:2px;">${dg.valorRA ? dg.valorRA+'pts' : ''}</span>
+      <button onclick="event.stopPropagation();desasignarPlanDeCurso('${pid}')" title="Quitar del curso"
+        style="background:none;border:none;cursor:pointer;color:#B0BEC5;margin-left:4px;padding:0;line-height:1;">
+        <span class="material-icons" style="font-size:14px;">close</span>
+      </button>
+    </button>`;
+  });
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+// ─── abrirCalificaciones ──────────────────────────────────────────
+function abrirCalificaciones() {
+  cargarCalificaciones();
+  _mostrarPanel('panel-calificaciones');
+  renderizarCalificaciones();
+}
+
+// ─── Tabla de calificaciones (usa planificación activa del curso) ─
+function renderizarTablaCalificaciones() {
+  const thead   = document.getElementById('cal-thead');
+  const tbody   = document.getElementById('cal-tbody');
+  const tfoot   = document.getElementById('cal-tfoot');
+  const sinActs = document.getElementById('cal-sin-actividades');
+  if (!thead || !tbody || !tfoot) return;
+
+  const cursoId = calState.cursoActivoId;
+  const curso   = cursoId ? calState.cursos[cursoId] : null;
+
+  if (!curso) {
+    sinActs?.classList.remove('hidden');
+    thead.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = '';
+    return;
+  }
+
+  // Obtener planificación activa del curso
+  const planActiva = _getPlanActivaDeCurso();
+  let actividades = (planActiva && planActiva.actividades) || [];
+
+  // Fallback: snapshot guardado en el RA
+  if (actividades.length === 0) {
+    const raKey  = _getRaKey();
+    const raInfo = curso.ras && curso.ras[raKey];
+    if (raInfo && raInfo._actividadesSnapshot) actividades = raInfo._actividadesSnapshot;
+  }
+
+  if (actividades.length === 0 || !curso.planActivaId) {
+    sinActs?.classList.remove('hidden');
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">'
+      + (curso.planIds && curso.planIds.length === 0
+          ? 'Asigna una planificación a este curso para comenzar a registrar calificaciones.'
+          : 'Selecciona una planificación arriba.')
+      + '</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+  sinActs?.classList.add('hidden');
+
+  const raKey  = _getRaKey();
+  const raInfo = _ensureRA(curso, raKey);
+  const planDg = planActiva?.datosGenerales || {};
+  const planRa = planActiva?.ra || {};
+  const rasKeys = Object.keys(curso.ras || {});
+
+  // ─── Fila 1: encabezado del RA ───
+  const raDescCorta = planRa.descripcion
+    ? escapeHTML(planRa.descripcion.substring(0, 65)) + (planRa.descripcion.length > 65 ? '&hellip;' : '')
+    : '';
+  const raLabel = escapeHTML((planDg.moduloFormativo || 'RA').substring(0, 28))
+    + ' &mdash; RA&nbsp;(' + raInfo.valorTotal + '&nbsp;pts)'
+    + (raDescCorta ? '<br><small style="font-weight:400;opacity:0.88;font-size:0.72rem;">' + raDescCorta + '</small>' : '');
+
+  let h1 = '<tr class="tr-ec-header">'
+    + '<th class="th-nombre" rowspan="2">Estudiante</th>'
+    + '<th colspan="' + actividades.length + '" style="text-align:center;background:#1565C0;color:#fff;padding:6px 8px;">'
+    + raLabel + '</th>'
+    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small></th>';
+
+  rasKeys.filter(rk => rk !== raKey).forEach(rk => {
+    const ri = curso.ras[rk];
+    h1 += '<th rowspan="2" style="background:#4527A0;color:#fff;min-width:72px;font-size:0.75rem;vertical-align:middle;text-align:center;white-space:nowrap;" title="' + escapeHTML(ri.label) + '">'
+      + escapeHTML(ri.modulo.substring(0,14)||'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
+  });
+  h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th></tr>';
+
+  // ─── Fila 2: actividades con contador correcto por EC ───
+  const _cntEC = {};
+  actividades.forEach(a => { const ec = a.ecCodigo || ''; _cntEC[ec] = (_cntEC[ec] || 0) + 1; });
+  const _idxEC = {};
+
+  let h2 = '<tr>';
+  actividades.forEach((a, i) => {
+    const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
+    const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
+    const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.','').replace('CE','') : '';
+    _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
+    const numInEC = _idxEC[a.ecCodigo || ''];
+    const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
+    h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
+      + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i+1)
+      + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
+      + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + '</div>'
+      + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
+      + ' title="Valor máximo de esta actividad" placeholder="pts"'
+      + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value)"'
+      + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #90CAF9;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
+      + '</th>';
+  });
+  h2 += '</tr>';
+  thead.innerHTML = h1 + h2;
+
+  // ─── Cuerpo ───
+  if (!curso.estudiantes || curso.estudiantes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Agrega estudiantes usando el formulario de arriba.</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  curso.estudiantes.forEach(est => {
+    const tr = document.createElement('tr');
+    let cells = '<td class="td-nombre" id="nombre-' + est.id + '">'
+      + '<div class="td-nombre-inner">'
+      + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
+      + '<button class="btn-del-estudiante" onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar"><span class="material-icons" style="font-size:16px;">close</span></button>'
+      + '</div></td>';
+
+    actividades.forEach(a => {
+      const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
+      const val  = nota !== undefined ? nota : '';
+      const max  = raInfo.valores[a.id] || 100;
+      const cls  = nota !== undefined ? _clsNota(nota, max) : '';
+      cells += '<td><input type="number" class="input-nota ' + cls + '"'
+        + ' id="nota-' + est.id + '-' + a.id + '"'
+        + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
+        + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
+        + ' oninput="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
+        + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado||'').substring(0,40)) + '"'
+        + '/></td>';
+    });
+
+    const notaRA = _calcNotaRA(curso, est.id, raKey);
+    cells += '<td class="td-total-ra ' + _clsNota(notaRA, raInfo.valorTotal) + '" id="total-ra-' + est.id + '-' + raKey + '">'
+      + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</td>';
+
+    rasKeys.filter(rk => rk !== raKey).forEach(rk => {
+      const ri = curso.ras[rk];
+      const n  = _calcNotaRA(curso, est.id, rk);
+      cells += '<td class="td-total-ra ' + _clsNota(n, ri.valorTotal) + '" style="background:#F3E5F5;">'
+        + (n !== null ? n.toFixed(1) : '—') + '</td>';
+    });
+
+    const notaFinal = _calcNotaFinal(curso, est.id);
+    cells += '<td class="td-promedio ' + _clsProm(notaFinal) + '" id="final-' + est.id + '">'
+      + (notaFinal !== null ? notaFinal.toFixed(1) : '—') + '</td>';
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+
+  // ─── Footer ───
+  let footCells = '<td class="tf-label">Promedio</td>';
+  actividades.forEach(a => {
+    const notas = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[a.id]).filter(n => n !== undefined && n !== null);
+    const avg   = notas.length ? notas.reduce((s,n) => s+n, 0) / notas.length : null;
+    const max   = raInfo.valores[a.id] || 100;
+    footCells += '<td class="' + (avg !== null ? _clsNota(avg, max) : '') + '">'
+      + (avg !== null ? avg.toFixed(1) : '—') + '</td>';
+  });
+  const avgRA = _promedioColRA(curso, raKey);
+  footCells += '<td class="td-total-ra ' + (avgRA !== null ? _clsNota(avgRA, raInfo.valorTotal) : '') + '">'
+    + (avgRA !== null ? avgRA.toFixed(1) : '—') + '</td>';
+  rasKeys.filter(rk => rk !== raKey).forEach(() => { footCells += '<td>—</td>'; });
+  const avgFinal = _promedioFinal(curso);
+  footCells += '<td class="td-promedio ' + _clsProm(avgFinal) + '">'
+    + (avgFinal !== null ? avgFinal.toFixed(1) : '—') + '</td>';
+  tfoot.innerHTML = '<tr>' + footCells + '</tr>';
+}
+
+// ─── Actualizar notas (usa raKey del curso activo) ──────────────
 function registrarNota(estudianteId, actividadId, valor) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
@@ -6348,370 +6424,6 @@ function actualizarValorActividad(actividadId, nuevoValor) {
     renderizarTablaCalificaciones();
   }
 }
-
-function _calcNotaRA(curso, estudianteId, raKey) {
-  const raInfo = curso.ras?.[raKey];
-  if (!raInfo) return null;
-  const notasEst = curso.notas?.[estudianteId]?.[raKey] || {};
-  let total = 0, hayNotas = false;
-  raInfo.actividades.forEach(actId => {
-    const n = notasEst[actId];
-    if (n !== undefined && n !== null) { total += n; hayNotas = true; }
-  });
-  return hayNotas ? Math.round(total * 10) / 10 : null;
-}
-
-function _calcNotaFinal(curso, estudianteId) {
-  if (!curso.ras) return null;
-  let total = 0, hayAlgo = false;
-  Object.keys(curso.ras).forEach(rk => {
-    const n = _calcNotaRA(curso, estudianteId, rk);
-    if (n !== null) { total += n; hayAlgo = true; }
-  });
-  return hayAlgo ? Math.round(total * 10) / 10 : null;
-}
-
-function _clsNota(n, max) {
-  if (n === null || n === undefined) return '';
-  const pct = max > 0 ? (n / max) * 100 : n;
-  return pct >= 70 ? 'nota-aprobado' : pct >= 60 ? 'nota-regular' : 'nota-reprobado';
-}
-function _clsProm(n) {
-  if (n === null || n === undefined) return '';
-  return n >= 70 ? 'prom-aprobado' : n >= 60 ? 'prom-regular' : 'prom-reprobado';
-}
-
-function _actualizarFilaRA(estudianteId, raKey) {
-  const curso = calState.cursos[calState.cursoActivoId];
-  if (!curso) return;
-  const nota = _calcNotaRA(curso, estudianteId, raKey);
-  const max = curso.ras[raKey]?.valorTotal || 10;
-  const cell = document.getElementById('total-ra-' + estudianteId + '-' + raKey);
-  if (cell) { cell.textContent = nota !== null ? nota.toFixed(1) : '\u2014'; cell.className = 'td-total-ra ' + _clsNota(nota, max); }
-  const notaFinal = _calcNotaFinal(curso, estudianteId);
-  const cellFinal = document.getElementById('final-' + estudianteId);
-  if (cellFinal) { cellFinal.textContent = notaFinal !== null ? notaFinal.toFixed(1) : '\u2014'; cellFinal.className = 'td-promedio ' + _clsProm(notaFinal); }
-}
-
-function _actualizarFooterRA(raKey) {
-  const curso = calState.cursos[calState.cursoActivoId];
-  if (!curso || !curso.ras?.[raKey]) return;
-  const raInfo = curso.ras[raKey];
-  raInfo.actividades.forEach(actId => {
-    const vals = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[actId]).filter(v => v !== undefined && v !== null);
-    const cell = document.getElementById('foot-' + raKey + '-' + actId);
-    if (!cell) return;
-    if (vals.length === 0) { cell.textContent = '\u2014'; cell.style.color = ''; return; }
-    const p = vals.reduce((a,b)=>a+b,0)/vals.length;
-    const max = raInfo.valores[actId] || 10;
-    cell.textContent = p.toFixed(1);
-    cell.style.color = (p/max)>=0.7?'#2E7D32':(p/max)>=0.6?'#E65100':'#C62828';
-  });
-  const tots = curso.estudiantes.map(e => _calcNotaRA(curso,e.id,raKey)).filter(n=>n!==null);
-  const cellTot = document.getElementById('foot-total-ra-' + raKey);
-  if (cellTot) {
-    if (tots.length === 0) { cellTot.textContent = '\u2014'; cellTot.style.color = ''; }
-    else {
-      const p = tots.reduce((a,b)=>a+b,0)/tots.length;
-      cellTot.textContent = p.toFixed(1);
-      cellTot.style.color = (p/raInfo.valorTotal)>=0.7?'#2E7D32':(p/raInfo.valorTotal)>=0.6?'#E65100':'#C62828';
-    }
-  }
-}
-
-function actualizarFilaPromedio(estudianteId) { _actualizarFilaRA(estudianteId, _getRaKey()); }
-function actualizarPromedioActividad(actividadId) { _actualizarFooterRA(_getRaKey()); }
-
-// ----------------------------------------------------------------
-// RENDERIZADO
-// ----------------------------------------------------------------
-
-function renderizarCalificaciones() {
-  renderizarTabsCursos();
-  renderizarTablaCalificaciones();
-}
-
-function renderizarTabsCursos() {
-  const container = document.getElementById('cal-tabs');
-  if (!container) return;
-  container.innerHTML = '';
-  const cursos = Object.values(calState.cursos);
-  if (cursos.length === 0) {
-    container.innerHTML = '<span style="color:#9E9E9E;font-size:0.85rem;">Sin cursos. Crea uno &rarr;</span>';
-    return;
-  }
-  cursos.forEach(curso => {
-    const tab = document.createElement('button');
-    tab.className = 'cal-tab' + (curso.id === calState.cursoActivoId ? ' activo' : '');
-    tab.innerHTML = '<span class="material-icons" style="font-size:16px;">class</span>'
-      + escapeHTML(curso.nombre)
-      + '<button class="cal-tab-del" title="Eliminar curso" onclick="event.stopPropagation();eliminarCurso(\'' + curso.id + '\')">'
-      + '<span class="material-icons" style="font-size:16px;">close</span></button>';
-    tab.onclick = () => activarCurso(curso.id);
-    container.appendChild(tab);
-  });
-}
-
-function renderizarTablaCalificaciones() {
-  const thead = document.getElementById('cal-thead');
-  const tbody = document.getElementById('cal-tbody');
-  const tfoot = document.getElementById('cal-tfoot');
-  const sinActs = document.getElementById('cal-sin-actividades');
-  if (!thead || !tbody || !tfoot) return;
-
-  const actividades = planificacion.actividades || [];
-  const cursoId = calState.cursoActivoId;
-  const curso = cursoId ? calState.cursos[cursoId] : null;
-
-  if (actividades.length === 0) {
-    sinActs?.classList.remove('hidden');
-    thead.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = '';
-    return;
-  }
-  sinActs?.classList.add('hidden');
-
-  if (!curso) {
-    thead.innerHTML = '';
-    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Crea o selecciona un curso para comenzar.</td></tr>';
-    tfoot.innerHTML = '';
-    return;
-  }
-
-  const raKey = _getRaKey();
-  const raInfo = _ensureRA(curso, raKey);
-  const dg = planificacion.datosGenerales || {};
-  const rasKeys = Object.keys(curso.ras || {});
-
-  // ─── ENCABEZADO fila 1 ───
-  const raDescCorta = planificacion.ra && planificacion.ra.descripcion
-    ? escapeHTML(planificacion.ra.descripcion.substring(0, 65)) + (planificacion.ra.descripcion.length > 65 ? '&hellip;' : '')
-    : '';
-  const raLabel = escapeHTML((dg.moduloFormativo || 'RA').substring(0, 28))
-    + ' &mdash; RA&nbsp;(' + raInfo.valorTotal + '&nbsp;pts)'
-    + (raDescCorta ? '<br><small style="font-weight:400;opacity:0.88;font-size:0.72rem;">' + raDescCorta + '</small>' : '');
-
-  let h1 = '<tr class="tr-ec-header">'
-    + '<th class="th-nombre" rowspan="2">Estudiante</th>'
-    + '<th colspan="' + actividades.length + '" style="text-align:center;background:#1565C0;color:#fff;padding:6px 8px;">'
-    + raLabel + '</th>'
-    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small></th>';
-
-  rasKeys.filter(rk => rk !== raKey).forEach(rk => {
-    const ri = curso.ras[rk];
-    h1 += '<th rowspan="2" style="background:#4527A0;color:#fff;min-width:72px;font-size:0.75rem;vertical-align:middle;text-align:center;white-space:nowrap;" title="' + escapeHTML(ri.label) + '">'
-      + escapeHTML(ri.modulo.substring(0,14)||'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
-  });
-
-  h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th></tr>';
-
-  // Fila 2: actividades con valor editable
-  let h2 = '<tr>';
-  actividades.forEach((a, i) => {
-    const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
-    const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
-    const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.','') : '';
-    h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
-      + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i+1)
-      + ' <span style="opacity:0.65;font-weight:400;">' + ecCorto + '</span></div>'
-      + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + '</div>'
-      + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
-      + ' title="Valor m&aacute;ximo de esta actividad" placeholder="pts"'
-      + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value)"'
-      + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #90CAF9;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
-      + '</th>';
-  });
-  h2 += '</tr>';
-  thead.innerHTML = h1 + h2;
-
-  // ─── CUERPO ───
-  if (curso.estudiantes.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Agrega estudiantes usando el formulario de arriba.</td></tr>';
-    tfoot.innerHTML = '';
-    return;
-  }
-
-  tbody.innerHTML = '';
-  curso.estudiantes.forEach(est => {
-    const tr = document.createElement('tr');
-    let cells = '<td class="td-nombre" id="nombre-' + est.id + '">'
-      + '<div class="td-nombre-inner">'
-      + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
-      + '<button class="btn-del-estudiante" onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar"><span class="material-icons" style="font-size:16px;">close</span></button>'
-      + '</div></td>';
-
-    actividades.forEach(a => {
-      const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
-      const val = nota !== undefined ? nota : '';
-      const max = raInfo.valores[a.id] || 100;
-      const cls = nota !== undefined ? _clsNota(nota, max) : '';
-      cells += '<td><input type="number" class="input-nota ' + cls + '"'
-        + ' id="nota-' + est.id + '-' + a.id + '"'
-        + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="\u2014"'
-        + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
-        + ' oninput="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
-        + ' title="M&aacute;x: ' + max + ' pts | ' + escapeHTML(a.enunciado.substring(0,40)) + '"'
-        + '/></td>';
-    });
-
-    const notaRA = _calcNotaRA(curso, est.id, raKey);
-    cells += '<td class="td-total-ra ' + _clsNota(notaRA, raInfo.valorTotal) + '" id="total-ra-' + est.id + '-' + raKey + '">'
-      + (notaRA !== null ? notaRA.toFixed(1) : '\u2014') + '</td>';
-
-    rasKeys.filter(rk => rk !== raKey).forEach(rk => {
-      const ri = curso.ras[rk];
-      const n = _calcNotaRA(curso, est.id, rk);
-      cells += '<td class="td-total-ra ' + _clsNota(n, ri.valorTotal) + '" style="background:#F3E5F5;">'
-        + (n !== null ? n.toFixed(1) : '\u2014') + '</td>';
-    });
-
-    const notaFinal = _calcNotaFinal(curso, est.id);
-    cells += '<td class="td-promedio ' + _clsProm(notaFinal) + '" id="final-' + est.id + '">'
-      + (notaFinal !== null ? notaFinal.toFixed(1) : '\u2014') + '</td>';
-
-    tr.innerHTML = cells;
-    tbody.appendChild(tr);
-  });
-
-  // ─── FOOTER ───
-  let footerRow = '<tr><td class="td-foot-label">Prom. clase</td>';
-  actividades.forEach(a => {
-    const vals = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[a.id]).filter(v => v !== undefined && v !== null);
-    const p = vals.length > 0 ? vals.reduce((x,y)=>x+y,0)/vals.length : null;
-    const max = raInfo.valores[a.id] || 10;
-    footerRow += '<td id="foot-' + raKey + '-' + a.id + '" style="' + (p!==null?'color:'+((p/max)>=0.7?'#2E7D32':(p/max)>=0.6?'#E65100':'#C62828'):'') + ';">'
-      + (p !== null ? p.toFixed(1) : '\u2014') + '</td>';
-  });
-
-  const tots = curso.estudiantes.map(e => _calcNotaRA(curso,e.id,raKey)).filter(n=>n!==null);
-  const avgRA = tots.length > 0 ? tots.reduce((a,b)=>a+b,0)/tots.length : null;
-  footerRow += '<td id="foot-total-ra-' + raKey + '" style="font-weight:700;' + (avgRA!==null?'color:'+((avgRA/raInfo.valorTotal)>=0.7?'#2E7D32':(avgRA/raInfo.valorTotal)>=0.6?'#E65100':'#C62828'):'') + ';">'
-    + (avgRA !== null ? avgRA.toFixed(1) : '\u2014') + '</td>';
-
-  rasKeys.filter(rk => rk !== raKey).forEach(rk => {
-    const ri = curso.ras[rk];
-    const tt = curso.estudiantes.map(e => _calcNotaRA(curso,e.id,rk)).filter(n=>n!==null);
-    const avg = tt.length > 0 ? tt.reduce((a,b)=>a+b,0)/tt.length : null;
-    footerRow += '<td style="background:#EDE7F6;font-weight:700;' + (avg!==null?'color:'+((avg/ri.valorTotal)>=0.7?'#2E7D32':(avg/ri.valorTotal)>=0.6?'#E65100':'#C62828'):'') + ';">'
-      + (avg !== null ? avg.toFixed(1) : '\u2014') + '</td>';
-  });
-
-  const fins = curso.estudiantes.map(e => _calcNotaFinal(curso,e.id)).filter(n=>n!==null);
-  const avgFin = fins.length > 0 ? fins.reduce((a,b)=>a+b,0)/fins.length : null;
-  footerRow += '<td style="font-weight:700;' + (avgFin!==null?'color:'+(avgFin>=70?'#2E7D32':avgFin>=60?'#E65100':'#C62828'):'') + ';">'
-    + (avgFin !== null ? avgFin.toFixed(1) : '\u2014') + '</td>';
-
-  footerRow += '</tr>';
-  tfoot.innerHTML = footerRow;
-}
-
-
-
-/** Escapa HTML para evitar XSS en nombres */
-
-
-
-function escapeHTML(str) {
-
-
-
-  return String(str || '')
-
-
-
-    .replace(/&/g, '&amp;')
-
-
-
-    .replace(/</g, '&lt;')
-
-
-
-    .replace(/>/g, '&gt;')
-
-
-
-    .replace(/"/g, '&quot;');
-
-
-
-}
-
-
-
-
-
-
-
-// ----------------------------------------------------------------
-
-
-
-// NAVEGACIÓN – mostrar/ocultar panel calificaciones
-
-
-
-// ----------------------------------------------------------------
-
-
-
-
-
-
-
-/** Muestra el panel de calificaciones y oculta el stepper/main */
-
-
-
-function abrirCalificaciones() {
-  // Intentar cargar planificación, pero no bloquear si no existe
-  _asegurarPlanificacion();
-  cargarCalificaciones();
-  _mostrarPanel('panel-calificaciones');
-  // Si no hay planificación activa, mostrar selector de planificaciones guardadas
-  const tieneActividades = (planificacion.actividades || []).length > 0;
-  _actualizarSelectorPlanCal(tieneActividades);
-  renderizarCalificaciones();
-}
-// __old_abrirCalificaciones__
-
-
-
-
-
-
-
-/** Cierra el panel y vuelve a la planificación */
-
-
-
-function cerrarCalificaciones() {
-  _ocultarPaneles();
-}
-// __old_cerrarCalificaciones__
-
-
-
-
-
-
-
-// ----------------------------------------------------------------
-
-
-
-// EXPORTACIÓN DE CALIFICACIONES
-
-
-
-// ----------------------------------------------------------------
-
-
-
-
-
-
-
-/** Exporta la tabla de calificaciones a Word */
 
 
 
@@ -7025,6 +6737,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (modalFooter && !modalFooter.id) modalFooter.id = 'modal-footer';
 
+  // Botón "Planificaciones" en el header
+  if (headerInner && !document.getElementById('btn-planificaciones')) {
+    const btnPln = document.createElement('button');
+    btnPln.id = 'btn-planificaciones';
+    btnPln.className = 'btn-planificaciones';
+    btnPln.title = 'Mis Planificaciones';
+    btnPln.innerHTML = '<span class="material-icons">folder_special</span><span class="btn-nueva-label">Planificaciones</span>';
+    btnPln.onclick = abrirPlanificaciones;
+    const btnCalRef = document.getElementById('btn-calificaciones');
+    const btnNuevaRef = document.getElementById('btn-nueva-planificacion');
+    if (btnCalRef) headerInner.insertBefore(btnPln, btnCalRef);
+    else if (btnNuevaRef) headerInner.insertBefore(btnPln, btnNuevaRef);
+    else headerInner.appendChild(btnPln);
+  }
+
 
 
 
@@ -7251,89 +6978,73 @@ function guardarPlanificacionActual() {
 
 
 
-  // Si ya existe uno con el mismo módulo + docente, preguntar si reemplazar
-
-
-
-  const idx = biblio.items.findIndex(i =>
-
-
-
-    i.planificacion?.datosGenerales?.moduloFormativo === dg.moduloFormativo &&
-
-
-
-    i.planificacion?.datosGenerales?.nombreDocente === dg.nombreDocente
-
-
-
-  );
-
-
-
-
-
-
-
-  if (idx >= 0) {
-
-
-
-    if (!confirm(
-
-
-
-      'Ya existe una planificación guardada para "' + (dg.moduloFormativo || '') +
-
-
-
-      '". ¿Deseas actualizarla con los datos actuales?'
-
-
-
-    )) return;
-
-
-
-    biblio.items[idx] = registro;
-
-
-
-    mostrarToast('Planificación actualizada en la biblioteca', 'success');
-
-
-
+  // Si tiene _id (fue cargada de biblioteca), actualizar directamente
+  const existingId = planificacion._id;
+  const idxById = existingId ? biblio.items.findIndex(i => i.id === existingId) : -1;
+  if (idxById >= 0) {
+    registro.id = existingId;
+    biblio.items[idxById] = registro;
+    mostrarToast('Planificación actualizada', 'success');
   } else {
-
-
-
-    biblio.items.unshift(registro); // más reciente primero
-
-
-
-    mostrarToast('Planificación guardada correctamente', 'success');
-
-
-
+    const idxMod = biblio.items.findIndex(i =>
+      i.planificacion?.datosGenerales?.moduloFormativo === dg.moduloFormativo &&
+      i.planificacion?.datosGenerales?.nombreDocente === dg.nombreDocente
+    );
+    if (idxMod >= 0) {
+      if (!confirm('Ya existe una planificación para "' + (dg.moduloFormativo || '') + '". ¿Reemplazarla?')) return;
+      registro.id = biblio.items[idxMod].id;
+      biblio.items[idxMod] = registro;
+      mostrarToast('Planificación actualizada', 'success');
+    } else {
+      biblio.items.unshift(registro);
+      mostrarToast('Planificación guardada correctamente', 'success');
+    }
   }
-
-
-
-
-
-
-
+  planificacion._id = registro.id;
   persistirBiblioteca(biblio);
 
-
-
+  // Asignar al curso si hay cursos creados y no está ya asignada
+  const cursosExist = Object.values(calState.cursos);
+  if (cursosExist.length > 0) {
+    const yaAsignada = cursosExist.some(c => (c.planIds||[]).includes(id));
+    if (!yaAsignada) {
+      const opsCursos = cursosExist.map(c => `<option value="${c.id}">${escapeHTML(c.nombre)}</option>`).join('');
+      document.getElementById('modal-title').textContent = 'Asignar al libro de calificaciones';
+      document.getElementById('modal-body').innerHTML = `
+        <div class="modal-curso-content">
+          <p style="margin-bottom:12px;font-size:0.9rem;color:#37474F;">
+            ¿A qué curso pertenece esta planificación?
+          </p>
+          <label for="modal-sel-curso-guardar">Curso</label>
+          <select id="modal-sel-curso-guardar" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;margin-top:4px;">
+            <option value="">— No asignar ahora —</option>
+            ${opsCursos}
+          </select>
+        </div>`;
+      document.getElementById('modal-footer').innerHTML = `
+        <button class="btn-siguiente" onclick="_asignarDesdeGuardar('${id}')">
+          <span class="material-icons">link</span> Asignar
+        </button>
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Omitir</button>`;
+      document.getElementById('modal-overlay').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  }
 }
 
-
-
-
-
-
+function _asignarDesdeGuardar(planId) {
+  const cursoId = document.getElementById('modal-sel-curso-guardar')?.value;
+  cerrarModalBtn();
+  if (!cursoId || !calState.cursos[cursoId]) return;
+  const curso = calState.cursos[cursoId];
+  if (!curso.planIds) curso.planIds = [];
+  if (!curso.planIds.includes(planId)) {
+    curso.planIds.push(planId);
+    if (!curso.planActivaId) curso.planActivaId = planId;
+    guardarCalificaciones();
+    mostrarToast('Planificación asignada al curso "' + curso.nombre + '"', 'success');
+  }
+}
 
 /** Carga una planificación guardada y la restaura como activa */
 
@@ -7376,6 +7087,7 @@ function cargarPlanificacionGuardada(id) {
 
 
   planificacion = registro.planificacion;
+  planificacion._id = registro.id;
 
 
 
@@ -7855,6 +7567,7 @@ function renderizarBiblioteca() {
 
 
 
+      <div class="pln-card-curso-badge" id="pln-badge-${reg.id}"></div>
       <div class="pln-card-actions">
 
 
@@ -7871,6 +7584,9 @@ function renderizarBiblioteca() {
 
 
 
+        <button class="btn-pln-asignar" onclick="asignarPlanACurso('${reg.id}')" title="Asignar a un curso">
+          <span class="material-icons">link</span> Asignar curso
+        </button>
         <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar">
 
 
@@ -7892,6 +7608,17 @@ function renderizarBiblioteca() {
 
 
     grid.appendChild(card);
+    // Mostrar badge de cursos que tienen esta planificación
+    const _badgeEl = document.getElementById('pln-badge-' + reg.id);
+    if (_badgeEl) {
+      const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds||[]).includes(reg.id));
+      if (cursosConPlan.length) {
+        _badgeEl.innerHTML = cursosConPlan.map(c =>
+          '<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:700;margin:0 4px 4px 0;">'
+          + '<span class="material-icons" style="font-size:13px;">class</span>' + escapeHTML(c.nombre) + '</span>'
+        ).join('');
+      }
+    }
 
 
 
