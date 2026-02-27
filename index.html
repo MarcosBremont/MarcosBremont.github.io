@@ -36,14 +36,29 @@
     <div class="header-inner">
       <div class="header-brand">
         <button class="logo-btn" onclick="irAlHome()" title="Inicio – El Gran Planificador">
-          <img src="logo.png" alt="El Gran Planificador" class="header-logo" />
+          <img src="Metabotlogo.svg" alt="El Gran Planificador" class="header-logo" />
         </button>
         <div>
           <h1 class="header-title">Planificador Educativo por RA</h1>
           <p class="header-subtitle">Sistema de Educación Técnico Profesional · República Dominicana</p>
         </div>
       </div>
-            <button id="btn-config-ia" class="btn-config-ia" onclick="abrirConfigIA()"
+            <button id="btn-notificaciones" class="btn-config-ia" onclick="abrirNotificaciones()"
+              title="Notificaciones y recordatorios"
+              style="position:relative;background:rgba(245,124,0,0.1);border-color:rgba(245,124,0,0.3);color:#E65100;">
+        <span class="material-icons">notifications</span>
+        <span class="btn-nueva-label">Avisos</span>
+        <span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;background:#E53935;color:#fff;
+          border-radius:50%;width:16px;height:16px;font-size:0.6rem;font-weight:800;
+          display:flex;align-items:center;justify-content:center;"></span>
+      </button>
+      <button id="btn-buscar-est" class="btn-config-ia" onclick="abrirBuscadorEstudiante()"
+              title="Buscar estudiante"
+              style="background:rgba(0,105,92,0.1);border-color:rgba(0,150,136,0.3);color:#00695C;">
+        <span class="material-icons">search</span>
+        <span class="btn-nueva-label">Buscar</span>
+      </button>
+      <button id="btn-config-ia" class="btn-config-ia" onclick="abrirConfigIA()"
               title="Configurar clave de IA (Groq)">
         <span class="material-icons">settings</span>
         <span class="btn-nueva-label">Config. IA</span>
@@ -53,6 +68,18 @@
               style="background:rgba(230,81,0,0.1);border-color:rgba(230,81,0,0.3);color:#E65100;">
         <span class="material-icons">backup</span>
         <span class="btn-nueva-label">Mis datos</span>
+      </button>
+      <button id="btn-configuracion" class="btn-config-ia" onclick="abrirConfiguracion()"
+              title="Configuración de la app"
+              style="background:rgba(69,39,160,0.1);border-color:rgba(149,117,205,0.3);color:#4527A0;">
+        <span class="material-icons">tune</span>
+        <span class="btn-nueva-label">Config.</span>
+      </button>
+      <button id="btn-acercade" class="btn-config-ia" onclick="abrirAcercaDe()"
+              title="Acerca de El Gran Planificador"
+              style="background:rgba(0,105,92,0.1);border-color:rgba(0,150,136,0.3);color:#00695C;">
+        <span class="material-icons">info_outline</span>
+        <span class="btn-nueva-label">Info</span>
       </button>
 <button id="btn-nueva-planificacion" class="btn-nueva" title="Nueva Planificación">
         <span class="material-icons">add_circle_outline</span>
@@ -65,11 +92,49 @@
   <div id="panel-dashboard" class="dashboard-panel hidden">
     <div class="dash-main">
 
-      <!-- Saludo + estadisticas -->
+      <!-- ── Saludo + stats ── -->
       <div class="dash-greeting" id="dash-greeting"></div>
 
-      <!-- Accesos rapidos -->
-      <div class="dash-section-label">
+      <!-- ── Alertas inteligentes ── -->
+      <div id="dash-alertas"></div>
+
+      <!-- ── Grid principal: Hoy | Mañana | Tareas ── -->
+      <div class="dash-grid-3col">
+        <!-- Columna 1: clases de hoy -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">today</span>Clases de hoy
+            <span id="dash-hoy-fecha" style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
+          </div>
+          <div id="dash-hoy"></div>
+        </div>
+        <!-- Columna 2: clases de mañana -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">event</span>Mañana
+            <span id="dash-manana-fecha" style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
+          </div>
+          <div id="dash-manana"></div>
+        </div>
+        <!-- Columna 3: tareas próximas -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">assignment</span>Tareas próximas
+            <button onclick="abrirTareas()" style="margin-left:auto;background:none;border:none;color:#1565C0;font-size:0.75rem;font-weight:700;cursor:pointer;">Ver todas →</button>
+          </div>
+          <div id="dash-tareas-proximas"></div>
+        </div>
+      </div>
+
+      <!-- ── Resumen de cursos ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">school</span>Estado de cursos
+        <button onclick="abrirCalificaciones()" style="margin-left:auto;background:none;border:none;color:#1565C0;font-size:0.75rem;font-weight:700;cursor:pointer;">Ir al libro →</button>
+      </div>
+      <div id="dash-cursos"></div>
+
+      <!-- ── Accesos rápidos ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">apps</span>Accesos rápidos
       </div>
       <div class="dash-nav-grid">
@@ -89,6 +154,14 @@
           <span class="material-icons">grade</span>
           <span>Libro de Calificaciones</span>
         </button>
+        <button class="dash-nav-btn" onclick="abrirHorario()" style="--accent:#0277BD;">
+          <span class="material-icons">calendar_view_week</span>
+          <span>Mi Horario</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirTareas()" style="--accent:#E65100;">
+          <span class="material-icons">assignment</span>
+          <span>Tareas</span>
+        </button>
         <button class="dash-nav-btn" onclick="abrirConfigIA()" style="--accent:#AD1457;">
           <span class="material-icons">auto_awesome</span>
           <span>Configurar IA</span>
@@ -102,12 +175,6 @@
           <span>Mis Datos</span>
         </button>
       </div>
-
-      <!-- Hoy -->
-      <div class="dash-section-label" style="margin-top:28px;">
-        <span class="material-icons">today</span>Lo que tienes hoy
-      </div>
-      <div id="dash-hoy"></div>
 
     </div>
   </div>
@@ -444,6 +511,13 @@
           <!-- Se genera dinámicamente por JS -->
         </div>
 
+        <!-- Botón agregar EC -->
+        <div style="display:flex;justify-content:center;margin-top:16px;">
+          <button onclick="_agregarNuevoEC()" style="display:flex;align-items:center;gap:7px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:9px 22px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            <span class="material-icons">add_circle</span> Agregar Elemento de Capacidad
+          </button>
+        </div>
+
       </div>
 
       <!-- Navegación -->
@@ -477,6 +551,12 @@
           </p>
         </div>
 
+        <!-- Alerta ECs sin actividades -->
+        <div id="alerta-ec-sin-act" style="display:none;align-items:center;gap:8px;
+          background:#FFF3E0;border:1.5px solid #FFCC80;border-radius:9px;
+          padding:10px 14px;font-size:0.82rem;color:#E65100;margin-bottom:12px;">
+        </div>
+
         <!-- Tabla de actividades -->
         <div class="tabla-responsiva">
           <table id="tabla-actividades" class="tabla-actividades">
@@ -486,6 +566,7 @@
                 <th>EC</th>
                 <th>Actividad</th>
                 <th>Instrumento</th>
+                <th style="text-align:center;">Valor (pts)</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -493,6 +574,13 @@
               <!-- Se llena dinámicamente -->
             </tbody>
           </table>
+        </div>
+
+        <!-- Botón agregar nueva actividad -->
+        <div style="display:flex;justify-content:center;margin-top:14px;">
+          <button onclick="_agregarNuevaActividad()" style="display:flex;align-items:center;gap:6px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            <span class="material-icons">add_circle</span> Agregar actividad
+          </button>
         </div>
 
       </div>
@@ -561,7 +649,12 @@
         <div class="section-header">
           <span class="material-icons section-icon" style="background:#E8F5E9;color:#2E7D32;">grade</span>
           <h2>Libro de Calificaciones</h2>
-          <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn-export btn-sm" id="btn-toggle-asistencia"
+              onclick="toggleVistaAsistencia()"
+              style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;">
+              <span class="material-icons">how_to_reg</span> Asistencia
+            </button>
             <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
               <span class="material-icons">description</span> Exportar Word
             </button>
@@ -601,6 +694,12 @@
 
         <!-- Planificaciones del curso activo -->
         <div id="cal-planes-bar" style="margin-bottom:12px;"></div>
+
+        <!-- Panel de asistencia (toggle) -->
+        <div id="cal-asist-panel" class="hidden">
+          <div class="asist-panel-wrap" id="cal-asist-wrap"></div>
+          <div style="margin-top:8px;border-top:1px solid #E0E0E0;padding-top:12px;"></div>
+        </div>
 
         <!-- Info si no hay actividades cargadas -->
         <div id="cal-sin-actividades" class="info-tip hidden" style="margin-bottom:16px;">
@@ -745,6 +844,471 @@
 
   </main>
 
+
+  <!-- ===== PANEL HORARIO ===== -->
+  <div id="panel-horario" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E3F2FD;color:#0D47A1;">calendar_view_week</span>
+        <h2>Mi Horario de Clases</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-export btn-print btn-sm" onclick="window.print()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
+        </div>
+      </div>
+      <p style="font-size:0.82rem;color:#78909C;margin:0 0 12px;">
+        <span class="material-icons" style="font-size:14px;vertical-align:middle;">info</span>
+        Haz clic en cualquier celda para agregar o editar una clase.
+      </p>
+      <div id="horario-leyenda" style="margin-bottom:14px;"></div>
+      <div class="tabla-responsiva" id="horario-tabla"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarHorario()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL TAREAS ===== -->
+  <div id="panel-tareas" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#FFF3E0;color:#E65100;">assignment</span>
+        <h2>Tareas</h2>
+        <div style="margin-left:auto;">
+          <button class="btn-siguiente" onclick="abrirNuevaTarea()" style="font-size:0.82rem;padding:8px 16px;">
+            <span class="material-icons">add</span> Nueva tarea
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="tareas-filtros-bar">
+        <button class="tarea-filtro-btn activo" data-filtro="todas" onclick="filtrarTareas('todas')">
+          Todas <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="pendiente" onclick="filtrarTareas('pendiente')">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F57F17;margin-right:4px;"></span>
+          Pendientes <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="entregada" onclick="filtrarTareas('entregada')">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E7D32;margin-right:4px;"></span>
+          Entregadas <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="vencida" onclick="filtrarTareas('vencida')">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C62828;margin-right:4px;"></span>
+          Vencidas <span class="tarea-count">0</span>
+        </button>
+        <select id="tarea-filtro-seccion" onchange="renderizarTareas()"
+          style="margin-left:auto;padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:20px;font-size:0.8rem;background:#fff;color:#424242;cursor:pointer;">
+          <option value="">Todas las secciones</option>
+        </select>
+      </div>
+
+      <!-- Lista de tareas -->
+      <div id="tareas-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarTareas()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL CONFIGURACIÓN ===== -->
+  <div id="config-overlay" class="modal-overlay hidden" onclick="this.id==='config-overlay'&&cerrarConfiguracion()">
+    <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">tune</span>Configuración</h3>
+        <button class="modal-close" onclick="cerrarConfiguracion()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <!-- Apariencia -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">palette</span>Apariencia</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Modo oscuro
+              <small>Cambia el tema de la aplicación</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-dark-mode" onchange="toggleDarkMode(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Fuente grande
+              <small>Aumenta el tamaño del texto</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-fuente-grande" onchange="toggleFuenteGrande(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Asistencia -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">how_to_reg</span>Asistencia</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Umbral de alerta (%)
+              <small>Alerta cuando un estudiante baja de este porcentaje</small>
+            </div>
+            <input type="number" id="cfg-umbral-asist" min="1" max="100" value="80"
+              onchange="localStorage.setItem('asist_umbral',this.value);mostrarToast('Umbral guardado','success')"
+              style="width:64px;padding:6px 8px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
+          </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">dashboard</span>Dashboard</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Mostrar alertas inteligentes
+              <small>Avisos de tareas vencidas, cursos sin plan, etc.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-alertas" onchange="localStorage.setItem('cfg_alertas',this.checked);renderizarDashboard()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Mostrar columna "Mañana"
+              <small>Clases del día siguiente en el dashboard</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-manana" onchange="localStorage.setItem('cfg_manana',this.checked);renderizarDashboard()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Datos -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">storage</span>Datos</div>
+          <button onclick="if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.'))limpiarTodosDatos()"
+            style="width:100%;background:#FFF5F5;border:1.5px solid #FFCDD2;color:#C62828;border-radius:8px;padding:10px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">delete_forever</span>
+            Borrar todos los datos locales
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-siguiente" onclick="cerrarConfiguracion()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL ACERCA DE ===== -->
+  <div id="acercade-overlay" class="modal-overlay hidden" onclick="this.id==='acercade-overlay'&&cerrarAcercaDe()">
+    <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="position:sticky;top:0;z-index:1;">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">info_outline</span>Acerca de</h3>
+        <button class="modal-close" onclick="cerrarAcercaDe()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <div class="about-header">
+          <img src="Metabotlogo.svg" alt="Logo" class="about-logo" onerror="this.style.display='none'">
+          <div>
+            <div class="about-app-nombre">El Gran Planificador Educativo</div>
+            <div class="about-app-desc">Sistema de Planificación para Docentes · Educación Técnico Profesional · República Dominicana</div>
+            <div style="margin-top:6px;font-size:0.72rem;color:#9E9E9E;">Desarrollado por Marcos J. Simé Bremont</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
+            Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v7.0<span class="about-ver-fecha">Feb 2026</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Edición completa de planificaciones duplicadas</div>
+              <ul class="about-ver-items">
+                <li>Biblioteca agrupada por curso con indicador de plan activa</li>
+                <li>Permite múltiples planificaciones por módulo (distintos RA)</li>
+                <li>Editar nivel Bloom del EC con dropdown directo en la card</li>
+                <li>Editar código EC (E.C.1.1.1, E.C.1.1.2, etc.) desde la card</li>
+                <li>Agregar nuevos EC manualmente con código, nivel, enunciado y horas</li>
+                <li>Agregar nuevas actividades desde el paso 4 con selección de EC</li>
+                <li>Editar enunciado, fecha, EC e instrumento de cada actividad</li>
+                <li>Cambiar instrumento (cotejo/rúbrica) directamente en la tabla</li>
+                <li>Editar valor en puntos de cada actividad inline en la tabla</li>
+                <li>Eliminar actividades con confirmación</li>
+                <li>Alerta visual de ECs sin actividades al entrar al paso 4</li>
+                <li>Vista previa con colores correctos en modo oscuro</li>
+                <li>Auto-regeneración de instrumentos al abrir "Ver"</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v6.0<span class="about-ver-fecha">Feb 2026</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Asistencia, Horario, Tareas y Dashboard inteligente</div>
+              <ul class="about-ver-items">
+                <li>Módulo completo de asistencia (P/T/A/E) con historial, reporte y umbral configurable</li>
+                <li>Módulo de horario semanal editable con colores por materia</li>
+                <li>Módulo de tareas agrupadas por curso con estados y alertas</li>
+                <li>Dashboard rediseñado: clases de hoy y mañana, tareas próximas, resumen de cursos</li>
+                <li>Modal de detalle por clase: actividad, asistencia rápida, forma de evaluación y notas</li>
+                <li>Notas rápidas de clase con guardado automático</li>
+                <li>Configuración general y pantalla Acerca de</li>
+                <li>Modo oscuro completo</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v5.0<span class="about-ver-fecha">Ene 2026</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Libro de Calificaciones y Edición de Planificaciones</div>
+              <ul class="about-ver-items">
+                <li>Libro de calificaciones por Resultado de Aprendizaje (RA)</li>
+                <li>Múltiples cursos y planificaciones por curso</li>
+                <li>Edición completa de planificaciones cargadas desde biblioteca</li>
+                <li>Edición inline de EC, secuencia didáctica y actividades</li>
+                <li>Regeneración automática de instrumentos al editar</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v4.0<span class="about-ver-fecha">Dic 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Biblioteca, Exportación Word y Planificaciones Diarias</div>
+              <ul class="about-ver-items">
+                <li>Biblioteca de planificaciones guardadas</li>
+                <li>Exportación a Word con formato institucional</li>
+                <li>Módulo de planificaciones diarias por sesión</li>
+                <li>Wizard de importación desde documentos Word</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v3.0<span class="about-ver-fecha">Nov 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Instrumentos de Evaluación con IA</div>
+              <ul class="about-ver-items">
+                <li>Generación automática de rúbricas y listas de cotejo con Groq IA</li>
+                <li>Instrumentos personalizados por nivel de Bloom y EC</li>
+                <li>Vista y exportación de instrumentos por actividad</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v2.0<span class="about-ver-fecha">Oct 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación por Elementos de Capacidad</div>
+              <ul class="about-ver-items">
+                <li>Wizard de 3 pasos: Datos Generales → EC → Actividades</li>
+                <li>Secuencia didáctica (Anticipación, Construcción, Consolidación)</li>
+                <li>Generación de actividades por EC con IA</li>
+                <li>Stepper visual con progreso</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v1.0<span class="about-ver-fecha">Sep 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Lanzamiento inicial</div>
+              <ul class="about-ver-items">
+                <li>Planificación educativa básica por RA</li>
+                <li>Datos generales del módulo formativo</li>
+                <li>Primeras funciones de guardado en navegador</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer" style="position:sticky;bottom:0;">
+        <button class="btn-siguiente" onclick="cerrarAcercaDe()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL NOTIFICACIONES ===== -->
+  <div id="notif-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarNotificaciones()">
+    <div class="modal-box" style="max-width:520px;max-height:88vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="flex-shrink:0;">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">notifications</span>
+          Avisos y recordatorios
+          <span id="notif-count-header" style="font-size:0.75rem;font-weight:400;color:#9E9E9E;margin-left:6px;"></span>
+        </h3>
+        <button class="modal-close" onclick="cerrarNotificaciones()"><span class="material-icons">close</span></button>
+      </div>
+      <div id="notif-modal-body" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+      <div class="modal-footer" style="flex-shrink:0;">
+        <button class="btn-secundario" onclick="cerrarNotificaciones()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL EXPORTAR ASISTENCIA ===== -->
+  <div id="exp-asist-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarExpAsistencia()">
+    <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">table_chart</span>Exportar asistencia</h3>
+        <button class="modal-close" onclick="cerrarExpAsistencia()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">class</span>Curso</div>
+          <select id="exp-asist-curso" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+          </select>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">date_range</span>Período</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <label style="font-size:0.82rem;color:#546E7A;flex-shrink:0;">Desde</label>
+            <input type="date" id="exp-asist-desde" style="flex:1;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+            <label style="font-size:0.82rem;color:#546E7A;flex-shrink:0;">Hasta</label>
+            <input type="date" id="exp-asist-hasta" style="flex:1;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button onclick="setExpAsistPeriodo('mes')" class="exp-asist-periodo-btn">Este mes</button>
+            <button onclick="setExpAsistPeriodo('trimestre')" class="exp-asist-periodo-btn">Últimos 3 meses</button>
+            <button onclick="setExpAsistPeriodo('todo')" class="exp-asist-periodo-btn">Todo el registro</button>
+          </div>
+        </div>
+
+        <div class="config-section" style="border:none;margin-bottom:0;">
+          <div class="config-section-title"><span class="material-icons">download</span>Formato</div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="generarReporteAsistenciaWord()" class="exp-asist-format-btn" style="flex:1;background:#E3F2FD;border-color:#90CAF9;color:#1565C0;">
+              <span class="material-icons">description</span>
+              Exportar a Word (.docx)
+            </button>
+            <button onclick="generarReporteAsistenciaPDF()" class="exp-asist-format-btn" style="flex:1;background:#FFEBEE;border-color:#FFCDD2;color:#C62828;">
+              <span class="material-icons">picture_as_pdf</span>
+              Exportar a PDF
+            </button>
+          </div>
+        </div>
+
+        <div id="exp-asist-preview" style="margin-top:12px;font-size:0.78rem;color:#78909C;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DUPLICAR PLANIFICACIÓN ===== -->
+  <div id="dup-plan-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarDuplicarPlan()">
+    <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">content_copy</span>Duplicar planificación</h3>
+        <button class="modal-close" onclick="cerrarDuplicarPlan()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <!-- Info de la original -->
+        <div id="dup-plan-origen" style="background:#F5F7FA;border-radius:8px;padding:10px 14px;border:1px solid #E0E0E0;margin-bottom:16px;font-size:0.82rem;color:#546E7A;"></div>
+
+        <!-- Nombre de la copia -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">label</span>Nombre de la copia</div>
+          <input type="text" id="dup-plan-nombre"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;font-family:inherit;box-sizing:border-box;">
+        </div>
+
+        <!-- Curso destino -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">class</span>Asignar a un curso <span style="font-weight:400;color:#9E9E9E;">(opcional)</span></div>
+          <select id="dup-plan-curso"
+            style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;font-family:inherit;">
+            <option value="">Sin asignar (puedo hacerlo después)</option>
+          </select>
+        </div>
+
+        <!-- Ajuste de fechas de actividades -->
+        <div class="config-section" style="border:none;margin-bottom:0;">
+          <div class="config-section-title"><span class="material-icons">date_range</span>Recorrer fechas de actividades</div>
+          <p style="font-size:0.78rem;color:#78909C;margin:0 0 10px;">Si las actividades tienen fechas asignadas, puedes correrlas todas hacia adelante o atrás desde una fecha nueva de inicio.</p>
+          <div class="toggle-row" style="padding:0 0 10px;">
+            <div class="toggle-label">Ajustar fechas automáticamente<small>Desactiva para copiar las fechas exactas</small></div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="dup-plan-ajustar-fechas" checked onchange="toggleDupFechas(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div id="dup-plan-fechas-wrap">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <label style="font-size:0.82rem;color:#546E7A;flex-shrink:0;">Nueva fecha de inicio:</label>
+              <input type="date" id="dup-plan-fecha-inicio"
+                style="flex:1;padding:7px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+            </div>
+            <div id="dup-plan-fechas-preview" style="margin-top:8px;font-size:0.75rem;color:#78909C;"></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" onclick="cerrarDuplicarPlan()">Cancelar</button>
+        <button class="btn-siguiente" onclick="confirmarDuplicarPlan()">
+          <span class="material-icons" style="font-size:16px;">content_copy</span> Duplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL BUSCADOR DE ESTUDIANTES ===== -->
+  <div id="buscar-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarBuscadorEstudiante()">
+    <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="flex-shrink:0;">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">search</span>Buscar estudiante</h3>
+        <button class="modal-close" onclick="cerrarBuscadorEstudiante()"><span class="material-icons">close</span></button>
+      </div>
+      <!-- Barra de búsqueda sticky -->
+      <div style="padding:14px 20px 10px;border-bottom:1px solid #E0E0E0;flex-shrink:0;" id="buscar-search-bar">
+        <div style="position:relative;">
+          <span class="material-icons" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#90A4AE;font-size:20px;">search</span>
+          <input type="text" id="buscar-input"
+            placeholder="Escribe el nombre del estudiante…"
+            oninput="buscarEstudiante(this.value)"
+            autocomplete="off"
+            style="width:100%;padding:10px 12px 10px 40px;border:1.5px solid #90CAF9;border-radius:10px;font-size:0.95rem;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div id="buscar-resultados-count" style="font-size:0.75rem;color:#9E9E9E;margin-top:6px;padding-left:4px;"></div>
+      </div>
+      <!-- Resultados + Perfil -->
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
+        <!-- Lista de resultados -->
+        <div id="buscar-lista" style="width:260px;flex-shrink:0;overflow-y:auto;border-right:1px solid #E0E0E0;padding:8px 0;"></div>
+        <!-- Perfil del estudiante seleccionado -->
+        <div id="buscar-perfil" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== MODAL DE INSTRUMENTO ===== -->
   <div id="modal-overlay" class="modal-overlay hidden" onclick="cerrarModal(event)">
     <div class="modal-box" id="modal-box">
@@ -757,6 +1321,7 @@
       <div class="modal-body" id="modal-body">
         <!-- Contenido del instrumento -->
       </div>
+      <!-- Footer unificado: cambia contenido según contexto -->
       <div class="modal-footer" id="modal-footer">
         <button class="btn-export btn-print btn-sm" onclick="imprimirModal()">
           <span class="material-icons">print</span>

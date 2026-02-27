@@ -762,22 +762,132 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
+
+// ════════════════════════════════════════════════════════════════════
+// GENERAR SESIÓN DIARIA CON GROQ — PROMPT PERSONALIZADO
+// ════════════════════════════════════════════════════════════════════
+async function _generarSesionConGroq(actId, act, ec) {
+  const dg         = planificacion.datosGenerales || {};
+  const ra         = planificacion.ra || {};
+  const horasAct   = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades||[]).filter(a=>a.ecCodigo===ec.codigo).length)) : 1.5;
+  const minTotal   = Math.round((horasAct || 1.5) * 60);
+  const minInicio  = Math.round(minTotal * 0.20);
+  const minDesarr  = Math.round(minTotal * 0.60);
+  const minCierre  = minTotal - minInicio - minDesarr;
+
+  // Botón: estado cargando
+  const btn = document.querySelector(`[onclick*="generarSesion('${actId}')"]`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
+  mostrarToast('🧠 Generando sesión personalizada con IA...', 'info');
+
+  const prompt = `dame una planificacion diaria de esta actividad:
+
+MÓDULO: ${dg.moduloFormativo || ''}
+FAMILIA PROFESIONAL: ${dg.familiaProfesional || ''}
+BACHILLERATO: ${dg.nombreBachillerato || ''}
+RESULTADO DE APRENDIZAJE: ${ra.descripcion || ''}
+ELEMENTO DE CAPACIDAD (${act.ecCodigo}): ${ec?.enunciado || ''}
+NIVEL BLOOM: ${ec?.nivel || ''}
+DURACIÓN TOTAL: ${minTotal} minutos
+RECURSOS DISPONIBLES: ${ra.recursosDid || 'pizarrón, computadoras, guías de trabajo'}
+
+ACTIVIDAD: ${act.enunciado}
+
+yo necesito:
+1er momento. Inicio (${minInicio} minutos): apertura motivadora con pregunta detonante específica al tema, activación de conocimientos previos con preguntas concretas del campo profesional, presentación del objetivo y criterios de evaluación.
+
+2do momento. Desarrollo (${minDesarr} minutos): desarrollo paso a paso con bloques temáticos numerados y tiempos parciales, actividades prácticas específicas al tema, preguntas de verificación de comprensión concretas, dinámicas (individual/parejas/equipos según aplique).
+
+3er momento. Cierre (${minCierre} minutos): síntesis de lo aprendido con pregunta reflexiva específica, evaluación formativa rápida con 2-3 preguntas concretas al tema, tarea/próximo paso si aplica.
+
+Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
+{
+  "apertura": "texto detallado del INICIO con pasos numerados, preguntas concretas al tema y tiempos parciales",
+  "encuadre": "propósito específico de la sesión: qué van a aprender, por qué es importante para su perfil profesional y cómo se conecta con el RA",
+  "organizacion": "organización pedagógica: individual/grupos, roles, materiales por estudiante, normas de participación específicas para esta actividad",
+  "procedimental": "texto detallado del DESARROLLO con bloques numerados (Bloque 1, 2, 3...) con tiempos parciales, pasos específicos, preguntas de verificación concretas al tema",
+  "conceptual": "reflexión conceptual: ejemplo real del campo profesional ${dg.familiaProfesional || ''}, cómo aplica en el trabajo diario, pregunta metacognitiva específica",
+  "sintesis": "texto detallado del CIERRE con recapitulación de conceptos clave, preguntas de evaluación formativa específicas al tema, tarea concreta si aplica y próximo paso",
+  "estrategias": "lista de 3-4 estrategias didácticas usadas con nombre, descripción de cómo se aplican en ESTA sesión y justificación según nivel Bloom: ${ec?.nivel || 'aplicacion'}"
+}`;
+
+  try {
+    const data = await _llamarGroqConFallback(prompt, 'Generando sesión');
+    if (!data) throw new Error('Sin respuesta de Groq');
+
+    // Mapear respuesta al formato interno
+    const minSesion = minTotal;
+    const tIni = minInicio, tDes = minDesarr, tCie = minCierre;
+    const gen = {
+      inicio: {
+        apertura:     data.apertura     || '',
+        encuadre:     data.encuadre     || '',
+        organizacion: data.organizacion || ''
+      },
+      desarrollo: {
+        procedimental: data.procedimental || '',
+        conceptual:    data.conceptual    || ''
+      },
+      cierre: {
+        sintesis:     data.sintesis || '',
+        conexion:     data.conceptual || '',
+        proximopaso:  'Continuar con la siguiente actividad del EC.'
+      },
+      estrategias: data.estrategias || '',
+      recursos: ra.recursosDid || 'Material del módulo, pizarrón, guías de trabajo.',
+      tiempos: { ini: tIni, des: tDes, cie: tCie }
+    };
+
+    // Guardar en sesionIA y en estadoDiarias
+    act.sesionIA = data;
+    estadoDiarias.sesiones[actId] = gen;
+    persistirDiarias();
+
+    // Actualizar textareas en pantalla
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set(`pd-inicio-apertura-${actId}`,     gen.inicio.apertura);
+    set(`pd-inicio-encuadre-${actId}`,     gen.inicio.encuadre);
+    set(`pd-inicio-organizacion-${actId}`, gen.inicio.organizacion);
+    set(`pd-desarrollo-proc-${actId}`,     gen.desarrollo.procedimental);
+    set(`pd-desarrollo-conc-${actId}`,     gen.desarrollo.conceptual);
+    set(`pd-cierre-sintesis-${actId}`,     gen.cierre.sintesis);
+    set(`pd-estrategias-${actId}`,         gen.estrategias);
+    set(`pd-recursos-${actId}`,            gen.recursos);
+
+    mostrarToast('✅ Sesión generada con IA', 'success');
+  } catch(e) {
+    console.error('_generarSesionConGroq error:', e);
+    mostrarToast('⚠️ Error con IA, usando generación local', 'warning');
+    // Fallback a generación local
+    const ec2 = (planificacion.elementosCapacidad||[]).find(e=>e.codigo===act.ecCodigo);
+    const gen = generarContenidoSesion(act, ec2, horasAct);
+    estadoDiarias.sesiones[actId] = gen;
+    persistirDiarias();
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    const s = gen;
+    set(`pd-inicio-apertura-${actId}`,     s.inicio.apertura);
+    set(`pd-inicio-encuadre-${actId}`,     s.inicio.encuadre);
+    set(`pd-inicio-organizacion-${actId}`, s.inicio.organizacion);
+    set(`pd-desarrollo-proc-${actId}`,     s.desarrollo.procedimental);
+    set(`pd-desarrollo-conc-${actId}`,     s.desarrollo.conceptual);
+    set(`pd-cierre-sintesis-${actId}`,     s.cierre.sintesis);
+    set(`pd-estrategias-${actId}`,         s.estrategias);
+    set(`pd-recursos-${actId}`,            s.recursos);
+    mostrarToast('Sesión generada (modo local)', 'info');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:14px;">auto_awesome</span> Generar'; }
+  }
+}
+
 function generarSesion(actId) {
-
-
-
   const act = (planificacion.actividades || []).find(a => a.id === actId);
-
-
-
   if (!act) return;
-
-
-
   const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
-
-
-
+  // Si tiene clave Groq, regenerar con IA directamente (prompt personalizado del usuario)
+  if (getGroqKey()) {
+    _generarSesionConGroq(actId, act, ec);
+    return;
+  }
   const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
 
 
@@ -2210,14 +2320,15 @@ function abrirConfigIA() {
         </div>
       </div>
       ${groqKeyActual ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar clave</button>' : ''}
+    </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="guardarApiKey()">
+          <span class="material-icons">save</span> Guardar clave
+        </button>
+      </div>
     </div>`;
-
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn-siguiente" onclick="guardarApiKey()">
-      <span class="material-icons">save</span> Guardar clave
-    </button>
-    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
-
+  _usarFooterDinamico('');
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('input-groq-key')?.focus(), 100);
@@ -2259,7 +2370,7 @@ function actualizarBtnConfigIA() {
 function construirPromptBase(dg, ra) {
   const diasClaseObj = dg.diasClase || {};
   const diasArr = Object.entries(diasClaseObj)
-    .filter(([, v]) => v && v.activo)
+    .filter(([_k, v]) => v && v.activo)
     .map(([dia, v]) => `${dia} (${v.horas}h)`);
   const diasStr = diasArr.length > 0 ? diasArr.join(', ') : (dg.horasSemana + ' hrs/semana');
 
@@ -2905,8 +3016,10 @@ document.addEventListener('DOMContentLoaded', () => {
   actualizarBtnConfigIA();
   const mf = document.querySelector('.modal-footer');
   if (mf && !mf.id) mf.id = 'modal-footer';
+  // Aplicar preferencias de apariencia antes de mostrar
+  _aplicarPreferencias();
   // Mostrar dashboard al iniciar
-  setTimeout(() => abrirDashboard(), 50);
+  setTimeout(() => { abrirDashboard(); actualizarBadgeNotificaciones(); }, 50);
 });
 
 // ================================================================
@@ -3518,19 +3631,9 @@ function imp_guardar() {
   };
 
   const biblio = cargarBiblioteca();
-  const idxExistente = (biblio.items || []).findIndex(i =>
-    i.planificacion?.datosGenerales?.moduloFormativo === dg.moduloFormativo &&
-    i.planificacion?.datosGenerales?.nombreDocente === dg.nombreDocente
-  );
-
-  if (idxExistente >= 0) {
-    if (!confirm('Ya existe una planificación de "' + (dg.moduloFormativo||'') + '". ¿Reemplazarla?')) return;
-    biblio.items[idxExistente] = registro;
-    mostrarToast('Planificación actualizada en la biblioteca', 'success');
-  } else {
-    biblio.items.unshift(registro);
-    mostrarToast('Planificación importada y guardada correctamente', 'success');
-  }
+  // Siempre guardar como nueva — mismo módulo puede tener múltiples RA
+  biblio.items.unshift(registro);
+  mostrarToast('Planificación importada y guardada correctamente', 'success');
 
   persistirBiblioteca(biblio);
 
@@ -3611,6 +3714,77 @@ function abrirBackup() {
 function cerrarBackup() {
   document.getElementById('backup-overlay').classList.add('hidden');
 }
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: CONFIGURACIÓN
+// ════════════════════════════════════════════════════════════════════
+function abrirConfiguracion() {
+  const overlay = document.getElementById('config-overlay');
+  if (!overlay) return;
+  // Cargar valores guardados en los toggles
+  const dark     = localStorage.getItem('cfg_dark_mode')  === 'true';
+  const grande   = localStorage.getItem('cfg_fuente_grande') === 'true';
+  const alertas  = localStorage.getItem('cfg_alertas') !== 'false';
+  const manana   = localStorage.getItem('cfg_manana')  !== 'false';
+  const umbral   = localStorage.getItem('asist_umbral') || '80';
+  const cfgDark   = document.getElementById('cfg-dark-mode');
+  const cfgGrande = document.getElementById('cfg-fuente-grande');
+  const cfgAlert  = document.getElementById('cfg-alertas');
+  const cfgMan    = document.getElementById('cfg-manana');
+  const cfgUmbral = document.getElementById('cfg-umbral-asist');
+  if (cfgDark)   cfgDark.checked   = dark;
+  if (cfgGrande) cfgGrande.checked = grande;
+  if (cfgAlert)  cfgAlert.checked  = alertas;
+  if (cfgMan)    cfgMan.checked    = manana;
+  if (cfgUmbral) cfgUmbral.value   = umbral;
+    overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  const _mf = document.getElementById('modal-footer');
+  if (_mf) _mf.style.visibility = 'hidden';
+}
+function cerrarConfiguracion() {
+  document.getElementById('config-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+  const _mf = document.getElementById('modal-footer');
+  if (_mf) _mf.style.visibility = '';
+}
+
+function toggleDarkMode(on) {
+  localStorage.setItem('cfg_dark_mode', on);
+  document.body.classList.toggle('dark-mode', on);
+  mostrarToast(on ? 'Modo oscuro activado 🌙' : 'Modo claro activado ☀️', 'success');
+}
+
+function toggleFuenteGrande(on) {
+  localStorage.setItem('cfg_fuente_grande', on);
+  document.body.classList.toggle('fuente-grande', on);
+  mostrarToast(on ? 'Fuente grande activada' : 'Fuente normal activada', 'success');
+}
+
+function limpiarTodosDatos() {
+  localStorage.clear();
+  mostrarToast('Todos los datos borrados. Recargando…', 'error');
+  setTimeout(() => location.reload(), 1500);
+}
+
+function _aplicarPreferencias() {
+  if (localStorage.getItem('cfg_dark_mode')     === 'true') document.body.classList.add('dark-mode');
+  if (localStorage.getItem('cfg_fuente_grande') === 'true') document.body.classList.add('fuente-grande');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: ACERCA DE
+// ════════════════════════════════════════════════════════════════════
+function abrirAcercaDe() {
+  document.getElementById('acercade-overlay')?.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarAcercaDe() {
+  document.getElementById('acercade-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+
 
 function exportarDatos() {
   const ahora = new Date();
@@ -3622,7 +3796,17 @@ function exportarDatos() {
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
     biblioteca:      localStorage.getItem(BIBLIO_KEY)       || '{"items":[]}',
-    calificaciones:  localStorage.getItem(CAL_STORAGE_KEY)  || '{"cursos":{}}',
+    calificaciones:  localStorage.getItem(CAL_STORAGE_KEY)  || '{"cursos": {}}',
+    horario:         localStorage.getItem(HORARIO_KEY)        || '[]',
+    tareas:          localStorage.getItem(TAREAS_KEY)         || '[]',
+    asistencia:      localStorage.getItem(ASIST_KEY)          || '{}',
+    comentarios:     localStorage.getItem(COMENT_KEY)          || '{}',
+    notasClase:      JSON.stringify(Object.fromEntries(
+      Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_'))
+    )),
+    obsEstudiantes:  JSON.stringify(Object.fromEntries(
+      Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_'))
+    )),
     diarias:         localStorage.getItem(DIARIAS_KEY)       || '{"sesiones":{}}',
     borrador:        localStorage.getItem(STORAGE_KEY)       || 'null',
     groqKey:         localStorage.getItem(GROQ_KEY_STORAGE)  || ''
@@ -3702,6 +3886,22 @@ function importarDatos() {
 
     if (d.biblioteca)     localStorage.setItem(BIBLIO_KEY, d.biblioteca);
     if (d.calificaciones) localStorage.setItem(CAL_STORAGE_KEY, d.calificaciones);
+    if (d.horario)        localStorage.setItem(HORARIO_KEY, d.horario);
+    if (d.tareas)         localStorage.setItem(TAREAS_KEY, d.tareas);
+    if (d.asistencia)     localStorage.setItem(ASIST_KEY, d.asistencia);
+    if (d.comentarios)    localStorage.setItem(COMENT_KEY, d.comentarios);
+    if (d.notasClase) {
+      try {
+        const nc = JSON.parse(d.notasClase);
+        Object.entries(nc).forEach(([k,v]) => localStorage.setItem(k, v));
+      } catch {}
+    }
+    if (d.obsEstudiantes) {
+      try {
+        const obs = JSON.parse(d.obsEstudiantes);
+        Object.entries(obs).forEach(([k,v]) => localStorage.setItem(k, v));
+      } catch {}
+    }
     if (d.diarias)        localStorage.setItem(DIARIAS_KEY, d.diarias);
     if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
     if (d.groqKey)        localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
@@ -3728,195 +3928,594 @@ function abrirDashboard() {
 
 function renderizarDashboard() {
   _renderizarSaludo();
-  _renderizarHoy();
+  _renderizarAlertas();
+  _renderizarClasesHoy();
+  _renderizarClasesManana();
+  _renderizarTareasProximas();
+  _renderizarResumenCursos();
 }
 
+// ── Saludo + estadísticas ────────────────────────────────────────
 function _renderizarSaludo() {
-  var ahora = new Date();
-  var DIAS  = ['Domingo','Lunes','Martes','Mi\u00e9rcoles','Jueves','Viernes','S\u00e1bado'];
-  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  var hora  = ahora.getHours();
-  var saludo = hora < 12 ? '\u00a1Buenos d\u00edas' : hora < 18 ? '\u00a1Buenas tardes' : '\u00a1Buenas noches';
-  var dg = planificacion.datosGenerales || {};
-  var nombre = dg.nombreDocente ? ', ' + dg.nombreDocente.split(' ').slice(-1)[0] + '!' : '!';
-  var fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' de ' + ahora.getFullYear();
+  const ahora = new Date();
+  const DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const hora  = ahora.getHours();
+  const saludo = hora < 12 ? '¡Buenos días' : hora < 18 ? '¡Buenas tardes' : '¡Buenas noches';
+  const dg = planificacion.datosGenerales || {};
+  const nombre = dg.nombreDocente
+    ? ', ' + dg.nombreDocente.trim().split(' ')[0] + '!'
+    : '!';
+  const fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' · ' + ahora.getFullYear();
 
-  var biblio = cargarBiblioteca();
-  var items  = biblio.items || [];
-  var nPlans = items.length;
-  var calData = {};
-  try { calData = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}'); } catch(e) {}
-  var nCursos = Object.keys(calData.cursos || {}).length;
+  const biblio   = cargarBiblioteca();
+  const nPlans   = (biblio.items || []).length;
+  const nCursos  = Object.keys(calState.cursos || {}).length;
+  const tareas   = cargarTareas();
+  const nPend    = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
+  const nVenc    = tareas.filter(t => _estadoTarea(t) === 'vencida').length;
 
-  var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var nHoy = 0;
-  items.forEach(function(reg) {
-    var acts = (reg.planificacion && reg.planificacion.actividades) || [];
-    acts.forEach(function(act) {
-      if (!act.fecha) return;
-      var fa = new Date(act.fecha); fa.setHours(0,0,0,0);
-      if (fa.getTime() === hoy.getTime()) nHoy++;
+  // Clases hoy desde horario
+  const horario  = cargarHorario();
+  const diaHoy   = new Date().getDay(); // 0=Dom…6=Sab
+  const diaIdx   = diaHoy === 0 ? -1 : diaHoy - 1; // 0=Lu…4=Vi
+  const clasesHoy = diaIdx >= 0 ? horario.filter(e => e.dia === diaIdx && e.materia).length : 0;
+
+  const el = document.getElementById('dash-greeting');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="dash-greeting-left">
+      <div class="dash-greeting-date">${fechaStr}</div>
+      <div class="dash-greeting-title">${saludo}${nombre}</div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana</div>
+    </div>
+    <div class="dash-stats-row">
+      <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
+        <div class="dash-stat-icon"><span class="material-icons">folder_special</span></div>
+        <div class="dash-stat-num">${nPlans}</div>
+        <div class="dash-stat-lbl">Planific.</div>
+      </div>
+      <div class="dash-stat-pill" title="Cursos activos" onclick="abrirCalificaciones()" style="cursor:pointer;">
+        <div class="dash-stat-icon"><span class="material-icons">school</span></div>
+        <div class="dash-stat-num">${nCursos}</div>
+        <div class="dash-stat-lbl">Cursos</div>
+      </div>
+      <div class="dash-stat-pill" title="Clases programadas hoy" onclick="abrirHorario()" style="cursor:pointer;">
+        <div class="dash-stat-icon"><span class="material-icons">today</span></div>
+        <div class="dash-stat-num">${clasesHoy}</div>
+        <div class="dash-stat-lbl">Clases hoy</div>
+      </div>
+      <div class="dash-stat-pill ${nVenc > 0 ? 'stat-alerta' : nPend > 0 ? 'stat-warning' : ''}" title="Tareas pendientes" onclick="abrirTareas()" style="cursor:pointer;">
+        <div class="dash-stat-icon"><span class="material-icons">assignment</span></div>
+        <div class="dash-stat-num">${nPend + nVenc}</div>
+        <div class="dash-stat-lbl">Tareas</div>
+      </div>
+    </div>`;
+}
+
+// ── Alertas inteligentes ─────────────────────────────────────────
+function _renderizarAlertas() {
+  const el = document.getElementById('dash-alertas');
+  if (!el) return;
+  const alertas = [];
+
+  // Tareas vencidas
+  const tareas = cargarTareas();
+  const vencidas = tareas.filter(t => _estadoTarea(t) === 'vencida');
+  if (vencidas.length > 0) {
+    const grupos = {};
+    vencidas.forEach(t => { grupos[t.seccion||'?'] = (grupos[t.seccion||'?']||0)+1; });
+    const txt = Object.entries(grupos).map(([s,n]) => `${s} (${n})`).join(', ');
+    alertas.push({ tipo: 'error', icono: 'warning', msg: `${vencidas.length} tarea(s) vencida(s): ${txt}`, accion: 'abrirTareas()', label: 'Ver tareas' });
+  }
+
+  // Tareas que vencen hoy o mañana
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const manana = new Date(hoy); manana.setDate(manana.getDate()+1);
+  const urgentes = tareas.filter(t => {
+    if (!t.fechaLimite || _estadoTarea(t) !== 'pendiente') return false;
+    const fl = new Date(t.fechaLimite); fl.setHours(0,0,0,0);
+    return fl <= manana;
+  });
+  urgentes.forEach(t => {
+    const fl = new Date(t.fechaLimite); fl.setHours(0,0,0,0);
+    const esHoy = fl.getTime() === hoy.getTime();
+    alertas.push({
+      tipo: 'warning',
+      icono: 'schedule',
+      msg: `Tarea de ${t.seccion||'?'} vence ${esHoy ? 'HOY' : 'mañana'}${t.horaLimite ? ' a las ' + t.horaLimite : ''}: "${(t.descripcion||'').substring(0,50)}"`,
+      accion: 'abrirTareas()', label: 'Ver'
     });
   });
 
-  var el = document.getElementById('dash-greeting');
-  if (!el) return;
+  // Cursos sin planificación asignada
+  const _bibIds = new Set((cargarBiblioteca().items||[]).map(i => i.id));
+  const cursosSinPlan = Object.values(calState.cursos).filter(c =>
+    !(c.planIds||[]).some(pid => _bibIds.has(pid))
+  );
+  if (cursosSinPlan.length > 0) {
+    alertas.push({ tipo: 'info', icono: 'link_off', msg: `${cursosSinPlan.length} curso(s) sin planificación asignada: ${cursosSinPlan.map(c=>c.nombre).join(', ')}`, accion: 'abrirPlanificaciones()', label: 'Asignar' });
+  }
 
-  el.innerHTML =
-    '<div class="dash-greeting-left">' +
-      '<div class="dash-greeting-date">' + fechaStr + '</div>' +
-      '<div class="dash-greeting-title">' + saludo + nombre + '</div>' +
-      '<div class="dash-greeting-sub">Sistema de Planificaci\u00f3n Educativa \u00b7 Rep\u00fablica Dominicana</div>' +
-    '</div>' +
-    '<div class="dash-stats-row">' +
-      '<div class="dash-stat-pill"><div class="dash-stat-num">' + nPlans + '</div><div class="dash-stat-lbl">Planific.</div></div>' +
-      '<div class="dash-stat-pill"><div class="dash-stat-num">' + nCursos + '</div><div class="dash-stat-lbl">Cursos</div></div>' +
-      '<div class="dash-stat-pill"><div class="dash-stat-num">' + nHoy + '</div><div class="dash-stat-lbl">Sesi' + '\u00f3' + 'n hoy</div></div>' +
-    '</div>';
+  // Actividades sin instrumento
+  const biblio = cargarBiblioteca();
+  let sinInst = 0;
+  (biblio.items||[]).forEach(r => {
+    (r.planificacion?.actividades||[]).forEach(a => { if (!a.instrumento) sinInst++; });
+  });
+  if (sinInst > 0) {
+    alertas.push({ tipo: 'info', icono: 'assignment_late', msg: `${sinInst} actividad(es) sin instrumento de evaluación asignado`, accion: 'abrirPlanificaciones()', label: 'Revisar' });
+  }
+
+  if (alertas.length === 0) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `<div class="dash-alertas-wrap">` +
+    alertas.map(a => `
+      <div class="dash-alerta dash-alerta-${a.tipo}">
+        <span class="material-icons">${a.icono}</span>
+        <span class="dash-alerta-msg">${escapeHTML(a.msg)}</span>
+        <button onclick="${a.accion}" class="dash-alerta-btn">${a.label} →</button>
+      </div>`
+    ).join('') +
+  `</div>`;
 }
 
-function _renderizarHoy() {
-  var cont = document.getElementById('dash-hoy');
+// ── Clases de hoy desde horario ──────────────────────────────────
+// ── Clases de hoy y mañana (función genérica) ────────────────────
+function _renderizarClasesHoy() {
+  _renderizarClasesDia('dash-hoy', 'dash-hoy-fecha', 0);
+}
+function _renderizarClasesManana() {
+  _renderizarClasesDia('dash-manana', 'dash-manana-fecha', 1);
+}
+
+function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
+  const cont = document.getElementById(contId);
   if (!cont) return;
+  const DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const target = new Date();
+  target.setDate(target.getDate() + offsetDias);
+  target.setHours(0,0,0,0);
+  const diaJS  = target.getDay();            // 0=Dom…6=Sab
+  const diaIdx = diaJS === 0 || diaJS === 6 ? -1 : diaJS - 1; // 0=Lu…4=Vi
 
-  var DIAS  = ['Domingo','Lunes','Martes','Mi\u00e9rcoles','Jueves','Viernes','S\u00e1bado'];
-  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  var COLORES = ['#1565C0','#00695C','#4527A0','#E65100','#AD1457','#BF360C','#1B5E20','#6A1B9A'];
+  const fechaEl = document.getElementById(fechaLabelId);
+  if (fechaEl) fechaEl.textContent = DIAS[diaJS] + ' ' + target.getDate() + ' de ' + MESES[target.getMonth()];
 
-  var biblio = cargarBiblioteca();
-  var items  = biblio.items || [];
-
-  var ahora = new Date();
-  var hoy   = new Date(); hoy.setHours(0,0,0,0);
-  var fechaHoyStr = DIAS[ahora.getDay()] + ' ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()];
-
-  if (items.length === 0) {
-    cont.innerHTML =
-      '<div class="dash-hoy-wrapper">' +
-        '<div class="dash-hoy-header"><span class="material-icons">today</span>' +
-          '<span class="dash-hoy-header-title">Lo que tienes hoy</span>' +
-          '<span class="dash-hoy-header-date">' + fechaHoyStr + '</span>' +
-        '</div>' +
-        '<div class="dash-sin-planificacion">' +
-          '<span class="material-icons">event_busy</span>' +
-          '<h3>No hay planificaciones guardadas</h3>' +
-          '<p>Crea o importa una planificaci\u00f3n para ver el resumen de tu d\u00eda aqu\u00ed.</p>' +
-        '</div>' +
-      '</div>';
+  if (diaIdx < 0) {
+    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">weekend</span><p>${offsetDias===0?'¡Es fin de semana!':'Mañana es fin de semana 😄'}</p></div>`;
     return;
   }
 
-  var sesionesHoy = [];
-  var sesionesFuturas = [];
+  const horario = cargarHorario().filter(e => e.dia === diaIdx && e.materia);
+  const coloresMateria = _horarioColores();
 
-  items.forEach(function(reg, regIdx) {
-    var plan  = reg.planificacion;
-    if (!plan) return;
-    var dg    = plan.datosGenerales || {};
-    var ra    = plan.ra || {};
-    var acts  = plan.actividades || [];
-    var color = COLORES[regIdx % COLORES.length];
-    acts.forEach(function(act) {
+  if (horario.length === 0) {
+    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">event_available</span><p>Sin clases programadas.<br><button onclick="abrirHorario()" style="margin-top:8px;background:none;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:4px 14px;font-size:0.8rem;cursor:pointer;">Configurar horario</button></p></div>`;
+    return;
+  }
+
+  horario.sort((a, b) => a.periodo - b.periodo);
+
+  // Buscar actividades de planificaciones para esa fecha
+  const planPorSeccion = {};
+  const biblio = cargarBiblioteca();
+  (biblio.items||[]).forEach(reg => {
+    (reg.planificacion?.actividades || []).forEach(act => {
       if (!act.fecha) return;
-      var fa = new Date(act.fecha); fa.setHours(0,0,0,0);
-      var item = { act: act, dg: dg, ra: ra, color: color, fecha: fa };
-      if (fa.getTime() === hoy.getTime()) sesionesHoy.push(item);
-      else if (fa > hoy) sesionesFuturas.push(item);
+      // Normalizar act.fecha a ISO string YYYY-MM-DD
+      let _fechaISO;
+      if (act.fecha instanceof Date) {
+        _fechaISO = act.fecha.toISOString().split('T')[0];
+      } else {
+        const s = String(act.fecha);
+        _fechaISO = s.includes('T') ? s.split('T')[0] : s.substring(0,10);
+      }
+      // Parsear como fecha LOCAL (no UTC) agregando T12:00:00
+      const fa = new Date(_fechaISO + 'T12:00:00'); fa.setHours(0,0,0,0);
+      if (fa.getTime() === target.getTime()) {
+        const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds||[]).includes(reg.id));
+        cursosConPlan.forEach(c => {
+          if (!planPorSeccion[c.nombre]) planPorSeccion[c.nombre] = [];
+          planPorSeccion[c.nombre].push({ act, dg: reg.planificacion?.datosGenerales||{}, planId: reg.id });
+        });
+      }
     });
   });
 
-  sesionesFuturas.sort(function(a,b) { return a.fecha - b.fecha; });
-  var proxima = sesionesFuturas[0] || null;
+  const horaActual = offsetDias === 0 ? new Date().getHours() * 60 + new Date().getMinutes() : -1;
+  const horasPer = {1:480,2:530,3:600,4:650,5:750,6:800,7:860,8:910};
 
-  function cortar(txt, n) {
-    if (!txt) return '\u2014';
-    txt = String(txt).replace(/\n/g, ' ');
-    return txt.length > n ? txt.substring(0, n) + '\u2026' : txt;
-  }
+  cont.innerHTML = horario.map(e => {
+    const color  = coloresMateria[e.materia.trim()] || '#78909C';
+    const per    = PERIODOS.find(p => p.id === e.periodo);
+    const sesiones = planPorSeccion[e.seccion] || [];
+    const inicioMin = horasPer[e.periodo] || 0;
+    const finMin    = inicioMin + 50;
+    const estado = horaActual < 0 ? 'futura'
+      : horaActual > finMin ? 'pasada'
+      : horaActual >= inicioMin ? 'ahora' : 'futura';
 
-  var bodyHtml = '';
+    // Datos para el modal — serializados en data-attrs
+    const dataClase = JSON.stringify({
+      materia: e.materia, seccion: e.seccion||'', aula: e.aula||'', notas: e.notas||'',
+      periodo: e.periodo, hora: per?.hora||'', color,
+      sesiones: sesiones.map(s=>({ enunciado: s.act.enunciado||'', actId: s.act.id||'', planId: s.planId||'', instrumento: s.act.instrumento||null, dg: s.dg })),
+      fecha: target.toISOString().split('T')[0]
+    }).replace(/'/g,'&apos;');
 
-  if (sesionesHoy.length === 0) {
-    bodyHtml =
-      '<div class="dash-hoy-empty">' +
-        '<span class="material-icons">event_available</span>' +
-        'No tienes sesiones programadas para hoy.' +
-      '</div>';
-  } else {
-    sesionesHoy.forEach(function(item) {
-      var act  = item.act;
-      var dg   = item.dg;
-      var s    = estadoDiarias.sesiones[act.id] || {};
-      var ti   = (s.tiempos && s.tiempos.ini) || 20;
-      var td   = (s.tiempos && s.tiempos.des) || 55;
-      var tc   = (s.tiempos && s.tiempos.cie) || 15;
-      var inst = act.instrumento;
-
-      bodyHtml +=
-        '<div class="dash-sesion-card" style="--plan-color:' + item.color + '">' +
-          '<div class="dash-sesion-header">' +
-            '<div class="dash-sesion-icon"><span class="material-icons">school</span></div>' +
-            '<div class="dash-sesion-meta">' +
-              '<div class="dash-sesion-modulo">' + escapeHTML(dg.moduloFormativo || '') + '</div>' +
-              '<div class="dash-sesion-act">' + escapeHTML(act.enunciado || '') + '</div>' +
-              '<div class="dash-sesion-chips">' +
-                '<span class="dash-chip">' + escapeHTML(act.ecCodigo || '') + '</span>' +
-                '<span class="dash-chip green">' + (ti+td+tc) + ' min</span>' +
-                (inst ? '<span class="dash-chip orange">' + escapeHTML(inst.tipoLabel || '') + '</span>' : '') +
-              '</div>' +
-            '</div>' +
-            '<button onclick="abrirDiarias()" style="background:var(--plan-color);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">' +
-              '<span class="material-icons" style="font-size:14px;vertical-align:middle;">open_in_new</span> Ver' +
-            '</button>' +
-          '</div>' +
-          '<div class="dash-sesion-body">' +
-            '<div class="dash-momento inicio">' +
-              '<div class="dash-momento-lbl">1\u00ba Inicio \u00b7 ' + ti + ' min</div>' +
-              '<div class="dash-momento-txt">' + escapeHTML(cortar((s.inicio && s.inicio.apertura) || '', 120)) + '</div>' +
-            '</div>' +
-            '<div class="dash-momento des">' +
-              '<div class="dash-momento-lbl">2\u00ba Desarrollo \u00b7 ' + td + ' min</div>' +
-              '<div class="dash-momento-txt">' + escapeHTML(cortar((s.desarrollo && s.desarrollo.procedimental) || '', 120)) + '</div>' +
-            '</div>' +
-            '<div class="dash-momento cierre">' +
-              '<div class="dash-momento-lbl">3\u00ba Cierre \u00b7 ' + tc + ' min</div>' +
-              '<div class="dash-momento-txt">' + escapeHTML(cortar((s.cierre && s.cierre.sintesis) || '', 120)) + '</div>' +
-            '</div>' +
-          '</div>' +
-          (inst ?
-            '<div class="dash-sesion-inst">' +
-              '<span class="material-icons">' + (inst.tipo === 'rubrica' ? 'table_chart' : 'checklist') + '</span>' +
-              '<span><strong>' + escapeHTML(inst.tipoLabel || '') + ':</strong> ' + escapeHTML(inst.titulo || '') + '</span>' +
-            '</div>'
-          : '') +
-        '</div>';
-    });
-  }
-
-  var proximaHtml = '';
-  if (proxima) {
-    var fdStr = DIAS[proxima.fecha.getDay()] + ' ' + proxima.fecha.getDate() + ' de ' + MESES[proxima.fecha.getMonth()];
-    proximaHtml =
-      '<div class="dash-proxima-wrapper">' +
-        '<div class="dash-proxima">' +
-          '<span class="material-icons">navigate_next</span>' +
-          '<div>' +
-            '<strong>Pr\u00f3xima sesi\u00f3n:</strong> ' + escapeHTML(proxima.act.enunciado || '') + ' &mdash; <em>' + fdStr + '</em>' +
-            '<div style="font-size:0.75rem;color:#546E7A;margin-top:2px;">' + escapeHTML(proxima.dg.moduloFormativo || '') + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-  }
-
-  cont.innerHTML =
-    '<div class="dash-hoy-wrapper">' +
-      '<div class="dash-hoy-header">' +
-        '<span class="material-icons">today</span>' +
-        '<span class="dash-hoy-header-title">Lo que tienes hoy</span>' +
-        '<span class="dash-hoy-header-date">' + fechaHoyStr + '</span>' +
-      '</div>' +
-      bodyHtml +
-      proximaHtml +
-    '</div>';
+    return `<div class="dash-clase-card" style="--clase-color:${color};opacity:${estado==='pasada'?'0.65':'1'};"
+      onclick="abrirModalClase('${encodeURIComponent(dataClase)}')" title="Ver detalles de la clase">
+      <div class="dash-clase-barra" style="background:${color};"></div>
+      <div class="dash-clase-body">
+        <div class="dash-clase-header">
+          <span class="dash-clase-periodo">P${e.periodo} · ${per?.hora||''}</span>
+          ${estado==='ahora'  ? '<span class="dash-clase-ahora"><span class="material-icons" style="font-size:12px;">fiber_manual_record</span>Ahora</span>' : ''}
+          ${estado==='pasada' ? '<span class="dash-clase-pasada">Finalizada</span>' : ''}
+        </div>
+        <div class="dash-clase-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
+        ${e.seccion ? `<div class="dash-clase-seccion"><span class="material-icons" style="font-size:13px;">group</span>${escapeHTML(e.seccion)}</div>` : ''}
+        ${e.aula    ? `<div class="dash-clase-aula"><span class="material-icons" style="font-size:13px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
+        ${sesiones.length ? sesiones.map(s=>`
+          <div class="dash-clase-plan">
+            <span class="material-icons" style="font-size:12px;">description</span>
+            ${escapeHTML((s.act.enunciado||'').substring(0,52))}${(s.act.enunciado||'').length>52?'…':''}
+          </div>`).join('') : ''}
+      </div>
+      <span class="material-icons dash-clase-chevron" style="color:${color};">chevron_right</span>
+    </div>`;
+  }).join('');
 }
 
+// ── Modal de detalle de clase ────────────────────────────────────
+function abrirModalClase(encodedData) {
+  let d;
+  try { d = JSON.parse(decodeURIComponent(encodedData)); } catch { return; }
+  const color = d.color || '#1565C0';
+
+  const FORM_EVAL = [
+    { id:'exposicion',    icono:'mic',                label:'Exposición oral' },
+    { id:'cuaderno',      icono:'menu_book',           label:'Cuaderno / Portafolio' },
+    { id:'participacion', icono:'record_voice_over',   label:'Participación' },
+    { id:'practica',      icono:'computer',            label:'Práctica / Lab' },
+    { id:'trabajo',       icono:'assignment',          label:'Trabajo escrito' },
+    { id:'examen',        icono:'quiz',                label:'Examen / Prueba' },
+    { id:'proyecto',      icono:'engineering',         label:'Proyecto' },
+    { id:'actitud',       icono:'emoji_people',        label:'Actitud / Comportamiento' },
+  ];
+
+  const evalKey  = `eval_${d.fecha}_${d.seccion}_${d.periodo}`;
+  const notaKey  = `notaclase_${d.fecha}_${d.seccion}_${d.periodo}`;
+  let savedEval  = {};
+  let savedNota  = '';
+  try { savedEval = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch {}
+  try { savedNota = localStorage.getItem(notaKey) || ''; } catch {}
+
+  const asistData = cargarAsistencia();
+  const cursoConSeccion = Object.values(calState.cursos).find(c => c.nombre === d.seccion);
+  const asistDia = cursoConSeccion ? ((asistData[cursoConSeccion.id]||{})[d.fecha]||{}) : {};
+  const nEst   = cursoConSeccion ? (cursoConSeccion.estudiantes||[]).length : 0;
+  const nPres  = Object.values(asistDia).filter(v=>v==='P').length;
+  const nAus   = Object.values(asistDia).filter(v=>v==='A').length;
+  const nTard  = Object.values(asistDia).filter(v=>v==='T').length;
+  const asistRegistrada = nPres + nAus + nTard > 0;
+
+  const sesionInfo = d.sesiones && d.sesiones[0];
+  const sesion     = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : {};
+  const tiempos    = sesion.tiempos || { ini: 20, des: 55, cie: 15 };
+
+  document.getElementById('modal-title').innerHTML =
+    `<span style="color:${color};">●</span> ${escapeHTML(d.materia)}
+     <span style="font-size:0.78rem;font-weight:400;color:#78909C;margin-left:8px;">P${d.periodo} · ${d.hora}</span>`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Info básica -->
+      <div class="modal-clase-header" style="border-left:4px solid ${color};padding-left:12px;">
+        ${d.seccion ? `<div class="mcl-row"><span class="material-icons">group</span><strong>${escapeHTML(d.seccion)}</strong></div>` : ''}
+        ${d.aula    ? `<div class="mcl-row"><span class="material-icons">room</span>${escapeHTML(d.aula)}</div>` : ''}
+        ${d.notas   ? `<div class="mcl-row"><span class="material-icons">info</span>${escapeHTML(d.notas)}</div>` : ''}
+      </div>
+
+      <!-- Actividad / Planificación -->
+      ${sesionInfo ? `
+      <div class="mcl-seccion">
+        <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada</div>
+        <div class="mcl-actividad-txt">${escapeHTML(sesionInfo.enunciado)}</div>
+        ${sesionInfo.instrumento ? `
+        <div class="mcl-instrumento" style="background:${color}18;border-color:${color}44;">
+          <span class="material-icons" style="color:${color};">${sesionInfo.instrumento.tipo==='rubrica'?'table_chart':'checklist'}</span>
+          <span><strong>${escapeHTML(sesionInfo.instrumento.tipoLabel||'')}</strong>: ${escapeHTML(sesionInfo.instrumento.titulo||'')}</span>
+        </div>` : ''}
+        <div class="mcl-tiempos">
+          <span class="mcl-tiempo ini">Inicio&nbsp;${tiempos.ini}min</span>
+          <span class="mcl-tiempo des">Desarrollo&nbsp;${tiempos.des}min</span>
+          <span class="mcl-tiempo cie">Cierre&nbsp;${tiempos.cie}min</span>
+        </div>
+        <!-- Planificación diaria expandida -->
+        ${(() => {
+          const s = sesion;
+          const ini = s.inicio || {};
+          const dev = s.desarrollo || {};
+          const cie = s.cierre || {};
+          if (!ini.apertura && !dev.procedimental && !cie.sintesis) return '';
+          return `
+          <div class="mcl-sesion-diaria">
+            <!-- Toggle header -->
+            <button class="mcl-sesion-toggle" onclick="this.parentElement.classList.toggle('mcl-sesion-open')" style="color:${color};border-color:${color}44;">
+              <span class="material-icons" style="font-size:15px;">calendar_today</span>
+              <strong>Planificación diaria</strong>
+              <span class="material-icons mcl-sesion-chevron" style="margin-left:auto;font-size:18px;transition:transform 0.2s;">expand_more</span>
+            </button>
+            <!-- Contenido colapsable -->
+            <div class="mcl-sesion-contenido">
+              ${ini.apertura ? `
+              <div class="mcl-momento" style="border-left:3px solid #4CAF50;">
+                <div class="mcl-momento-hdr" style="color:#2E7D32;"><span class="material-icons">play_circle_filled</span>1er Momento — Inicio (${tiempos.ini} min)</div>
+                <div class="mcl-momento-txt">${ini.apertura.replace(/\n/g,'<br>')}</div>
+              </div>` : ''}
+              ${dev.procedimental ? `
+              <div class="mcl-momento" style="border-left:3px solid #2196F3;">
+                <div class="mcl-momento-hdr" style="color:#1565C0;"><span class="material-icons">play_circle_filled</span>2do Momento — Desarrollo (${tiempos.des} min)</div>
+                <div class="mcl-momento-txt">${dev.procedimental.replace(/\n/g,'<br>')}</div>
+              </div>` : ''}
+              ${cie.sintesis ? `
+              <div class="mcl-momento" style="border-left:3px solid #FF9800;">
+                <div class="mcl-momento-hdr" style="color:#E65100;"><span class="material-icons">play_circle_filled</span>3er Momento — Cierre (${tiempos.cie} min)</div>
+                <div class="mcl-momento-txt">${cie.sintesis.replace(/\n/g,'<br>')}</div>
+              </div>` : ''}
+              ${s.estrategias ? `
+              <div class="mcl-momento" style="border-left:3px solid #9C27B0;margin-top:4px;">
+                <div class="mcl-momento-hdr" style="color:#6A1B9A;"><span class="material-icons">lightbulb</span>Estrategias</div>
+                <div class="mcl-momento-txt">${s.estrategias.replace(/\n/g,'<br>')}</div>
+              </div>` : ''}
+            </div>
+          </div>`;
+        })()} 
+        <button onclick="cerrarModalBtn();abrirDiarias();" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+          <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
+        </button>
+      </div>` : `
+      <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
+        <span class="material-icons" style="font-size:1.8rem;display:block;margin-bottom:4px;opacity:0.4;">event_note</span>
+        Sin actividad planificada para esta fecha.<br>
+        <button onclick="cerrarModalBtn();abrirDiarias();" style="margin-top:8px;background:none;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:4px 14px;font-size:0.78rem;cursor:pointer;">
+          Crear planificación diaria
+        </button>
+      </div>`}
+
+      <!-- Asistencia rápida -->
+      <div class="mcl-seccion">
+        <div class="mcl-titulo"><span class="material-icons">how_to_reg</span>Asistencia
+          ${asistRegistrada ? `<span style="font-size:0.7rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;">Registrada</span>` : ''}
+        </div>
+        ${nEst > 0 ? `
+        <div class="mcl-asist-resumen">
+          <span class="mcl-asist-chip pres"><span class="material-icons">check_circle</span>${nPres} P</span>
+          <span class="mcl-asist-chip tard"><span class="material-icons">schedule</span>${nTard} T</span>
+          <span class="mcl-asist-chip ause"><span class="material-icons">cancel</span>${nAus} A</span>
+          <span style="color:#78909C;font-size:0.75rem;">/ ${nEst} estudiantes</span>
+        </div>` : '<p style="font-size:0.8rem;color:#9E9E9E;">Curso sin estudiantes registrados.</p>'}
+        <button onclick="cerrarModalBtn();abrirCalificaciones();setTimeout(()=>toggleVistaAsistencia(),300);"
+          class="mcl-btn-link" style="color:#00695C;border-color:#B2DFDB;">
+          <span class="material-icons" style="font-size:14px;">how_to_reg</span>
+          ${asistRegistrada ? 'Ver / editar asistencia' : 'Pasar lista ahora'}
+        </button>
+      </div>
+
+      <!-- Formas de evaluación -->
+      <div class="mcl-seccion">
+        <div class="mcl-titulo"><span class="material-icons">star_rate</span>Forma de evaluación</div>
+        <p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">¿Cómo vas a evaluar esta clase?</p>
+        <div class="mcl-eval-grid">
+          ${FORM_EVAL.map(f => `
+          <button class="mcl-eval-btn ${savedEval[f.id]?'activo':''}"
+            style="${savedEval[f.id]?`background:${color}18;border-color:${color};color:${color};`:''}"
+            onclick="toggleFormaEval('${evalKey}','${f.id}','${color}',this)">
+            <span class="material-icons">${f.icono}</span>
+            <span>${f.label}</span>
+          </button>`).join('')}
+        </div>
+      </div>
+
+      <!-- Notas rápidas de clase -->
+      <div class="mcl-seccion">
+        <div class="mcl-titulo">
+          <span class="material-icons">edit_note</span>Notas de la clase
+          <span id="mcl-nota-guardada" style="margin-left:auto;font-size:0.68rem;color:#9E9E9E;font-weight:400;display:none;">
+            <span class="material-icons" style="font-size:11px;vertical-align:middle;">check</span> Guardado
+          </span>
+        </div>
+        <p style="font-size:0.75rem;color:#78909C;margin:0 0 8px;">
+          Lo que pasó realmente en clase, observaciones, pendientes para la próxima vez…
+        </p>
+        <textarea id="mcl-nota-textarea"
+          placeholder="Ej: Los estudiantes llegaron tarde. Cubrimos el tema hasta la sección 2. Pendiente: traer material de práctica el jueves..."
+          style="width:100%;min-height:110px;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:9px;
+                 font-size:0.85rem;font-family:inherit;resize:vertical;line-height:1.5;
+                 transition:border-color 0.15s;box-sizing:border-box;"
+          onfocus="this.style.borderColor='${color}'"
+          onblur="this.style.borderColor='#E0E0E0'"
+          oninput="guardarNotaClaseDebounce('${notaKey}',this.value)"
+        >${escapeHTML(savedNota)}</textarea>
+        ${savedNota ? `
+        <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+          <button onclick="borrarNotaClase('${notaKey}')"
+            style="background:none;border:none;color:#BDBDBD;font-size:0.72rem;cursor:pointer;display:flex;align-items:center;gap:3px;">
+            <span class="material-icons" style="font-size:13px;">delete_outline</span> Borrar nota
+          </button>
+        </div>` : ''}
+      </div>
+
+      <!-- Ir a calificaciones -->
+      <button onclick="cerrarModalBtn();abrirCalificaciones();"
+        class="mcl-btn-link" style="color:#E65100;border-color:#FFCCBC;width:100%;justify-content:center;">
+        <span class="material-icons" style="font-size:15px;">grade</span> Ir al libro de calificaciones
+      </button>
+
+    </div>`;
+
+  // botones en body
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+// ── Debounce para guardado de notas de clase ─────────────────────
+let _notaDebounceTimer = null;
+function guardarNotaClaseDebounce(key, valor) {
+  clearTimeout(_notaDebounceTimer);
+  const ind = document.getElementById('mcl-nota-guardada');
+  if (ind) ind.style.display = 'none';
+  _notaDebounceTimer = setTimeout(() => {
+    localStorage.setItem(key, valor);
+    if (ind) { ind.style.display = 'inline'; }
+  }, 600);
+}
+
+function borrarNotaClase(key) {
+  if (!confirm('¿Borrar la nota de esta clase?')) return;
+  localStorage.removeItem(key);
+  const ta = document.getElementById('mcl-nota-textarea');
+  if (ta) ta.value = '';
+  mostrarToast('Nota borrada', 'success');
+}
+
+function toggleFormaEval(evalKey, formaId, color, btn) {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch {}
+  saved[formaId] = !saved[formaId];
+  localStorage.setItem(evalKey, JSON.stringify(saved));
+  const activo = saved[formaId];
+  btn.classList.toggle('activo', activo);
+  btn.style.background  = activo ? color + '18' : '';
+  btn.style.borderColor = activo ? color : '';
+  btn.style.color       = activo ? color : '';
+}
+
+
+// ── Tareas próximas (7 días) ─────────────────────────────────────
+function _renderizarTareasProximas() {
+  const cont = document.getElementById('dash-tareas-proximas');
+  if (!cont) return;
+
+  const tareas = cargarTareas();
+  const hoy    = new Date(); hoy.setHours(0,0,0,0);
+  const en7    = new Date(hoy); en7.setDate(en7.getDate() + 7);
+
+  const proximas = tareas
+    .map(t => ({ ...t, _estado: _estadoTarea(t) }))
+    .filter(t => {
+      if (t._estado === 'entregada') return false;
+      if (!t.fechaLimite) return t._estado === 'vencida';
+      const fl = new Date(t.fechaLimite); fl.setHours(0,0,0,0);
+      return fl <= en7;
+    })
+    .sort((a, b) => {
+      if (!a.fechaLimite) return 1;
+      if (!b.fechaLimite) return -1;
+      return new Date(a.fechaLimite) - new Date(b.fechaLimite);
+    })
+    .slice(0, 8); // max 8 en el dash
+
+  if (proximas.length === 0) {
+    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">task_alt</span><p>Sin tareas pendientes esta semana 🎉</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = proximas.map(t => {
+    const dias = _diasRestantes(t.fechaLimite);
+    const estadoCls = { pendiente:'dash-tarea-pend', vencida:'dash-tarea-venc' }[t._estado] || 'dash-tarea-pend';
+    let diasStr = '';
+    if (t._estado === 'vencida') diasStr = `<span class="dt-dias venc">Vencida</span>`;
+    else if (dias === 0) diasStr = `<span class="dt-dias hoy">Hoy</span>`;
+    else if (dias === 1) diasStr = `<span class="dt-dias pronto">Mañana</span>`;
+    else diasStr = `<span class="dt-dias">En ${dias}d</span>`;
+
+    const horaStr = t.horaLimite ? ` · ${t.horaLimite}` : '';
+    const fechaStr = t.fechaLimite
+      ? new Date(t.fechaLimite+'T12:00:00').toLocaleDateString('es-DO',{weekday:'short',day:'2-digit',month:'short'}) + horaStr
+      : '';
+
+    return `<div class="dash-tarea-row ${estadoCls}">
+      <div class="dt-left">
+        <span class="dt-seccion">${escapeHTML(t.seccion||'—')}</span>
+        <span class="dt-desc">${escapeHTML((t.descripcion||'').substring(0,50))}${(t.descripcion||'').length>50?'…':''}</span>
+        ${fechaStr ? `<span class="dt-fecha"><span class="material-icons" style="font-size:11px;">event</span>${fechaStr}</span>` : ''}
+      </div>
+      <div class="dt-right">
+        ${diasStr}
+        <button onclick="marcarTareaEntregada('${t.id}')" class="dt-check" title="Marcar entregada">
+          <span class="material-icons">check</span>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Resumen de cursos ────────────────────────────────────────────
+function _renderizarResumenCursos() {
+  const cont = document.getElementById('dash-cursos');
+  if (!cont) return;
+
+  const cursos = Object.values(calState.cursos || {});
+  if (cursos.length === 0) {
+    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">school</span><p>No hay cursos creados aún.<br><button onclick="abrirCalificaciones()" style="margin-top:8px;background:none;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:4px 14px;font-size:0.8rem;cursor:pointer;">Crear curso</button></p></div>`;
+    return;
+  }
+
+  cont.innerHTML = `<div class="dash-cursos-grid">` + cursos.map(curso => {
+    const nEst  = (curso.estudiantes||[]).length;
+    const nPlans = (curso.planIds||[]).length;
+    const _biblioItems = cargarBiblioteca().items || [];
+    // Si planActivaId no existe en biblioteca, buscar la primera de planIds que sí exista
+    let planActiva = null;
+    if (curso.planActivaId) planActiva = _biblioItems.find(i => i.id === curso.planActivaId);
+    if (!planActiva && (curso.planIds||[]).length) {
+      for (const pid of curso.planIds) {
+        const found = _biblioItems.find(i => i.id === pid);
+        if (found) { planActiva = found; curso.planActivaId = pid; break; }
+      }
+    }
+    const modulo = planActiva?.planificacion?.datosGenerales?.moduloFormativo || '—';
+
+    // Calcular promedio general del curso
+    let promedioLabel = '—';
+    if (nEst > 0 && planActiva) {
+      const raKey = Object.keys(curso.ras||{})[0];
+      if (raKey) {
+        const pf = _promedioFinal(curso);
+        if (pf !== null) promedioLabel = pf.toFixed(1);
+      }
+    }
+
+    // Tareas pendientes para este curso
+    const tareasCurso = cargarTareas().filter(t =>
+      t.seccion === curso.nombre && _estadoTarea(t) !== 'entregada'
+    );
+    const nTareasVenc = tareasCurso.filter(t => _estadoTarea(t) === 'vencida').length;
+    const nTareasPend = tareasCurso.filter(t => _estadoTarea(t) === 'pendiente').length;
+
+    const statusColor = nTareasVenc > 0 ? '#C62828' : nTareasPend > 0 ? '#E65100' : '#2E7D32';
+
+    return `<div class="dash-curso-card" onclick="abrirCalificaciones()">
+      <div class="dash-curso-header">
+        <div class="dash-curso-nombre">${escapeHTML(curso.nombre)}</div>
+        <div class="dash-curso-dot" style="background:${statusColor};"></div>
+      </div>
+      <div class="dash-curso-modulo" title="${escapeHTML(modulo)}">${escapeHTML(modulo.substring(0,40))}${modulo.length>40?'…':''}</div>
+      <div class="dash-curso-stats">
+        <span title="Estudiantes"><span class="material-icons" style="font-size:13px;">group</span>${nEst}</span>
+        <span title="Planificaciones"><span class="material-icons" style="font-size:13px;">description</span>${nPlans}</span>
+          ${promedioLabel !== '—' ? '<span title="Promedio general"><span class="material-icons" style="font-size:13px;">grade</span>'+promedioLabel+'</span>' : ''}
+        ${nTareasPend+nTareasVenc > 0 ? '<span style="color:'+statusColor+';" title="Tareas"><span class="material-icons" style="font-size:13px;">assignment</span>'+(nTareasPend+nTareasVenc)+'</span>' : ''}
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+  const _mf2 = document.getElementById('modal-footer');
+  if (_mf2) _mf2.style.visibility = '';

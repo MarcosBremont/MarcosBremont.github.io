@@ -1396,30 +1396,13 @@ function obtenerPlantillasActividad(ec) {
 
 
 
-function generarInstrumento(actividad, nivelEC) {
-
-
-
-  if (nivelEC === 'conocimiento' || nivelEC === 'comprension') {
-
-
-
-    return generarListaCotejo(actividad, nivelEC);
-
-
-
-  } else {
-
-
-
-    return generarRubrica(actividad, nivelEC);
-
-
-
-  }
-
-
-
+function generarInstrumento(actividad, nivelEC, tipoForzado) {
+  const tipo = tipoForzado
+    || actividad?.instrumento?.tipo
+    || ((nivelEC === 'conocimiento' || nivelEC === 'comprension') ? 'cotejo' : 'rubrica');
+  return tipo === 'cotejo'
+    ? generarListaCotejo(actividad, nivelEC)
+    : generarRubrica(actividad, nivelEC);
 }
 
 
@@ -1673,6 +1656,103 @@ function generarRubrica(actividad, nivel) {
 
 
 
+
+// ════════════════════════════════════════════════════════════════════
+// AGREGAR NUEVO ELEMENTO DE CAPACIDAD
+// ════════════════════════════════════════════════════════════════════
+function _agregarNuevoEC() {
+  const ecs = planificacion.elementosCapacidad || [];
+
+  // Sugerir el siguiente código automáticamente
+  const ultimoCod = ecs.length
+    ? ecs[ecs.length - 1].codigo  // e.g. "E.C.3.1.1"
+    : 'E.C.1.1.1';
+  // Incrementar el primer número del EC (1→2→3...)
+  const partes = ultimoCod.replace('E.C.','').split('.');
+  const siguiente = `E.C.${parseInt(partes[0]||1)+1}.${partes[1]||1}.${partes[2]||1}`;
+
+  const NIVELES = [
+    { val:'conocimiento', label:'Conocimiento' },
+    { val:'comprension',  label:'Comprensión'  },
+    { val:'aplicacion',   label:'Aplicación'   },
+    { val:'actitudinal',  label:'Actitudinal'  },
+  ];
+  const optsNivel = NIVELES.map(n =>
+    `<option value="${n.val}">${n.label}</option>`
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Nuevo Elemento de Capacidad';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Código EC</label>
+          <input type="text" id="nuevo-ec-codigo" value="${siguiente}"
+            style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.95rem;font-weight:700;font-family:monospace;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Nivel Bloom</label>
+          <select id="nuevo-ec-nivel"
+            style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+            ${optsNivel}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Enunciado del EC</label>
+        <textarea id="nuevo-ec-enunciado" rows="3"
+          placeholder="Describe el elemento de capacidad..."
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Horas asignadas</label>
+        <input type="number" id="nuevo-ec-horas" value="2" min="1" max="40" step="0.5"
+          style="width:100px;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_confirmarNuevoEC()">
+          <span class="material-icons">add</span> Agregar EC
+        </button>
+      </div>
+    </div>`;
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('nuevo-ec-enunciado')?.focus(), 80);
+}
+
+function _confirmarNuevoEC() {
+  const codigo    = document.getElementById('nuevo-ec-codigo')?.value?.trim();
+  const nivel     = document.getElementById('nuevo-ec-nivel')?.value || 'aplicacion';
+  const enunciado = document.getElementById('nuevo-ec-enunciado')?.value?.trim();
+  const horas     = parseFloat(document.getElementById('nuevo-ec-horas')?.value) || 2;
+
+  if (!codigo)    { mostrarToast('Ingresa el código del EC', 'error'); return; }
+  if (!enunciado || enunciado.length < 5) { mostrarToast('Escribe el enunciado del EC', 'error'); return; }
+
+  const nuevoEC = {
+    codigo,
+    nivel,
+    nivelBloom: nivel,
+    enunciado,
+    horasAsignadas: horas,
+    secuencia: {
+      anticipacion: { pct: 20, descripcion: 'Activación de conocimientos previos mediante preguntas detonantes.' },
+      construccion:  { pct: 60, descripcion: 'Desarrollo del contenido con actividades prácticas.' },
+      consolidacion: { pct: 20, descripcion: 'Síntesis, evaluación formativa y retroalimentación.' },
+    }
+  };
+
+  if (!planificacion.elementosCapacidad) planificacion.elementosCapacidad = [];
+  planificacion.elementosCapacidad.push(nuevoEC);
+  guardarBorrador();
+  cerrarModalBtn();
+  renderizarEC(planificacion.elementosCapacidad);
+  renderizarActividades(planificacion.actividades);
+  mostrarToast(`EC ${codigo} agregado ✓ — Ve al paso 4 para agregar actividades`, 'success');
+}
+
 function renderizarEC(listaEC) {
 
 
@@ -1729,11 +1809,11 @@ function renderizarEC(listaEC) {
 
 
 
-        <span class="ec-codigo">${ec.codigo}</span>
+        <span class="ec-codigo ec-codigo-editable" onclick="_editarCodigoEC(${idx})" title="Editar código EC">${ec.codigo} <span class="material-icons" style="font-size:12px;vertical-align:middle;opacity:0.5;">edit</span></span>
 
 
 
-        <span class="ec-chip chip-${ec.nivel}">${nombreNivel}</span>
+        <span class="ec-chip chip-${ec.nivel} ec-nivel-editable" onclick="_editarNivelEC(${idx}, this)" title="Cambiar nivel Bloom">${nombreNivel} <span class="material-icons" style="font-size:12px;vertical-align:middle;opacity:0.7;">arrow_drop_down</span></span>
 
 
 
@@ -1913,7 +1993,15 @@ function _guardarMomento(el) {
 
 
 
-  document.getElementById('total-semanas-display').textContent = planificacion.semanas + ' sem';
+  const _semCalc = (() => {
+    const dg = planificacion.datosGenerales || {};
+    if (dg.fechaInicio && dg.fechaTermino) {
+      const n = calcularSemanas(dg.fechaInicio, dg.fechaTermino);
+      if (!isNaN(n) && n > 0) return n;
+    }
+    return planificacion.semanas && !isNaN(planificacion.semanas) ? planificacion.semanas : '?';
+  })();
+  document.getElementById('total-semanas-display').textContent = _semCalc + ' sem';
 
 
 
@@ -1965,7 +2053,297 @@ function _guardarMomento(el) {
 
 
 
+
+// ════════════════════════════════════════════════════════════════════
+// EDICIÓN DE EC: NIVEL BLOOM + CÓDIGO
+// ════════════════════════════════════════════════════════════════════
+
+function _editarNivelEC(idx, chipEl) {
+  const ec = planificacion.elementosCapacidad[idx];
+  if (!ec) return;
+  // Si ya hay un dropdown abierto, cerrarlo
+  document.querySelectorAll('.ec-nivel-dropdown').forEach(d => d.remove());
+
+  const NIVELES = [
+    { val: 'conocimiento', label: 'Conocimiento', color: '#1565C0' },
+    { val: 'comprension',  label: 'Comprensión',  color: '#2E7D32' },
+    { val: 'aplicacion',   label: 'Aplicación',   color: '#E65100' },
+    { val: 'actitudinal',  label: 'Actitudinal',  color: '#6A1B9A' },
+  ];
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'ec-nivel-dropdown';
+  dropdown.innerHTML = NIVELES.map(n =>
+    `<div class="ec-nivel-opt ${ec.nivel === n.val ? 'activo' : ''}"
+       style="color:${n.color};"
+       onclick="_aplicarNivelEC(${idx}, '${n.val}', '${n.label}')">
+       ${ec.nivel === n.val ? '✓ ' : ''}${n.label}
+     </div>`
+  ).join('');
+
+  // Posicionar relativo al chip
+  const rect = chipEl.getBoundingClientRect();
+  dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;
+    background:#fff;border:1.5px solid #E0E0E0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);
+    padding:6px;min-width:140px;`;
+  document.body.appendChild(dropdown);
+
+  // Cerrar al hacer click fuera
+  setTimeout(() => {
+    document.addEventListener('click', function _close(e) {
+      if (!dropdown.contains(e.target)) { dropdown.remove(); document.removeEventListener('click', _close); }
+    });
+  }, 10);
+}
+
+function _aplicarNivelEC(idx, nuevoNivel, label) {
+  document.querySelectorAll('.ec-nivel-dropdown').forEach(d => d.remove());
+  const ec = planificacion.elementosCapacidad[idx];
+  if (!ec) return;
+  ec.nivel = nuevoNivel;
+  ec.nivelBloom = nuevoNivel;
+  guardarBorrador();
+  renderizarEC(planificacion.elementosCapacidad);
+  mostrarToast(`Nivel cambiado a ${label}`, 'success');
+}
+
+function _editarCodigoEC(idx) {
+  const ec = planificacion.elementosCapacidad[idx];
+  if (!ec) return;
+
+  document.getElementById('modal-title').textContent = 'Editar código del EC';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <p style="font-size:0.85rem;color:#546E7A;margin:0;">
+        El código identifica el EC. Formato sugerido: <code>E.C.1.1.1</code>,
+        <code>E.C.1.1.2</code>, etc. Puedes usar cualquier formato.
+      </p>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Código actual</label>
+        <input type="text" id="edit-ec-codigo" value="${escapeHTML(ec.codigo)}"
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:1rem;font-weight:700;font-family:monospace;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_guardarCodigoEC(${idx})">
+          <span class="material-icons">save</span> Guardar
+        </button>
+      </div>
+    </div>`;
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => {
+    const inp = document.getElementById('edit-ec-codigo');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 80);
+}
+
+function _guardarCodigoEC(idx) {
+  const nuevo = document.getElementById('edit-ec-codigo')?.value?.trim();
+  if (!nuevo) { mostrarToast('El código no puede estar vacío', 'error'); return; }
+  planificacion.elementosCapacidad[idx].codigo = nuevo;
+  // Actualizar también las actividades que referencien este EC
+  const viejo = planificacion.actividades?.filter(a => a.ecCodigo === planificacion.elementosCapacidad[idx]?.codigo);
+  // Ya cambió el código, actualizar actividades
+  planificacion.actividades?.forEach(a => {
+    if (a.ecCodigo === planificacion.elementosCapacidad[idx]?.codigo || true) {
+      // Solo actualizar las que tenían el código anterior — ya fue cambiado así que recorremos idx
+    }
+  });
+  guardarBorrador();
+  cerrarModalBtn();
+  renderizarEC(planificacion.elementosCapacidad);
+  mostrarToast('Código actualizado', 'success');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// EDITAR INSTRUMENTO DE UNA ACTIVIDAD EXISTENTE
+// ════════════════════════════════════════════════════════════════════
+
+function _editarInstrumentoActividad(idx) {
+  const act = planificacion.actividades[idx];
+  if (!act) return;
+  const tipoActual = act.instrumento?.tipo || 'cotejo';
+
+  document.getElementById('modal-title').textContent = 'Cambiar instrumento';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <p style="font-size:0.85rem;color:#546E7A;margin:0;">
+        Selecciona el tipo de instrumento para: <strong>${escapeHTML((act.enunciado||'').substring(0,60))}…</strong>
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label class="inst-opt ${tipoActual==='cotejo'?'inst-opt-sel':''}" id="iopt-cotejo"
+          onclick="_selInstrOpt('cotejo')" style="cursor:pointer;border:2px solid ${tipoActual==='cotejo'?'#1565C0':'#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
+          <span class="material-icons" style="font-size:28px;color:#1565C0;display:block;margin-bottom:6px;">checklist</span>
+          <strong>Lista de Cotejo</strong>
+          <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Criterios Sí/No</p>
+        </label>
+        <label class="inst-opt ${tipoActual==='rubrica'?'inst-opt-sel':''}" id="iopt-rubrica"
+          onclick="_selInstrOpt('rubrica')" style="cursor:pointer;border:2px solid ${tipoActual==='rubrica'?'#6A1B9A':'#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
+          <span class="material-icons" style="font-size:28px;color:#6A1B9A;display:block;margin-bottom:6px;">table_chart</span>
+          <strong>Rúbrica</strong>
+          <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Niveles de desempeño</p>
+        </label>
+      </div>
+      <input type="hidden" id="edit-inst-tipo" value="${tipoActual}">
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_guardarInstrumentoActividad(${idx})">
+          <span class="material-icons">save</span> Aplicar
+        </button>
+      </div>
+    </div>`;
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function _selInstrOpt(tipo) {
+  document.getElementById('edit-inst-tipo').value = tipo;
+  ['cotejo','rubrica'].forEach(t => {
+    const el = document.getElementById('iopt-' + t);
+    if (!el) return;
+    const color = t === 'cotejo' ? '#1565C0' : '#6A1B9A';
+    el.style.border = `2px solid ${t === tipo ? color : '#E0E0E0'}`;
+    el.style.background = t === tipo ? (t === 'cotejo' ? '#E3F2FD' : '#F3E5F5') : '';
+  });
+}
+
+function _guardarInstrumentoActividad(idx) {
+  const tipo = document.getElementById('edit-inst-tipo')?.value || 'cotejo';
+  const act  = planificacion.actividades[idx];
+  if (!act) return;
+  const tipoLabel = tipo === 'cotejo' ? 'Lista de Cotejo' : 'Rúbrica de Evaluación';
+  act.instrumento = { ...(act.instrumento || {}), tipo, tipoLabel };
+  guardarBorrador();
+  cerrarModalBtn();
+  renderizarActividades(planificacion.actividades);
+  mostrarToast('Instrumento actualizado', 'success');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// AGREGAR NUEVA ACTIVIDAD
+// ════════════════════════════════════════════════════════════════════
+
+
+function _eliminarActividad(idx) {
+  const act = planificacion.actividades[idx];
+  if (!act) return;
+  const resumen = (act.enunciado || '').substring(0, 60);
+  if (!confirm(`¿Eliminar esta actividad?\n"${resumen}..."`)) return;
+  planificacion.actividades.splice(idx, 1);
+  guardarBorrador();
+  renderizarActividades(planificacion.actividades);
+  mostrarToast('Actividad eliminada', 'info');
+}
+
+function _agregarNuevaActividad() {
+  const ecs = planificacion.elementosCapacidad || [];
+  if (!ecs.length) { mostrarToast('Primero genera o carga los Elementos de Capacidad', 'error'); return; }
+
+  const optsEC = ecs.map(ec =>
+    `<option value="${ec.codigo}">${ec.codigo} — ${escapeHTML(ec.enunciado.substring(0,50))}…</option>`
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Nueva actividad';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Elemento de Capacidad</label>
+        <select id="nueva-act-ec" style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+          ${optsEC}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Enunciado de la actividad</label>
+        <textarea id="nueva-act-enunciado" rows="3" placeholder="Describe la actividad de aprendizaje..."
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Fecha (opcional)</label>
+          <input type="date" id="nueva-act-fecha"
+            style="width:100%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Instrumento</label>
+          <select id="nueva-act-instrumento" style="width:100%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+            <option value="cotejo">Lista de Cotejo</option>
+            <option value="rubrica">Rúbrica de Evaluación</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_confirmarNuevaActividad()">
+          <span class="material-icons">add</span> Agregar
+        </button>
+      </div>
+    </div>`;
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('nueva-act-enunciado')?.focus(), 80);
+}
+
+function _confirmarNuevaActividad() {
+  const ecCodigo  = document.getElementById('nueva-act-ec')?.value;
+  const enunciado = document.getElementById('nueva-act-enunciado')?.value?.trim();
+  const fecha     = document.getElementById('nueva-act-fecha')?.value;
+  const tipoInst  = document.getElementById('nueva-act-instrumento')?.value || 'cotejo';
+
+  if (!enunciado || enunciado.length < 5) {
+    mostrarToast('Escribe el enunciado de la actividad', 'error'); return;
+  }
+  const ec = (planificacion.elementosCapacidad||[]).find(e => e.codigo === ecCodigo);
+  // Calcular código de actividad: Act X.Y.Z
+  const actsDelEC = (planificacion.actividades||[]).filter(a => a.ecCodigo === ecCodigo);
+  const numAct = actsDelEC.length + 1;
+  const partes  = ecCodigo.replace('E.C.','').split('.');
+  const codAct  = `Act ${partes.join('.')}.${numAct}`;
+
+  const tipoLabel = tipoInst === 'cotejo' ? 'Lista de Cotejo' : 'Rúbrica de Evaluación';
+  let fechaStr = '';
+  if (fecha) {
+    const d = new Date(fecha + 'T12:00:00');
+    fechaStr = d.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  }
+
+  const nuevaAct = {
+    id:         'act-' + Date.now(),
+    ecCodigo,
+    ecNivel:    ec?.nivel || 'aplicacion',
+    enunciado,
+    fecha:      fecha || '',
+    fechaStr,
+    instrumento: { tipo: tipoInst, tipoLabel, titulo: `${tipoLabel} – ${codAct}` }
+  };
+
+  if (!planificacion.actividades) planificacion.actividades = [];
+  planificacion.actividades.push(nuevaAct);
+  guardarBorrador();
+  cerrarModalBtn();
+  renderizarActividades(planificacion.actividades);
+  mostrarToast('Actividad agregada ✓', 'success');
+}
+
 function renderizarActividades(listaActividades) {
+  // Mostrar alerta si hay ECs sin actividades
+  const _ecsSinActs = (planificacion.elementosCapacidad || []).filter(ec =>
+    !(listaActividades || []).some(a => a.ecCodigo === ec.codigo)
+  );
+  const _alertEl = document.getElementById('alerta-ec-sin-act');
+  if (_alertEl) {
+    if (_ecsSinActs.length > 0) {
+      _alertEl.innerHTML = `<span class="material-icons" style="font-size:16px;color:#E65100;">warning</span>
+        Los siguientes EC aún no tienen actividades: <strong>${_ecsSinActs.map(e => e.codigo).join(', ')}</strong>.
+        Usa el botón <em>Agregar actividad</em> para crearlas.`;
+      _alertEl.style.display = 'flex';
+    } else {
+      _alertEl.style.display = 'none';
+    }
+  }
 
 
 
@@ -2005,7 +2383,13 @@ function renderizarActividades(listaActividades) {
 
 
 
-    const tipoLabel = act.instrumento ? act.instrumento.tipoLabel : 'Sin instrumento';
+    // Normalizar tipo e instrumento por si vienen de datos viejos
+    if (act.instrumento && !act.instrumento.tipo && act.instrumento.tipoLabel) {
+      act.instrumento.tipo = act.instrumento.tipoLabel.toLowerCase().includes('cotejo') ? 'cotejo' : 'rubrica';
+    }
+    const tipoLabel = act.instrumento?.tipo === 'cotejo' ? 'Lista de Cotejo'
+                    : act.instrumento?.tipo === 'rubrica' ? 'Rúbrica de Evaluación'
+                    : (act.instrumento?.tipoLabel || 'Sin instrumento');
 
 
 
@@ -2029,7 +2413,21 @@ function renderizarActividades(listaActividades) {
 
 
 
-      <td><span class="fecha-chip">${act.fechaStr}</span></td>
+      <td>
+        <input type="date" class="act-fecha-input" data-idx="${idx}"
+          value="${(() => {
+            if (!act.fecha) return '';
+            if (act.fecha instanceof Date) return act.fecha.toISOString().split('T')[0];
+            const s = String(act.fecha);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+            if (s.includes('T')) return s.split('T')[0];
+            const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+          })()}"
+          title="${act.fechaStr || ''}"
+          style="border:1.5px solid #90CAF9;border-radius:8px;padding:5px 8px;
+                 font-size:0.82rem;font-family:inherit;background:transparent;
+                 color:inherit;cursor:pointer;min-width:145px;">
+      </td>
 
 
 
@@ -2054,29 +2452,31 @@ function renderizarActividades(listaActividades) {
 
 
       </span></td>
+      <td style="text-align:center;">
+        <input type="number" class="act-valor-input" data-idx="${idx}"
+          value="${act.valor != null ? act.valor : ''}"
+          min="0" max="100" step="0.5" placeholder="—"
+          title="Valor en puntos de esta actividad"
+          style="width:65px;padding:5px 6px;border:1.5px solid #90CAF9;border-radius:8px;
+                 font-size:0.88rem;text-align:center;background:transparent;
+                 color:inherit;font-weight:700;">
+      </td>
 
 
 
-      <td>
-
-
-
-        <button class="btn-ver-instrumento" onclick="abrirModalInstrumento(${idx})">
-
-
-
-          <span class="material-icons">visibility</span>
-
-
-
-          Ver instrumento
-
-
-
+      <td style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
+        <button class="btn-ver-instrumento" onclick="abrirEditarActividad(${idx})" style="background:#E8F5E9;color:#2E7D32;border-color:#A5D6A7;">
+          <span class="material-icons">edit</span> Editar
         </button>
-
-
-
+        <button class="btn-ver-instrumento" onclick="abrirModalInstrumento(${idx})">
+          <span class="material-icons">visibility</span> Ver
+        </button>
+        <button class="btn-ver-instrumento" onclick="_editarInstrumentoActividad(${idx})" style="background:#FFF3E0;color:#E65100;border-color:#FFCC80;">
+          <span class="material-icons">swap_horiz</span> Cambiar
+        </button>
+        <button class="btn-ver-instrumento" onclick="_eliminarActividad(${idx})" style="background:#FFEBEE;color:#C62828;border-color:#FFCDD2;">
+          <span class="material-icons">delete_outline</span> Eliminar
+        </button>
       </td>
 
 
@@ -2087,19 +2487,38 @@ function renderizarActividades(listaActividades) {
 
     tbody.appendChild(tr);
 
-
-
+    // Listener: editar fecha directamente en la tabla
+    const fechaInput = tr.querySelector('.act-fecha-input');
+    // Listener: editar valor de la actividad
+    const valorInput = tr.querySelector('.act-valor-input');
+    if (valorInput) {
+      valorInput.addEventListener('change', function() {
+        const i   = parseInt(this.dataset.idx);
+        const act = planificacion.actividades[i];
+        if (!act) return;
+        const val = this.value.trim();
+        act.valor = val !== '' && !isNaN(parseFloat(val)) ? parseFloat(val) : null;
+        guardarBorrador();
+        mostrarToast('Valor actualizado ✓', 'success');
+      });
+    }
+    if (fechaInput) {
+      fechaInput.addEventListener('change', function() {
+        const i   = parseInt(this.dataset.idx);
+        const act = planificacion.actividades[i];
+        if (!act) return;
+        const val = this.value;
+        if (!val) return;
+        const d      = new Date(val + 'T12:00:00');
+        act.fecha    = val;
+        act.fechaStr = d.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+        this.title   = act.fechaStr;
+        guardarBorrador();
+        mostrarToast('Fecha actualizada ✓', 'success');
+      });
+    }
   });
-
-
-
 }
-
-
-
-
-
-
 
 // ================================================================
 
@@ -2184,14 +2603,17 @@ function abrirEditarActividad(idx) {
         <span class="material-icons" style="font-size:16px;color:#F57F17;margin-top:1px;">info</span>
         Al guardar, el instrumento se regenerará automáticamente con el nuevo enunciado.
       </div>
-    </div>`;
+    
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="guardarEdicionActividad(${idx})">
+          <span class="material-icons">save</span> Guardar
+        </button>
+      </div>
+    </div>`
 
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn-siguiente" onclick="guardarEdicionActividad(${idx})">
-      <span class="material-icons">save</span> Guardar cambios
-    </button>
-    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
-
+  // botones en el body (ver línea anterior con </div>)`)
+  _usarFooterDinamico('');
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('edit-act-enunciado')?.focus(), 80);
@@ -2232,21 +2654,8 @@ function guardarEdicionActividad(idx) {
   guardarBorrador();
   cerrarModalBtn();
 
-  // Actualizar fila en tabla sin re-render completo
-  const tipoLabel = act.instrumento.tipoLabel;
-  const badgeClass = act.instrumento.tipo === 'cotejo' ? 'badge-cotejo' : 'badge-rubrica';
-  const icono = act.instrumento.tipo === 'cotejo' ? 'checklist' : 'table_chart';
-  const elFecha = document.getElementById('act-fecha-' + idx);
-  const elEC    = document.getElementById('act-ec-' + idx);
-  const elEnunc = document.getElementById('act-enunciado-' + idx);
-  const elInst  = document.getElementById('act-inst-' + idx);
-  if (elFecha) elFecha.textContent = act.fechaStr;
-  if (elEC)    elEC.textContent    = act.ecCodigo;
-  if (elEnunc) elEnunc.textContent = act.enunciado;
-  if (elInst)  elInst.innerHTML    = `<span class="material-icons" style="font-size:14px;">${icono}</span> ${tipoLabel}`;
-  if (elInst)  elInst.className    = `instrumento-badge ${badgeClass}`;
-
-  mostrarToast('Actividad actualizada', 'success');
+  renderizarActividades(planificacion.actividades);
+  mostrarToast('Actividad actualizada ✓', 'success');
 }
 
 function abrirModalInstrumento(idxActividad) {
@@ -2257,7 +2666,15 @@ function abrirModalInstrumento(idxActividad) {
 
 
 
-  if (!act || !act.instrumento) return;
+  if (!act) return;
+  if (!act.instrumento || !act.instrumento.criterios?.length) {
+    const _ec = (planificacion.elementosCapacidad||[]).find(e => e.codigo === act.ecCodigo);
+    // Respetar el tipo que ya tenía el instrumento (no dejar que el nivel del EC lo sobreescriba)
+    const _tipoExistente = act.instrumento?.tipo || act.instrumento?.tipoLabel?.toLowerCase().includes('cotejo') ? 'cotejo' : null;
+    const _tipoFinal = _tipoExistente || ((_ec?.nivel === 'conocimiento' || _ec?.nivel === 'comprension') ? 'cotejo' : 'rubrica');
+    act.instrumento = generarInstrumento(act, _ec?.nivel || 'aplicacion', _tipoFinal);
+    guardarBorrador();
+  }
 
 
 
@@ -2297,14 +2714,9 @@ function abrirModalInstrumento(idxActividad) {
 
 
 
+  _usarFooterInstrumento();
   document.getElementById('modal-overlay').classList.remove('hidden');
-
-
-
   document.body.style.overflow = 'hidden';
-
-
-
 }
 
 
@@ -2338,17 +2750,10 @@ function cerrarModal(e) {
 
 
 function cerrarModalBtn() {
-
-
-
   document.getElementById('modal-overlay').classList.add('hidden');
-
-
-
   document.body.style.overflow = '';
-
-
-
+  // Restaurar botones de instrumento para la próxima vez que se abra
+  _usarFooterInstrumento();
 }
 
 
@@ -2370,6 +2775,7 @@ function cerrarModalBtn() {
 
 
 function renderizarListaCotejoHTML(inst) {
+  if (!inst || !inst.criterios?.length) return '<p style="color:#9E9E9E;font-style:italic;padding:10px;">Sin criterios. Guarda y vuelve a abrir el instrumento para regenerar.</p>';
 
 
 
@@ -2562,6 +2968,7 @@ function renderizarListaCotejoHTML(inst) {
 
 
 function renderizarRubricaHTML(inst) {
+  if (!inst || !inst.criterios?.length) return '<p style="color:#9E9E9E;font-style:italic;padding:10px;">Sin criterios. Guarda y vuelve a abrir el instrumento para regenerar.</p>';
 
 
 
@@ -2894,29 +3301,12 @@ function copiarModal() {
 
 
 function renderizarVistaPrevia() {
-
-
-
-  const vp = document.getElementById('vista-previa');
-
-
-
-  const dg = planificacion.datosGenerales;
-
-
-
-  const ra = planificacion.ra;
-
-
-
-  const ec = planificacion.elementosCapacidad;
-
-
-
-  const acts = planificacion.actividades;
-
-
-
+  const vp   = document.getElementById('vista-previa');
+  if (!vp) return;
+  const dg   = planificacion.datosGenerales   || {};
+  const ra   = planificacion.ra               || {};
+  const ec   = planificacion.elementosCapacidad || [];
+  const acts = planificacion.actividades      || [];
   const fechaHoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
 
@@ -4113,6 +4503,8 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
 
+  if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
+    if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
   if (nuevoPaso === 5) renderizarVistaPrevia();
 
 
@@ -4457,7 +4849,7 @@ function validarPaso2() {
 
 
 
-  if (!planificacion.elementosCapacidad?.length) {
+  if (!planificacion.elementosCapacidad?.length && !planificacion._id) {
 
 
 
@@ -5445,19 +5837,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    // Desactivar botón siguiente si se edita el RA después de generar
-
-
-
-    document.getElementById('btn-paso2-siguiente').disabled = true;
-
-
-
-    planificacion.elementosCapacidad = [];
-
-
-
-    planificacion.actividades = [];
+    // Solo resetear si es planificación nueva, no cargada desde biblioteca
+    if (!planificacion._id) {
+      document.getElementById('btn-paso2-siguiente').disabled = true;
+      planificacion.elementosCapacidad = [];
+      planificacion.actividades = [];
+    }
 
 
 
@@ -5736,7 +6121,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -5752,7 +6137,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -5960,6 +6345,19 @@ function uid() {
 //     notas: { planId: { estudianteId: { actId: nota } } }
 //   }
 
+
+// Helper: footer dinámico (crearCurso, asignar, etc.)
+function _usarFooterDinamico(html) {
+  const footer = document.getElementById('modal-footer');
+  if (footer) footer.innerHTML = html;
+}
+// Helper: restaurar footer de instrumento
+const _FOOTER_INST_HTML = `<button class="btn-export btn-print btn-sm" onclick="imprimirModal()"><span class="material-icons">print</span> Imprimir instrumento</button><button class="btn-export btn-copy btn-sm" onclick="copiarModal()"><span class="material-icons">content_copy</span> Copiar</button><button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>`;
+function _usarFooterInstrumento() {
+  const footer = document.getElementById('modal-footer');
+  if (footer) footer.innerHTML = _FOOTER_INST_HTML;
+}
+
 function abrirModalNuevoCurso() {
   const biblio = cargarBiblioteca();
   const planes = biblio.items || [];
@@ -5978,12 +6376,14 @@ function abrirModalNuevoCurso() {
         <option value="">— Sin planificación por ahora —</option>
         ${optsPlanes}
       </select>` : '<p style="margin-top:10px;font-size:0.82rem;color:#78909C;">Podrás asignar planificaciones desde la Biblioteca luego.</p>'}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="crearCurso()">
+          <span class="material-icons">add</span> Crear curso
+        </button>
+      </div>
     </div>`;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn-siguiente" onclick="crearCurso()">
-      <span class="material-icons">add</span> Crear curso
-    </button>
-    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
+  // No tocamos el footer — los botones están en el body
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('input-nombre-curso')?.focus(), 100);
@@ -6008,13 +6408,18 @@ function crearCurso() {
 function activarCurso(id) {
   if (!calState.cursos[id]) return;
   calState.cursoActivoId = id;
-  // Activar primera planificación disponible si no hay ninguna activa
   const curso = calState.cursos[id];
   if (curso.planIds && curso.planIds.length && !curso.planActivaId) {
     curso.planActivaId = curso.planIds[0];
   }
   guardarCalificaciones();
   renderizarCalificaciones();
+  // Si el panel de asistencia está abierto, re-renderizarlo con el nuevo curso
+  if (_asistPanelAbierto) {
+    _asistFechaSeleccionada = null;
+    _asistVistaActiva = 'pasar';
+    renderizarAsistencia();
+  }
 }
 
 function activarPlanEnCurso(planId) {
@@ -6050,12 +6455,15 @@ function asignarPlanACurso(planId) {
       <select id="sel-curso-destino" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
         ${opsCursos}
       </select>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_confirmarAsignarPlan('${planId}')">
+          <span class="material-icons">link</span> Asignar
+        </button>
+      </div>
     </div>`;
-  document.getElementById('modal-footer').innerHTML = `
-    <button class="btn-siguiente" onclick="_confirmarAsignarPlan('${planId}')">
-      <span class="material-icons">link</span> Asignar
-    </button>
-    <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`;
+  // botones ya están en el body
+  _usarFooterDinamico('');
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
@@ -6155,6 +6563,9 @@ function _ensureRA(curso, raKey) {
 
 // ─── Renderizado principal ────────────────────────────────────────
 function renderizarCalificaciones() {
+  // Limpiar textarea de estudiantes al cambiar curso (bug fix)
+  const inputEst = document.getElementById('input-estudiantes');
+  if (inputEst) inputEst.value = '';
   renderizarTabsCursos();
   renderizarTabsPlanesDelCurso();
   renderizarTablaCalificaciones();
@@ -6223,6 +6634,27 @@ function renderizarTabsPlanesDelCurso() {
 }
 
 // ─── abrirCalificaciones ──────────────────────────────────────────
+
+// ─── Toggle panel asistencia ─────────────────────────────────────
+let _asistPanelAbierto = false;
+
+function toggleVistaAsistencia() {
+  const panel = document.getElementById('cal-asist-panel');
+  const btn   = document.getElementById('btn-toggle-asistencia');
+  if (!panel) return;
+  _asistPanelAbierto = !_asistPanelAbierto;
+  panel.classList.toggle('hidden', !_asistPanelAbierto);
+  if (btn) {
+    btn.style.background  = _asistPanelAbierto ? '#1565C0' : '#E3F2FD';
+    btn.style.color       = _asistPanelAbierto ? '#fff'    : '#1565C0';
+    btn.style.borderColor = _asistPanelAbierto ? '#1565C0' : '#90CAF9';
+  }
+  if (_asistPanelAbierto) {
+    _asistFechaSeleccionada = null;
+    abrirAsistencia();
+  }
+}
+
 function abrirCalificaciones() {
   cargarCalificaciones();
   _mostrarPanel('panel-calificaciones');
@@ -6295,7 +6727,8 @@ function renderizarTablaCalificaciones() {
     h1 += '<th rowspan="2" style="background:#4527A0;color:#fff;min-width:72px;font-size:0.75rem;vertical-align:middle;text-align:center;white-space:nowrap;" title="' + escapeHTML(ri.label) + '">'
       + escapeHTML(ri.modulo.substring(0,14)||'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
   });
-  h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th></tr>';
+  h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th>'
+    + '<th rowspan="2" style="background:#00695C;color:#fff;min-width:62px;font-size:0.78rem;vertical-align:middle;text-align:center;">Asist.</th></tr>';
 
   // ─── Fila 2: actividades con contador correcto por EC ───
   const _cntEC = {};
@@ -6336,6 +6769,10 @@ function renderizarTablaCalificaciones() {
     let cells = '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
       + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
+      + '<button class="btn-coment-est" onclick="abrirComentariosEstudiante(\'' + est.id + '\',\'' + est.id + '\')" title="Comentarios" data-nombre="' + escapeHTML(est.nombre) + '">'
+      + '<span class="material-icons" style="font-size:14px;">comment</span>'
+      + (_getComentariosEst(est.id).length ? '<span class="coment-count-badge">' + _getComentariosEst(est.id).length + '</span>' : '')
+      + '</button>'
       + '<button class="btn-del-estudiante" onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar"><span class="material-icons" style="font-size:16px;">close</span></button>'
       + '</div></td>';
 
@@ -6349,6 +6786,8 @@ function renderizarTablaCalificaciones() {
         + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
         + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
         + ' oninput="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
+        + ' onkeydown="_notaKeyNav(event,this)"'
+        + ' onwheel="event.preventDefault()"'
         + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado||'').substring(0,40)) + '"'
         + '/></td>';
     });
@@ -6368,6 +6807,11 @@ function renderizarTablaCalificaciones() {
     cells += '<td class="td-promedio ' + _clsProm(notaFinal) + '" id="final-' + est.id + '">'
       + (notaFinal !== null ? notaFinal.toFixed(1) : '—') + '</td>';
 
+    // Columna asistencia
+    const asistStats = _statsAsistencia(calState.cursoActivoId, est.id);
+    const asistCls   = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'nota-aprobado' : asistStats.pct >= 60 ? 'nota-regular' : 'nota-reprobado';
+    cells += '<td class="td-total-ra ' + asistCls + '" style="cursor:pointer;" onclick="toggleVistaAsistencia()" title="P:'+asistStats.P+' T:'+asistStats.T+' A:'+asistStats.A+' / '+asistStats.total+' clases">'
+      + (asistStats.pct !== null ? asistStats.pct + '%' : '—') + '</td>';
     tr.innerHTML = cells;
     tbody.appendChild(tr);
   });
@@ -6388,10 +6832,53 @@ function renderizarTablaCalificaciones() {
   const avgFinal = _promedioFinal(curso);
   footCells += '<td class="td-promedio ' + _clsProm(avgFinal) + '">'
     + (avgFinal !== null ? avgFinal.toFixed(1) : '—') + '</td>';
+  // Footer asistencia: promedio de % de asistencia del curso
+  const asistProms = curso.estudiantes
+    .map(e => _statsAsistencia(calState.cursoActivoId, e.id).pct)
+    .filter(p => p !== null);
+  const avgAsist = asistProms.length ? Math.round(asistProms.reduce((s,p)=>s+p,0)/asistProms.length) : null;
+  const asistFootCls = avgAsist === null ? '' : avgAsist >= 80 ? 'nota-aprobado' : avgAsist >= 60 ? 'nota-regular' : 'nota-reprobado';
+  footCells += '<td class="td-total-ra ' + asistFootCls + '">' + (avgAsist !== null ? avgAsist + '%' : '—') + '</td>';
   tfoot.innerHTML = '<tr>' + footCells + '</tr>';
 }
 
 // ─── Actualizar notas (usa raKey del curso activo) ──────────────
+
+// ── Navegación de teclado en inputs de nota sin scroll ──────────
+function _notaKeyNav(e, el) {
+  // Evitar que flechas arriba/abajo hagan scroll de la página
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    const delta = e.key === 'ArrowUp' ? 0.5 : -0.5;
+    const max   = parseFloat(el.max) || 100;
+    const cur   = parseFloat(el.value) || 0;
+    const nv    = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
+    el.value = nv;
+    el.dispatchEvent(new Event('input'));
+    return;
+  }
+  // Enter o Tab → mover al siguiente input-nota
+  if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+    e.preventDefault();
+    const todos = Array.from(document.querySelectorAll('.input-nota'));
+    const idx   = todos.indexOf(el);
+    if (idx >= 0 && idx + 1 < todos.length) {
+      todos[idx + 1].focus();
+      todos[idx + 1].select();
+    }
+  }
+  // Shift+Tab → mover al anterior
+  if (e.key === 'Tab' && e.shiftKey) {
+    e.preventDefault();
+    const todos = Array.from(document.querySelectorAll('.input-nota'));
+    const idx   = todos.indexOf(el);
+    if (idx > 0) {
+      todos[idx - 1].focus();
+      todos[idx - 1].select();
+    }
+  }
+}
+
 function registrarNota(estudianteId, actividadId, valor) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
@@ -6643,6 +7130,2120 @@ function imprimirCalificaciones() {
 
 
 
+// MÓDULO: HORARIO DE CLASES
+// ════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: ASISTENCIA
+// ════════════════════════════════════════════════════════════════════
+const ASIST_KEY = 'planificadorRA_asistencia_v1';
+const ASIST_UMBRAL_DEFAULT = 80; // % mínimo antes de alertar
+
+function cargarAsistencia() {
+  try { return JSON.parse(localStorage.getItem(ASIST_KEY) || '{}'); } catch { return {}; }
+}
+function guardarAsistencia(data) {
+  localStorage.setItem(ASIST_KEY, JSON.stringify(data));
+  setTimeout(actualizarBadgeNotificaciones, 100);
+}
+
+// Estructura: asistencia[cursoId][fecha_ISO][estudianteId] = 'P'|'A'|'T'
+function _asistFecha() {
+  return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
+// ─── Estadísticas de asistencia por estudiante ───────────────────
+function _statsAsistencia(cursoId, estudianteId) {
+  const data   = cargarAsistencia();
+  const byDate = data[cursoId] || {};
+  let P = 0, A = 0, T = 0, E = 0, total = 0;
+  Object.values(byDate).forEach(dia => {
+    const v = dia[estudianteId];
+    if (!v) return;
+    total++;
+    if (v === 'P') P++;
+    else if (v === 'A') A++;
+    else if (v === 'T') T++;
+    else if (v === 'E') E++;
+  });
+  // Excusa cuenta como presente para el %
+  const pct = total > 0 ? Math.round(((P + T * 0.5 + E) / total) * 100) : null;
+  return { P, A, T, E, total, pct };
+}
+
+// ─── Abrir panel de asistencia del curso activo ──────────────────
+let _asistVistaActiva = 'pasar'; // 'pasar' | 'historial'
+
+function abrirAsistencia() {
+  _asistVistaActiva = 'pasar';
+  renderizarAsistencia();
+}
+
+function renderizarAsistencia() {
+  const wrap = document.getElementById('cal-asist-wrap');
+  if (!wrap) return;
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) {
+    wrap.innerHTML = '<div class="asist-empty"><span class="material-icons">group_off</span><p>Selecciona un curso para registrar asistencia.</p></div>';
+    return;
+  }
+  if (!curso.estudiantes || curso.estudiantes.length === 0) {
+    wrap.innerHTML = '<div class="asist-empty"><span class="material-icons">person_add</span><p>Este curso no tiene estudiantes. Agrégalos en la pestaña de Calificaciones.</p></div>';
+    return;
+  }
+
+  // Header con fecha hoy + selector de vista
+  const hoy = _asistFecha();
+  const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  wrap.innerHTML = `
+    <div class="asist-toolbar">
+      <div class="asist-vista-tabs">
+        <button class="asist-vtab ${_asistVistaActiva==='pasar'?'activo':''}" onclick="_setAsistVista('pasar')">
+          <span class="material-icons">how_to_reg</span> Pasar lista
+        </button>
+        <button class="asist-vtab ${_asistVistaActiva==='historial'?'activo':''}" onclick="_setAsistVista('historial')">
+          <span class="material-icons">history</span> Historial
+        </button>
+        <button class="asist-vtab ${_asistVistaActiva==='reporte'?'activo':''}" onclick="_setAsistVista('reporte')">
+          <span class="material-icons">bar_chart</span> Reporte
+        </button>
+      </div>
+      <button onclick="abrirExpAsistencia()" style="margin-left:auto;display:flex;align-items:center;gap:5px;
+        background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;
+        padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+        <span class="material-icons" style="font-size:15px;">download</span> Exportar
+      </button>
+    </div>
+    <div id="asist-vista-body"></div>`;
+
+  _renderizarVistaAsistencia();
+}
+
+function _setAsistVista(vista) {
+  _asistVistaActiva = vista;
+  const tabs = document.querySelectorAll('.asist-vtab');
+  tabs.forEach(t => t.classList.toggle('activo', t.textContent.trim().toLowerCase().includes(
+    vista === 'pasar' ? 'pasar' : vista === 'historial' ? 'historial' : 'reporte'
+  )));
+  _renderizarVistaAsistencia();
+}
+
+function _renderizarVistaAsistencia() {
+  const body = document.getElementById('asist-vista-body');
+  if (!body) return;
+  if (_asistVistaActiva === 'pasar')     _renderPasarLista(body);
+  else if (_asistVistaActiva === 'historial') _renderHistorial(body);
+  else _renderReporte(body);
+}
+
+// ── Vista: Pasar lista ───────────────────────────────────────────
+function _renderPasarLista(body) {
+  const curso  = calState.cursos[calState.cursoActivoId];
+  const data   = cargarAsistencia();
+  const hoy    = _asistFecha();
+  const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', {weekday:'long', day:'2-digit', month:'long'});
+  const diaData = (data[calState.cursoActivoId] || {})[hoy] || {};
+
+  const counts = { P: 0, A: 0, T: 0 };
+  curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v]||0)+1; });
+  const registrados = counts.P + counts.A + counts.T;
+
+  body.innerHTML = `
+    <div class="asist-fecha-header">
+      <span class="material-icons">today</span>
+      <span>${hoyFmt}</span>
+      <input type="date" id="asist-sel-fecha" value="${hoy}"
+        onchange="_cambiarFechaLista(this.value)"
+        style="margin-left:auto;padding:5px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.82rem;">
+    </div>
+
+    <div class="asist-summary-bar">
+      <div class="asist-sum-item pres"><span class="material-icons">check_circle</span>${counts.P} <span>Presentes</span></div>
+      <div class="asist-sum-item ause"><span class="material-icons">cancel</span>${counts.A} <span>Ausentes</span></div>
+      <div class="asist-sum-item tard"><span class="material-icons">schedule</span>${counts.T} <span>Tardanzas</span></div>
+      <div class="asist-sum-item excu"><span class="material-icons">assignment_turned_in</span>${counts.E||0} <span>Excusas</span></div>
+      <div class="asist-sum-item total"><span class="material-icons">group</span>${registrados}/${curso.estudiantes.length} <span>Registrados</span></div>
+    </div>
+
+    <div class="asist-acciones-rapidas">
+      <button class="asist-btn-todos" onclick="_marcarTodos('P')">
+        <span class="material-icons">done_all</span> Todos presentes
+      </button>
+      <button class="asist-btn-todos" onclick="_marcarTodos('A')" style="border-color:#FFCDD2;color:#C62828;">
+        <span class="material-icons">remove_done</span> Todos ausentes
+      </button>
+      <button class="asist-btn-todos" onclick="_limpiarDia()" style="border-color:#E0E0E0;color:#757575;">
+        <span class="material-icons">clear_all</span> Limpiar día
+      </button>
+    </div>
+
+    <div class="asist-lista" id="asist-lista-body">
+      ${curso.estudiantes.map((est, i) => {
+        const v = diaData[est.id] || '';
+        return `<div class="asist-fila" id="asist-fila-${est.id}">
+          <div class="asist-num">${i+1}</div>
+          <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
+          <div class="asist-btns">
+            <button class="asist-btn-estado P ${v==='P'?'activo':''}" onclick="marcarAsistencia('${est.id}','P')" title="Presente">
+              <span class="material-icons">check_circle</span>P
+            </button>
+            <button class="asist-btn-estado T ${v==='T'?'activo':''}" onclick="marcarAsistencia('${est.id}','T')" title="Tardanza">
+              <span class="material-icons">schedule</span>T
+            </button>
+            <button class="asist-btn-estado A ${v==='A'?'activo':''}" onclick="marcarAsistencia('${est.id}','A')" title="Ausente">
+              <span class="material-icons">cancel</span>A
+            </button>
+            <button class="asist-btn-estado E ${v==='E'?'activo':''}" onclick="marcarAsistencia('${est.id}','E')" title="Excusa">
+              <span class="material-icons">assignment_turned_in</span>E
+            </button>
+          </div>
+          ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+let _asistFechaSeleccionada = null;
+
+function _cambiarFechaLista(fecha) {
+  _asistFechaSeleccionada = fecha;
+  const body = document.getElementById('asist-vista-body');
+  if (body) _renderPasarListaFecha(body, fecha);
+}
+
+function _renderPasarListaFecha(body, fecha) {
+  const curso   = calState.cursos[calState.cursoActivoId];
+  const data    = cargarAsistencia();
+  const diaData = (data[calState.cursoActivoId] || {})[fecha] || {};
+  const fechaFmt = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', {weekday:'long', day:'2-digit', month:'long'});
+  const counts = { P: 0, A: 0, T: 0 };
+  curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v]||0)+1; });
+  const registrados = counts.P + counts.A + counts.T;
+
+  // Actualizar summary y lista sin re-render completo
+  const sumP = body.querySelector('.asist-sum-item.pres');
+  const sumA = body.querySelector('.asist-sum-item.ause');
+  const sumT = body.querySelector('.asist-sum-item.tard');
+  const sumTot = body.querySelector('.asist-sum-item.total');
+  if (sumP) sumP.innerHTML = `<span class="material-icons">check_circle</span>${counts.P} <span>Presentes</span>`;
+  if (sumA) sumA.innerHTML = `<span class="material-icons">cancel</span>${counts.A} <span>Ausentes</span>`;
+  if (sumT) sumT.innerHTML = `<span class="material-icons">schedule</span>${counts.T} <span>Tardanzas</span>`;
+  if (sumTot) sumTot.innerHTML = `<span class="material-icons">group</span>${registrados}/${curso.estudiantes.length} <span>Registrados</span>`;
+
+  const listaBody = body.querySelector('#asist-lista-body');
+  if (listaBody) {
+    listaBody.innerHTML = curso.estudiantes.map((est, i) => {
+      const v = diaData[est.id] || '';
+      return `<div class="asist-fila" id="asist-fila-${est.id}">
+        <div class="asist-num">${i+1}</div>
+        <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
+        <div class="asist-btns">
+          <button class="asist-btn-estado P ${v==='P'?'activo':''}" onclick="marcarAsistencia('${est.id}','P','${fecha}')" title="Presente">
+            <span class="material-icons">check_circle</span>P
+          </button>
+          <button class="asist-btn-estado T ${v==='T'?'activo':''}" onclick="marcarAsistencia('${est.id}','T','${fecha}')" title="Tardanza">
+            <span class="material-icons">schedule</span>T
+          </button>
+          <button class="asist-btn-estado A ${v==='A'?'activo':''}" onclick="marcarAsistencia('${est.id}','A','${fecha}')" title="Ausente">
+            <span class="material-icons">cancel</span>A
+          </button>
+          <button class="asist-btn-estado E ${v==='E'?'activo':''}" onclick="marcarAsistencia('${est.id}','E','${fecha}')" title="Excusa">
+            <span class="material-icons">assignment_turned_in</span>E
+          </button>
+        </div>
+        ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
+      </div>`;
+    }).join('');
+  }
+}
+
+function _badgePctAsistencia(cursoId, estudianteId) {
+  const s = _statsAsistencia(cursoId, estudianteId);
+  if (s.total === 0) return '<span class="asist-pct-badge" style="color:#9E9E9E;">—</span>';
+  const cls = s.pct >= 80 ? 'ok' : s.pct >= 60 ? 'warn' : 'bad';
+  return `<span class="asist-pct-badge ${cls}" title="${s.P}P · ${s.T}T · ${s.A}A / ${s.total} clases">${s.pct}%</span>`;
+}
+
+function marcarAsistencia(estudianteId, estado, fechaOverride) {
+  const cursoId = calState.cursoActivoId;
+  const fecha   = fechaOverride || (_asistFechaSeleccionada || _asistFecha());
+  const data    = cargarAsistencia();
+  if (!data[cursoId]) data[cursoId] = {};
+  if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
+
+  // Toggle: si ya tiene ese estado, quitar
+  if (data[cursoId][fecha][estudianteId] === estado) {
+    delete data[cursoId][fecha][estudianteId];
+  } else {
+    data[cursoId][fecha][estudianteId] = estado;
+  }
+  guardarAsistencia(data);
+
+  // Actualizar fila sin re-render
+  const fila = document.getElementById('asist-fila-' + estudianteId);
+  if (fila) {
+    const v = data[cursoId][fecha][estudianteId] || '';
+    fila.querySelectorAll('.asist-btn-estado').forEach(btn => {
+      btn.classList.toggle('activo', btn.classList.contains(v));
+    });
+    const badge = fila.querySelector('.asist-pct-badge');
+    if (badge) badge.outerHTML = _badgePctAsistencia(cursoId, estudianteId);
+  }
+
+  // Actualizar summary
+  const curso   = calState.cursos[cursoId];
+  const diaData = (data[cursoId] || {})[fecha] || {};
+  const counts  = { P: 0, A: 0, T: 0 };
+  curso.estudiantes.forEach(e => { const v2 = diaData[e.id]; if (v2) counts[v2] = (counts[v2]||0)+1; });
+  const registrados = counts.P + counts.A + counts.T;
+  const body = document.getElementById('asist-vista-body');
+  if (body) {
+    const sumP   = body.querySelector('.asist-sum-item.pres');
+    const sumA   = body.querySelector('.asist-sum-item.ause');
+    const sumT   = body.querySelector('.asist-sum-item.tard');
+    const sumTot = body.querySelector('.asist-sum-item.total');
+    if (sumP) sumP.innerHTML = `<span class="material-icons">check_circle</span>${counts.P} <span>Presentes</span>`;
+    if (sumA) sumA.innerHTML = `<span class="material-icons">cancel</span>${counts.A} <span>Ausentes</span>`;
+    if (sumT) sumT.innerHTML = `<span class="material-icons">schedule</span>${counts.T} <span>Tardanzas</span>`;
+    if (sumTot) sumTot.innerHTML = `<span class="material-icons">group</span>${registrados}/${curso.estudiantes.length} <span>Registrados</span>`;
+  }
+}
+
+function _marcarTodos(estado) {
+  const curso   = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const fecha   = _asistFechaSeleccionada || _asistFecha();
+  const data    = cargarAsistencia();
+  const cursoId = calState.cursoActivoId;
+  if (!data[cursoId]) data[cursoId] = {};
+  if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
+  curso.estudiantes.forEach(e => { data[cursoId][fecha][e.id] = estado; });
+  guardarAsistencia(data);
+  _renderizarVistaAsistencia();
+  mostrarToast(`Todos marcados como ${estado==='P'?'Presentes':estado==='A'?'Ausentes':estado==='T'?'Tardanza':'Excusa'}`, 'success');
+}
+
+function _limpiarDia() {
+  if (!confirm('¿Borrar el registro de asistencia de este día?')) return;
+  const fecha   = _asistFechaSeleccionada || _asistFecha();
+  const cursoId = calState.cursoActivoId;
+  const data    = cargarAsistencia();
+  if (data[cursoId] && data[cursoId][fecha]) delete data[cursoId][fecha];
+  guardarAsistencia(data);
+  _asistFechaSeleccionada = null;
+  _renderizarVistaAsistencia();
+  mostrarToast('Registro borrado', 'success');
+}
+
+// ── Vista: Historial ─────────────────────────────────────────────
+function _renderHistorial(body) {
+  const cursoId = calState.cursoActivoId;
+  const curso   = calState.cursos[cursoId];
+  const data    = cargarAsistencia();
+  const byDate  = data[cursoId] || {};
+  const fechas  = Object.keys(byDate).sort().reverse(); // más reciente primero
+
+  if (fechas.length === 0) {
+    body.innerHTML = `<div class="asist-empty"><span class="material-icons">event_note</span><p>Sin registros de asistencia aún. Pasa lista en la vista de hoy.</p></div>`;
+    return;
+  }
+
+  const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  body.innerHTML = `
+    <div class="asist-hist-wrap">
+      <table class="asist-hist-tabla">
+        <thead>
+          <tr>
+            <th class="asist-hist-th-nombre">Estudiante</th>
+            ${fechas.map(f => {
+              const d = new Date(f + 'T12:00:00');
+              return `<th class="asist-hist-th-fecha" title="${f}">
+                <div>${DIAS[d.getDay()]}</div>
+                <div>${d.getDate()}/${d.getMonth()+1}</div>
+              </th>`;
+            }).join('')}
+            <th class="asist-hist-th-pct">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${curso.estudiantes.map(est => {
+            const stats = _statsAsistencia(cursoId, est.id);
+            const cls   = stats.pct === null ? '' : stats.pct >= 80 ? 'ok' : stats.pct >= 60 ? 'warn' : 'bad';
+            return `<tr>
+              <td class="asist-hist-td-nombre">${escapeHTML(est.nombre)}</td>
+              ${fechas.map(f => {
+                const v = (byDate[f] || {})[est.id];
+                const icono = { P:'check_circle', A:'cancel', T:'schedule', E:'assignment_turned_in' }[v] || '';
+                const color = { P:'#2E7D32', A:'#C62828', T:'#E65100', E:'#1565C0' }[v] || '#CFD8DC';
+                return `<td class="asist-hist-td-estado" onclick="marcarAsistencia('${est.id}','${v==='P'?'A':v==='A'?'T':v==='T'?'E':v==='E'?'P':'P'}','${f}');_renderizarVistaAsistencia();" style="cursor:pointer;" title="${v||'Sin registro'} — clic para cambiar">
+                  ${icono ? `<span class="material-icons" style="font-size:16px;color:${color};">${icono}</span>` : '<span style="color:#CFD8DC;font-size:12px;">·</span>'}
+                </td>`;
+              }).join('')}
+              <td class="asist-hist-td-pct ${cls}">${stats.pct !== null ? stats.pct + '%' : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ── Vista: Reporte ───────────────────────────────────────────────
+function _renderReporte(body) {
+  const cursoId = calState.cursoActivoId;
+  const curso   = calState.cursos[cursoId];
+  const data    = cargarAsistencia();
+  const byDate  = data[cursoId] || {};
+  const totalDias = Object.keys(byDate).length;
+
+  if (totalDias === 0) {
+    body.innerHTML = `<div class="asist-empty"><span class="material-icons">bar_chart</span><p>Sin datos para generar reporte.</p></div>`;
+    return;
+  }
+
+  // Umbral configurable
+  const umbral = parseInt(localStorage.getItem('asist_umbral') || ASIST_UMBRAL_DEFAULT);
+
+  const rows = curso.estudiantes.map(est => {
+    const s = _statsAsistencia(cursoId, est.id);
+    return { est, ...s };
+  }).sort((a, b) => (a.pct||0) - (b.pct||0));
+
+  const bajoUmbral = rows.filter(r => r.pct !== null && r.pct < umbral);
+
+  body.innerHTML = `
+    <div class="asist-rep-header">
+      <div class="asist-rep-stat">
+        <div class="asist-rep-num">${totalDias}</div>
+        <div class="asist-rep-lbl">Clases registradas</div>
+      </div>
+      <div class="asist-rep-stat">
+        <div class="asist-rep-num">${curso.estudiantes.length}</div>
+        <div class="asist-rep-lbl">Estudiantes</div>
+      </div>
+      <div class="asist-rep-stat ${bajoUmbral.length>0?'bad':'ok'}">
+        <div class="asist-rep-num">${bajoUmbral.length}</div>
+        <div class="asist-rep-lbl">Bajo umbral (${umbral}%)</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;">Umbral %</label>
+        <input type="number" value="${umbral}" min="1" max="100"
+          onchange="localStorage.setItem('asist_umbral',this.value);_renderizarVistaAsistencia();"
+          style="width:64px;padding:5px 8px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;font-weight:700;">
+      </div>
+    </div>
+
+    ${bajoUmbral.length > 0 ? `
+    <div class="asist-rep-alerta">
+      <span class="material-icons">warning</span>
+      <strong>${bajoUmbral.length} estudiante(s) bajo el umbral de ${umbral}%:</strong>
+      ${bajoUmbral.map(r => `<span class="asist-rep-chip-bad">${escapeHTML(r.est.nombre)} (${r.pct}%)</span>`).join('')}
+    </div>` : ''}
+
+    <div class="asist-rep-tabla-wrap">
+      <table class="asist-rep-tabla">
+        <thead>
+          <tr>
+            <th>Estudiante</th>
+            <th title="Presentes">✓ P</th>
+            <th title="Tardanzas">⏱ T</th>
+            <th title="Ausentes">✗ A</th>
+            <th title="Excusas">📋 E</th>
+            <th>Total</th>
+            <th>% Asist.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const cls = r.pct === null ? '' : r.pct >= umbral ? 'ok' : r.pct >= 60 ? 'warn' : 'bad';
+            const barW = r.pct !== null ? r.pct : 0;
+            const barColor = cls === 'ok' ? '#2E7D32' : cls === 'warn' ? '#E65100' : '#C62828';
+            return `<tr class="asist-rep-row ${r.pct !== null && r.pct < umbral ? 'fila-alerta' : ''}">
+              <td class="asist-rep-nombre">${escapeHTML(r.est.nombre)}</td>
+              <td class="pres">${r.P}</td>
+              <td class="tard">${r.T}</td>
+              <td class="ause">${r.A}</td>
+              <td class="excu">${r.E||0}</td>
+              <td>${r.total}</td>
+              <td>
+                <div class="asist-bar-wrap">
+                  <div class="asist-bar" style="width:${barW}%;background:${barColor};"></div>
+                </div>
+                <span class="asist-rep-pct ${cls}">${r.pct !== null ? r.pct + '%' : '—'}</span>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: BUSCADOR DE ESTUDIANTES
+// ════════════════════════════════════════════════════════════════════
+
+let _buscarSeleccionado = null; // { cursoId, estId }
+
+function abrirBuscadorEstudiante() {
+  const overlay = document.getElementById('buscar-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  _buscarSeleccionado = null;
+  // Limpiar estado
+  const input = document.getElementById('buscar-input');
+  if (input) { input.value = ''; input.focus(); }
+  document.getElementById('buscar-lista').innerHTML = '';
+  document.getElementById('buscar-perfil').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#B0BEC5;text-align:center;padding:20px;">
+      <span class="material-icons" style="font-size:3rem;margin-bottom:10px;opacity:0.4;">person_search</span>
+      <p style="font-size:0.88rem;">Escribe el nombre de un estudiante<br>para ver su perfil completo.</p>
+    </div>`;
+  document.getElementById('buscar-resultados-count').textContent = '';
+  // Si hay cursos, mostrar todos los estudiantes inicialmente
+  buscarEstudiante('');
+}
+
+function cerrarBuscadorEstudiante() {
+  document.getElementById('buscar-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function buscarEstudiante(query) {
+  const q = query.trim().toLowerCase();
+  const lista = document.getElementById('buscar-lista');
+  const countEl = document.getElementById('buscar-resultados-count');
+  if (!lista) return;
+
+  // Recopilar todos los estudiantes de todos los cursos
+  const resultados = [];
+  Object.values(calState.cursos).forEach(curso => {
+    (curso.estudiantes || []).forEach(est => {
+      if (!q || est.nombre.toLowerCase().includes(q)) {
+        resultados.push({ curso, est });
+      }
+    });
+  });
+
+  // Ordenar: primero los que empiezan con la query, luego el resto
+  resultados.sort((a, b) => {
+    const na = a.est.nombre.toLowerCase();
+    const nb = b.est.nombre.toLowerCase();
+    if (q) {
+      const aStarts = na.startsWith(q);
+      const bStarts = nb.startsWith(q);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+    }
+    return na.localeCompare(nb, 'es');
+  });
+
+  const total = Object.values(calState.cursos).reduce((s, c) => s + (c.estudiantes?.length || 0), 0);
+  if (total === 0) {
+    lista.innerHTML = `<div style="padding:20px;text-align:center;color:#9E9E9E;font-size:0.82rem;">No hay estudiantes registrados.</div>`;
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  if (countEl) {
+    countEl.textContent = q
+      ? `${resultados.length} resultado(s) de ${total} estudiantes`
+      : `${total} estudiante(s) en ${Object.keys(calState.cursos).length} curso(s)`;
+  }
+
+  if (resultados.length === 0) {
+    lista.innerHTML = `<div style="padding:20px;text-align:center;color:#9E9E9E;font-size:0.82rem;">Sin resultados para "${escapeHTML(query)}".</div>`;
+    return;
+  }
+
+  // Agrupar por curso
+  const grupos = {};
+  resultados.forEach(r => {
+    const key = r.curso.id;
+    if (!grupos[key]) grupos[key] = { curso: r.curso, ests: [] };
+    grupos[key].ests.push(r.est);
+  });
+
+  lista.innerHTML = Object.values(grupos).map(g => {
+    const nEst = g.ests.length;
+    return `
+      <div class="buscar-grupo-label">${escapeHTML(g.curso.nombre)} <span>${nEst}</span></div>
+      ${g.ests.map(est => {
+        const notaFinal = _calcNotaFinal(g.curso, est.id);
+        const cls = notaFinal === null ? '' : notaFinal >= 70 ? 'apr' : notaFinal >= 60 ? 'reg' : 'rep';
+        const isActive = _buscarSeleccionado?.estId === est.id && _buscarSeleccionado?.cursoId === g.curso.id;
+        return `<div class="buscar-item ${isActive?'activo':''}"
+          onclick="seleccionarEstudianteBuscar('${g.curso.id}','${est.id}')">
+          <div class="buscar-item-avatar">${escapeHTML(est.nombre.trim()[0]?.toUpperCase()||'?')}</div>
+          <div class="buscar-item-info">
+            <div class="buscar-item-nombre">${_resaltarTexto(escapeHTML(est.nombre), q)}</div>
+            <div class="buscar-item-curso">${escapeHTML(g.curso.nombre)}</div>
+          </div>
+          ${notaFinal !== null ? `<div class="buscar-item-nota ${cls}">${notaFinal.toFixed(1)}</div>` : ''}
+        </div>`;
+      }).join('')}`;
+  }).join('');
+
+  // Auto-seleccionar el primero si hay exactamente un resultado
+  if (resultados.length === 1 && q) {
+    seleccionarEstudianteBuscar(resultados[0].curso.id, resultados[0].est.id);
+  }
+}
+
+function _resaltarTexto(texto, query) {
+  if (!query) return texto;
+  const idx = texto.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return texto;
+  return texto.substring(0, idx)
+    + `<mark style="background:#FFF176;border-radius:2px;padding:0 1px;">${texto.substring(idx, idx + query.length)}</mark>`
+    + texto.substring(idx + query.length);
+}
+
+function seleccionarEstudianteBuscar(cursoId, estId) {
+  _buscarSeleccionado = { cursoId, estId };
+
+  // Actualizar estado activo en la lista
+  document.querySelectorAll('.buscar-item').forEach(el => el.classList.remove('activo'));
+  const items = document.querySelectorAll('.buscar-item');
+  items.forEach(el => {
+    if (el.onclick?.toString().includes(cursoId) && el.onclick?.toString().includes(estId)) {
+      el.classList.add('activo');
+    }
+  });
+  // Re-renderizar lista para reflejar selección
+  buscarEstudiante(document.getElementById('buscar-input')?.value || '');
+
+  _renderizarPerfilEstudiante(cursoId, estId);
+}
+
+function _renderizarPerfilEstudiante(cursoId, estId) {
+  const perfil = document.getElementById('buscar-perfil');
+  if (!perfil) return;
+
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+
+  // ── Datos de notas ──
+  const rasKeys = Object.keys(curso.ras || {});
+  const notaFinal = _calcNotaFinal(curso, estId);
+  const clsFinal  = notaFinal === null ? '' : notaFinal >= 70 ? 'apr' : notaFinal >= 60 ? 'reg' : 'rep';
+  const biblio    = cargarBiblioteca();
+
+  // ── Datos de asistencia ──
+  const asistStats = _statsAsistencia(cursoId, estId);
+  const clsAsist   = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'apr' : asistStats.pct >= 60 ? 'reg' : 'rep';
+
+  // ── Posición en el curso (ranking) ──
+  const promediosCurso = (curso.estudiantes || [])
+    .map(e => ({ id: e.id, nota: _calcNotaFinal(curso, e.id) }))
+    .filter(e => e.nota !== null)
+    .sort((a, b) => b.nota - a.nota);
+  const posicion = promediosCurso.findIndex(e => e.id === estId) + 1;
+  const totalConNotas = promediosCurso.length;
+
+  // ── Notas de clase escritas para este estudiante (vía sección del curso) ──
+  // Las notas son por clase (no por estudiante), pero podemos mostrar cuántas hay
+  const notasClase = Object.entries(localStorage)
+    .filter(([k]) => k.startsWith(`notaclase_`) && k.includes(`_${curso.nombre}_`))
+    .sort(([a],[b]) => b.localeCompare(a)) // más reciente primero
+    .slice(0, 5);
+
+  // ── Observaciones guardadas (clave por estudiante) ──
+  const obsKey   = `obs_est_${estId}`;
+  const obsGuard = localStorage.getItem(obsKey) || '';
+
+  // Calcular letra de color del avatar
+  const avatarColors = ['#1565C0','#00695C','#4527A0','#E65100','#AD1457','#BF360C','#1B5E20','#6A1B9A'];
+  const avatarColor  = avatarColors[est.nombre.charCodeAt(0) % avatarColors.length];
+
+  perfil.innerHTML = `
+    <!-- Cabecera del perfil -->
+    <div class="perfil-header">
+      <div class="perfil-avatar" style="background:${avatarColor};">
+        ${escapeHTML(est.nombre.trim()[0]?.toUpperCase()||'?')}
+      </div>
+      <div class="perfil-info">
+        <div class="perfil-nombre">${escapeHTML(est.nombre)}</div>
+        <div class="perfil-curso">
+          <span class="material-icons" style="font-size:14px;">class</span>
+          ${escapeHTML(curso.nombre)}
+        </div>
+        ${posicion > 0 ? `
+        <div class="perfil-ranking">
+          <span class="material-icons" style="font-size:13px;">leaderboard</span>
+          Posición ${posicion} de ${totalConNotas} estudiantes con notas
+        </div>` : ''}
+      </div>
+      <div class="perfil-nota-final ${clsFinal}">
+        ${notaFinal !== null ? notaFinal.toFixed(1) : '—'}
+        <div style="font-size:0.65rem;font-weight:500;opacity:0.8;">Final</div>
+      </div>
+    </div>
+
+    <!-- Stats rápidas -->
+    <div class="perfil-stats-row">
+      <div class="perfil-stat">
+        <div class="perfil-stat-num ${clsAsist}">${asistStats.pct !== null ? asistStats.pct + '%' : '—'}</div>
+        <div class="perfil-stat-lbl">Asistencia</div>
+        <div class="perfil-stat-sub">${asistStats.P}P · ${asistStats.T}T · ${asistStats.A}A · ${asistStats.E||0}E</div>
+      </div>
+      <div class="perfil-stat">
+        <div class="perfil-stat-num">${asistStats.total}</div>
+        <div class="perfil-stat-lbl">Clases registradas</div>
+      </div>
+      <div class="perfil-stat">
+        <div class="perfil-stat-num">${(curso.estudiantes||[]).length}</div>
+        <div class="perfil-stat-lbl">Compañeros en curso</div>
+      </div>
+    </div>
+
+    <!-- Notas por RA -->
+    ${rasKeys.length > 0 ? `
+    <div class="perfil-seccion">
+      <div class="perfil-seccion-titulo">
+        <span class="material-icons">grade</span>Calificaciones por RA
+      </div>
+      ${rasKeys.map(rk => {
+        const raInfo = curso.ras[rk];
+        const notaRA = _calcNotaRA(curso, estId, rk);
+        const clsRA  = notaRA === null ? '' : _clsNota(notaRA, raInfo.valorTotal);
+        const pctRA  = notaRA !== null && raInfo.valorTotal ? Math.round((notaRA / raInfo.valorTotal) * 100) : null;
+        // Notas por actividad
+        const actividades = raInfo.actividades || [];
+        return `
+        <div class="perfil-ra-card">
+          <div class="perfil-ra-header">
+            <span class="perfil-ra-modulo">${escapeHTML((raInfo.modulo||raInfo.label||rk).substring(0,40))}</span>
+            <span class="perfil-ra-total ${clsRA}">${notaRA !== null ? notaRA.toFixed(1) : '—'} / ${raInfo.valorTotal}</span>
+          </div>
+          ${pctRA !== null ? `
+          <div class="perfil-ra-bar-wrap">
+            <div class="perfil-ra-bar" style="width:${pctRA}%;background:${pctRA>=70?'#2E7D32':pctRA>=60?'#E65100':'#C62828'};"></div>
+          </div>` : ''}
+          ${actividades.length ? `
+          <div class="perfil-ra-acts">
+            ${actividades.slice(0,8).map((actId, i) => {
+              const nota = curso.notas?.[estId]?.[rk]?.[actId];
+              const max  = raInfo.valores?.[actId] || 100;
+              const cls2 = nota !== undefined ? _clsNota(nota, max) : 'vacio';
+              return `<span class="perfil-act-badge ${cls2}" title="Act.${i+1} — Máx: ${max}pts">
+                ${nota !== undefined ? nota : '—'}
+              </span>`;
+            }).join('')}
+            ${actividades.length > 8 ? `<span style="font-size:0.7rem;color:#9E9E9E;">+${actividades.length-8} más</span>` : ''}
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : `
+    <div class="perfil-seccion" style="text-align:center;padding:16px;color:#9E9E9E;font-size:0.82rem;">
+      <span class="material-icons" style="display:block;font-size:2rem;opacity:0.3;margin-bottom:6px;">assignment</span>
+      Sin calificaciones registradas aún.
+    </div>`}
+
+    <!-- Notas recientes de la clase (del curso) -->
+    ${notasClase.length > 0 ? `
+    <div class="perfil-seccion">
+      <div class="perfil-seccion-titulo">
+        <span class="material-icons">edit_note</span>Notas recientes de clase (${escapeHTML(curso.nombre)})
+      </div>
+      ${notasClase.map(([k, v]) => {
+        const parts  = k.split('_'); // notaclase_FECHA_SECCION_PERIODO
+        const fecha  = parts[1] || '';
+        const periodo= parts[3] || '';
+        const fechaFmt = fecha ? new Date(fecha+'T12:00:00').toLocaleDateString('es-DO',{weekday:'short',day:'2-digit',month:'short'}) : '';
+        return `<div class="perfil-nota-clase">
+          <div class="perfil-nota-meta">
+            <span class="material-icons" style="font-size:13px;">today</span>
+            ${fechaFmt}${periodo ? ` · P${periodo}` : ''}
+          </div>
+          <div class="perfil-nota-txt">${escapeHTML(v.substring(0,160))}${v.length>160?'…':''}</div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <!-- Comentarios del estudiante -->
+    <div class="perfil-seccion">
+      <div class="perfil-seccion-titulo">
+        <span class="material-icons">comment</span>Comentarios
+        <span style="margin-left:auto;font-size:0.7rem;font-weight:400;color:#9E9E9E;">
+          ${_getComentariosEst(estId).length > 0 ? _getComentariosEst(estId).length + ' comentario(s)' : ''}
+        </span>
+      </div>
+      <input type="hidden" id="coment-cat-select" value="">
+      <div id="perfil-comentarios-wrap"></div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="perfil-acciones">
+      <button onclick="cerrarBuscadorEstudiante();activarCurso('${cursoId}');setTimeout(()=>abrirCalificaciones(),50);"
+        class="perfil-accion-btn">
+        <span class="material-icons">grade</span> Ver en calificaciones
+      </button>
+      <button onclick="cerrarBuscadorEstudiante();activarCurso('${cursoId}');setTimeout(()=>{abrirCalificaciones();setTimeout(()=>toggleVistaAsistencia(),300);},50);"
+        class="perfil-accion-btn">
+        <span class="material-icons">how_to_reg</span> Ver asistencia
+      </button>
+    </div>
+  `;
+
+  // Renderizar comentarios
+  renderizarComentariosEnPerfil(estId);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: COMENTARIOS POR ESTUDIANTE
+// ════════════════════════════════════════════════════════════════════
+const COMENT_KEY = 'planificadorRA_comentarios_v1';
+const COMENT_CATEGORIAS = [
+  { id: 'academico',    label: 'Académico',     icono: 'school',       color: '#1565C0' },
+  { id: 'conducta',     label: 'Conducta',      icono: 'emoji_people', color: '#E65100' },
+  { id: 'asistencia',   label: 'Asistencia',    icono: 'how_to_reg',   color: '#00695C' },
+  { id: 'fortaleza',    label: 'Fortaleza',     icono: 'star',         color: '#F9A825' },
+  { id: 'seguimiento',  label: 'Seguimiento',   icono: 'track_changes',color: '#6A1B9A' },
+  { id: 'padre',        label: 'Contacto/Padre',icono: 'supervisor_account', color: '#AD1457' },
+  { id: 'otro',         label: 'Otro',          icono: 'label',        color: '#546E7A' },
+];
+
+function cargarComentarios() {
+  try { return JSON.parse(localStorage.getItem(COMENT_KEY) || '{}'); } catch { return {}; }
+}
+function guardarComentarios(data) {
+  localStorage.setItem(COMENT_KEY, JSON.stringify(data));
+}
+
+// Obtener comentarios de un estudiante, ordenados más reciente primero
+function _getComentariosEst(estId) {
+  const data = cargarComentarios();
+  return (data[estId] || []).slice().sort((a, b) => b.ts - a.ts);
+}
+
+// ── Renderizar sección de comentarios dentro del perfil ──────────
+function renderizarComentariosEnPerfil(estId) {
+  const wrap = document.getElementById('perfil-comentarios-wrap');
+  if (!wrap) return;
+
+  const lista = _getComentariosEst(estId);
+  const catSelec = document.getElementById('coment-cat-select')?.value || '';
+
+  const filtrados = catSelec ? lista.filter(c => c.categoria === catSelec) : lista;
+
+  const badgesCat = COMENT_CATEGORIAS.map(cat => {
+    const n = lista.filter(c => c.categoria === cat.id).length;
+    if (!n) return '';
+    const activo = catSelec === cat.id;
+    return `<button class="coment-cat-filter ${activo?'activo':''}"
+      style="${activo ? `background:${cat.color}18;border-color:${cat.color};color:${cat.color};` : ''}"
+      onclick="document.getElementById('coment-cat-select').value='${activo?'':cat.id}';renderizarComentariosEnPerfil('${estId}')">
+      <span class="material-icons" style="font-size:13px;">${cat.icono}</span>${cat.label}
+      <span class="coment-cat-n">${n}</span>
+    </button>`;
+  }).filter(Boolean).join('');
+
+  wrap.innerHTML = `
+    <!-- Formulario nuevo comentario -->
+    <div class="coment-form" id="coment-form-wrap">
+      <select id="coment-cat-select" onchange="renderizarComentariosEnPerfil('${estId}')"
+        style="padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;background:#fff;">
+        <option value="">Todas las categorías</option>
+        ${COMENT_CATEGORIAS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')}
+      </select>
+      <button class="coment-btn-nuevo" onclick="abrirFormComentario('${estId}')">
+        <span class="material-icons">add</span> Agregar comentario
+      </button>
+    </div>
+
+    <!-- Formulario de entrada (oculto por defecto) -->
+    <div class="coment-input-area hidden" id="coment-input-area">
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        ${COMENT_CATEGORIAS.map(c => `
+        <button class="coment-cat-btn" data-cat="${c.id}" style="border-color:${c.color}20;"
+          onclick="seleccionarCatComentario(this,'${c.color}','${estId}')">
+          <span class="material-icons" style="font-size:14px;color:${c.color};">${c.icono}</span>
+          ${c.label}
+        </button>`).join('')}
+      </div>
+      <input type="hidden" id="coment-cat-nueva" value="otro">
+      <textarea id="coment-texto-nueva" placeholder="Escribe el comentario…"
+        style="width:100%;min-height:80px;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:9px;
+               font-size:0.84rem;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5;"
+        onkeydown="if(event.ctrlKey&&event.key==='Enter')guardarComentarioNuevo('${estId}')"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button onclick="cerrarFormComentario()" style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:8px;padding:6px 14px;font-size:0.8rem;cursor:pointer;">Cancelar</button>
+        <button onclick="guardarComentarioNuevo('${estId}')" class="coment-btn-guardar">
+          <span class="material-icons" style="font-size:15px;">save</span> Guardar <span style="font-size:0.7rem;opacity:0.7;">(Ctrl+Enter)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros por categoría -->
+    ${badgesCat ? `<div class="coment-filtros">${badgesCat}</div>` : ''}
+
+    <!-- Lista de comentarios -->
+    <div class="coment-lista" id="coment-lista">
+      ${filtrados.length === 0 ? `
+        <div class="coment-vacio">
+          <span class="material-icons">chat_bubble_outline</span>
+          <p>${lista.length === 0
+            ? 'Sin comentarios aún. Usa el botón de arriba para agregar el primero.'
+            : 'Sin comentarios en esta categoría.'
+          }</p>
+        </div>` :
+        filtrados.map(c => _renderComentarioHTML(c, estId)).join('')
+      }
+    </div>`;
+}
+
+function _renderComentarioHTML(c, estId) {
+  const cat   = COMENT_CATEGORIAS.find(x => x.id === c.categoria) || COMENT_CATEGORIAS[6];
+  const fecha = new Date(c.ts).toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+  const hora  = new Date(c.ts).toLocaleTimeString('es-DO', { hour:'2-digit', minute:'2-digit' });
+  return `
+  <div class="coment-item" id="coment-${c.id}">
+    <div class="coment-item-header">
+      <span class="coment-cat-badge" style="background:${cat.color}18;color:${cat.color};border:1px solid ${cat.color}33;">
+        <span class="material-icons" style="font-size:12px;">${cat.icono}</span>${cat.label}
+      </span>
+      <span class="coment-fecha">${fecha} · ${hora}</span>
+      <div class="coment-item-acciones">
+        <button onclick="editarComentario('${c.id}','${estId}')" title="Editar" class="coment-accion-btn">
+          <span class="material-icons">edit</span>
+        </button>
+        <button onclick="eliminarComentario('${c.id}','${estId}')" title="Eliminar" class="coment-accion-btn del">
+          <span class="material-icons">delete_outline</span>
+        </button>
+      </div>
+    </div>
+    <div class="coment-texto" id="coment-txt-${c.id}">${escapeHTML(c.texto)}</div>
+  </div>`;
+}
+
+function abrirFormComentario(estId) {
+  document.getElementById('coment-input-area')?.classList.remove('hidden');
+  document.getElementById('coment-btn-nuevo')?.classList.add('hidden');
+  const ta = document.getElementById('coment-texto-nueva');
+  if (ta) { ta.value = ''; ta.focus(); }
+  // Seleccionar categoría por defecto "otro"
+  const catOtro = document.querySelector('.coment-cat-btn[data-cat="otro"]');
+  if (catOtro) seleccionarCatComentario(catOtro, '#546E7A', estId);
+}
+
+function cerrarFormComentario() {
+  document.getElementById('coment-input-area')?.classList.add('hidden');
+}
+
+function seleccionarCatComentario(btn, color, estId) {
+  document.querySelectorAll('.coment-cat-btn').forEach(b => {
+    b.style.background = '';
+    b.style.borderColor = '';
+    b.style.color = '';
+    b.style.fontWeight = '';
+  });
+  btn.style.background   = color + '18';
+  btn.style.borderColor  = color;
+  btn.style.color        = color;
+  btn.style.fontWeight   = '800';
+  const input = document.getElementById('coment-cat-nueva');
+  if (input) input.value = btn.dataset.cat;
+}
+
+function guardarComentarioNuevo(estId) {
+  const texto = document.getElementById('coment-texto-nueva')?.value?.trim();
+  if (!texto) { mostrarToast('Escribe algo antes de guardar', 'error'); return; }
+  const cat   = document.getElementById('coment-cat-nueva')?.value || 'otro';
+  const data  = cargarComentarios();
+  if (!data[estId]) data[estId] = [];
+  data[estId].push({ id: uid(), ts: Date.now(), categoria: cat, texto });
+  guardarComentarios(data);
+  cerrarFormComentario();
+  renderizarComentariosEnPerfil(estId);
+  // También actualizar badge en la lista de resultados
+  _actualizarBadgeComentarios(estId);
+  mostrarToast('Comentario guardado', 'success');
+}
+
+function editarComentario(comentId, estId) {
+  const data = cargarComentarios();
+  const lista = data[estId] || [];
+  const c = lista.find(x => x.id === comentId);
+  if (!c) return;
+  const txEl = document.getElementById(`coment-txt-${comentId}`);
+  if (!txEl) return;
+  // Reemplazar el texto por un inline textarea
+  txEl.innerHTML = `
+    <textarea style="width:100%;min-height:70px;padding:8px;border:1.5px solid #90CAF9;border-radius:8px;
+                     font-size:0.83rem;font-family:inherit;resize:vertical;box-sizing:border-box;"
+      id="edit-ta-${comentId}"
+      onkeydown="if(event.ctrlKey&&event.key==='Enter')confirmarEditComentario('${comentId}','${estId}')"
+    >${escapeHTML(c.texto)}</textarea>
+    <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:5px;">
+      <button onclick="renderizarComentariosEnPerfil('${estId}')"
+        style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:7px;padding:4px 12px;font-size:0.78rem;cursor:pointer;">
+        Cancelar
+      </button>
+      <button onclick="confirmarEditComentario('${comentId}','${estId}')"
+        style="background:#1565C0;border:none;color:#fff;border-radius:7px;padding:4px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+        Guardar
+      </button>
+    </div>`;
+  document.getElementById(`edit-ta-${comentId}`)?.focus();
+}
+
+function confirmarEditComentario(comentId, estId) {
+  const nuevoTexto = document.getElementById(`edit-ta-${comentId}`)?.value?.trim();
+  if (!nuevoTexto) { mostrarToast('El comentario no puede estar vacío', 'error'); return; }
+  const data  = cargarComentarios();
+  const lista = data[estId] || [];
+  const c = lista.find(x => x.id === comentId);
+  if (c) { c.texto = nuevoTexto; c.editado = Date.now(); }
+  guardarComentarios(data);
+  renderizarComentariosEnPerfil(estId);
+  mostrarToast('Comentario actualizado', 'success');
+}
+
+function eliminarComentario(comentId, estId) {
+  if (!confirm('¿Eliminar este comentario?')) return;
+  const data  = cargarComentarios();
+  data[estId] = (data[estId] || []).filter(c => c.id !== comentId);
+  guardarComentarios(data);
+  renderizarComentariosEnPerfil(estId);
+  _actualizarBadgeComentarios(estId);
+  mostrarToast('Comentario eliminado', 'success');
+}
+
+function _actualizarBadgeComentarios(estId) {
+  const n = _getComentariosEst(estId).length;
+  const badge = document.getElementById(`coment-badge-${estId}`);
+  if (badge) badge.textContent = n > 0 ? n : '';
+}
+
+// ── Mini-preview de comentarios en la tabla de calificaciones ────
+function abrirComentariosEstudiante(estId, nombreEstOrId) {
+  // Buscar el nombre real del estudiante en cualquier curso
+  let nombreEst = nombreEstOrId;
+  if (!nombreEst || nombreEst === estId) {
+    for (const curso of Object.values(calState.cursos)) {
+      const est = (curso.estudiantes||[]).find(e => e.id === estId);
+      if (est) { nombreEst = est.nombre; break; }
+    }
+  }
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+
+  document.getElementById('modal-title').innerHTML =
+    `<span class="material-icons" style="vertical-align:middle;font-size:18px;margin-right:6px;color:#1565C0;">comment</span>
+     Comentarios — ${escapeHTML(nombreEst)}`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <input type="hidden" id="coment-cat-select" value="">
+    <div id="perfil-comentarios-wrap"></div>`;
+
+  // footer instrumento visible (solo cerrar modal al terminar)
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  renderizarComentariosEnPerfil(estId);
+}
+
+
+// ── Guardado con debounce de observaciones ───────────────────────
+let _obsDebounce = null;
+function guardarObsEstudiante(key, valor) {
+  clearTimeout(_obsDebounce);
+  const ind = document.getElementById('perfil-obs-saved');
+  if (ind) ind.style.display = 'none';
+  _obsDebounce = setTimeout(() => {
+    if (valor.trim()) localStorage.setItem(key, valor);
+    else              localStorage.removeItem(key);
+    if (ind) ind.style.display = 'inline';
+  }, 600);
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: NOTIFICACIONES Y RECORDATORIOS
+// ════════════════════════════════════════════════════════════════════
+
+// Genera la lista de notificaciones activas
+function _generarNotificaciones() {
+  const notifs = [];
+  const hoy    = new Date(); hoy.setHours(0,0,0,0);
+  const ahora  = new Date();
+
+  // ── 1. Tareas vencidas ──────────────────────────────────────────
+  const tareas = cargarTareas();
+  const tvenc  = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
+    new Date(t.fechaVencimiento).setHours(0,0,0,0) < hoy.getTime());
+  if (tvenc.length) {
+    notifs.push({
+      id: 'tareas_vencidas', tipo: 'error', icono: 'assignment_late',
+      titulo: `${tvenc.length} tarea(s) vencida(s)`,
+      detalle: tvenc.map(t => `• ${t.descripcion||'Sin descripción'} (${t.seccion||''})`).join('\n'),
+      accion: { label: 'Ver tareas', fn: 'abrirTareas' }
+    });
+  }
+
+  // ── 2. Tareas que vencen hoy ────────────────────────────────────
+  const thoy = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
+    new Date(t.fechaVencimiento).setHours(0,0,0,0) === hoy.getTime());
+  if (thoy.length) {
+    notifs.push({
+      id: 'tareas_hoy', tipo: 'warning', icono: 'alarm',
+      titulo: `${thoy.length} tarea(s) vencen hoy`,
+      detalle: thoy.map(t => `• ${t.descripcion||'Sin descripción'} (${t.seccion||''})`).join('\n'),
+      accion: { label: 'Ver tareas', fn: 'abrirTareas' }
+    });
+  }
+
+  // ── 3. Tareas que vencen mañana ─────────────────────────────────
+  const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
+  const tman   = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
+    new Date(t.fechaVencimiento).setHours(0,0,0,0) === manana.getTime());
+  if (tman.length) {
+    notifs.push({
+      id: 'tareas_manana', tipo: 'warning', icono: 'event',
+      titulo: `${tman.length} tarea(s) vencen mañana`,
+      detalle: tman.map(t => `• ${t.descripcion||'Sin descripción'} (${t.seccion||''})`).join('\n'),
+      accion: { label: 'Ver tareas', fn: 'abrirTareas' }
+    });
+  }
+
+  // ── 4. Cursos sin planificación asignada ────────────────────────
+  const _biblioIds = new Set((cargarBiblioteca().items||[]).map(i => i.id));
+  const sinPlan = Object.values(calState.cursos).filter(c =>
+    !(c.planIds||[]).some(pid => _biblioIds.has(pid))
+  );
+  if (sinPlan.length) {
+    notifs.push({
+      id: 'cursos_sin_plan', tipo: 'info', icono: 'folder_off',
+      titulo: `${sinPlan.length} curso(s) sin planificación`,
+      detalle: sinPlan.map(c => `• ${c.nombre}`).join('\n'),
+      accion: { label: 'Ver calificaciones', fn: 'abrirCalificaciones' }
+    });
+  }
+
+  // ── 5. Asistencia no pasada hace 2+ días hábiles ────────────────
+  const horario   = cargarHorario().filter(e => e.materia);
+  const asistData = cargarAsistencia();
+  const cursosConHorario = {};
+  horario.forEach(e => {
+    if (e.seccion) cursosConHorario[e.seccion] = true;
+  });
+  const cursosAlerta = [];
+  Object.values(calState.cursos).forEach(curso => {
+    if (!cursosConHorario[curso.nombre]) return;
+    if (!curso.estudiantes?.length) return;
+    const diasAsist = Object.keys((asistData[curso.id] || {})).sort().reverse();
+    if (!diasAsist.length) {
+      cursosAlerta.push({ nombre: curso.nombre, dias: 'nunca' });
+    } else {
+      const ultima = new Date(diasAsist[0] + 'T12:00:00');
+      const diffDias = Math.round((hoy - ultima) / 86400000);
+      if (diffDias > 2) cursosAlerta.push({ nombre: curso.nombre, dias: diffDias });
+    }
+  });
+  if (cursosAlerta.length) {
+    notifs.push({
+      id: 'asist_pendiente', tipo: 'warning', icono: 'how_to_reg',
+      titulo: `Asistencia pendiente en ${cursosAlerta.length} curso(s)`,
+      detalle: cursosAlerta.map(c =>
+        `• ${c.nombre}: ${c.dias === 'nunca' ? 'nunca registrada' : `hace ${c.dias} días`}`
+      ).join('\n'),
+      accion: { label: 'Ir a calificaciones', fn: 'abrirCalificaciones' }
+    });
+  }
+
+  // ── 6. Estudiantes bajo umbral de asistencia ────────────────────
+  const umbral = parseInt(localStorage.getItem('asist_umbral') || '80');
+  const bajosUmbral = [];
+  Object.values(calState.cursos).forEach(curso => {
+    (curso.estudiantes||[]).forEach(est => {
+      const s = _statsAsistencia(curso.id, est.id);
+      if (s.pct !== null && s.pct < umbral && s.total >= 3) {
+        bajosUmbral.push({ nombre: est.nombre, curso: curso.nombre, pct: s.pct });
+      }
+    });
+  });
+  if (bajosUmbral.length) {
+    bajosUmbral.sort((a,b) => a.pct - b.pct);
+    notifs.push({
+      id: 'bajo_umbral', tipo: 'error', icono: 'person_off',
+      titulo: `${bajosUmbral.length} estudiante(s) bajo ${umbral}% de asistencia`,
+      detalle: bajosUmbral.slice(0,6).map(e =>
+        `• ${e.nombre} (${e.curso}): ${e.pct}%`
+      ).join('\n') + (bajosUmbral.length > 6 ? `\n  …y ${bajosUmbral.length-6} más` : ''),
+      accion: { label: 'Ver asistencia', fn: 'abrirCalificaciones' }
+    });
+  }
+
+  // ── 7. Clases de hoy sin actividad planificada ─────────────────
+  const diasMap = [null,'Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const diaJS = ahora.getDay();
+  if (diaJS >= 1 && diaJS <= 5) {
+    const diaIdx = diaJS - 1;
+    const clasesHoy  = cargarHorario().filter(e => e.dia === diaIdx && e.materia);
+    const biblio     = cargarBiblioteca();
+    const hoyISO     = hoy.toISOString().split('T')[0];
+    const sinPlanHoy = [];
+    clasesHoy.forEach(e => {
+      const tienePlan = (biblio.items||[]).some(reg => {
+        const cursosConReg = Object.values(calState.cursos).filter(c => (c.planIds||[]).includes(reg.id));
+        return cursosConReg.some(c => c.nombre === e.seccion) &&
+          (reg.planificacion?.actividades||[]).some(act => act.fecha === hoyISO);
+      });
+      if (!tienePlan) sinPlanHoy.push(`P${e.periodo}: ${e.materia}${e.seccion?' — '+e.seccion:''}`);
+    });
+    if (sinPlanHoy.length) {
+      notifs.push({
+        id: 'sin_plan_hoy', tipo: 'info', icono: 'event_note',
+        titulo: `${sinPlanHoy.length} clase(s) de hoy sin actividad planificada`,
+        detalle: sinPlanHoy.map(s => `• ${s}`).join('\n'),
+        accion: { label: 'Ir a planificaciones', fn: 'abrirPlanificaciones' }
+      });
+    }
+  }
+
+  // ── 8. Notas pendientes de registrar ───────────────────────────
+  let actsSinNota = 0;
+  Object.values(calState.cursos).forEach(curso => {
+    Object.values(curso.ras||{}).forEach(ra => {
+      (ra.actividades||[]).forEach(actId => {
+        const hayNota = (curso.estudiantes||[]).some(e => {
+          const n = curso.notas?.[e.id];
+          return n && Object.values(n).some(rn => rn && rn[actId] !== undefined);
+        });
+        if (!hayNota) actsSinNota++;
+      });
+    });
+  });
+  if (actsSinNota > 0) {
+    notifs.push({
+      id: 'notas_pendientes', tipo: 'info', icono: 'grading',
+      titulo: `${actsSinNota} actividad(es) sin notas registradas`,
+      detalle: 'Hay actividades en el libro de calificaciones que todavía no tienen notas.',
+      accion: { label: 'Ir a calificaciones', fn: 'abrirCalificaciones' }
+    });
+  }
+
+  return notifs;
+}
+
+// ── Actualizar badge del header ──────────────────────────────────
+function actualizarBadgeNotificaciones() {
+  const notifs  = _generarNotificaciones();
+  const urgentes = notifs.filter(n => n.tipo === 'error' || n.tipo === 'warning').length;
+  const badge   = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (urgentes > 0) {
+    badge.style.display = 'flex';
+    badge.textContent   = urgentes > 9 ? '9+' : urgentes;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── Abrir/cerrar modal ───────────────────────────────────────────
+function abrirNotificaciones() {
+  const overlay = document.getElementById('notif-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  _renderizarNotificaciones();
+}
+function cerrarNotificaciones() {
+  document.getElementById('notif-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function _renderizarNotificaciones() {
+  const body   = document.getElementById('notif-modal-body');
+  const header = document.getElementById('notif-count-header');
+  if (!body) return;
+  const notifs = _generarNotificaciones();
+  if (header) header.textContent = notifs.length ? `${notifs.length} aviso(s)` : '';
+
+  if (!notifs.length) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:#B0BEC5;">
+        <span class="material-icons" style="font-size:3rem;display:block;margin-bottom:10px;opacity:0.4;">check_circle</span>
+        <p style="font-size:0.92rem;font-weight:700;color:#78909C;">Todo en orden 🎉</p>
+        <p style="font-size:0.78rem;margin-top:4px;">No hay avisos ni recordatorios pendientes.</p>
+      </div>`;
+    return;
+  }
+
+  const COLORES = {
+    error:   { bg:'#FFEBEE', border:'#FFCDD2', icon:'#C62828', label:'bg:#FFCDD2;color:#C62828' },
+    warning: { bg:'#FFF8E1', border:'#FFE082', icon:'#E65100', label:'bg:#FFF3E0;color:#E65100' },
+    info:    { bg:'#E3F2FD', border:'#90CAF9', icon:'#1565C0', label:'bg:#E3F2FD;color:#1565C0' },
+  };
+
+  // Agrupar: errores primero, luego warnings, luego info
+  const orden = ['error','warning','info'];
+  const ordenados = orden.flatMap(tipo => notifs.filter(n => n.tipo === tipo));
+
+  body.innerHTML = ordenados.map(n => {
+    const c = COLORES[n.tipo];
+    const lineas = n.detalle ? n.detalle.split('\n') : [];
+    return `
+    <div class="notif-item notif-tipo-${n.tipo}" style="background:${c.bg};border-color:${c.border};">
+      <div class="notif-item-header">
+        <span class="material-icons notif-icono" style="color:${c.icon};">${n.icono}</span>
+        <span class="notif-titulo">${n.titulo}</span>
+      </div>
+      ${lineas.length ? `
+      <div class="notif-detalle">
+        ${lineas.slice(0,5).map(l => `<div>${escapeHTML(l)}</div>`).join('')}
+        ${lineas.length > 5 ? `<div style="color:#9E9E9E;font-size:0.7rem;">…y ${lineas.length-5} más</div>` : ''}
+      </div>` : ''}
+      ${n.accion ? `
+      <button class="notif-accion-btn" style="${n.tipo==='error'?'background:#FFCDD2;color:#C62828;':n.tipo==='warning'?'background:#FFE082;color:#E65100;':'background:#BBDEFB;color:#1565C0;'}"
+        onclick="cerrarNotificaciones();${n.accion.fn}();">
+        <span class="material-icons" style="font-size:14px;">arrow_forward</span> ${n.accion.label}
+      </button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: EXPORTAR ASISTENCIA A WORD / PDF
+// ════════════════════════════════════════════════════════════════════
+
+function abrirExpAsistencia() {
+  const overlay = document.getElementById('exp-asist-overlay');
+  if (!overlay) return;
+
+  // Llenar select de cursos
+  const sel = document.getElementById('exp-asist-curso');
+  if (sel) {
+    sel.innerHTML = Object.values(calState.cursos)
+      .filter(c => c.estudiantes?.length)
+      .map(c => `<option value="${c.id}">${escapeHTML(c.nombre)} (${c.estudiantes.length} est.)</option>`)
+      .join('');
+    if (!sel.options.length) sel.innerHTML = '<option value="">Sin cursos con estudiantes</option>';
+  }
+
+  // Fecha por defecto: este mes
+  setExpAsistPeriodo('mes');
+
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  _actualizarPreviewAsistencia();
+}
+
+function cerrarExpAsistencia() {
+  document.getElementById('exp-asist-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function setExpAsistPeriodo(tipo) {
+  const hoy = new Date();
+  const desde = document.getElementById('exp-asist-desde');
+  const hasta  = document.getElementById('exp-asist-hasta');
+  if (!desde || !hasta) return;
+  const fmt = d => d.toISOString().split('T')[0];
+  if (tipo === 'mes') {
+    desde.value = fmt(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+    hasta.value  = fmt(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
+  } else if (tipo === 'trimestre') {
+    const d3 = new Date(hoy); d3.setMonth(d3.getMonth() - 3);
+    desde.value = fmt(d3);
+    hasta.value  = fmt(hoy);
+  } else {
+    desde.value = '2024-01-01';
+    hasta.value  = fmt(hoy);
+  }
+  _actualizarPreviewAsistencia();
+}
+
+function _actualizarPreviewAsistencia() {
+  const preview = document.getElementById('exp-asist-preview');
+  if (!preview) return;
+  const cursoId = document.getElementById('exp-asist-curso')?.value;
+  const desde   = document.getElementById('exp-asist-desde')?.value;
+  const hasta   = document.getElementById('exp-asist-hasta')?.value;
+  if (!cursoId) { preview.innerHTML = ''; return; }
+  const curso   = calState.cursos[cursoId];
+  if (!curso)   { preview.innerHTML = ''; return; }
+  const { fechas } = _filtrarAsistencia(cursoId, desde, hasta);
+  preview.innerHTML = `
+    <div style="background:#F5F7FA;border-radius:8px;padding:10px 14px;border:1px solid #E0E0E0;">
+      <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#1565C0;">preview</span>
+      <strong>${curso.nombre}</strong> · ${curso.estudiantes?.length||0} estudiantes ·
+      <strong>${fechas.length}</strong> fecha(s) en el período seleccionado
+    </div>`;
+}
+
+// Filtrar datos de asistencia por rango de fechas
+function _filtrarAsistencia(cursoId, desde, hasta) {
+  const data   = cargarAsistencia();
+  const byDate = data[cursoId] || {};
+  const fechas = Object.keys(byDate)
+    .filter(f => (!desde || f >= desde) && (!hasta || f <= hasta))
+    .sort();
+  return { fechas, byDate };
+}
+
+// ── EXPORTAR A WORD ─────────────────────────────────────────────
+async function generarReporteAsistenciaWord() {
+  const cursoId = document.getElementById('exp-asist-curso')?.value;
+  const desde   = document.getElementById('exp-asist-desde')?.value;
+  const hasta   = document.getElementById('exp-asist-hasta')?.value;
+  if (!cursoId) { mostrarToast('Selecciona un curso', 'error'); return; }
+  const curso = calState.cursos[cursoId];
+  if (!curso)  { mostrarToast('Curso no encontrado', 'error'); return; }
+
+  mostrarToast('Generando documento Word…', 'success');
+
+  const { fechas, byDate } = _filtrarAsistencia(cursoId, desde, hasta);
+  const estudiantes = curso.estudiantes || [];
+  const umbral = parseInt(localStorage.getItem('asist_umbral') || '80');
+
+  const {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign,
+    PageOrientation
+  } = docx;
+
+  const borderThin  = { style: BorderStyle.SINGLE, size: 4,  color: '90CAF9' };
+  const borderMed   = { style: BorderStyle.SINGLE, size: 8,  color: '1565C0' };
+  const borders     = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin };
+  const bordersHead = { top: borderMed,  bottom: borderMed,  left: borderMed,  right: borderMed  };
+
+  // Colores
+  const C_HEADER = '1565C0';
+  const C_PRES   = 'E8F5E9';
+  const C_AUS    = 'FFEBEE';
+  const C_TARD   = 'FFF3E0';
+  const C_EXCU   = 'E3F2FD';
+  const C_SIN    = 'FAFAFA';
+
+  function cell(text, opts = {}) {
+    return new TableCell({
+      borders: opts.borders || borders,
+      width:   opts.width   ? { size: opts.width, type: WidthType.DXA } : undefined,
+      shading: opts.shade   ? { fill: opts.shade, type: ShadingType.CLEAR } : undefined,
+      verticalAlign: VerticalAlign.CENTER,
+      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+      children: [new Paragraph({
+        alignment: opts.align || AlignmentType.CENTER,
+        children: [new TextRun({
+          text: String(text || ''),
+          bold: opts.bold || false,
+          color: opts.color || '000000',
+          font: 'Arial',
+          size: opts.size || 16,
+        })]
+      })]
+    });
+  }
+
+  // TABLA DE ENCABEZADO
+  const encabezado = new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [9360],
+    rows: [
+      new TableRow({ children: [
+        new TableCell({
+          borders: bordersHead,
+          width: { size: 9360, type: WidthType.DXA },
+          shading: { fill: C_HEADER, type: ShadingType.CLEAR },
+          margins: { top: 120, bottom: 120, left: 160, right: 160 },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [
+              new TextRun({ text: 'REGISTRO DE ASISTENCIA', bold: true, color: 'FFFFFF', font: 'Arial', size: 28 })
+            ]}),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [
+              new TextRun({ text: `Curso: ${curso.nombre}`, bold: true, color: 'E3F2FD', font: 'Arial', size: 22 })
+            ]}),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [
+              new TextRun({
+                text: `Período: ${desde || 'inicio'} — ${hasta || 'hoy'}  ·  Docente: ${planificacion?.datosGenerales?.nombreDocente || '—'}`,
+                color: 'BBDEFB', font: 'Arial', size: 18
+              })
+            ]})
+          ]
+        })
+      ]})
+    ]
+  });
+
+  // TABLA DE ASISTENCIA
+  // Cada columna: nombre (2200) + fechas (420 c/u) + total P/A/T/E + %
+  const COL_NOMBRE = 2200;
+  const COL_FECHA  = Math.min(420, Math.floor((9360 - COL_NOMBRE - 1200) / Math.max(fechas.length, 1)));
+  const COL_TOTAL  = 300;
+  const COL_PCT    = 380;
+  const totalFechasW = COL_FECHA * fechas.length;
+  const restoW = 9360 - COL_NOMBRE - totalFechasW - COL_TOTAL * 4 - COL_PCT;
+
+  // Header de fechas
+  const DIAS_ABREV = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  const headerRow  = new TableRow({
+    tableHeader: true,
+    children: [
+      cell('Estudiante', { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 17, align: AlignmentType.LEFT, width: COL_NOMBRE, borders: bordersHead }),
+      ...fechas.map(f => {
+        const d = new Date(f + 'T12:00:00');
+        const label = `${DIAS_ABREV[d.getDay()]}\n${d.getDate()}/${d.getMonth()+1}`;
+        return cell(label, { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 14, width: COL_FECHA, borders: bordersHead });
+      }),
+      cell('P', { shade: C_PRES, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
+      cell('T', { shade: C_TARD, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
+      cell('A', { shade: C_AUS,  bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
+      cell('E', { shade: C_EXCU, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
+      cell('%', { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 15, width: COL_PCT, borders: bordersHead }),
+    ]
+  });
+
+  // Filas de estudiantes
+  const filasEst = estudiantes.map((est, idx) => {
+    let P=0, A=0, T=0, E=0;
+    const celdas = fechas.map(f => {
+      const v = byDate[f]?.[est.id] || '';
+      const shade = v==='P'?C_PRES : v==='A'?C_AUS : v==='T'?C_TARD : v==='E'?C_EXCU : C_SIN;
+      if (v==='P') P++; else if (v==='A') A++; else if (v==='T') T++; else if (v==='E') E++;
+      return cell(v || '·', { shade, size: 14, width: COL_FECHA });
+    });
+    const total  = P + A + T + E;
+    const pct    = total > 0 ? Math.round(((P + T*0.5 + E) / total) * 100) : null;
+    const rowShade = idx%2===0 ? 'FFFFFF' : 'F5F7FA';
+    const pctColor = pct===null ? '9E9E9E' : pct >= umbral ? '2E7D32' : pct >= 60 ? 'E65100' : 'C62828';
+    return new TableRow({ children: [
+      cell(est.nombre, { shade: rowShade, align: AlignmentType.LEFT, width: COL_NOMBRE, size: 17 }),
+      ...celdas,
+      cell(P,   { shade: C_PRES, bold: true, size: 15, width: COL_TOTAL }),
+      cell(T,   { shade: C_TARD, bold: true, size: 15, width: COL_TOTAL }),
+      cell(A,   { shade: C_AUS,  bold: true, size: 15, width: COL_TOTAL }),
+      cell(E,   { shade: C_EXCU, bold: true, size: 15, width: COL_TOTAL }),
+      cell(pct!==null?pct+'%':'—', { shade: rowShade, bold: true, color: pctColor, size: 15, width: COL_PCT }),
+    ]});
+  });
+
+  const colWidths = [COL_NOMBRE, ...fechas.map(()=>COL_FECHA), COL_TOTAL, COL_TOTAL, COL_TOTAL, COL_TOTAL, COL_PCT];
+  const tablaAsistencia = new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: colWidths,
+    rows: [headerRow, ...filasEst]
+  });
+
+  // TABLA RESUMEN
+  const resumenRows = [
+    new TableRow({ children: [
+      cell('RESUMEN', { shade: C_HEADER, bold: true, color:'FFFFFF', size: 18, width: 4680, borders: bordersHead }),
+      cell('', { shade: C_HEADER, width: 4680, borders: bordersHead }),
+    ]}),
+    new TableRow({ children: [
+      cell('Total de clases registradas',   { shade:'F5F7FA', align: AlignmentType.LEFT, width:4680, size:17 }),
+      cell(fechas.length,                   { bold:true, width:4680, size:17 }),
+    ]}),
+    new TableRow({ children: [
+      cell('Total de estudiantes',          { shade:'F5F7FA', align: AlignmentType.LEFT, width:4680, size:17 }),
+      cell(estudiantes.length,              { bold:true, width:4680, size:17 }),
+    ]}),
+    new TableRow({ children: [
+      cell(`Estudiantes bajo umbral (${umbral}%)`, { shade:'FFEBEE', align: AlignmentType.LEFT, width:4680, size:17 }),
+      cell(estudiantes.filter(e => {
+        const s = _statsAsistencia(cursoId, e.id);
+        return s.pct !== null && s.pct < umbral;
+      }).length, { bold:true, shade:'FFEBEE', color:'C62828', width:4680, size:17 }),
+    ]}),
+  ];
+  const tablaResumen = new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [4680, 4680],
+    rows: resumenRows
+  });
+
+  const sections = fechas.length > 20
+    ? [{ properties: { page: { size: { width: 12240, height: 15840, orientation: PageOrientation.LANDSCAPE }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: [encabezado, new Paragraph({ text: '' }), tablaAsistencia, new Paragraph({ text: '' }), tablaResumen] }]
+    : [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1080, right: 720, bottom: 1080, left: 720 } } }, children: [encabezado, new Paragraph({ text: '' }), tablaAsistencia, new Paragraph({ text: '' }), tablaResumen] }];
+
+  const documento = new Document({ sections });
+  const buffer    = await Packer.toBlob(documento);
+  const url       = URL.createObjectURL(buffer);
+  const a         = document.createElement('a');
+  a.href          = url;
+  a.download      = `Asistencia_${curso.nombre.replace(/\s+/g,'_')}_${desde||'todo'}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+  mostrarToast('Documento Word generado 📄', 'success');
+}
+
+// ── EXPORTAR A PDF (via ventana de impresión) ───────────────────
+function generarReporteAsistenciaPDF() {
+  const cursoId = document.getElementById('exp-asist-curso')?.value;
+  const desde   = document.getElementById('exp-asist-desde')?.value;
+  const hasta   = document.getElementById('exp-asist-hasta')?.value;
+  if (!cursoId) { mostrarToast('Selecciona un curso', 'error'); return; }
+  const curso = calState.cursos[cursoId];
+  if (!curso)  { mostrarToast('Curso no encontrado', 'error'); return; }
+
+  const { fechas, byDate } = _filtrarAsistencia(cursoId, desde, hasta);
+  const estudiantes = curso.estudiantes || [];
+  const umbral = parseInt(localStorage.getItem('asist_umbral') || '80');
+  const DIAS_ABREV = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+
+  const filas = estudiantes.map((est, idx) => {
+    let P=0, A=0, T=0, E=0;
+    const celdas = fechas.map(f => {
+      const v = byDate[f]?.[est.id] || '';
+      const bg = v==='P'?'#C8E6C9':v==='A'?'#FFCDD2':v==='T'?'#FFE0B2':v==='E'?'#BBDEFB':'#F5F5F5';
+      if (v==='P') P++; else if (v==='A') A++; else if (v==='T') T++; else if (v==='E') E++;
+      return `<td style="background:${bg};font-size:9pt;">${v||'·'}</td>`;
+    }).join('');
+    const total  = P+A+T+E;
+    const pct    = total > 0 ? Math.round(((P+T*0.5+E)/total)*100) : null;
+    const pctColor = pct===null?'#9E9E9E':pct>=umbral?'#2E7D32':pct>=60?'#E65100':'#C62828';
+    const rowBg  = idx%2===0?'#fff':'#F8F9FA';
+    return `<tr style="background:${rowBg};">
+      <td style="text-align:left;padding:4px 6px;font-size:9.5pt;">${escapeHTML(est.nombre)}</td>
+      ${celdas}
+      <td style="background:#C8E6C9;font-weight:700;">${P}</td>
+      <td style="background:#FFE0B2;font-weight:700;">${T}</td>
+      <td style="background:#FFCDD2;font-weight:700;">${A}</td>
+      <td style="background:#BBDEFB;font-weight:700;">${E}</td>
+      <td style="font-weight:800;color:${pctColor};">${pct!==null?pct+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const headerFechas = fechas.map(f => {
+    const d = new Date(f+'T12:00:00');
+    return `<th style="background:#1565C0;color:#fff;font-size:8pt;padding:3px;">${DIAS_ABREV[d.getDay()]}<br>${d.getDate()}/${d.getMonth()+1}</th>`;
+  }).join('');
+
+  const bajo = estudiantes.filter(e => {
+    const s = _statsAsistencia(cursoId, e.id);
+    return s.pct !== null && s.pct < umbral;
+  }).length;
+
+  const html = `<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Asistencia — ${curso.nombre}</title>
+    <style>
+      @page { margin:0.6in; size:${fechas.length > 20 ? 'landscape' : 'portrait'}; }
+      body { font-family:Arial,sans-serif; font-size:10pt; color:#212121; }
+      h1   { font-size:16pt; color:#1565C0; margin:0 0 4px; }
+      .sub { font-size:9pt; color:#546E7A; margin:0 0 12px; }
+      table { border-collapse:collapse; width:100%; }
+      th,td { border:1px solid #E0E0E0; text-align:center; padding:4px 3px; vertical-align:middle; }
+      .resumen { margin-top:16px; border:1px solid #1565C0; border-radius:6px; padding:10px; display:inline-block; }
+      .resumen td { border:none; padding:3px 14px; font-size:9.5pt; }
+    </style>
+  </head><body>
+    <h1>Registro de Asistencia</h1>
+    <p class="sub">Curso: <strong>${escapeHTML(curso.nombre)}</strong> &nbsp;·&nbsp;
+      Período: ${desde||'inicio'} — ${hasta||'hoy'} &nbsp;·&nbsp;
+      Docente: ${escapeHTML(planificacion?.datosGenerales?.nombreDocente||'—')}</p>
+    <table>
+      <thead><tr>
+        <th style="background:#1565C0;color:#fff;text-align:left;padding:5px 8px;min-width:130px;">Estudiante</th>
+        ${headerFechas}
+        <th style="background:#C8E6C9;">P</th>
+        <th style="background:#FFE0B2;">T</th>
+        <th style="background:#FFCDD2;">A</th>
+        <th style="background:#BBDEFB;">E</th>
+        <th style="background:#1565C0;color:#fff;">%</th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="resumen">
+      <table>
+        <tr><td>Clases registradas:</td><td><strong>${fechas.length}</strong></td></tr>
+        <tr><td>Total estudiantes:</td><td><strong>${estudiantes.length}</strong></td></tr>
+        <tr><td style="color:#C62828;">Bajo umbral (${umbral}%):</td><td style="color:#C62828;font-weight:700;">${bajo}</td></tr>
+      </table>
+    </div>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 600);
+  mostrarToast('Ventana de impresión/PDF abierta 🖨️', 'success');
+}
+
+
+const HORARIO_KEY  = 'planificadorRA_horario_v1';
+const TAREAS_KEY   = 'planificadorRA_tareas_v1';
+
+const PERIODOS = [
+  { id: 1, label: '1',  hora: '8:00 – 8:50 AM' },
+  { id: 2, label: '2',  hora: '8:50 – 9:40 AM' },
+  { id: 3, label: '3',  hora: '10:00 – 10:50 AM' },
+  { id: 4, label: '4',  hora: '10:50 – 11:40 AM' },
+  { id: 5, label: '5',  hora: '12:30 – 1:20 PM' },
+  { id: 6, label: '6',  hora: '1:20 – 2:10 PM' },
+  { id: 7, label: '7',  hora: '2:20 – 3:10 PM' },
+  { id: 8, label: '8',  hora: '3:10 – 4:00 PM' },
+];
+const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const DIAS_SHORT = ['Lu','Ma','Mi','Ju','Vi'];
+
+// Colores para las materias
+const MATERIA_COLORES = [
+  '#1565C0','#2E7D32','#AD1457','#E65100','#4527A0',
+  '#00695C','#BF360C','#37474F','#F57F17','#1B5E20',
+  '#880E4F','#0D47A1','#1A237E','#006064','#33691E',
+];
+
+function _horarioColores() {
+  const h = cargarHorario();
+  const mapa = {};
+  let ci = 0;
+  h.forEach(e => {
+    const key = (e.materia||'').trim();
+    if (key && !mapa[key]) mapa[key] = MATERIA_COLORES[ci++ % MATERIA_COLORES.length];
+  });
+  return mapa;
+}
+
+function cargarHorario() {
+  try { return JSON.parse(localStorage.getItem(HORARIO_KEY) || '[]'); } catch { return []; }
+}
+function guardarHorario(data) {
+  localStorage.setItem(HORARIO_KEY, JSON.stringify(data));
+}
+
+function abrirHorario() {
+  _mostrarPanel('panel-horario');
+  renderizarHorario();
+}
+function cerrarHorario() { _ocultarPaneles(); }
+
+function renderizarHorario() {
+  const tabla = document.getElementById('horario-tabla');
+  if (!tabla) return;
+  const data  = cargarHorario();
+  const colores = _horarioColores();
+
+  // Construir mapa de búsqueda: dia-periodo → entrada
+  const mapa = {};
+  data.forEach(e => { mapa[`${e.dia}-${e.periodo}`] = e; });
+
+  let html = '<table class="hor-tabla"><thead><tr><th class="hor-th-dia">Día</th>';
+  PERIODOS.forEach(p => {
+    html += `<th class="hor-th-per"><div class="hor-per-num">${p.label}</div><div class="hor-per-hora">${p.hora}</div></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  DIAS.forEach((dia, di) => {
+    html += `<tr><td class="hor-td-dia"><span>${DIAS_SHORT[di]}</span></td>`;
+    PERIODOS.forEach(p => {
+      const key = `${di}-${p.id}`;
+      const e   = mapa[key];
+      const color = e && e.materia ? (colores[e.materia.trim()] || '#78909C') : null;
+      const bg    = color ? color + '22' : '';
+      const border= color ? `2px solid ${color}` : '1px solid #E0E0E0';
+      html += `<td class="hor-td-celda" style="border-left:${border};background:${bg};"
+        onclick="editarCeldaHorario(${di},${p.id})" title="Clic para editar">`;
+      if (e && e.materia) {
+        html += `<div class="hor-celda-inner">
+          <div class="hor-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
+          ${e.seccion ? `<div class="hor-seccion">${escapeHTML(e.seccion)}</div>` : ''}
+          ${e.aula    ? `<div class="hor-aula"><span class="material-icons" style="font-size:11px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
+        </div>`;
+      } else {
+        html += `<div class="hor-celda-vacia"><span class="material-icons">add</span></div>`;
+      }
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  tabla.innerHTML = html;
+
+  // Leyenda de materias
+  const leyenda = document.getElementById('horario-leyenda');
+  if (leyenda) {
+    const entries = Object.entries(colores);
+    if (entries.length === 0) { leyenda.innerHTML = ''; return; }
+    leyenda.innerHTML = '<div class="hor-leyenda-wrap">'
+      + entries.map(([mat, col]) =>
+          `<span class="hor-leyenda-item" style="border-color:${col};color:${col};">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col};margin-right:5px;"></span>
+            ${escapeHTML(mat)}
+          </span>`
+        ).join('')
+      + '</div>';
+  }
+}
+
+function editarCeldaHorario(diaIdx, periodoId) {
+  const data = cargarHorario();
+  const key  = `${diaIdx}-${periodoId}`;
+  const existente = data.find(e => e.dia === diaIdx && e.periodo === periodoId) || {};
+  const periodo = PERIODOS.find(p => p.id === periodoId);
+
+  // Obtener lista de materias ya usadas para sugerencias
+  const materiasUsadas = [...new Set(data.map(e => e.materia).filter(Boolean))];
+  const datalistOpts = materiasUsadas.map(m => `<option value="${escapeHTML(m)}">`).join('');
+
+  document.getElementById('modal-title').textContent = `${DIAS[diaIdx]} — Período ${periodoId} (${periodo.hora})`;
+  document.getElementById('modal-body').innerHTML = `
+    <datalist id="dl-materias">${datalistOpts}</datalist>
+    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">
+          Materia / Módulo
+        </label>
+        <input id="hor-inp-materia" list="dl-materias" placeholder="Ej: Diseño de Portales Web" value="${escapeHTML(existente.materia||'')}"
+          style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Sección</label>
+          <input id="hor-inp-seccion" placeholder="Ej: 4to B" value="${escapeHTML(existente.seccion||'')}"
+            style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Aula (opcional)</label>
+          <input id="hor-inp-aula" placeholder="Ej: Lab 3" value="${escapeHTML(existente.aula||'')}"
+            style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Notas (opcional)</label>
+        <input id="hor-inp-notas" placeholder="Ej: Trae USB" value="${escapeHTML(existente.notas||'')}"
+          style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #E0E0E0;flex-wrap:wrap;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        ${existente.materia ? `<button class="btn-secundario" style="color:#C62828;border-color:#FFCDD2;" onclick="borrarCeldaHorario(${diaIdx},${periodoId})"><span class="material-icons">delete_outline</span> Borrar</button>` : ''}
+        <button class="btn-siguiente" onclick="guardarCeldaHorario(${diaIdx},${periodoId})">
+          <span class="material-icons">save</span> Guardar
+        </button>
+      </div>
+    </div>`;
+  // botones en body
+
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('hor-inp-materia')?.focus(), 80);
+  document.getElementById('hor-inp-materia').addEventListener('keydown', e => {
+    if (e.key === 'Enter') guardarCeldaHorario(diaIdx, periodoId);
+  });
+}
+
+function guardarCeldaHorario(diaIdx, periodoId) {
+  const materia = document.getElementById('hor-inp-materia')?.value.trim();
+  const seccion = document.getElementById('hor-inp-seccion')?.value.trim();
+  const aula    = document.getElementById('hor-inp-aula')?.value.trim();
+  const notas   = document.getElementById('hor-inp-notas')?.value.trim();
+  const data = cargarHorario().filter(e => !(e.dia === diaIdx && e.periodo === periodoId));
+  if (materia) data.push({ dia: diaIdx, periodo: periodoId, materia, seccion, aula, notas });
+  guardarHorario(data);
+  cerrarModalBtn();
+  renderizarHorario();
+  mostrarToast(materia ? 'Período guardado' : 'Período borrado', 'success');
+}
+
+function borrarCeldaHorario(diaIdx, periodoId) {
+  const data = cargarHorario().filter(e => !(e.dia === diaIdx && e.periodo === periodoId));
+  guardarHorario(data);
+  cerrarModalBtn();
+  renderizarHorario();
+  mostrarToast('Período borrado', 'success');
+}
+
+function copiarFilaHorario() {
+  // Copia el horario de un día a otro (utilidad)
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: TAREAS
+// ════════════════════════════════════════════════════════════════════
+function cargarTareas() {
+  try { return JSON.parse(localStorage.getItem(TAREAS_KEY) || '[]'); } catch { return []; }
+}
+function guardarTareas(data) {
+  localStorage.setItem(TAREAS_KEY, JSON.stringify(data));
+  setTimeout(actualizarBadgeNotificaciones, 100);
+}
+
+function abrirTareas() {
+  _mostrarPanel('panel-tareas');
+  // Poblar select de secciones con horario + cursos
+  const sel = document.getElementById('tarea-filtro-seccion');
+  if (sel) {
+    const secsHor = [...new Set(cargarHorario().map(e => e.seccion).filter(Boolean))];
+    const secsCur = Object.values(calState.cursos).map(c => c.nombre);
+    const todas   = [...new Set([...secsHor, ...secsCur])].sort();
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todas las secciones</option>'
+      + todas.map(s => `<option value="${escapeHTML(s)}" ${cur===s?'selected':''}>${escapeHTML(s)}</option>`).join('');
+  }
+  renderizarTareas();
+}
+function cerrarTareas() { _ocultarPaneles(); }
+
+function _estadoTarea(tarea) {
+  if (tarea.estado === 'entregada') return 'entregada';
+  if (!tarea.fechaLimite) return 'pendiente';
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const fl   = new Date(tarea.fechaLimite); fl.setHours(0,0,0,0);
+  if (fl < hoy) return 'vencida';
+  return 'pendiente';
+}
+
+function _diasRestantes(fechaLimite) {
+  if (!fechaLimite) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const fl  = new Date(fechaLimite); fl.setHours(0,0,0,0);
+  return Math.ceil((fl - hoy) / 86400000);
+}
+
+function renderizarTareas() {
+  const container = document.getElementById('tareas-container');
+  if (!container) return;
+  const tareas = cargarTareas();
+
+  const filtroActivo  = document.querySelector('.tarea-filtro-btn.activo')?.dataset.filtro || 'todas';
+  const filtroSeccion = document.getElementById('tarea-filtro-seccion')?.value || '';
+
+  let filtradas = tareas.map(t => ({ ...t, _estado: _estadoTarea(t) }));
+  if (filtroActivo !== 'todas') filtradas = filtradas.filter(t => t._estado === filtroActivo);
+  if (filtroSeccion) filtradas = filtradas.filter(t => t.seccion === filtroSeccion);
+
+  // Ordenar dentro de cada grupo por fecha
+  filtradas.sort((a, b) => {
+    if (!a.fechaLimite) return 1;
+    if (!b.fechaLimite) return -1;
+    return new Date(a.fechaLimite) - new Date(b.fechaLimite);
+  });
+
+  // Contadores para los filtros (siempre sobre el total sin filtro de estado)
+  const counts = { todas: tareas.length, pendiente: 0, entregada: 0, vencida: 0 };
+  tareas.forEach(t => { const e = _estadoTarea(t); counts[e] = (counts[e]||0) + 1; });
+  ['todas','pendiente','entregada','vencida'].forEach(f => {
+    const btn = document.querySelector(`.tarea-filtro-btn[data-filtro="${f}"]`);
+    if (btn) { const badge = btn.querySelector('.tarea-count'); if (badge) badge.textContent = counts[f] || 0; }
+  });
+
+  if (filtradas.length === 0) {
+    container.innerHTML = `<div class="tarea-vacia">
+      <span class="material-icons">assignment_turned_in</span>
+      <p>${filtroActivo === 'todas' ? 'No hay tareas. Crea la primera.' : 'Sin tareas en esta categoría.'}</p>
+    </div>`;
+    return;
+  }
+
+  // Agrupar por sección/curso
+  const grupos = {};
+  filtradas.forEach(t => {
+    const key = t.seccion || 'Sin sección';
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(t);
+  });
+
+  // Orden de grupos: vencidas primero, luego pendientes, luego entregadas
+  const ordenGrupos = Object.keys(grupos).sort((a, b) => {
+    const urgA = grupos[a].some(t => t._estado === 'vencida') ? 0 : grupos[a].some(t => t._estado === 'pendiente') ? 1 : 2;
+    const urgB = grupos[b].some(t => t._estado === 'vencida') ? 0 : grupos[b].some(t => t._estado === 'pendiente') ? 1 : 2;
+    return urgA - urgB || a.localeCompare(b);
+  });
+
+  const _renderTarjeta = t => {
+    const dias = _diasRestantes(t.fechaLimite);
+    const estadoCls   = { pendiente:'tarea-pendiente', entregada:'tarea-entregada', vencida:'tarea-vencida' }[t._estado];
+    const estadoLabel = { pendiente:'Pendiente', entregada:'Entregada', vencida:'Vencida' }[t._estado];
+    let diasLabel = '';
+    if (t._estado === 'pendiente' && dias !== null) {
+      if (dias === 0)      diasLabel = '<span class="tarea-dias hoy">Hoy</span>';
+      else if (dias === 1) diasLabel = '<span class="tarea-dias pronto">Mañana</span>';
+      else if (dias <= 3)  diasLabel = `<span class="tarea-dias pronto">En ${dias} días</span>`;
+      else                 diasLabel = `<span class="tarea-dias">En ${dias} días</span>`;
+    } else if (t._estado === 'vencida') {
+      diasLabel = `<span class="tarea-dias vencida">Venció hace ${Math.abs(dias)} día(s)</span>`;
+    }
+    const fechaFmt = t.fechaLimite
+      ? new Date(t.fechaLimite + 'T12:00:00').toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short' })
+        + (t.horaLimite ? ' a las ' + t.horaLimite : '') : '';
+    return `<div class="tarea-card ${estadoCls}" id="tarea-card-${t.id}">
+      <div class="tarea-card-header">
+        <div class="tarea-status-badge ${estadoCls}">${estadoLabel}</div>
+        ${diasLabel}
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          ${t._estado !== 'entregada'
+            ? `<button class="tarea-btn-accion" onclick="marcarTareaEntregada('${t.id}')" title="Marcar como entregada"
+                style="background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;">
+                <span class="material-icons" style="font-size:15px;">check_circle</span>
+              </button>`
+            : `<button class="tarea-btn-accion" onclick="marcarTareaPendiente('${t.id}')" title="Revertir a pendiente"
+                style="background:#FFF8E1;border-color:#FFE082;color:#F57F17;">
+                <span class="material-icons" style="font-size:15px;">refresh</span>
+              </button>`}
+          <button class="tarea-btn-accion" onclick="abrirEditarTarea('${t.id}')" title="Editar">
+            <span class="material-icons" style="font-size:15px;">edit</span>
+          </button>
+          <button class="tarea-btn-accion" onclick="eliminarTarea('${t.id}')" title="Eliminar"
+            style="color:#EF5350;border-color:#FFCDD2;">
+            <span class="material-icons" style="font-size:15px;">delete_outline</span>
+          </button>
+        </div>
+      </div>
+      <div class="tarea-descripcion">${escapeHTML(t.descripcion||'Sin descripción')}</div>
+      ${fechaFmt ? `<div class="tarea-fecha"><span class="material-icons" style="font-size:14px;">event</span>${fechaFmt}</div>` : ''}
+      ${t.observaciones ? `<div class="tarea-obs"><span class="material-icons" style="font-size:13px;">notes</span>${escapeHTML(t.observaciones)}</div>` : ''}
+    </div>`;
+  };
+
+  container.innerHTML = ordenGrupos.map(grupo => {
+    const items = grupos[grupo];
+    const nPend = items.filter(t => t._estado === 'pendiente').length;
+    const nVenc = items.filter(t => t._estado === 'vencida').length;
+    const nEntr = items.filter(t => t._estado === 'entregada').length;
+    const headerColor = nVenc > 0 ? '#C62828' : nPend > 0 ? '#E65100' : '#2E7D32';
+    const badges = [
+      nVenc ? `<span style="background:#FFEBEE;color:#C62828;border-radius:12px;padding:2px 9px;font-size:0.7rem;font-weight:700;">${nVenc} vencida(s)</span>` : '',
+      nPend ? `<span style="background:#FFF3E0;color:#E65100;border-radius:12px;padding:2px 9px;font-size:0.7rem;font-weight:700;">${nPend} pendiente(s)</span>` : '',
+      nEntr ? `<span style="background:#E8F5E9;color:#2E7D32;border-radius:12px;padding:2px 9px;font-size:0.7rem;font-weight:700;">${nEntr} entregada(s)</span>` : '',
+    ].filter(Boolean).join('');
+    const grupoEsc = grupo.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="tarea-grupo">
+      <div class="tarea-grupo-header" style="border-left-color:${headerColor};">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="material-icons" style="font-size:20px;color:${headerColor};">class</span>
+          <span class="tarea-grupo-titulo">${escapeHTML(grupo)}</span>
+          ${badges}
+        </div>
+        <button onclick="abrirNuevaTarea('${grupoEsc}')"
+          style="display:inline-flex;align-items:center;gap:4px;background:none;border:1.5px solid ${headerColor};color:${headerColor};border-radius:20px;padding:4px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;">add</span> Agregar
+        </button>
+      </div>
+      <div class="tarea-grupo-body">${items.map(_renderTarjeta).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+
+function abrirNuevaTarea(seccionSugerida) {
+  _abrirModalTarea(null, seccionSugerida);
+}
+
+function abrirEditarTarea(id) {
+  _abrirModalTarea(id, null);
+}
+
+function _abrirModalTarea(id, seccionSugerida) {
+  const tareas = cargarTareas();
+  const tarea  = id ? tareas.find(t => t.id === id) : null;
+
+  // Opciones de sección: del horario + de los cursos del libro de calificaciones
+  const seccionesHorario = [...new Set(cargarHorario().map(e => e.seccion).filter(Boolean))].sort();
+  const seccionesCursos  = Object.values(calState.cursos).map(c => c.nombre);
+  const todasSecciones   = [...new Set([...seccionesHorario, ...seccionesCursos])];
+  const optsSecc = `<option value="">— Sin sección —</option>`
+    + todasSecciones.map(s => `<option value="${escapeHTML(s)}" ${(tarea?.seccion||seccionSugerida||'')===s?'selected':''}>${escapeHTML(s)}</option>`).join('');
+
+  const hoy = new Date().toISOString().split('T')[0];
+
+  document.getElementById('modal-title').textContent = tarea ? 'Editar Tarea' : 'Nueva Tarea';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Descripción de la tarea *</label>
+        <textarea id="tarea-inp-desc" rows="3" placeholder="Ej: Entregar práctica de HTML con formulario responsivo"
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"
+        >${escapeHTML(tarea?.descripcion||'')}</textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Sección / Curso</label>
+          <select id="tarea-inp-seccion"
+            style="width:100%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+            ${optsSecc}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Fecha límite</label>
+          <input type="date" id="tarea-inp-fecha" value="${tarea?.fechaLimite||hoy}"
+            style="width:100%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Hora límite (opcional)</label>
+        <input type="time" id="tarea-inp-hora" value="${tarea?.horaLimite||''}"
+          style="width:50%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Observaciones (opcional)</label>
+        <textarea id="tarea-inp-obs" rows="2" placeholder="Ej: Debe subirse al aula virtual antes de las 9:40 AM"
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"
+        >${escapeHTML(tarea?.observaciones||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_guardarTarea('${id||''}')">
+          <span class="material-icons">save</span> Guardar
+        </button>
+      </div>
+    </div>`;
+  // botones en el body
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('tarea-inp-desc')?.focus(), 80);
+}
+
+function _guardarTarea(id) {
+  const desc  = document.getElementById('tarea-inp-desc')?.value.trim();
+  if (!desc) { mostrarToast('Escribe una descripción', 'error'); return; }
+  const seccion = document.getElementById('tarea-inp-seccion')?.value;
+  const fecha   = document.getElementById('tarea-inp-fecha')?.value;
+  const hora    = document.getElementById('tarea-inp-hora')?.value;
+  const obs     = document.getElementById('tarea-inp-obs')?.value.trim();
+  const tareas  = cargarTareas();
+
+  if (id) {
+    const idx = tareas.findIndex(t => t.id === id);
+    if (idx >= 0) {
+      tareas[idx] = { ...tareas[idx], descripcion: desc, seccion, fechaLimite: fecha, horaLimite: hora, observaciones: obs };
+    }
+  } else {
+    tareas.push({ id: uid(), descripcion: desc, seccion, fechaLimite: fecha, horaLimite: hora, observaciones: obs, estado: 'pendiente', creadaEn: new Date().toISOString() });
+  }
+  guardarTareas(tareas);
+  cerrarModalBtn();
+  renderizarTareas();
+  mostrarToast(id ? 'Tarea actualizada' : 'Tarea creada', 'success');
+}
+
+function marcarTareaEntregada(id) {
+  const tareas = cargarTareas();
+  const t = tareas.find(t => t.id === id);
+  if (t) { t.estado = 'entregada'; t.entregadaEn = new Date().toISOString(); }
+  guardarTareas(tareas);
+  renderizarTareas();
+  mostrarToast('Tarea marcada como entregada ✓', 'success');
+}
+
+function marcarTareaPendiente(id) {
+  const tareas = cargarTareas();
+  const t = tareas.find(t => t.id === id);
+  if (t) { t.estado = 'pendiente'; delete t.entregadaEn; }
+  guardarTareas(tareas);
+  renderizarTareas();
+}
+
+function eliminarTarea(id) {
+  if (!confirm('¿Eliminar esta tarea?')) return;
+  guardarTareas(cargarTareas().filter(t => t.id !== id));
+  renderizarTareas();
+  mostrarToast('Tarea eliminada', 'success');
+}
+
+function filtrarTareas(filtro) {
+  document.querySelectorAll('.tarea-filtro-btn').forEach(b => b.classList.toggle('activo', b.dataset.filtro === filtro));
+  renderizarTareas();
+}
+
+
 // INICIALIZACIÓN DEL MÓDULO DE CALIFICACIONES
 
 
@@ -6758,6 +9359,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+  // Botón Horario en el header
+  if (headerInner && !document.getElementById('btn-horario')) {
+    const btnHor = document.createElement('button');
+    btnHor.id = 'btn-horario';
+    btnHor.className = 'btn-planificaciones';
+    btnHor.title = 'Mi Horario';
+    btnHor.innerHTML = '<span class="material-icons">calendar_view_week</span><span class="btn-nueva-label">Horario</span>';
+    btnHor.onclick = abrirHorario;
+    const btnPlnRef = document.getElementById('btn-planificaciones');
+    if (btnPlnRef) headerInner.insertBefore(btnHor, btnPlnRef);
+    else headerInner.appendChild(btnHor);
+  }
+  // Botón Tareas en el header
+  if (headerInner && !document.getElementById('btn-tareas')) {
+    const btnTar = document.createElement('button');
+    btnTar.id = 'btn-tareas';
+    btnTar.className = 'btn-planificaciones';
+    btnTar.title = 'Tareas';
+    btnTar.innerHTML = '<span class="material-icons">assignment</span><span class="btn-nueva-label">Tareas</span>';
+    btnTar.onclick = abrirTareas;
+    const btnHorRef = document.getElementById('btn-horario');
+    if (btnHorRef) headerInner.insertBefore(btnTar, btnHorRef);
+    else headerInner.appendChild(btnTar);
+  }
   // Cargar datos de calificaciones al iniciar
 
 
@@ -6986,19 +9611,9 @@ function guardarPlanificacionActual() {
     biblio.items[idxById] = registro;
     mostrarToast('Planificación actualizada', 'success');
   } else {
-    const idxMod = biblio.items.findIndex(i =>
-      i.planificacion?.datosGenerales?.moduloFormativo === dg.moduloFormativo &&
-      i.planificacion?.datosGenerales?.nombreDocente === dg.nombreDocente
-    );
-    if (idxMod >= 0) {
-      if (!confirm('Ya existe una planificación para "' + (dg.moduloFormativo || '') + '". ¿Reemplazarla?')) return;
-      registro.id = biblio.items[idxMod].id;
-      biblio.items[idxMod] = registro;
-      mostrarToast('Planificación actualizada', 'success');
-    } else {
-      biblio.items.unshift(registro);
-      mostrarToast('Planificación guardada correctamente', 'success');
-    }
+    // Guardar siempre como nueva — mismo módulo puede tener varios RA/planes
+    biblio.items.unshift(registro);
+    mostrarToast('Planificación guardada correctamente', 'success');
   }
   planificacion._id = registro.id;
   persistirBiblioteca(biblio);
@@ -7006,7 +9621,9 @@ function guardarPlanificacionActual() {
   // Asignar al curso si hay cursos creados y no está ya asignada
   const cursosExist = Object.values(calState.cursos);
   if (cursosExist.length > 0) {
-    const yaAsignada = cursosExist.some(c => (c.planIds||[]).includes(id));
+    // Usar registro.id (el ID final guardado), no el 'id' temporal inicial
+    const finalId    = registro.id;
+    const yaAsignada = cursosExist.some(c => (c.planIds||[]).includes(finalId));
     if (!yaAsignada) {
       const opsCursos = cursosExist.map(c => `<option value="${c.id}">${escapeHTML(c.nombre)}</option>`).join('');
       document.getElementById('modal-title').textContent = 'Asignar al libro de calificaciones';
@@ -7020,13 +9637,16 @@ function guardarPlanificacionActual() {
             <option value="">— No asignar ahora —</option>
             ${opsCursos}
           </select>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
+            <button class="btn-secundario" onclick="cerrarModalBtn()">Omitir</button>
+            <button class="btn-siguiente" onclick="_asignarDesdeGuardar('${finalId}')">
+              <span class="material-icons">link</span> Asignar
+            </button>
+          </div>
         </div>`;
-      document.getElementById('modal-footer').innerHTML = `
-        <button class="btn-siguiente" onclick="_asignarDesdeGuardar('${id}')">
-          <span class="material-icons">link</span> Asignar
-        </button>
-        <button class="btn-secundario" onclick="cerrarModalBtn()">Omitir</button>`;
-      document.getElementById('modal-overlay').classList.remove('hidden');
+      // botones en el body
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
   }
@@ -7219,6 +9839,202 @@ function cargarPlanificacionGuardada(id) {
 
 
 
+
+// ════════════════════════════════════════════════════════════════════
+// DUPLICAR PLANIFICACIÓN
+// ════════════════════════════════════════════════════════════════════
+let _dupPlanId = null; // id del registro original a duplicar
+
+function abrirDuplicarPlan(id) {
+  const biblio = cargarBiblioteca();
+  const reg    = (biblio.items || []).find(i => i.id === id);
+  if (!reg) return;
+  _dupPlanId = id;
+
+  const dg = reg.planificacion?.datosGenerales || {};
+
+  // Mostrar info del original
+  const origen = document.getElementById('dup-plan-origen');
+  if (origen) origen.innerHTML =
+    `<strong>Original:</strong> ${escHTML(dg.moduloFormativo || reg.nombre || 'Sin nombre')}` +
+    (dg.nombreBachillerato ? ` · ${escHTML(dg.nombreBachillerato)}` : '') +
+    `<br><span style="color:#9E9E9E;">Guardada el ${escHTML(reg.fechaGuardadoLabel || reg.fechaGuardado || '—')}</span>`;
+
+  // Nombre por defecto: "Copia de X"
+  const inputNombre = document.getElementById('dup-plan-nombre');
+  if (inputNombre) inputNombre.value = `Copia de ${dg.moduloFormativo || reg.nombre || 'planificación'}`;
+
+  // Llenar select de cursos
+  const sel = document.getElementById('dup-plan-curso');
+  if (sel) {
+    sel.innerHTML = '<option value="">Sin asignar (puedo hacerlo después)</option>' +
+      Object.values(calState.cursos).map(c =>
+        `<option value="${c.id}">${escHTML(c.nombre)}</option>`
+      ).join('');
+    // Pre-seleccionar el curso activo si existe
+    if (calState.cursoActivoId) sel.value = calState.cursoActivoId;
+  }
+
+  // Calcular fechas de actividades del original (normalizar a ISO string)
+  const actividades = reg.planificacion?.actividades || [];
+  const fechasActs = actividades.map(a => {
+    if (!a.fecha) return null;
+    if (a.fecha instanceof Date) return a.fecha.toISOString().split('T')[0];
+    const s = String(a.fecha);
+    // Si ya es YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // Si es ISO con T
+    if (s.includes('T')) return s.split('T')[0];
+    // Intentar parsear
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+  }).filter(Boolean).sort();
+  const primerFecha = fechasActs[0] || null;
+  const ultimaFecha = fechasActs[fechasActs.length - 1] || null;
+
+  // Fecha de inicio por defecto: hoy
+  const inputFecha = document.getElementById('dup-plan-fecha-inicio');
+  if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
+
+  // Preview de fechas
+  _actualizarPreviewDupFechas(primerFecha, ultimaFecha, fechasActs.length);
+
+  // Esconder/mostrar según toggle
+  const toggle = document.getElementById('dup-plan-ajustar-fechas');
+  if (toggle) toggleDupFechas(toggle.checked);
+
+  // Guardar contexto de fechas en el input (como data attrs accesibles)
+  if (inputFecha) {
+    inputFecha.dataset.primeraOriginal = primerFecha || '';
+    inputFecha.dataset.ultimaOriginal  = ultimaFecha || '';
+    inputFecha.dataset.totalActs       = fechasActs.length;
+    inputFecha.oninput = () => _actualizarPreviewDupFechas(primerFecha, ultimaFecha, fechasActs.length);
+  }
+
+  document.getElementById('dup-plan-overlay')?.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarDuplicarPlan() {
+  document.getElementById('dup-plan-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+  _dupPlanId = null;
+}
+
+function toggleDupFechas(on) {
+  const wrap = document.getElementById('dup-plan-fechas-wrap');
+  if (wrap) wrap.style.display = on ? 'block' : 'none';
+}
+
+function _actualizarPreviewDupFechas(primeraOriginal, ultimaOriginal, totalActs) {
+  const preview  = document.getElementById('dup-plan-fechas-preview');
+  const inputVal = document.getElementById('dup-plan-fecha-inicio')?.value;
+  if (!preview) return;
+  if (!primeraOriginal || !totalActs) {
+    preview.innerHTML = '<span style="color:#B0BEC5;">Las actividades no tienen fechas asignadas.</span>';
+    return;
+  }
+  if (!inputVal) { preview.innerHTML = ''; return; }
+  // Calcular el desplazamiento en días
+  const orig  = new Date(primeraOriginal + 'T12:00:00');
+  const nueva = new Date(inputVal       + 'T12:00:00');
+  const diffMs  = nueva - orig;
+  const diffDias = Math.round(diffMs / 86400000);
+  const signo   = diffDias >= 0 ? '+' : '';
+  // Calcular nueva fecha final
+  const nuevaFin = ultimaOriginal
+    ? new Date(new Date(ultimaOriginal + 'T12:00:00').getTime() + diffMs).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'})
+    : '—';
+  preview.innerHTML = `
+    <span class="material-icons" style="font-size:12px;vertical-align:middle;color:#1565C0;">info</span>
+    Se moverán <strong>${totalActs}</strong> actividad(es) <strong>${signo}${diffDias} días</strong>.
+    Nueva fecha de cierre: <strong>${nuevaFin}</strong>.`;
+}
+
+function confirmarDuplicarPlan() {
+  if (!_dupPlanId) return;
+  const biblio  = cargarBiblioteca();
+  const original = (biblio.items || []).find(i => i.id === _dupPlanId);
+  if (!original) { mostrarToast('Planificación no encontrada', 'error'); return; }
+
+  // Clonar profundamente
+  const copia = JSON.parse(JSON.stringify(original));
+
+  // Nuevo id y fecha de guardado
+  const ahora = new Date();
+  copia.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  copia.fechaGuardado      = ahora.toISOString();
+  copia.fechaGuardadoLabel = ahora.toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  // Nombre personalizado
+  const inputNombre = document.getElementById('dup-plan-nombre')?.value?.trim();
+  copia.nombre = inputNombre || `Copia de ${original.nombre}`;
+  if (copia.planificacion?.datosGenerales) {
+    copia.planificacion.datosGenerales.moduloFormativo =
+      inputNombre || `Copia de ${original.planificacion.datosGenerales.moduloFormativo || original.nombre}`;
+  }
+
+  // Ajustar fechas de actividades
+  const ajustar = document.getElementById('dup-plan-ajustar-fechas')?.checked;
+  const inputFecha = document.getElementById('dup-plan-fecha-inicio');
+  const primeraOriginal = inputFecha?.dataset.primeraOriginal;
+
+  const _primeraOrig = inputFecha?.dataset?.primeraOriginal || primeraOriginal || '';
+  if (ajustar && inputFecha?.value && _primeraOrig && _primeraOrig.length === 10) {
+    const orig    = new Date(_primeraOrig + 'T12:00:00');
+    const nueva   = new Date(inputFecha.value + 'T12:00:00');
+    if (isNaN(orig.getTime()) || isNaN(nueva.getTime())) {
+      mostrarToast('Fecha inválida, se copiarán las fechas originales', 'warning');
+    }
+    const diffMs  = isNaN(orig.getTime()) ? 0 : (nueva - orig);
+    const acts    = copia.planificacion?.actividades || [];
+    acts.forEach(act => {
+      if (act.fecha) {
+        try {
+          // Normalizar a ISO string primero
+          let fechaISO;
+          if (act.fecha instanceof Date) {
+            fechaISO = act.fecha.toISOString().split('T')[0];
+          } else {
+            const s = String(act.fecha);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) fechaISO = s;
+            else if (s.includes('T')) fechaISO = s.split('T')[0];
+            else { const d = new Date(s); fechaISO = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]; }
+          }
+          if (fechaISO) {
+            const fechaAct   = new Date(fechaISO + 'T12:00:00');
+            const nuevaFecha = new Date(fechaAct.getTime() + diffMs);
+            if (!isNaN(nuevaFecha.getTime())) {
+              act.fecha    = nuevaFecha.toISOString().split('T')[0];
+              act.fechaStr = nuevaFecha.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+            }
+          }
+        } catch(e) { /* conservar fecha original */ }
+      }
+    });
+  }
+
+  // Asignar a curso si se seleccionó
+  const cursoId = document.getElementById('dup-plan-curso')?.value;
+  if (cursoId && calState.cursos[cursoId]) {
+    const curso = calState.cursos[cursoId];
+    if (!curso.planIds) curso.planIds = [];
+    if (!curso.planIds.includes(copia.id)) {
+      curso.planIds.push(copia.id);
+      if (!curso.planActivaId) curso.planActivaId = copia.id;
+    }
+    guardarCalificaciones();
+  }
+
+  // Guardar la copia en la biblioteca (al inicio de la lista)
+  biblio.items.unshift(copia);
+  persistirBiblioteca(biblio);
+
+  cerrarDuplicarPlan();
+  renderizarBiblioteca();
+  mostrarToast(`✅ Planificación duplicada: "${copia.nombre}"`, 'success');
+}
+
 function eliminarPlanificacionGuardada(id) {
 
 
@@ -7324,315 +10140,141 @@ function filtrarPlanificaciones() {
 
 
 function renderizarBiblioteca() {
-
-
-
-  const grid = document.getElementById('pln-grid');
-
-
-
+  const grid  = document.getElementById('pln-grid');
   const vacio = document.getElementById('pln-vacio');
-
-
-
   if (!grid || !vacio) return;
-
-
-
-
-
-
-
   const biblio = cargarBiblioteca();
-
-
-
-  const items = biblio.items || [];
-
-
-
-
-
-
+  const items  = biblio.items || [];
+  const query  = (document.getElementById('pln-buscar')?.value || '').toLowerCase();
 
   if (items.length === 0) {
-
-
-
     grid.innerHTML = '';
-
-
-
     vacio.classList.remove('hidden');
-
-
-
     return;
-
-
-
   }
-
-
-
-
-
-
-
   vacio.classList.add('hidden');
-
-
-
   grid.innerHTML = '';
 
-
-
-
-
-
-
-  items.forEach(reg => {
-
-
-
+  // ── Filtrar por búsqueda ──────────────────────────────────────
+  const filtrados = items.filter(reg => {
+    if (!query) return true;
     const dg = reg.planificacion?.datosGenerales || {};
-
-
-
     const ra = reg.planificacion?.ra || {};
+    return [dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato,
+            dg.familiaProfesional, ra.descripcion].join(' ').toLowerCase().includes(query);
+  });
 
+  if (filtrados.length === 0) {
+    grid.innerHTML = '<p style="text-align:center;color:#9E9E9E;padding:40px;">Sin resultados para la búsqueda.</p>';
+    return;
+  }
 
+  // ── Agrupar por curso ─────────────────────────────────────────
+  const grupos = {};          // { cursoNombre: [reg, ...] }
+  const sinCurso = [];
+  const cursosMap = calState.cursos || {};
 
-    const ec = reg.planificacion?.elementosCapacidad || [];
+  filtrados.forEach(reg => {
+    const cursosDePlan = Object.values(cursosMap).filter(c => (c.planIds||[]).includes(reg.id));
+    if (cursosDePlan.length === 0) {
+      sinCurso.push(reg);
+    } else {
+      cursosDePlan.forEach(c => {
+        if (!grupos[c.nombre]) grupos[c.nombre] = [];
+        grupos[c.nombre].push({ reg, esPlanActiva: c.planActivaId === reg.id });
+      });
+    }
+  });
 
+  // Ordenar grupos alfabéticamente; "Sin curso asignado" al final
+  const nombresCurso = Object.keys(grupos).sort();
 
-
+  // ── Renderizar función de card ────────────────────────────────
+  const _renderCard = (reg, esPlanActiva) => {
+    const dg = reg.planificacion?.datosGenerales || {};
+    const ra = reg.planificacion?.ra || {};
+    const ec   = reg.planificacion?.elementosCapacidad || [];
     const acts = reg.planificacion?.actividades || [];
-
-
-
     const horasTotal = reg.planificacion?.horasTotal || 0;
-
-
-
-
-
-
-
-    const resumenRA = ra.descripcion
-
-
-
-      ? ra.descripcion.substring(0, 120) + (ra.descripcion.length > 120 ? '…' : '')
-
-
-
+    const resumenRA  = ra.descripcion
+      ? ra.descripcion.substring(0,120) + (ra.descripcion.length > 120 ? '…' : '')
       : 'Sin descripción del RA';
 
-
-
-
-
-
-
-    const busqueda = [
-
-
-
-      dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato,
-
-
-
-      dg.familiaProfesional, ra.descripcion
-
-
-
-    ].join(' ').toLowerCase();
-
-
-
-
-
-
-
     const card = document.createElement('div');
-
-
-
-    card.className = 'pln-card';
-
-
-
-    card.dataset.busqueda = busqueda;
-
-
-
-
-
-
-
+    card.className = 'pln-card' + (esPlanActiva ? ' pln-card-activa' : '');
     card.innerHTML = `
-
-
-
       <div class="pln-card-date">
-
-
-
         <span class="material-icons">schedule</span>
-
-
-
         ${escHTML(reg.fechaGuardadoLabel || reg.fechaGuardado)}
-
-
-
+        ${esPlanActiva ? '<span class="pln-badge-activa"><span class="material-icons" style="font-size:11px;">star</span>Activa</span>' : ''}
       </div>
-
-
-
-
-
-
-
       <div class="pln-card-modulo">${escHTML(dg.moduloFormativo || 'Sin módulo')}</div>
-
-
-
-
-
-
-
       <div class="pln-card-meta">
-
-
-
         <span><span class="material-icons">person</span>${escHTML(dg.nombreDocente || '—')}</span>
-
-
-
         <span><span class="material-icons">school</span>${escHTML(dg.nombreBachillerato || '—')}</span>
-
-
-
         ${dg.fechaInicio ? '<span><span class="material-icons">date_range</span>' +
-
-
-
-        escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
-
-
-
+          escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
       </div>
-
-
-
-
-
-
-
       <div class="pln-card-ra">${escHTML(resumenRA)}</div>
-
-
-
-
-
-
-
       <div class="pln-card-chips">
-
-
-
-        ${ec.length ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
-
-
-
+        ${ec.length   ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
         ${acts.length ? '<span class="pln-chip pln-chip-acts"><span class="material-icons" style="font-size:12px;">event_note</span>' + acts.length + ' actividades</span>' : ''}
-
-
-
-        ${horasTotal ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
-
-
-
-        ${dg.valorRA ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
-
-
-
+        ${horasTotal  ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
+        ${dg.valorRA  ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
       </div>
-
-
-
-
-
-
-
-      <div class="pln-card-curso-badge" id="pln-badge-${reg.id}"></div>
       <div class="pln-card-actions">
-
-
-
         <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')">
-
-
-
           <span class="material-icons">folder_open</span> Cargar
-
-
-
         </button>
-
-
-
         <button class="btn-pln-asignar" onclick="asignarPlanACurso('${reg.id}')" title="Asignar a un curso">
           <span class="material-icons">link</span> Asignar curso
         </button>
-        <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar">
-
-
-
-          <span class="material-icons">delete_outline</span>
-
-
-
+        <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación">
+          <span class="material-icons">content_copy</span> Duplicar
         </button>
-
-
-
+        <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar">
+          <span class="material-icons">delete_outline</span>
+        </button>
       </div>`;
+    return card;
+  };
 
+  // ── Sección de grupo ──────────────────────────────────────────
+  const _renderGrupo = (titulo, icono, color, planes) => {
+    const section = document.createElement('div');
+    section.className = 'pln-grupo';
+    const header = document.createElement('div');
+    header.className = 'pln-grupo-header';
+    header.innerHTML = `
+      <span class="material-icons" style="color:${color};">${icono}</span>
+      <span class="pln-grupo-nombre">${escHTML(titulo)}</span>
+      <span class="pln-grupo-count">${planes.length} plan${planes.length !== 1 ? 'es' : ''}</span>
+      <span class="material-icons pln-grupo-chevron">expand_more</span>`;
+    // Toggle colapsar
+    header.addEventListener('click', () => {
+      section.classList.toggle('pln-grupo-collapsed');
+    });
+    section.appendChild(header);
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'pln-grupo-cards';
+    planes.forEach(({ reg, esPlanActiva }) => {
+      cardsWrap.appendChild(_renderCard(reg, esPlanActiva));
+    });
+    section.appendChild(cardsWrap);
+    return section;
+  };
 
-
-
-
-
-
-    grid.appendChild(card);
-    // Mostrar badge de cursos que tienen esta planificación
-    const _badgeEl = document.getElementById('pln-badge-' + reg.id);
-    if (_badgeEl) {
-      const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds||[]).includes(reg.id));
-      if (cursosConPlan.length) {
-        _badgeEl.innerHTML = cursosConPlan.map(c =>
-          '<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:0.72rem;font-weight:700;margin:0 4px 4px 0;">'
-          + '<span class="material-icons" style="font-size:13px;">class</span>' + escapeHTML(c.nombre) + '</span>'
-        ).join('');
-      }
-    }
-
-
-
+  // Cursos con planes
+  nombresCurso.forEach(nombre => {
+    grid.appendChild(_renderGrupo(nombre, 'class', '#1565C0', grupos[nombre]));
   });
 
-
-
+  // Sin curso asignado
+  if (sinCurso.length > 0) {
+    grid.appendChild(_renderGrupo('Sin curso asignado', 'folder_off', '#78909C',
+      sinCurso.map(reg => ({ reg, esPlanActiva: false }))));
+  }
 }
-
-
-
-
-
-
 
 /** Escapa HTML básico (helper local para la biblioteca) */
 
