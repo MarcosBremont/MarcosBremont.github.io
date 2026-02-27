@@ -6047,25 +6047,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   
-  // Bloquear scroll automático del navegador al enfocar inputs de nota
-  document.addEventListener('scroll', function(e) {
-    if (document.activeElement && document.activeElement.classList.contains('input-nota')) {
-      // Hay un input de nota activo - no hacer nada, el scroll fue del usuario
+  // ── Anti-scroll: bloquear scroll de teclado mientras input-nota activo ──
+  // El scroll lo causa el browser al hacer scroll-into-view del body cuando
+  // se escribe un número. Se bloquea el scroll programático pero se permite
+  // el scroll manual (wheel/touch).
+  let _notaActiva = false;
+  let _notaScrollY = 0;
+  let _notaScrollX = 0;
+  let _userWheelActive = false;
+
+  // Detectar scroll manual con rueda o touch
+  window.addEventListener('wheel', () => {
+    _userWheelActive = true;
+    if (_notaActiva) {
+      // El usuario quiere scrollear manualmente — actualizar la posición anclada
+      _notaScrollY = window.scrollY;
+      _notaScrollX = window.scrollX;
     }
+    clearTimeout(window._wheelTimer);
+    window._wheelTimer = setTimeout(() => { _userWheelActive = false; }, 200);
   }, { passive: true });
 
-  // Interceptar el evento de focus nativo para evitar scroll
+  window.addEventListener('touchmove', () => {
+    _userWheelActive = true;
+    if (_notaActiva) {
+      _notaScrollY = window.scrollY;
+      _notaScrollX = window.scrollX;
+    }
+    clearTimeout(window._wheelTimer);
+    window._wheelTimer = setTimeout(() => { _userWheelActive = false; }, 200);
+  }, { passive: true });
+
   document.addEventListener('focusin', function(e) {
     if (e.target && e.target.classList && e.target.classList.contains('input-nota')) {
-      const sy = window.scrollY;
-      const sx = window.scrollX;
-      requestAnimationFrame(() => {
-        if (Math.abs(window.scrollY - sy) > 5 || Math.abs(window.scrollX - sx) > 5) {
-          window.scrollTo({ top: sy, left: sx, behavior: 'instant' });
-        }
-      });
+      _notaScrollY = window.scrollY;
+      _notaScrollX = window.scrollX;
+      _notaActiva = true;
     }
   }, true);
+
+  document.addEventListener('focusout', function(e) {
+    if (e.target && e.target.classList && e.target.classList.contains('input-nota')) {
+      setTimeout(() => {
+        if (!document.activeElement || !document.activeElement.classList.contains('input-nota')) {
+          _notaActiva = false;
+        }
+      }, 10);
+    }
+  }, true);
+
+  // Bloquear scroll automático del browser (teclado), permitir manual (rueda/touch)
+  window.addEventListener('scroll', function() {
+    if (_notaActiva && !_userWheelActive) {
+      window.scrollTo({ top: _notaScrollY, left: _notaScrollX, behavior: 'instant' });
+    }
+  }, { passive: false });
 
 console.log('? Planificador Educativo por RA inicializado correctamente.');
 
@@ -6866,11 +6902,8 @@ function renderizarTablaCalificaciones() {
 
 // ─── Actualizar notas (usa raKey del curso activo) ──────────────
 
-// ── Navegación de teclado en inputs de nota sin scroll ──────────
+// ── Navegación de teclado en inputs de nota ──────────────────────
 function _notaKeyNav(e, el) {
-  // Bloquear absolutamente cualquier scroll en inputs de nota
-  e.stopPropagation();
-
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault();
     const delta = e.key === 'ArrowUp' ? 0.5 : -0.5;
@@ -6881,34 +6914,53 @@ function _notaKeyNav(e, el) {
     el.dispatchEvent(new Event('input'));
     return;
   }
+
+  // Enter o Tab → bajar al mismo campo del estudiante siguiente (misma columna)
   if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
     e.preventDefault();
-    const todos = Array.from(document.querySelectorAll('.input-nota'));
-    const idx   = todos.indexOf(el);
-    if (idx >= 0 && idx + 1 < todos.length) {
-      _focusNotaInput(todos[idx + 1]);
-    }
+    _moverNotaVertical(el, 1);
     return;
   }
+  // Shift+Tab → subir al estudiante anterior (misma columna)
   if (e.key === 'Tab' && e.shiftKey) {
     e.preventDefault();
-    const todos = Array.from(document.querySelectorAll('.input-nota'));
-    const idx   = todos.indexOf(el);
-    if (idx > 0) {
-      _focusNotaInput(todos[idx - 1]);
+    _moverNotaVertical(el, -1);
+  }
+}
+
+function _moverNotaVertical(el, direccion) {
+  // El id del input es "nota-{estId}-{actId}"
+  // La tabla tiene una fila por estudiante y una columna por actividad
+  // Buscamos el input en la misma columna (actId) pero la siguiente fila (estId)
+  const tbody = document.getElementById('cal-tbody');
+  if (!tbody) return _focusNotaInput(el); // fallback
+
+  const filas = Array.from(tbody.querySelectorAll('tr'));
+  // Encontrar qué fila y qué celda tiene este input
+  let filaActual = -1, celdaActual = -1;
+  for (let f = 0; f < filas.length; f++) {
+    const inputs = Array.from(filas[f].querySelectorAll('.input-nota'));
+    const c = inputs.indexOf(el);
+    if (c >= 0) { filaActual = f; celdaActual = c; break; }
+  }
+  if (filaActual < 0) return;
+
+  // Buscar en dirección (arriba o abajo) el mismo índice de columna
+  let siguienteFila = filaActual + direccion;
+  while (siguienteFila >= 0 && siguienteFila < filas.length) {
+    const inputs = Array.from(filas[siguienteFila].querySelectorAll('.input-nota'));
+    if (inputs[celdaActual]) {
+      _focusNotaInput(inputs[celdaActual]);
+      return;
     }
+    siguienteFila += direccion;
   }
 }
 
 function _focusNotaInput(el) {
-  // Guardar posición actual del scroll
-  const scrollX = window.scrollX;
-  const scrollY = window.scrollY;
-  // Enfocar sin mover el scroll
+  _notaActiva = true;
   el.focus({ preventScroll: true });
   el.select();
-  // Restaurar posición por si el navegador igual la movió
-  window.scrollTo({ top: scrollY, left: scrollX, behavior: 'instant' });
 }
 
 
