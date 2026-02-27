@@ -6046,7 +6046,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  console.log('? Planificador Educativo por RA inicializado correctamente.');
+  
+  // Bloquear scroll automático del navegador al enfocar inputs de nota
+  document.addEventListener('scroll', function(e) {
+    if (document.activeElement && document.activeElement.classList.contains('input-nota')) {
+      // Hay un input de nota activo - no hacer nada, el scroll fue del usuario
+    }
+  }, { passive: true });
+
+  // Interceptar el evento de focus nativo para evitar scroll
+  document.addEventListener('focusin', function(e) {
+    if (e.target && e.target.classList && e.target.classList.contains('input-nota')) {
+      const sy = window.scrollY;
+      const sx = window.scrollX;
+      requestAnimationFrame(() => {
+        if (Math.abs(window.scrollY - sy) > 5 || Math.abs(window.scrollX - sx) > 5) {
+          window.scrollTo({ top: sy, left: sx, behavior: 'instant' });
+        }
+      });
+    }
+  }, true);
+
+console.log('? Planificador Educativo por RA inicializado correctamente.');
 
 
 
@@ -6788,6 +6809,7 @@ function renderizarTablaCalificaciones() {
         + ' oninput="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
         + ' onkeydown="_notaKeyNav(event,this)"'
         + ' onwheel="event.preventDefault()"'
+        + ' onfocus="_focusNotaInput(this)"'
         + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado||'').substring(0,40)) + '"'
         + '/></td>';
     });
@@ -6841,6 +6863,54 @@ function renderizarTablaCalificaciones() {
   footCells += '<td class="td-total-ra ' + asistFootCls + '">' + (avgAsist !== null ? avgAsist + '%' : '—') + '</td>';
   tfoot.innerHTML = '<tr>' + footCells + '</tr>';
 }
+
+// ─── Actualizar notas (usa raKey del curso activo) ──────────────
+
+// ── Navegación de teclado en inputs de nota sin scroll ──────────
+function _notaKeyNav(e, el) {
+  // Bloquear absolutamente cualquier scroll en inputs de nota
+  e.stopPropagation();
+
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    const delta = e.key === 'ArrowUp' ? 0.5 : -0.5;
+    const max   = parseFloat(el.max) || 100;
+    const cur   = parseFloat(el.value) || 0;
+    const nv    = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
+    el.value = nv;
+    el.dispatchEvent(new Event('input'));
+    return;
+  }
+  if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+    e.preventDefault();
+    const todos = Array.from(document.querySelectorAll('.input-nota'));
+    const idx   = todos.indexOf(el);
+    if (idx >= 0 && idx + 1 < todos.length) {
+      _focusNotaInput(todos[idx + 1]);
+    }
+    return;
+  }
+  if (e.key === 'Tab' && e.shiftKey) {
+    e.preventDefault();
+    const todos = Array.from(document.querySelectorAll('.input-nota'));
+    const idx   = todos.indexOf(el);
+    if (idx > 0) {
+      _focusNotaInput(todos[idx - 1]);
+    }
+  }
+}
+
+function _focusNotaInput(el) {
+  // Guardar posición actual del scroll
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+  // Enfocar sin mover el scroll
+  el.focus({ preventScroll: true });
+  el.select();
+  // Restaurar posición por si el navegador igual la movió
+  window.scrollTo({ top: scrollY, left: scrollX, behavior: 'instant' });
+}
+
 
 // ─── Actualizar notas (usa raKey del curso activo) ──────────────
 
