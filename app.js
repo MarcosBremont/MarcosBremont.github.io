@@ -2379,9 +2379,26 @@ function renderizarActividades(listaActividades) {
 
 
 
+  // Ordenar actividades por código EC (numérico) y luego por fecha
+  const _parseCodigo = (cod) => {
+    if (!cod) return [999,999,999,999];
+    return cod.replace(/[^0-9.]/g,'').split('.').map(n => parseInt(n)||0);
+  };
+  const _cmpCodigo = (a, b) => {
+    const ca = _parseCodigo(a.ecCodigo);
+    const cb = _parseCodigo(b.ecCodigo);
+    for (let i = 0; i < Math.max(ca.length, cb.length); i++) {
+      const diff = (ca[i]||0) - (cb[i]||0);
+      if (diff !== 0) return diff;
+    }
+    // Mismo EC → ordenar por fecha
+    return (a.fecha || '').localeCompare(b.fecha || '');
+  };
+  const _actividadesOrdenadas = [...listaActividades].sort(_cmpCodigo);
+  // Sincronizar el orden en el array original para que se guarde ordenado
+  _actividadesOrdenadas.forEach((act, i) => { listaActividades[i] = act; });
+
   listaActividades.forEach((act, idx) => {
-
-
 
     // Normalizar tipo e instrumento por si vienen de datos viejos
     if (act.instrumento && !act.instrumento.tipo && act.instrumento.tipoLabel) {
