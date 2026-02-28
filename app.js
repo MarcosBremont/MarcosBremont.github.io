@@ -1753,6 +1753,21 @@ function _confirmarNuevoEC() {
   mostrarToast(`EC ${codigo} agregado ✓ — Ve al paso 4 para agregar actividades`, 'success');
 }
 
+// ════════════════════════════════════════════════════════════════════
+// MOVER EC DE POSICIÓN (REORDENAR)
+// ════════════════════════════════════════════════════════════════════
+function _moverEC(idx, dir) {
+  const arr = planificacion.elementosCapacidad;
+  if (!arr) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  // Intercambiar posiciones
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  guardarBorrador();
+  renderizarEC(arr);
+  mostrarToast(`EC movido ${dir < 0 ? 'arriba' : 'abajo'} ✓`, 'success');
+}
+
 function renderizarEC(listaEC) {
 
 
@@ -1819,6 +1834,14 @@ function renderizarEC(listaEC) {
 
         <span class="ec-horas"><span class="material-icons">schedule</span> ${ec.horasAsignadas}h</span>
 
+        <span class="ec-reorder-btns" style="margin-left:auto;display:inline-flex;gap:2px;">
+          <button class="ec-move-btn" onclick="_moverEC(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled style="opacity:0.25;cursor:default;margin-left:auto;"' : ''}>
+            <span class="material-icons" style="font-size:18px;">arrow_upward</span>
+          </button>
+          <button class="ec-move-btn" onclick="_moverEC(${idx}, 1)" title="Mover abajo" ${idx === listaEC.length - 1 ? 'disabled style="opacity:0.25;cursor:default;"' : ''}>
+            <span class="material-icons" style="font-size:18px;">arrow_downward</span>
+          </button>
+        </span>
 
 
       </div>
@@ -2227,6 +2250,17 @@ function _guardarInstrumentoActividad(idx) {
 // ════════════════════════════════════════════════════════════════════
 
 
+function _moverActividad(idx, dir) {
+  const arr = planificacion.actividades;
+  if (!arr) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  guardarBorrador();
+  renderizarActividades(arr);
+  mostrarToast(`Actividad movida ${dir < 0 ? 'arriba' : 'abajo'} ✓`, 'success');
+}
+
 function _eliminarActividad(idx) {
   const act = planificacion.actividades[idx];
   if (!act) return;
@@ -2379,24 +2413,7 @@ function renderizarActividades(listaActividades) {
 
 
 
-  // Ordenar actividades por código EC (numérico) y luego por fecha
-  const _parseCodigo = (cod) => {
-    if (!cod) return [999, 999, 999, 999];
-    return cod.replace(/[^0-9.]/g, '').split('.').map(n => parseInt(n) || 0);
-  };
-  const _cmpCodigo = (a, b) => {
-    const ca = _parseCodigo(a.ecCodigo);
-    const cb = _parseCodigo(b.ecCodigo);
-    for (let i = 0; i < Math.max(ca.length, cb.length); i++) {
-      const diff = (ca[i] || 0) - (cb[i] || 0);
-      if (diff !== 0) return diff;
-    }
-    // Mismo EC → ordenar por fecha
-    return String(a.fecha || '').localeCompare(String(b.fecha || ''));
-  };
-  const _actividadesOrdenadas = [...listaActividades].sort(_cmpCodigo);
-  // Sincronizar el orden en el array original para que se guarde ordenado
-  _actividadesOrdenadas.forEach((act, i) => { listaActividades[i] = act; });
+  // Se respeta el orden manual del usuario (sin auto-sort)
 
   listaActividades.forEach((act, idx) => {
 
@@ -2482,6 +2499,14 @@ function renderizarActividades(listaActividades) {
 
 
       <td style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
+        <div style="display:flex;gap:3px;margin-bottom:2px;">
+          <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
+            <span class="material-icons" style="font-size:16px;">arrow_upward</span>
+          </button>
+          <button class="ec-move-btn" onclick="_moverActividad(${idx}, 1)" title="Mover abajo" ${idx === listaActividades.length - 1 ? 'disabled' : ''}>
+            <span class="material-icons" style="font-size:16px;">arrow_downward</span>
+          </button>
+        </div>
         <button class="btn-ver-instrumento" onclick="abrirEditarActividad(${idx})" style="background:#E8F5E9;color:#2E7D32;border-color:#A5D6A7;">
           <span class="material-icons">edit</span> Editar
         </button>
