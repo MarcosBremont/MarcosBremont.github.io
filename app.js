@@ -10118,18 +10118,9 @@ function cargarPlanificacionGuardada(id) {
 
 
 
-  // Cerrar panel y volver al paso 1
-
-
-
-  cerrarPlanificaciones();
-
-
-
+  // Cerrar panel de biblioteca y abrir el wizard en paso 1 (Datos Generales)
+  _ocultarPaneles();
   irAlPaso(1, false);
-
-
-
   mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
 
 
