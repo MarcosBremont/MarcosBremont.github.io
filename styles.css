@@ -1794,7 +1794,7 @@ body {
 
 /* Panel principal */
 .cal-panel {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: var(--espacio-xl) var(--espacio-lg);
 }
@@ -2313,7 +2313,7 @@ body {
 
 /* Panel */
 .pln-panel {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: var(--espacio-xl) var(--espacio-lg);
 }
@@ -2377,7 +2377,7 @@ body {
 /* Grid de tarjetas */
 .pln-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: var(--espacio-lg);
 }
 
@@ -2649,7 +2649,8 @@ body.dark-mode .btn-pln-dup:hover {
     padding: var(--espacio-md);
   }
 
-  .pln-grid {
+  .pln-grid,
+  .pln-grupo-cards {
     grid-template-columns: 1fr;
   }
 }
@@ -2741,7 +2742,7 @@ body.dark-mode .btn-pln-dup:hover {
 
 /* Panel */
 .pd-panel {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: var(--espacio-xl) var(--espacio-lg);
 }
@@ -3366,6 +3367,57 @@ body.dark-mode .btn-pln-dup:hover {
   grid-column: 1 / -1;
 }
 
+body.dark-mode .imp-field label {
+  color: #CFD8DC;
+}
+
+body.dark-mode .imp-field input,
+body.dark-mode .imp-field select,
+body.dark-mode .imp-field textarea {
+  background: #2A2A2A;
+  border-color: #455A64;
+  color: #E0E0E0;
+}
+
+body.dark-mode .imp-field input:focus,
+body.dark-mode .imp-field select:focus,
+body.dark-mode .imp-field textarea:focus {
+  border-color: #64B5F6;
+  background: #1E1E1E;
+  box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.15);
+}
+
+body.dark-mode .imp-field input::placeholder,
+body.dark-mode .imp-field textarea::placeholder {
+  color: #78909C !important;
+}
+
+.imp-field-label-dias {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #424242;
+  display: block;
+  margin-bottom: 8px;
+}
+
+body.dark-mode .imp-field-label-dias {
+  color: #CFD8DC;
+}
+
+body.dark-mode .imp-dia-item {
+  background: #263238;
+}
+
+body.dark-mode .imp-dia-item label {
+  color: #CFD8DC;
+}
+
+body.dark-mode .imp-dia-item input[type="number"] {
+  background: #2A2A2A;
+  border-color: #455A64;
+  color: #E0E0E0;
+}
+
 .imp-dias-grid {
   display: flex;
   gap: 8px;
@@ -3530,6 +3582,43 @@ body.dark-mode .btn-pln-dup:hover {
   color: #616161;
 }
 
+body.dark-mode .imp-step-tab {
+  color: #78909C;
+  border-bottom-color: transparent;
+}
+
+body.dark-mode .imp-step-tab.activo {
+  color: #64B5F6;
+  border-bottom-color: #64B5F6;
+}
+
+body.dark-mode .imp-step-tab.completado {
+  color: #81C784;
+  border-bottom-color: #81C784;
+}
+
+body.dark-mode .imp-section-title {
+  color: #90CAF9;
+  border-bottom-color: #1E3A5F;
+}
+
+body.dark-mode .imp-resumen-card {
+  background: #1E2A35;
+  border-color: #37474F;
+}
+
+body.dark-mode .imp-resumen-card h4 {
+  color: #90CAF9;
+}
+
+body.dark-mode .imp-resumen-row strong {
+  color: #CFD8DC;
+}
+
+body.dark-mode .imp-resumen-row span {
+  color: #90A4AE;
+}
+
 @media (max-width: 600px) {
 
   .imp-grid-2,
@@ -3680,6 +3769,25 @@ body.dark-mode .btn-pln-dup:hover {
   font-size: 0.9rem;
   opacity: 0.8;
   font-weight: 400;
+}
+
+.dash-version-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s;
+  vertical-align: middle;
+}
+
+.dash-version-badge:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .dash-stats-row {
@@ -6107,8 +6215,16 @@ body.dark-mode .about-ver-items {
   margin-top: 2px;
 }
 
+body.dark-mode .about-app-nombre {
+  color: #90CAF9;
+}
+
 body.dark-mode .about-app-desc {
-  color: #6B7280;
+  color: #90A4AE;
+}
+
+body.dark-mode .about-ver-items li::before {
+  color: #64B5F6;
 }
 
 
@@ -7357,9 +7473,9 @@ body.dark-mode .mcl-momento-txt {
 
 .pln-grupo-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  padding: 16px;
   background: #FAFBFD;
 }
 

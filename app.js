@@ -4402,21 +4402,10 @@ function poblarFormularioDesdeEstado() {
 
 
 function nuevaPlanificacion() {
-
-
-
   if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
-
-
-
   localStorage.removeItem(STORAGE_KEY);
-
-
-
+  sessionStorage.setItem('planificador_goto', 'step1');
   location.reload();
-
-
-
 }
 
 
@@ -6934,7 +6923,7 @@ function renderizarTablaCalificaciones() {
 
   let h1 = '<tr class="tr-ec-header">'
     + '<th class="th-nombre" rowspan="2">Estudiante</th>'
-    + '<th colspan="' + actividades.length + '" style="text-align:center;background:#1565C0;color:#fff;padding:6px 8px;">'
+    + '<th colspan="' + actividades.length + '" style="text-align:start;background:#1565C0;color:#fff;padding:6px 8px;">'
     + raLabel + '</th>'
     + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small></th>';
 
@@ -13657,8 +13646,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (mf && !mf.id) mf.id = 'modal-footer';
   // Aplicar preferencias de apariencia antes de mostrar
   _aplicarPreferencias();
-  // Mostrar dashboard al iniciar
-  setTimeout(() => { abrirDashboard(); actualizarBadgeNotificaciones(); }, 50);
+  // Mostrar dashboard al iniciar (o paso 1 si viene de "Nueva Planificación")
+  setTimeout(() => {
+    if (sessionStorage.getItem('planificador_goto') === 'step1') {
+      sessionStorage.removeItem('planificador_goto');
+      irAlHomeBase();
+    } else {
+      abrirDashboard();
+    }
+    actualizarBadgeNotificaciones();
+  }, 50);
 });
 
 // ================================================================
@@ -13762,7 +13759,7 @@ function imp_htmlPaso1() {
       <div class="imp-field"><label>Fecha de término</label><input id="imp-fechaTermino" type="date"></div>
     </div>
     <div style="margin-top:12px;">
-      <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:8px;">Días de clase y horas por día:</label>
+      <label class="imp-field-label-dias">Días de clase y horas por día:</label>
       <div class="imp-dias-grid">
         ${['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map(d => `
           <div class="imp-dia-item">
@@ -14611,7 +14608,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana</div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v8.0</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
