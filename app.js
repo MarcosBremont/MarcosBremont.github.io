@@ -6292,7 +6292,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -6308,12 +6308,57 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
   if (typeof irAlPaso === 'function') irAlPaso(pasoActual || 1, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: NOTAS DEL DOCENTE
+// ════════════════════════════════════════════════════════════════════
+const NOTAS_DOCENTE_KEY = 'planificadorRA_notas_docente_v1';
+let _notasDocenteTimer = null;
+
+function abrirNotas() {
+  _mostrarPanel('panel-notas');
+  const ta = document.getElementById('notas-docente-textarea');
+  if (ta) {
+    ta.value = localStorage.getItem(NOTAS_DOCENTE_KEY) || '';
+    setTimeout(() => ta.focus(), 150);
+  }
+}
+
+function cerrarNotas() {
+  abrirDashboard();
+}
+
+function guardarNotasDocente() {
+  clearTimeout(_notasDocenteTimer);
+  const ind = document.getElementById('notas-guardado-ind');
+  if (ind) ind.style.display = 'none';
+  _notasDocenteTimer = setTimeout(() => {
+    const ta = document.getElementById('notas-docente-textarea');
+    if (!ta) return;
+    const val = ta.value;
+    if (val.trim()) {
+      localStorage.setItem(NOTAS_DOCENTE_KEY, val);
+    } else {
+      localStorage.removeItem(NOTAS_DOCENTE_KEY);
+    }
+    if (ind) ind.style.display = 'inline';
+  }, 500);
+}
+
+function limpiarNotasDocente() {
+  if (!confirm('¿Borrar todas las notas? Esta acción no se puede deshacer.')) return;
+  localStorage.removeItem(NOTAS_DOCENTE_KEY);
+  const ta = document.getElementById('notas-docente-textarea');
+  if (ta) ta.value = '';
+  registrarCambio('Notas del docente borradas');
+  mostrarToast('Notas borradas', 'success');
 }
 
 const CAL_STORAGE_KEY = 'planificadorRA_calificaciones_v1';
@@ -9073,7 +9118,7 @@ function abrirHorario() {
   _mostrarPanel('panel-horario');
   renderizarHorario();
 }
-function cerrarHorario() { _ocultarPaneles(); }
+function cerrarHorario() { abrirDashboard(); }
 
 function renderizarHorario() {
   const tabla = document.getElementById('horario-tabla');
@@ -9240,7 +9285,7 @@ function abrirTareas() {
   }
   renderizarTareas();
 }
-function cerrarTareas() { _ocultarPaneles(); }
+function cerrarTareas() { abrirDashboard(); }
 
 function _estadoTarea(tarea) {
   if (tarea.estado === 'entregada') return 'entregada';
@@ -10595,7 +10640,7 @@ function abrirPlanificaciones() {
 
 
 function cerrarPlanificaciones() {
-  _ocultarPaneles();
+  abrirDashboard();
 }
 // __old_cerrarPlanificaciones__
 
@@ -12785,7 +12830,7 @@ function abrirDiarias() {
 
 function cerrarDiarias() {
   guardarTodasDiarias();
-  _ocultarPaneles();
+  abrirDashboard();
 }
 // __old_cerrarDiarias__
 
@@ -14412,7 +14457,8 @@ function exportarDatos() {
     )),
     diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
     borrador: localStorage.getItem(STORAGE_KEY) || 'null',
-    groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || ''
+    groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || '',
+    notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || ''
   };
 
   const json = JSON.stringify(backup, null, 2);
