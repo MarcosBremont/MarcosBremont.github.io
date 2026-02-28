@@ -2392,7 +2392,7 @@ function renderizarActividades(listaActividades) {
       if (diff !== 0) return diff;
     }
     // Mismo EC → ordenar por fecha
-    return (a.fecha || '').localeCompare(b.fecha || '');
+    return String(a.fecha || '').localeCompare(String(b.fecha || ''));
   };
   const _actividadesOrdenadas = [...listaActividades].sort(_cmpCodigo);
   // Sincronizar el orden en el array original para que se guarde ordenado
