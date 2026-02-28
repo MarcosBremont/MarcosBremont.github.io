@@ -39,6 +39,7 @@ function eliminarEstudiante(estudianteId) {
   const est = curso.estudiantes.find(e => e.id === estudianteId);
   if (!est) return;
   if (!confirm(`¿Eliminar a "${est.nombre}"?`)) return;
+  registrarCambio(`Estudiante eliminado: ${est.nombre}`);
   curso.estudiantes = curso.estudiantes.filter(e => e.id !== estudianteId);
   // Limpiar notas
   if (curso.notas && curso.notas[estudianteId]) delete curso.notas[estudianteId];
@@ -51,9 +52,11 @@ function editarNombreEstudiante(estudianteId) {
   if (!curso) return;
   const est = curso.estudiantes.find(e => e.id === estudianteId);
   if (!est) return;
+  const nombreAnterior = est.nombre;
   const nuevoNombre = prompt('Nuevo nombre:', est.nombre);
   if (!nuevoNombre || !nuevoNombre.trim()) return;
   est.nombre = nuevoNombre.trim();
+  registrarCambio(`Nombre editado: "${nombreAnterior}" → "${est.nombre}"`);
   guardarCalificaciones();
   const el = document.getElementById('nombre-' + estudianteId);
   if (el) el.querySelector('span').textContent = est.nombre;
@@ -1986,6 +1989,7 @@ function renderizarEC(listaEC) {
       if (!isNaN(idx) && momento && planificacion.elementosCapacidad?.[idx]?.secuencia) {
         planificacion.elementosCapacidad[idx].secuencia[momento].descripcion = valor;
         guardarBorrador();
+        registrarCambio(`Secuencia didáctica editada (${momento}) en EC ${planificacion.elementosCapacidad[idx].codigo}`);
       }
     }
 
@@ -5614,6 +5618,69 @@ function actualizarResumenHoras() {
 /** Muestra un toast de notificación */
 
 
+// ════════════════════════════════════════════════════════════════════
+// BITÁCORA DE CAMBIOS
+// ════════════════════════════════════════════════════════════════════
+const BITACORA_KEY = 'planificadorRA_bitacora_v1';
+
+function registrarCambio(mensaje) {
+  try {
+    const log = JSON.parse(localStorage.getItem(BITACORA_KEY) || '[]');
+    log.push({
+      fecha: new Date().toISOString(),
+      accion: mensaje
+    });
+    // Limitar a 500 entradas
+    if (log.length > 500) log.splice(0, log.length - 500);
+    localStorage.setItem(BITACORA_KEY, JSON.stringify(log));
+  } catch (e) { /* silenciar errores de storage */ }
+}
+
+function exportarBitacora() {
+  const log = JSON.parse(localStorage.getItem(BITACORA_KEY) || '[]');
+  if (!log.length) {
+    mostrarToast('No hay cambios registrados aún', 'info');
+    return;
+  }
+  const lineas = [
+    '═══════════════════════════════════════════════════════════',
+    '  BITÁCORA DE CAMBIOS — El Gran Planificador Educativo',
+    '  Exportado: ' + new Date().toLocaleString('es-DO'),
+    '  Total de registros: ' + log.length,
+    '═══════════════════════════════════════════════════════════',
+    ''
+  ];
+  // Agrupar por día
+  let diaActual = '';
+  log.forEach(entry => {
+    const d = new Date(entry.fecha);
+    const dia = d.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    if (dia !== diaActual) {
+      diaActual = dia;
+      lineas.push('───────────────────────────────────────');
+      lineas.push('  📅 ' + dia);
+      lineas.push('───────────────────────────────────────');
+    }
+    const hora = d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    lineas.push('  [' + hora + ']  ' + entry.accion);
+  });
+  lineas.push('');
+  lineas.push('═══════════════════════════════════════════════════════════');
+  lineas.push('  Fin de la bitácora');
+  lineas.push('═══════════════════════════════════════════════════════════');
+
+  const texto = lineas.join('\n');
+  const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bitacora-cambios-' + new Date().toISOString().slice(0, 10) + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Bitácora descargada ✓', 'success');
+}
 
 function mostrarToast(mensaje, tipo = 'success') {
 
@@ -5666,6 +5733,11 @@ function mostrarToast(mensaje, tipo = 'success') {
 
 
 
+
+  // Registrar en bitácora las acciones exitosas
+  if (tipo === 'success' && mensaje && !mensaje.includes('Bitácora descargada')) {
+    registrarCambio(mensaje);
+  }
 
   // Ocultar después de 3.5 segundos
 
@@ -7058,6 +7130,8 @@ function registrarNota(estudianteId, actividadId, valor) {
     const max = (curso.ras[raKey].valores[actividadId]) || 100;
     curso.notas[estudianteId][raKey][actividadId] = Math.min(max, Math.max(0, num));
   }
+  const est = curso.estudiantes?.find(e => e.id === estudianteId);
+  registrarCambio(`Nota registrada: ${est?.nombre || estudianteId} → ${valor === '' ? 'borrada' : valor} pts`);
   guardarCalificaciones();
   _actualizarFilaRA(estudianteId, raKey);
   _actualizarFooterRA(raKey);
@@ -7071,6 +7145,7 @@ function actualizarValorActividad(actividadId, nuevoValor) {
   const num = parseFloat(nuevoValor);
   if (!isNaN(num) && num > 0) {
     curso.ras[raKey].valores[actividadId] = num;
+    registrarCambio(`Valor de actividad actualizado a ${num} pts`);
     guardarCalificaciones();
     renderizarTablaCalificaciones();
   }
@@ -7542,6 +7617,9 @@ function marcarAsistencia(estudianteId, estado, fechaOverride) {
     data[cursoId][fecha][estudianteId] = estado;
   }
   guardarAsistencia(data);
+  const _estAsist = calState.cursos[cursoId]?.estudiantes?.find(e => e.id === estudianteId);
+  const _estadoLabel = { P: 'Presente', A: 'Ausente', T: 'Tardanza', E: 'Excusa' }[estado] || estado;
+  registrarCambio(`Asistencia: ${_estAsist?.nombre || estudianteId} → ${data[cursoId][fecha][estudianteId] ? _estadoLabel : 'sin marcar'}`);
 
   // Actualizar fila sin re-render
   const fila = document.getElementById('asist-fila-' + estudianteId);
@@ -8321,6 +8399,7 @@ function guardarObsEstudiante(key, valor) {
   _obsDebounce = setTimeout(() => {
     if (valor.trim()) localStorage.setItem(key, valor);
     else localStorage.removeItem(key);
+    registrarCambio('Observaciones de estudiante actualizadas');
     if (ind) ind.style.display = 'inline';
   }, 600);
 }
@@ -9411,6 +9490,7 @@ function marcarTareaPendiente(id) {
   if (t) { t.estado = 'pendiente'; delete t.entregadaEn; }
   guardarTareas(tareas);
   renderizarTareas();
+  registrarCambio('Tarea marcada como pendiente');
 }
 
 function eliminarTarea(id) {
@@ -14346,6 +14426,10 @@ function exportarDatos() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  // También descargar la bitácora de cambios (.txt)
+  setTimeout(() => { exportarBitacora(); }, 500);
+
   mostrarToast('Backup descargado correctamente', 'success');
 }
 
@@ -14894,6 +14978,7 @@ function guardarNotaClaseDebounce(key, valor) {
   if (ind) ind.style.display = 'none';
   _notaDebounceTimer = setTimeout(() => {
     localStorage.setItem(key, valor);
+    registrarCambio('Nota de clase actualizada');
     if (ind) { ind.style.display = 'inline'; }
   }, 600);
 }
@@ -14912,6 +14997,7 @@ function toggleFormaEval(evalKey, formaId, color, btn) {
   saved[formaId] = !saved[formaId];
   localStorage.setItem(evalKey, JSON.stringify(saved));
   const activo = saved[formaId];
+  registrarCambio(`Forma de evaluación ${formaId} ${activo ? 'activada' : 'desactivada'}`);
   btn.classList.toggle('activo', activo);
   btn.style.background = activo ? color + '18' : '';
   btn.style.borderColor = activo ? color : '';
