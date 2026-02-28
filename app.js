@@ -1,4 +1,4 @@
-function escapeHTML(s) { if(s===null||s===undefined) return ""; return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 
 // ─── Funciones de gestión de cursos ───────────────────────────────
 function eliminarCurso(id) {
@@ -1668,14 +1668,14 @@ function _agregarNuevoEC() {
     ? ecs[ecs.length - 1].codigo  // e.g. "E.C.3.1.1"
     : 'E.C.1.1.1';
   // Incrementar el primer número del EC (1→2→3...)
-  const partes = ultimoCod.replace('E.C.','').split('.');
-  const siguiente = `E.C.${parseInt(partes[0]||1)+1}.${partes[1]||1}.${partes[2]||1}`;
+  const partes = ultimoCod.replace('E.C.', '').split('.');
+  const siguiente = `E.C.${parseInt(partes[0] || 1) + 1}.${partes[1] || 1}.${partes[2] || 1}`;
 
   const NIVELES = [
-    { val:'conocimiento', label:'Conocimiento' },
-    { val:'comprension',  label:'Comprensión'  },
-    { val:'aplicacion',   label:'Aplicación'   },
-    { val:'actitudinal',  label:'Actitudinal'  },
+    { val: 'conocimiento', label: 'Conocimiento' },
+    { val: 'comprension', label: 'Comprensión' },
+    { val: 'aplicacion', label: 'Aplicación' },
+    { val: 'actitudinal', label: 'Actitudinal' },
   ];
   const optsNivel = NIVELES.map(n =>
     `<option value="${n.val}">${n.label}</option>`
@@ -1723,12 +1723,12 @@ function _agregarNuevoEC() {
 }
 
 function _confirmarNuevoEC() {
-  const codigo    = document.getElementById('nuevo-ec-codigo')?.value?.trim();
-  const nivel     = document.getElementById('nuevo-ec-nivel')?.value || 'aplicacion';
+  const codigo = document.getElementById('nuevo-ec-codigo')?.value?.trim();
+  const nivel = document.getElementById('nuevo-ec-nivel')?.value || 'aplicacion';
   const enunciado = document.getElementById('nuevo-ec-enunciado')?.value?.trim();
-  const horas     = parseFloat(document.getElementById('nuevo-ec-horas')?.value) || 2;
+  const horas = parseFloat(document.getElementById('nuevo-ec-horas')?.value) || 2;
 
-  if (!codigo)    { mostrarToast('Ingresa el código del EC', 'error'); return; }
+  if (!codigo) { mostrarToast('Ingresa el código del EC', 'error'); return; }
   if (!enunciado || enunciado.length < 5) { mostrarToast('Escribe el enunciado del EC', 'error'); return; }
 
   const nuevoEC = {
@@ -1739,7 +1739,7 @@ function _confirmarNuevoEC() {
     horasAsignadas: horas,
     secuencia: {
       anticipacion: { pct: 20, descripcion: 'Activación de conocimientos previos mediante preguntas detonantes.' },
-      construccion:  { pct: 60, descripcion: 'Desarrollo del contenido con actividades prácticas.' },
+      construccion: { pct: 60, descripcion: 'Desarrollo del contenido con actividades prácticas.' },
       consolidacion: { pct: 20, descripcion: 'Síntesis, evaluación formativa y retroalimentación.' },
     }
   };
@@ -1955,16 +1955,16 @@ function renderizarEC(listaEC) {
 
     });
 
-/** Guarda un momento de la secuencia didáctica al editar inline */
-function _guardarMomento(el) {
-  const idx     = parseInt(el.dataset.idx);
-  const momento = el.dataset.momento;
-  const valor   = el.innerText.trim();
-  if (!isNaN(idx) && momento && planificacion.elementosCapacidad?.[idx]?.secuencia) {
-    planificacion.elementosCapacidad[idx].secuencia[momento].descripcion = valor;
-    guardarBorrador();
-  }
-}
+    /** Guarda un momento de la secuencia didáctica al editar inline */
+    function _guardarMomento(el) {
+      const idx = parseInt(el.dataset.idx);
+      const momento = el.dataset.momento;
+      const valor = el.innerText.trim();
+      if (!isNaN(idx) && momento && planificacion.elementosCapacidad?.[idx]?.secuencia) {
+        planificacion.elementosCapacidad[idx].secuencia[momento].descripcion = valor;
+        guardarBorrador();
+      }
+    }
 
 
 
@@ -2066,9 +2066,9 @@ function _editarNivelEC(idx, chipEl) {
 
   const NIVELES = [
     { val: 'conocimiento', label: 'Conocimiento', color: '#1565C0' },
-    { val: 'comprension',  label: 'Comprensión',  color: '#2E7D32' },
-    { val: 'aplicacion',   label: 'Aplicación',   color: '#E65100' },
-    { val: 'actitudinal',  label: 'Actitudinal',  color: '#6A1B9A' },
+    { val: 'comprension', label: 'Comprensión', color: '#2E7D32' },
+    { val: 'aplicacion', label: 'Aplicación', color: '#E65100' },
+    { val: 'actitudinal', label: 'Actitudinal', color: '#6A1B9A' },
   ];
 
   const dropdown = document.createElement('div');
@@ -2083,7 +2083,7 @@ function _editarNivelEC(idx, chipEl) {
 
   // Posicionar relativo al chip
   const rect = chipEl.getBoundingClientRect();
-  dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;
+  dropdown.style.cssText = `position:fixed;top:${rect.bottom + 4}px;left:${rect.left}px;z-index:9999;
     background:#fff;border:1.5px solid #E0E0E0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);
     padding:6px;min-width:140px;`;
   document.body.appendChild(dropdown);
@@ -2170,17 +2170,17 @@ function _editarInstrumentoActividad(idx) {
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:16px;">
       <p style="font-size:0.85rem;color:#546E7A;margin:0;">
-        Selecciona el tipo de instrumento para: <strong>${escapeHTML((act.enunciado||'').substring(0,60))}…</strong>
+        Selecciona el tipo de instrumento para: <strong>${escapeHTML((act.enunciado || '').substring(0, 60))}…</strong>
       </p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label class="inst-opt ${tipoActual==='cotejo'?'inst-opt-sel':''}" id="iopt-cotejo"
-          onclick="_selInstrOpt('cotejo')" style="cursor:pointer;border:2px solid ${tipoActual==='cotejo'?'#1565C0':'#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
+        <label class="inst-opt ${tipoActual === 'cotejo' ? 'inst-opt-sel' : ''}" id="iopt-cotejo"
+          onclick="_selInstrOpt('cotejo')" style="cursor:pointer;border:2px solid ${tipoActual === 'cotejo' ? '#1565C0' : '#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
           <span class="material-icons" style="font-size:28px;color:#1565C0;display:block;margin-bottom:6px;">checklist</span>
           <strong>Lista de Cotejo</strong>
           <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Criterios Sí/No</p>
         </label>
-        <label class="inst-opt ${tipoActual==='rubrica'?'inst-opt-sel':''}" id="iopt-rubrica"
-          onclick="_selInstrOpt('rubrica')" style="cursor:pointer;border:2px solid ${tipoActual==='rubrica'?'#6A1B9A':'#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
+        <label class="inst-opt ${tipoActual === 'rubrica' ? 'inst-opt-sel' : ''}" id="iopt-rubrica"
+          onclick="_selInstrOpt('rubrica')" style="cursor:pointer;border:2px solid ${tipoActual === 'rubrica' ? '#6A1B9A' : '#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
           <span class="material-icons" style="font-size:28px;color:#6A1B9A;display:block;margin-bottom:6px;">table_chart</span>
           <strong>Rúbrica</strong>
           <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Niveles de desempeño</p>
@@ -2201,7 +2201,7 @@ function _editarInstrumentoActividad(idx) {
 
 function _selInstrOpt(tipo) {
   document.getElementById('edit-inst-tipo').value = tipo;
-  ['cotejo','rubrica'].forEach(t => {
+  ['cotejo', 'rubrica'].forEach(t => {
     const el = document.getElementById('iopt-' + t);
     if (!el) return;
     const color = t === 'cotejo' ? '#1565C0' : '#6A1B9A';
@@ -2212,7 +2212,7 @@ function _selInstrOpt(tipo) {
 
 function _guardarInstrumentoActividad(idx) {
   const tipo = document.getElementById('edit-inst-tipo')?.value || 'cotejo';
-  const act  = planificacion.actividades[idx];
+  const act = planificacion.actividades[idx];
   if (!act) return;
   const tipoLabel = tipo === 'cotejo' ? 'Lista de Cotejo' : 'Rúbrica de Evaluación';
   act.instrumento = { ...(act.instrumento || {}), tipo, tipoLabel };
@@ -2243,7 +2243,7 @@ function _agregarNuevaActividad() {
   if (!ecs.length) { mostrarToast('Primero genera o carga los Elementos de Capacidad', 'error'); return; }
 
   const optsEC = ecs.map(ec =>
-    `<option value="${ec.codigo}">${ec.codigo} — ${escapeHTML(ec.enunciado.substring(0,50))}…</option>`
+    `<option value="${ec.codigo}">${ec.codigo} — ${escapeHTML(ec.enunciado.substring(0, 50))}…</option>`
   ).join('');
 
   document.getElementById('modal-title').textContent = 'Nueva actividad';
@@ -2288,34 +2288,34 @@ function _agregarNuevaActividad() {
 }
 
 function _confirmarNuevaActividad() {
-  const ecCodigo  = document.getElementById('nueva-act-ec')?.value;
+  const ecCodigo = document.getElementById('nueva-act-ec')?.value;
   const enunciado = document.getElementById('nueva-act-enunciado')?.value?.trim();
-  const fecha     = document.getElementById('nueva-act-fecha')?.value;
-  const tipoInst  = document.getElementById('nueva-act-instrumento')?.value || 'cotejo';
+  const fecha = document.getElementById('nueva-act-fecha')?.value;
+  const tipoInst = document.getElementById('nueva-act-instrumento')?.value || 'cotejo';
 
   if (!enunciado || enunciado.length < 5) {
     mostrarToast('Escribe el enunciado de la actividad', 'error'); return;
   }
-  const ec = (planificacion.elementosCapacidad||[]).find(e => e.codigo === ecCodigo);
+  const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === ecCodigo);
   // Calcular código de actividad: Act X.Y.Z
-  const actsDelEC = (planificacion.actividades||[]).filter(a => a.ecCodigo === ecCodigo);
+  const actsDelEC = (planificacion.actividades || []).filter(a => a.ecCodigo === ecCodigo);
   const numAct = actsDelEC.length + 1;
-  const partes  = ecCodigo.replace('E.C.','').split('.');
-  const codAct  = `Act ${partes.join('.')}.${numAct}`;
+  const partes = ecCodigo.replace('E.C.', '').split('.');
+  const codAct = `Act ${partes.join('.')}.${numAct}`;
 
   const tipoLabel = tipoInst === 'cotejo' ? 'Lista de Cotejo' : 'Rúbrica de Evaluación';
   let fechaStr = '';
   if (fecha) {
     const d = new Date(fecha + 'T12:00:00');
-    fechaStr = d.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    fechaStr = d.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   }
 
   const nuevaAct = {
-    id:         'act-' + Date.now(),
+    id: 'act-' + Date.now(),
     ecCodigo,
-    ecNivel:    ec?.nivel || 'aplicacion',
+    ecNivel: ec?.nivel || 'aplicacion',
     enunciado,
-    fecha:      fecha || '',
+    fecha: fecha || '',
     fechaStr,
     instrumento: { tipo: tipoInst, tipoLabel, titulo: `${tipoLabel} – ${codAct}` }
   };
@@ -2381,14 +2381,14 @@ function renderizarActividades(listaActividades) {
 
   // Ordenar actividades por código EC (numérico) y luego por fecha
   const _parseCodigo = (cod) => {
-    if (!cod) return [999,999,999,999];
-    return cod.replace(/[^0-9.]/g,'').split('.').map(n => parseInt(n)||0);
+    if (!cod) return [999, 999, 999, 999];
+    return cod.replace(/[^0-9.]/g, '').split('.').map(n => parseInt(n) || 0);
   };
   const _cmpCodigo = (a, b) => {
     const ca = _parseCodigo(a.ecCodigo);
     const cb = _parseCodigo(b.ecCodigo);
     for (let i = 0; i < Math.max(ca.length, cb.length); i++) {
-      const diff = (ca[i]||0) - (cb[i]||0);
+      const diff = (ca[i] || 0) - (cb[i] || 0);
       if (diff !== 0) return diff;
     }
     // Mismo EC → ordenar por fecha
@@ -2405,8 +2405,8 @@ function renderizarActividades(listaActividades) {
       act.instrumento.tipo = act.instrumento.tipoLabel.toLowerCase().includes('cotejo') ? 'cotejo' : 'rubrica';
     }
     const tipoLabel = act.instrumento?.tipo === 'cotejo' ? 'Lista de Cotejo'
-                    : act.instrumento?.tipo === 'rubrica' ? 'Rúbrica de Evaluación'
-                    : (act.instrumento?.tipoLabel || 'Sin instrumento');
+      : act.instrumento?.tipo === 'rubrica' ? 'Rúbrica de Evaluación'
+        : (act.instrumento?.tipoLabel || 'Sin instrumento');
 
 
 
@@ -2433,13 +2433,13 @@ function renderizarActividades(listaActividades) {
       <td>
         <input type="date" class="act-fecha-input" data-idx="${idx}"
           value="${(() => {
-            if (!act.fecha) return '';
-            if (act.fecha instanceof Date) return act.fecha.toISOString().split('T')[0];
-            const s = String(act.fecha);
-            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-            if (s.includes('T')) return s.split('T')[0];
-            const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
-          })()}"
+        if (!act.fecha) return '';
+        if (act.fecha instanceof Date) return act.fecha.toISOString().split('T')[0];
+        const s = String(act.fecha);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        if (s.includes('T')) return s.split('T')[0];
+        const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+      })()}"
           title="${act.fechaStr || ''}"
           style="border:1.5px solid #90CAF9;border-radius:8px;padding:5px 8px;
                  font-size:0.82rem;font-family:inherit;background:transparent;
@@ -2509,8 +2509,8 @@ function renderizarActividades(listaActividades) {
     // Listener: editar valor de la actividad
     const valorInput = tr.querySelector('.act-valor-input');
     if (valorInput) {
-      valorInput.addEventListener('change', function() {
-        const i   = parseInt(this.dataset.idx);
+      valorInput.addEventListener('change', function () {
+        const i = parseInt(this.dataset.idx);
         const act = planificacion.actividades[i];
         if (!act) return;
         const val = this.value.trim();
@@ -2520,16 +2520,16 @@ function renderizarActividades(listaActividades) {
       });
     }
     if (fechaInput) {
-      fechaInput.addEventListener('change', function() {
-        const i   = parseInt(this.dataset.idx);
+      fechaInput.addEventListener('change', function () {
+        const i = parseInt(this.dataset.idx);
         const act = planificacion.actividades[i];
         if (!act) return;
         const val = this.value;
         if (!val) return;
-        const d      = new Date(val + 'T12:00:00');
-        act.fecha    = val;
-        act.fechaStr = d.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-        this.title   = act.fechaStr;
+        const d = new Date(val + 'T12:00:00');
+        act.fecha = val;
+        act.fechaStr = d.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+        this.title = act.fechaStr;
         guardarBorrador();
         mostrarToast('Fecha actualizada ✓', 'success');
       });
@@ -2578,7 +2578,7 @@ function abrirEditarActividad(idx) {
 
   // Opciones de EC para el select
   const optsEC = ecs.map(ec =>
-    `<option value="${ec.codigo}" ${act.ecCodigo === ec.codigo ? 'selected' : ''}>${ec.codigo} — ${ec.enunciado.substring(0,50)}…</option>`
+    `<option value="${ec.codigo}" ${act.ecCodigo === ec.codigo ? 'selected' : ''}>${ec.codigo} — ${ec.enunciado.substring(0, 50)}…</option>`
   ).join('');
 
   // Tipo de instrumento actual
@@ -2604,8 +2604,8 @@ function abrirEditarActividad(idx) {
           <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Instrumento</label>
           <select id="edit-act-instrumento"
             style="width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
-            <option value="cotejo" ${tipoInst==='cotejo'?'selected':''}>Lista de Cotejo</option>
-            <option value="rubrica" ${tipoInst==='rubrica'?'selected':''}>Rúbrica</option>
+            <option value="cotejo" ${tipoInst === 'cotejo' ? 'selected' : ''}>Lista de Cotejo</option>
+            <option value="rubrica" ${tipoInst === 'rubrica' ? 'selected' : ''}>Rúbrica</option>
           </select>
         </div>
       </div>
@@ -2641,9 +2641,9 @@ function guardarEdicionActividad(idx) {
   if (!act) return;
 
   const nuevoEnunciado = document.getElementById('edit-act-enunciado')?.value.trim();
-  const nuevaFechaStr  = document.getElementById('edit-act-fecha')?.value;
-  const nuevoEC        = document.getElementById('edit-act-ec')?.value;
-  const nuevoInst      = document.getElementById('edit-act-instrumento')?.value;
+  const nuevaFechaStr = document.getElementById('edit-act-fecha')?.value;
+  const nuevoEC = document.getElementById('edit-act-ec')?.value;
+  const nuevoInst = document.getElementById('edit-act-instrumento')?.value;
 
   if (!nuevoEnunciado) { mostrarToast('El enunciado no puede estar vacío', 'error'); return; }
 
@@ -2659,8 +2659,8 @@ function guardarEdicionActividad(idx) {
   // Actualizar fecha si cambió
   if (nuevaFechaStr) {
     const fd = new Date(nuevaFechaStr + 'T12:00:00');
-    act.fecha   = fd;
-    act.fechaStr = fd.toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+    act.fecha = nuevaFechaStr;
+    act.fechaStr = fd.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   // Regenerar instrumento
@@ -2685,7 +2685,7 @@ function abrirModalInstrumento(idxActividad) {
 
   if (!act) return;
   if (!act.instrumento || !act.instrumento.criterios?.length) {
-    const _ec = (planificacion.elementosCapacidad||[]).find(e => e.codigo === act.ecCodigo);
+    const _ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
     // Respetar el tipo que ya tenía el instrumento (no dejar que el nivel del EC lo sobreescriba)
     const _tipoExistente = act.instrumento?.tipo || act.instrumento?.tipoLabel?.toLowerCase().includes('cotejo') ? 'cotejo' : null;
     const _tipoFinal = _tipoExistente || ((_ec?.nivel === 'conocimiento' || _ec?.nivel === 'comprension') ? 'cotejo' : 'rubrica');
@@ -3318,12 +3318,12 @@ function copiarModal() {
 
 
 function renderizarVistaPrevia() {
-  const vp   = document.getElementById('vista-previa');
+  const vp = document.getElementById('vista-previa');
   if (!vp) return;
-  const dg   = planificacion.datosGenerales   || {};
-  const ra   = planificacion.ra               || {};
-  const ec   = planificacion.elementosCapacidad || [];
-  const acts = planificacion.actividades      || [];
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const ec = planificacion.elementosCapacidad || [];
+  const acts = planificacion.actividades || [];
   const fechaHoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
 
@@ -4521,7 +4521,7 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
   if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
-    if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
+  if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
   if (nuevoPaso === 5) renderizarVistaPrevia();
 
 
@@ -5696,11 +5696,11 @@ function _cargarPlanDesdeSelector(selectorId, callback) {
   var sel = document.getElementById(selectorId);
   if (!sel || !sel.value) { mostrarToast('Selecciona una planificación', 'error'); return; }
   var biblio = cargarBiblioteca();
-  var item = (biblio.items || []).find(function(it) { return it.id === sel.value; });
+  var item = (biblio.items || []).find(function (it) { return it.id === sel.value; });
   if (!item || !item.planificacion) { mostrarToast('No se encontró la planificación', 'error'); return; }
   planificacion = item.planificacion;
-  (planificacion.actividades || []).forEach(function(a) { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
-  (planificacion.fechasClase || []).forEach(function(f) { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
+  (planificacion.actividades || []).forEach(function (a) { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
+  (planificacion.fechasClase || []).forEach(function (f) { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
   mostrarToast('Planificación cargada correctamente.', 'success');
   if (callback) callback();
 }
@@ -6063,7 +6063,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  
+
   // ── Anti-scroll: bloquear scroll de teclado mientras input-nota activo ──
   // El scroll lo causa el browser al hacer scroll-into-view del body cuando
   // se escribe un número. Se bloquea el scroll programático pero se permite
@@ -6095,7 +6095,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window._wheelTimer = setTimeout(() => { _userWheelActive = false; }, 200);
   }, { passive: true });
 
-  document.addEventListener('focusin', function(e) {
+  document.addEventListener('focusin', function (e) {
     if (e.target && e.target.classList && e.target.classList.contains('input-nota')) {
       _notaScrollY = window.scrollY;
       _notaScrollX = window.scrollX;
@@ -6103,7 +6103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, true);
 
-  document.addEventListener('focusout', function(e) {
+  document.addEventListener('focusout', function (e) {
     if (e.target && e.target.classList && e.target.classList.contains('input-nota')) {
       setTimeout(() => {
         if (!document.activeElement || !document.activeElement.classList.contains('input-nota')) {
@@ -6114,13 +6114,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }, true);
 
   // Bloquear scroll automático del browser (teclado), permitir manual (rueda/touch)
-  window.addEventListener('scroll', function() {
+  window.addEventListener('scroll', function () {
     if (_notaActiva && !_userWheelActive) {
       window.scrollTo({ top: _notaScrollY, left: _notaScrollX, behavior: 'instant' });
     }
   }, { passive: false });
 
-console.log('? Planificador Educativo por RA inicializado correctamente.');
+  console.log('? Planificador Educativo por RA inicializado correctamente.');
 
 
 
@@ -6190,7 +6190,7 @@ function _mostrarPanel(panelId) {
   // Ocultar stepper
   document.querySelector('.stepper-container')?.classList.add('hidden');
   // Ocultar secciones de pasos por ID
-  ['section-1','section-2','section-3','section-4','section-5'].forEach(id => {
+  ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   _stepSectionsOcultas = true;
@@ -6206,7 +6206,7 @@ function _mostrarPanel(panelId) {
 function _ocultarPaneles() {
   document.querySelector('.stepper-container')?.classList.remove('hidden');
   // Restaurar secciones de pasos - solo la activa debe verse
-  ['section-1','section-2','section-3','section-4','section-5'].forEach(id => {
+  ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
     document.getElementById(id)?.classList.remove('hidden');
   });
   _stepSectionsOcultas = false;
@@ -6523,7 +6523,7 @@ function asignarPlanACurso(planId) {
     <div class="modal-curso-content">
       <p style="margin-bottom:12px;font-size:0.9rem;color:#37474F;">
         <strong>${escHTML(reg.planificacion?.datosGenerales?.moduloFormativo || reg.nombre)}</strong><br>
-        <span style="font-size:0.82rem;color:#78909C;">${(reg.planificacion?.actividades||[]).length} actividades · ${reg.planificacion?.datosGenerales?.valorRA || '?'} pts</span>
+        <span style="font-size:0.82rem;color:#78909C;">${(reg.planificacion?.actividades || []).length} actividades · ${reg.planificacion?.datosGenerales?.valorRA || '?'} pts</span>
       </p>
       <label for="sel-curso-destino">Asignar al curso:</label>
       <select id="sel-curso-destino" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
@@ -6591,9 +6591,9 @@ function _getRaKey() {
   // Fallback al sistema anterior
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
-  const base = (dg.moduloFormativo||'')+'|'+(dg.codigoModulo||'')+'|'+(ra.descripcion||'').substring(0,40);
-  try { return 'ra_' + btoa(unescape(encodeURIComponent(base))).substring(0,16).replace(/[^a-zA-Z0-9]/g,'_'); }
-  catch(e) { return 'ra_' + Math.abs(base.split('').reduce((a,c)=>a+c.charCodeAt(0),0)) % 999999; }
+  const base = (dg.moduloFormativo || '') + '|' + (dg.codigoModulo || '') + '|' + (ra.descripcion || '').substring(0, 40);
+  try { return 'ra_' + btoa(unescape(encodeURIComponent(base))).substring(0, 16).replace(/[^a-zA-Z0-9]/g, '_'); }
+  catch (e) { return 'ra_' + Math.abs(base.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 999999; }
 }
 
 function _ensureRA(curso, raKey) {
@@ -6602,8 +6602,8 @@ function _ensureRA(curso, raKey) {
     // Intentar obtener la planificación activa del curso
     let plan = _getPlanActivaDeCurso();
     if (!plan) plan = planificacion; // fallback
-    const dg   = plan.datosGenerales || {};
-    const ra   = plan.ra || {};
+    const dg = plan.datosGenerales || {};
+    const ra = plan.ra || {};
     const acts = plan.actividades || [];
     const valorTotal = parseFloat(dg.valorRA) || 10;
     const valores = {};
@@ -6695,8 +6695,8 @@ function renderizarTabsPlanesDelCurso() {
     const activo = pid === curso.planActivaId;
     html += `<button class="cal-plan-tab${activo ? ' activo' : ''}" onclick="activarPlanEnCurso('${pid}')">
       <span class="material-icons" style="font-size:15px;">assignment</span>
-      <span>${escHTML((dg.moduloFormativo || reg.nombre || pid).substring(0,30))}</span>
-      <span style="font-size:0.7rem;opacity:0.7;margin-left:2px;">${dg.valorRA ? dg.valorRA+'pts' : ''}</span>
+      <span>${escHTML((dg.moduloFormativo || reg.nombre || pid).substring(0, 30))}</span>
+      <span style="font-size:0.7rem;opacity:0.7;margin-left:2px;">${dg.valorRA ? dg.valorRA + 'pts' : ''}</span>
       <button onclick="event.stopPropagation();desasignarPlanDeCurso('${pid}')" title="Quitar del curso"
         style="background:none;border:none;cursor:pointer;color:#B0BEC5;margin-left:4px;padding:0;line-height:1;">
         <span class="material-icons" style="font-size:14px;">close</span>
@@ -6714,13 +6714,13 @@ let _asistPanelAbierto = false;
 
 function toggleVistaAsistencia() {
   const panel = document.getElementById('cal-asist-panel');
-  const btn   = document.getElementById('btn-toggle-asistencia');
+  const btn = document.getElementById('btn-toggle-asistencia');
   if (!panel) return;
   _asistPanelAbierto = !_asistPanelAbierto;
   panel.classList.toggle('hidden', !_asistPanelAbierto);
   if (btn) {
-    btn.style.background  = _asistPanelAbierto ? '#1565C0' : '#E3F2FD';
-    btn.style.color       = _asistPanelAbierto ? '#fff'    : '#1565C0';
+    btn.style.background = _asistPanelAbierto ? '#1565C0' : '#E3F2FD';
+    btn.style.color = _asistPanelAbierto ? '#fff' : '#1565C0';
     btn.style.borderColor = _asistPanelAbierto ? '#1565C0' : '#90CAF9';
   }
   if (_asistPanelAbierto) {
@@ -6737,14 +6737,14 @@ function abrirCalificaciones() {
 
 // ─── Tabla de calificaciones (usa planificación activa del curso) ─
 function renderizarTablaCalificaciones() {
-  const thead   = document.getElementById('cal-thead');
-  const tbody   = document.getElementById('cal-tbody');
-  const tfoot   = document.getElementById('cal-tfoot');
+  const thead = document.getElementById('cal-thead');
+  const tbody = document.getElementById('cal-tbody');
+  const tfoot = document.getElementById('cal-tfoot');
   const sinActs = document.getElementById('cal-sin-actividades');
   if (!thead || !tbody || !tfoot) return;
 
   const cursoId = calState.cursoActivoId;
-  const curso   = cursoId ? calState.cursos[cursoId] : null;
+  const curso = cursoId ? calState.cursos[cursoId] : null;
 
   if (!curso) {
     sinActs?.classList.remove('hidden');
@@ -6758,7 +6758,7 @@ function renderizarTablaCalificaciones() {
 
   // Fallback: snapshot guardado en el RA
   if (actividades.length === 0) {
-    const raKey  = _getRaKey();
+    const raKey = _getRaKey();
     const raInfo = curso.ras && curso.ras[raKey];
     if (raInfo && raInfo._actividadesSnapshot) actividades = raInfo._actividadesSnapshot;
   }
@@ -6768,15 +6768,15 @@ function renderizarTablaCalificaciones() {
     thead.innerHTML = '';
     tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">'
       + (curso.planIds && curso.planIds.length === 0
-          ? 'Asigna una planificación a este curso para comenzar a registrar calificaciones.'
-          : 'Selecciona una planificación arriba.')
+        ? 'Asigna una planificación a este curso para comenzar a registrar calificaciones.'
+        : 'Selecciona una planificación arriba.')
       + '</td></tr>';
     tfoot.innerHTML = '';
     return;
   }
   sinActs?.classList.add('hidden');
 
-  const raKey  = _getRaKey();
+  const raKey = _getRaKey();
   const raInfo = _ensureRA(curso, raKey);
   const planDg = planActiva?.datosGenerales || {};
   const planRa = planActiva?.ra || {};
@@ -6799,7 +6799,7 @@ function renderizarTablaCalificaciones() {
   rasKeys.filter(rk => rk !== raKey).forEach(rk => {
     const ri = curso.ras[rk];
     h1 += '<th rowspan="2" style="background:#4527A0;color:#fff;min-width:72px;font-size:0.75rem;vertical-align:middle;text-align:center;white-space:nowrap;" title="' + escapeHTML(ri.label) + '">'
-      + escapeHTML(ri.modulo.substring(0,14)||'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
+      + escapeHTML(ri.modulo.substring(0, 14) || 'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
   });
   h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th>'
     + '<th rowspan="2" style="background:#00695C;color:#fff;min-width:62px;font-size:0.78rem;vertical-align:middle;text-align:center;">Asist.</th></tr>';
@@ -6813,12 +6813,12 @@ function renderizarTablaCalificaciones() {
   actividades.forEach((a, i) => {
     const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
     const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
-    const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.','').replace('CE','') : '';
+    const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
     _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
     const numInEC = _idxEC[a.ecCodigo || ''];
     const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
     h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
-      + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i+1)
+      + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i + 1)
       + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
       + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + '</div>'
       + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
@@ -6852,9 +6852,9 @@ function renderizarTablaCalificaciones() {
 
     actividades.forEach(a => {
       const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
-      const val  = nota !== undefined ? nota : '';
-      const max  = raInfo.valores[a.id] || 100;
-      const cls  = nota !== undefined ? _clsNota(nota, max) : '';
+      const val = nota !== undefined ? nota : '';
+      const max = raInfo.valores[a.id] || 100;
+      const cls = nota !== undefined ? _clsNota(nota, max) : '';
       cells += '<td><input type="number" class="input-nota ' + cls + '"'
         + ' id="nota-' + est.id + '-' + a.id + '"'
         + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
@@ -6863,7 +6863,7 @@ function renderizarTablaCalificaciones() {
         + ' onkeydown="_notaKeyNav(event,this)"'
         + ' onwheel="event.preventDefault()"'
         + ' onfocus="_focusNotaInput(this)"'
-        + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado||'').substring(0,40)) + '"'
+        + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado || '').substring(0, 40)) + '"'
         + '/></td>';
     });
 
@@ -6873,7 +6873,7 @@ function renderizarTablaCalificaciones() {
 
     rasKeys.filter(rk => rk !== raKey).forEach(rk => {
       const ri = curso.ras[rk];
-      const n  = _calcNotaRA(curso, est.id, rk);
+      const n = _calcNotaRA(curso, est.id, rk);
       cells += '<td class="td-total-ra ' + _clsNota(n, ri.valorTotal) + '" style="background:#F3E5F5;">'
         + (n !== null ? n.toFixed(1) : '—') + '</td>';
     });
@@ -6884,8 +6884,8 @@ function renderizarTablaCalificaciones() {
 
     // Columna asistencia
     const asistStats = _statsAsistencia(calState.cursoActivoId, est.id);
-    const asistCls   = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'nota-aprobado' : asistStats.pct >= 60 ? 'nota-regular' : 'nota-reprobado';
-    cells += '<td class="td-total-ra ' + asistCls + '" style="cursor:pointer;" onclick="toggleVistaAsistencia()" title="P:'+asistStats.P+' T:'+asistStats.T+' A:'+asistStats.A+' / '+asistStats.total+' clases">'
+    const asistCls = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'nota-aprobado' : asistStats.pct >= 60 ? 'nota-regular' : 'nota-reprobado';
+    cells += '<td class="td-total-ra ' + asistCls + '" style="cursor:pointer;" onclick="toggleVistaAsistencia()" title="P:' + asistStats.P + ' T:' + asistStats.T + ' A:' + asistStats.A + ' / ' + asistStats.total + ' clases">'
       + (asistStats.pct !== null ? asistStats.pct + '%' : '—') + '</td>';
     tr.innerHTML = cells;
     tbody.appendChild(tr);
@@ -6895,8 +6895,8 @@ function renderizarTablaCalificaciones() {
   let footCells = '<td class="tf-label">Promedio</td>';
   actividades.forEach(a => {
     const notas = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[a.id]).filter(n => n !== undefined && n !== null);
-    const avg   = notas.length ? notas.reduce((s,n) => s+n, 0) / notas.length : null;
-    const max   = raInfo.valores[a.id] || 100;
+    const avg = notas.length ? notas.reduce((s, n) => s + n, 0) / notas.length : null;
+    const max = raInfo.valores[a.id] || 100;
     footCells += '<td class="' + (avg !== null ? _clsNota(avg, max) : '') + '">'
       + (avg !== null ? avg.toFixed(1) : '—') + '</td>';
   });
@@ -6911,7 +6911,7 @@ function renderizarTablaCalificaciones() {
   const asistProms = curso.estudiantes
     .map(e => _statsAsistencia(calState.cursoActivoId, e.id).pct)
     .filter(p => p !== null);
-  const avgAsist = asistProms.length ? Math.round(asistProms.reduce((s,p)=>s+p,0)/asistProms.length) : null;
+  const avgAsist = asistProms.length ? Math.round(asistProms.reduce((s, p) => s + p, 0) / asistProms.length) : null;
   const asistFootCls = avgAsist === null ? '' : avgAsist >= 80 ? 'nota-aprobado' : avgAsist >= 60 ? 'nota-regular' : 'nota-reprobado';
   footCells += '<td class="td-total-ra ' + asistFootCls + '">' + (avgAsist !== null ? avgAsist + '%' : '—') + '</td>';
   tfoot.innerHTML = '<tr>' + footCells + '</tr>';
@@ -6924,9 +6924,9 @@ function _notaKeyNav(e, el) {
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault();
     const delta = e.key === 'ArrowUp' ? 0.5 : -0.5;
-    const max   = parseFloat(el.max) || 100;
-    const cur   = parseFloat(el.value) || 0;
-    const nv    = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
+    const max = parseFloat(el.max) || 100;
+    const cur = parseFloat(el.value) || 0;
+    const nv = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
     el.value = nv;
     el.dispatchEvent(new Event('input'));
     return;
@@ -6989,9 +6989,9 @@ function _notaKeyNav(e, el) {
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault();
     const delta = e.key === 'ArrowUp' ? 0.5 : -0.5;
-    const max   = parseFloat(el.max) || 100;
-    const cur   = parseFloat(el.value) || 0;
-    const nv    = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
+    const max = parseFloat(el.max) || 100;
+    const cur = parseFloat(el.value) || 0;
+    const nv = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
     el.value = nv;
     el.dispatchEvent(new Event('input'));
     return;
@@ -7000,7 +7000,7 @@ function _notaKeyNav(e, el) {
   if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
     e.preventDefault();
     const todos = Array.from(document.querySelectorAll('.input-nota'));
-    const idx   = todos.indexOf(el);
+    const idx = todos.indexOf(el);
     if (idx >= 0 && idx + 1 < todos.length) {
       todos[idx + 1].focus();
       todos[idx + 1].select();
@@ -7010,7 +7010,7 @@ function _notaKeyNav(e, el) {
   if (e.key === 'Tab' && e.shiftKey) {
     e.preventDefault();
     const todos = Array.from(document.querySelectorAll('.input-nota'));
-    const idx   = todos.indexOf(el);
+    const idx = todos.indexOf(el);
     if (idx > 0) {
       todos[idx - 1].focus();
       todos[idx - 1].select();
@@ -7292,7 +7292,7 @@ function _asistFecha() {
 
 // ─── Estadísticas de asistencia por estudiante ───────────────────
 function _statsAsistencia(cursoId, estudianteId) {
-  const data   = cargarAsistencia();
+  const data = cargarAsistencia();
   const byDate = data[cursoId] || {};
   let P = 0, A = 0, T = 0, E = 0, total = 0;
   Object.values(byDate).forEach(dia => {
@@ -7332,18 +7332,18 @@ function renderizarAsistencia() {
 
   // Header con fecha hoy + selector de vista
   const hoy = _asistFecha();
-  const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
   wrap.innerHTML = `
     <div class="asist-toolbar">
       <div class="asist-vista-tabs">
-        <button class="asist-vtab ${_asistVistaActiva==='pasar'?'activo':''}" onclick="_setAsistVista('pasar')">
+        <button class="asist-vtab ${_asistVistaActiva === 'pasar' ? 'activo' : ''}" onclick="_setAsistVista('pasar')">
           <span class="material-icons">how_to_reg</span> Pasar lista
         </button>
-        <button class="asist-vtab ${_asistVistaActiva==='historial'?'activo':''}" onclick="_setAsistVista('historial')">
+        <button class="asist-vtab ${_asistVistaActiva === 'historial' ? 'activo' : ''}" onclick="_setAsistVista('historial')">
           <span class="material-icons">history</span> Historial
         </button>
-        <button class="asist-vtab ${_asistVistaActiva==='reporte'?'activo':''}" onclick="_setAsistVista('reporte')">
+        <button class="asist-vtab ${_asistVistaActiva === 'reporte' ? 'activo' : ''}" onclick="_setAsistVista('reporte')">
           <span class="material-icons">bar_chart</span> Reporte
         </button>
       </div>
@@ -7370,21 +7370,21 @@ function _setAsistVista(vista) {
 function _renderizarVistaAsistencia() {
   const body = document.getElementById('asist-vista-body');
   if (!body) return;
-  if (_asistVistaActiva === 'pasar')     _renderPasarLista(body);
+  if (_asistVistaActiva === 'pasar') _renderPasarLista(body);
   else if (_asistVistaActiva === 'historial') _renderHistorial(body);
   else _renderReporte(body);
 }
 
 // ── Vista: Pasar lista ───────────────────────────────────────────
 function _renderPasarLista(body) {
-  const curso  = calState.cursos[calState.cursoActivoId];
-  const data   = cargarAsistencia();
-  const hoy    = _asistFecha();
-  const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', {weekday:'long', day:'2-digit', month:'long'});
+  const curso = calState.cursos[calState.cursoActivoId];
+  const data = cargarAsistencia();
+  const hoy = _asistFecha();
+  const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long' });
   const diaData = (data[calState.cursoActivoId] || {})[hoy] || {};
 
   const counts = { P: 0, A: 0, T: 0 };
-  curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v]||0)+1; });
+  curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v] || 0) + 1; });
   const registrados = counts.P + counts.A + counts.T;
 
   body.innerHTML = `
@@ -7400,7 +7400,7 @@ function _renderPasarLista(body) {
       <div class="asist-sum-item pres"><span class="material-icons">check_circle</span>${counts.P} <span>Presentes</span></div>
       <div class="asist-sum-item ause"><span class="material-icons">cancel</span>${counts.A} <span>Ausentes</span></div>
       <div class="asist-sum-item tard"><span class="material-icons">schedule</span>${counts.T} <span>Tardanzas</span></div>
-      <div class="asist-sum-item excu"><span class="material-icons">assignment_turned_in</span>${counts.E||0} <span>Excusas</span></div>
+      <div class="asist-sum-item excu"><span class="material-icons">assignment_turned_in</span>${counts.E || 0} <span>Excusas</span></div>
       <div class="asist-sum-item total"><span class="material-icons">group</span>${registrados}/${curso.estudiantes.length} <span>Registrados</span></div>
     </div>
 
@@ -7418,27 +7418,27 @@ function _renderPasarLista(body) {
 
     <div class="asist-lista" id="asist-lista-body">
       ${curso.estudiantes.map((est, i) => {
-        const v = diaData[est.id] || '';
-        return `<div class="asist-fila" id="asist-fila-${est.id}">
-          <div class="asist-num">${i+1}</div>
+    const v = diaData[est.id] || '';
+    return `<div class="asist-fila" id="asist-fila-${est.id}">
+          <div class="asist-num">${i + 1}</div>
           <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
           <div class="asist-btns">
-            <button class="asist-btn-estado P ${v==='P'?'activo':''}" onclick="marcarAsistencia('${est.id}','P')" title="Presente">
+            <button class="asist-btn-estado P ${v === 'P' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','P')" title="Presente">
               <span class="material-icons">check_circle</span>P
             </button>
-            <button class="asist-btn-estado T ${v==='T'?'activo':''}" onclick="marcarAsistencia('${est.id}','T')" title="Tardanza">
+            <button class="asist-btn-estado T ${v === 'T' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','T')" title="Tardanza">
               <span class="material-icons">schedule</span>T
             </button>
-            <button class="asist-btn-estado A ${v==='A'?'activo':''}" onclick="marcarAsistencia('${est.id}','A')" title="Ausente">
+            <button class="asist-btn-estado A ${v === 'A' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','A')" title="Ausente">
               <span class="material-icons">cancel</span>A
             </button>
-            <button class="asist-btn-estado E ${v==='E'?'activo':''}" onclick="marcarAsistencia('${est.id}','E')" title="Excusa">
+            <button class="asist-btn-estado E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E')" title="Excusa">
               <span class="material-icons">assignment_turned_in</span>E
             </button>
           </div>
           ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
         </div>`;
-      }).join('')}
+  }).join('')}
     </div>`;
 }
 
@@ -7451,12 +7451,12 @@ function _cambiarFechaLista(fecha) {
 }
 
 function _renderPasarListaFecha(body, fecha) {
-  const curso   = calState.cursos[calState.cursoActivoId];
-  const data    = cargarAsistencia();
+  const curso = calState.cursos[calState.cursoActivoId];
+  const data = cargarAsistencia();
   const diaData = (data[calState.cursoActivoId] || {})[fecha] || {};
-  const fechaFmt = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', {weekday:'long', day:'2-digit', month:'long'});
+  const fechaFmt = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long' });
   const counts = { P: 0, A: 0, T: 0 };
-  curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v]||0)+1; });
+  curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v] || 0) + 1; });
   const registrados = counts.P + counts.A + counts.T;
 
   // Actualizar summary y lista sin re-render completo
@@ -7474,19 +7474,19 @@ function _renderPasarListaFecha(body, fecha) {
     listaBody.innerHTML = curso.estudiantes.map((est, i) => {
       const v = diaData[est.id] || '';
       return `<div class="asist-fila" id="asist-fila-${est.id}">
-        <div class="asist-num">${i+1}</div>
+        <div class="asist-num">${i + 1}</div>
         <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
         <div class="asist-btns">
-          <button class="asist-btn-estado P ${v==='P'?'activo':''}" onclick="marcarAsistencia('${est.id}','P','${fecha}')" title="Presente">
+          <button class="asist-btn-estado P ${v === 'P' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','P','${fecha}')" title="Presente">
             <span class="material-icons">check_circle</span>P
           </button>
-          <button class="asist-btn-estado T ${v==='T'?'activo':''}" onclick="marcarAsistencia('${est.id}','T','${fecha}')" title="Tardanza">
+          <button class="asist-btn-estado T ${v === 'T' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','T','${fecha}')" title="Tardanza">
             <span class="material-icons">schedule</span>T
           </button>
-          <button class="asist-btn-estado A ${v==='A'?'activo':''}" onclick="marcarAsistencia('${est.id}','A','${fecha}')" title="Ausente">
+          <button class="asist-btn-estado A ${v === 'A' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','A','${fecha}')" title="Ausente">
             <span class="material-icons">cancel</span>A
           </button>
-          <button class="asist-btn-estado E ${v==='E'?'activo':''}" onclick="marcarAsistencia('${est.id}','E','${fecha}')" title="Excusa">
+          <button class="asist-btn-estado E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E','${fecha}')" title="Excusa">
             <span class="material-icons">assignment_turned_in</span>E
           </button>
         </div>
@@ -7505,8 +7505,8 @@ function _badgePctAsistencia(cursoId, estudianteId) {
 
 function marcarAsistencia(estudianteId, estado, fechaOverride) {
   const cursoId = calState.cursoActivoId;
-  const fecha   = fechaOverride || (_asistFechaSeleccionada || _asistFecha());
-  const data    = cargarAsistencia();
+  const fecha = fechaOverride || (_asistFechaSeleccionada || _asistFecha());
+  const data = cargarAsistencia();
   if (!data[cursoId]) data[cursoId] = {};
   if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
 
@@ -7530,16 +7530,16 @@ function marcarAsistencia(estudianteId, estado, fechaOverride) {
   }
 
   // Actualizar summary
-  const curso   = calState.cursos[cursoId];
+  const curso = calState.cursos[cursoId];
   const diaData = (data[cursoId] || {})[fecha] || {};
-  const counts  = { P: 0, A: 0, T: 0 };
-  curso.estudiantes.forEach(e => { const v2 = diaData[e.id]; if (v2) counts[v2] = (counts[v2]||0)+1; });
+  const counts = { P: 0, A: 0, T: 0 };
+  curso.estudiantes.forEach(e => { const v2 = diaData[e.id]; if (v2) counts[v2] = (counts[v2] || 0) + 1; });
   const registrados = counts.P + counts.A + counts.T;
   const body = document.getElementById('asist-vista-body');
   if (body) {
-    const sumP   = body.querySelector('.asist-sum-item.pres');
-    const sumA   = body.querySelector('.asist-sum-item.ause');
-    const sumT   = body.querySelector('.asist-sum-item.tard');
+    const sumP = body.querySelector('.asist-sum-item.pres');
+    const sumA = body.querySelector('.asist-sum-item.ause');
+    const sumT = body.querySelector('.asist-sum-item.tard');
     const sumTot = body.querySelector('.asist-sum-item.total');
     if (sumP) sumP.innerHTML = `<span class="material-icons">check_circle</span>${counts.P} <span>Presentes</span>`;
     if (sumA) sumA.innerHTML = `<span class="material-icons">cancel</span>${counts.A} <span>Ausentes</span>`;
@@ -7549,24 +7549,24 @@ function marcarAsistencia(estudianteId, estado, fechaOverride) {
 }
 
 function _marcarTodos(estado) {
-  const curso   = calState.cursos[calState.cursoActivoId];
+  const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
-  const fecha   = _asistFechaSeleccionada || _asistFecha();
-  const data    = cargarAsistencia();
+  const fecha = _asistFechaSeleccionada || _asistFecha();
+  const data = cargarAsistencia();
   const cursoId = calState.cursoActivoId;
   if (!data[cursoId]) data[cursoId] = {};
   if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
   curso.estudiantes.forEach(e => { data[cursoId][fecha][e.id] = estado; });
   guardarAsistencia(data);
   _renderizarVistaAsistencia();
-  mostrarToast(`Todos marcados como ${estado==='P'?'Presentes':estado==='A'?'Ausentes':estado==='T'?'Tardanza':'Excusa'}`, 'success');
+  mostrarToast(`Todos marcados como ${estado === 'P' ? 'Presentes' : estado === 'A' ? 'Ausentes' : estado === 'T' ? 'Tardanza' : 'Excusa'}`, 'success');
 }
 
 function _limpiarDia() {
   if (!confirm('¿Borrar el registro de asistencia de este día?')) return;
-  const fecha   = _asistFechaSeleccionada || _asistFecha();
+  const fecha = _asistFechaSeleccionada || _asistFecha();
   const cursoId = calState.cursoActivoId;
-  const data    = cargarAsistencia();
+  const data = cargarAsistencia();
   if (data[cursoId] && data[cursoId][fecha]) delete data[cursoId][fecha];
   guardarAsistencia(data);
   _asistFechaSeleccionada = null;
@@ -7577,17 +7577,17 @@ function _limpiarDia() {
 // ── Vista: Historial ─────────────────────────────────────────────
 function _renderHistorial(body) {
   const cursoId = calState.cursoActivoId;
-  const curso   = calState.cursos[cursoId];
-  const data    = cargarAsistencia();
-  const byDate  = data[cursoId] || {};
-  const fechas  = Object.keys(byDate).sort().reverse(); // más reciente primero
+  const curso = calState.cursos[cursoId];
+  const data = cargarAsistencia();
+  const byDate = data[cursoId] || {};
+  const fechas = Object.keys(byDate).sort().reverse(); // más reciente primero
 
   if (fechas.length === 0) {
     body.innerHTML = `<div class="asist-empty"><span class="material-icons">event_note</span><p>Sin registros de asistencia aún. Pasa lista en la vista de hoy.</p></div>`;
     return;
   }
 
-  const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   body.innerHTML = `
     <div class="asist-hist-wrap">
       <table class="asist-hist-tabla">
@@ -7595,32 +7595,32 @@ function _renderHistorial(body) {
           <tr>
             <th class="asist-hist-th-nombre">Estudiante</th>
             ${fechas.map(f => {
-              const d = new Date(f + 'T12:00:00');
-              return `<th class="asist-hist-th-fecha" title="${f}">
+    const d = new Date(f + 'T12:00:00');
+    return `<th class="asist-hist-th-fecha" title="${f}">
                 <div>${DIAS[d.getDay()]}</div>
-                <div>${d.getDate()}/${d.getMonth()+1}</div>
+                <div>${d.getDate()}/${d.getMonth() + 1}</div>
               </th>`;
-            }).join('')}
+  }).join('')}
             <th class="asist-hist-th-pct">%</th>
           </tr>
         </thead>
         <tbody>
           ${curso.estudiantes.map(est => {
-            const stats = _statsAsistencia(cursoId, est.id);
-            const cls   = stats.pct === null ? '' : stats.pct >= 80 ? 'ok' : stats.pct >= 60 ? 'warn' : 'bad';
-            return `<tr>
+    const stats = _statsAsistencia(cursoId, est.id);
+    const cls = stats.pct === null ? '' : stats.pct >= 80 ? 'ok' : stats.pct >= 60 ? 'warn' : 'bad';
+    return `<tr>
               <td class="asist-hist-td-nombre">${escapeHTML(est.nombre)}</td>
               ${fechas.map(f => {
-                const v = (byDate[f] || {})[est.id];
-                const icono = { P:'check_circle', A:'cancel', T:'schedule', E:'assignment_turned_in' }[v] || '';
-                const color = { P:'#2E7D32', A:'#C62828', T:'#E65100', E:'#1565C0' }[v] || '#CFD8DC';
-                return `<td class="asist-hist-td-estado" onclick="marcarAsistencia('${est.id}','${v==='P'?'A':v==='A'?'T':v==='T'?'E':v==='E'?'P':'P'}','${f}');_renderizarVistaAsistencia();" style="cursor:pointer;" title="${v||'Sin registro'} — clic para cambiar">
+      const v = (byDate[f] || {})[est.id];
+      const icono = { P: 'check_circle', A: 'cancel', T: 'schedule', E: 'assignment_turned_in' }[v] || '';
+      const color = { P: '#2E7D32', A: '#C62828', T: '#E65100', E: '#1565C0' }[v] || '#CFD8DC';
+      return `<td class="asist-hist-td-estado" onclick="marcarAsistencia('${est.id}','${v === 'P' ? 'A' : v === 'A' ? 'T' : v === 'T' ? 'E' : v === 'E' ? 'P' : 'P'}','${f}');_renderizarVistaAsistencia();" style="cursor:pointer;" title="${v || 'Sin registro'} — clic para cambiar">
                   ${icono ? `<span class="material-icons" style="font-size:16px;color:${color};">${icono}</span>` : '<span style="color:#CFD8DC;font-size:12px;">·</span>'}
                 </td>`;
-              }).join('')}
+    }).join('')}
               <td class="asist-hist-td-pct ${cls}">${stats.pct !== null ? stats.pct + '%' : '—'}</td>
             </tr>`;
-          }).join('')}
+  }).join('')}
         </tbody>
       </table>
     </div>`;
@@ -7629,9 +7629,9 @@ function _renderHistorial(body) {
 // ── Vista: Reporte ───────────────────────────────────────────────
 function _renderReporte(body) {
   const cursoId = calState.cursoActivoId;
-  const curso   = calState.cursos[cursoId];
-  const data    = cargarAsistencia();
-  const byDate  = data[cursoId] || {};
+  const curso = calState.cursos[cursoId];
+  const data = cargarAsistencia();
+  const byDate = data[cursoId] || {};
   const totalDias = Object.keys(byDate).length;
 
   if (totalDias === 0) {
@@ -7645,7 +7645,7 @@ function _renderReporte(body) {
   const rows = curso.estudiantes.map(est => {
     const s = _statsAsistencia(cursoId, est.id);
     return { est, ...s };
-  }).sort((a, b) => (a.pct||0) - (b.pct||0));
+  }).sort((a, b) => (a.pct || 0) - (b.pct || 0));
 
   const bajoUmbral = rows.filter(r => r.pct !== null && r.pct < umbral);
 
@@ -7659,7 +7659,7 @@ function _renderReporte(body) {
         <div class="asist-rep-num">${curso.estudiantes.length}</div>
         <div class="asist-rep-lbl">Estudiantes</div>
       </div>
-      <div class="asist-rep-stat ${bajoUmbral.length>0?'bad':'ok'}">
+      <div class="asist-rep-stat ${bajoUmbral.length > 0 ? 'bad' : 'ok'}">
         <div class="asist-rep-num">${bajoUmbral.length}</div>
         <div class="asist-rep-lbl">Bajo umbral (${umbral}%)</div>
       </div>
@@ -7693,15 +7693,15 @@ function _renderReporte(body) {
         </thead>
         <tbody>
           ${rows.map(r => {
-            const cls = r.pct === null ? '' : r.pct >= umbral ? 'ok' : r.pct >= 60 ? 'warn' : 'bad';
-            const barW = r.pct !== null ? r.pct : 0;
-            const barColor = cls === 'ok' ? '#2E7D32' : cls === 'warn' ? '#E65100' : '#C62828';
-            return `<tr class="asist-rep-row ${r.pct !== null && r.pct < umbral ? 'fila-alerta' : ''}">
+    const cls = r.pct === null ? '' : r.pct >= umbral ? 'ok' : r.pct >= 60 ? 'warn' : 'bad';
+    const barW = r.pct !== null ? r.pct : 0;
+    const barColor = cls === 'ok' ? '#2E7D32' : cls === 'warn' ? '#E65100' : '#C62828';
+    return `<tr class="asist-rep-row ${r.pct !== null && r.pct < umbral ? 'fila-alerta' : ''}">
               <td class="asist-rep-nombre">${escapeHTML(r.est.nombre)}</td>
               <td class="pres">${r.P}</td>
               <td class="tard">${r.T}</td>
               <td class="ause">${r.A}</td>
-              <td class="excu">${r.E||0}</td>
+              <td class="excu">${r.E || 0}</td>
               <td>${r.total}</td>
               <td>
                 <div class="asist-bar-wrap">
@@ -7710,7 +7710,7 @@ function _renderReporte(body) {
                 <span class="asist-rep-pct ${cls}">${r.pct !== null ? r.pct + '%' : '—'}</span>
               </td>
             </tr>`;
-          }).join('')}
+  }).join('')}
         </tbody>
       </table>
     </div>`;
@@ -7808,19 +7808,19 @@ function buscarEstudiante(query) {
     return `
       <div class="buscar-grupo-label">${escapeHTML(g.curso.nombre)} <span>${nEst}</span></div>
       ${g.ests.map(est => {
-        const notaFinal = _calcNotaFinal(g.curso, est.id);
-        const cls = notaFinal === null ? '' : notaFinal >= 70 ? 'apr' : notaFinal >= 60 ? 'reg' : 'rep';
-        const isActive = _buscarSeleccionado?.estId === est.id && _buscarSeleccionado?.cursoId === g.curso.id;
-        return `<div class="buscar-item ${isActive?'activo':''}"
+      const notaFinal = _calcNotaFinal(g.curso, est.id);
+      const cls = notaFinal === null ? '' : notaFinal >= 70 ? 'apr' : notaFinal >= 60 ? 'reg' : 'rep';
+      const isActive = _buscarSeleccionado?.estId === est.id && _buscarSeleccionado?.cursoId === g.curso.id;
+      return `<div class="buscar-item ${isActive ? 'activo' : ''}"
           onclick="seleccionarEstudianteBuscar('${g.curso.id}','${est.id}')">
-          <div class="buscar-item-avatar">${escapeHTML(est.nombre.trim()[0]?.toUpperCase()||'?')}</div>
+          <div class="buscar-item-avatar">${escapeHTML(est.nombre.trim()[0]?.toUpperCase() || '?')}</div>
           <div class="buscar-item-info">
             <div class="buscar-item-nombre">${_resaltarTexto(escapeHTML(est.nombre), q)}</div>
             <div class="buscar-item-curso">${escapeHTML(g.curso.nombre)}</div>
           </div>
           ${notaFinal !== null ? `<div class="buscar-item-nota ${cls}">${notaFinal.toFixed(1)}</div>` : ''}
         </div>`;
-      }).join('')}`;
+    }).join('')}`;
   }).join('');
 
   // Auto-seleccionar el primero si hay exactamente un resultado
@@ -7867,12 +7867,12 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
   // ── Datos de notas ──
   const rasKeys = Object.keys(curso.ras || {});
   const notaFinal = _calcNotaFinal(curso, estId);
-  const clsFinal  = notaFinal === null ? '' : notaFinal >= 70 ? 'apr' : notaFinal >= 60 ? 'reg' : 'rep';
-  const biblio    = cargarBiblioteca();
+  const clsFinal = notaFinal === null ? '' : notaFinal >= 70 ? 'apr' : notaFinal >= 60 ? 'reg' : 'rep';
+  const biblio = cargarBiblioteca();
 
   // ── Datos de asistencia ──
   const asistStats = _statsAsistencia(cursoId, estId);
-  const clsAsist   = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'apr' : asistStats.pct >= 60 ? 'reg' : 'rep';
+  const clsAsist = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'apr' : asistStats.pct >= 60 ? 'reg' : 'rep';
 
   // ── Posición en el curso (ranking) ──
   const promediosCurso = (curso.estudiantes || [])
@@ -7886,22 +7886,22 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
   // Las notas son por clase (no por estudiante), pero podemos mostrar cuántas hay
   const notasClase = Object.entries(localStorage)
     .filter(([k]) => k.startsWith(`notaclase_`) && k.includes(`_${curso.nombre}_`))
-    .sort(([a],[b]) => b.localeCompare(a)) // más reciente primero
+    .sort(([a], [b]) => b.localeCompare(a)) // más reciente primero
     .slice(0, 5);
 
   // ── Observaciones guardadas (clave por estudiante) ──
-  const obsKey   = `obs_est_${estId}`;
+  const obsKey = `obs_est_${estId}`;
   const obsGuard = localStorage.getItem(obsKey) || '';
 
   // Calcular letra de color del avatar
-  const avatarColors = ['#1565C0','#00695C','#4527A0','#E65100','#AD1457','#BF360C','#1B5E20','#6A1B9A'];
-  const avatarColor  = avatarColors[est.nombre.charCodeAt(0) % avatarColors.length];
+  const avatarColors = ['#1565C0', '#00695C', '#4527A0', '#E65100', '#AD1457', '#BF360C', '#1B5E20', '#6A1B9A'];
+  const avatarColor = avatarColors[est.nombre.charCodeAt(0) % avatarColors.length];
 
   perfil.innerHTML = `
     <!-- Cabecera del perfil -->
     <div class="perfil-header">
       <div class="perfil-avatar" style="background:${avatarColor};">
-        ${escapeHTML(est.nombre.trim()[0]?.toUpperCase()||'?')}
+        ${escapeHTML(est.nombre.trim()[0]?.toUpperCase() || '?')}
       </div>
       <div class="perfil-info">
         <div class="perfil-nombre">${escapeHTML(est.nombre)}</div>
@@ -7926,14 +7926,14 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
       <div class="perfil-stat">
         <div class="perfil-stat-num ${clsAsist}">${asistStats.pct !== null ? asistStats.pct + '%' : '—'}</div>
         <div class="perfil-stat-lbl">Asistencia</div>
-        <div class="perfil-stat-sub">${asistStats.P}P · ${asistStats.T}T · ${asistStats.A}A · ${asistStats.E||0}E</div>
+        <div class="perfil-stat-sub">${asistStats.P}P · ${asistStats.T}T · ${asistStats.A}A · ${asistStats.E || 0}E</div>
       </div>
       <div class="perfil-stat">
         <div class="perfil-stat-num">${asistStats.total}</div>
         <div class="perfil-stat-lbl">Clases registradas</div>
       </div>
       <div class="perfil-stat">
-        <div class="perfil-stat-num">${(curso.estudiantes||[]).length}</div>
+        <div class="perfil-stat-num">${(curso.estudiantes || []).length}</div>
         <div class="perfil-stat-lbl">Compañeros en curso</div>
       </div>
     </div>
@@ -7945,36 +7945,36 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
         <span class="material-icons">grade</span>Calificaciones por RA
       </div>
       ${rasKeys.map(rk => {
-        const raInfo = curso.ras[rk];
-        const notaRA = _calcNotaRA(curso, estId, rk);
-        const clsRA  = notaRA === null ? '' : _clsNota(notaRA, raInfo.valorTotal);
-        const pctRA  = notaRA !== null && raInfo.valorTotal ? Math.round((notaRA / raInfo.valorTotal) * 100) : null;
-        // Notas por actividad
-        const actividades = raInfo.actividades || [];
-        return `
+    const raInfo = curso.ras[rk];
+    const notaRA = _calcNotaRA(curso, estId, rk);
+    const clsRA = notaRA === null ? '' : _clsNota(notaRA, raInfo.valorTotal);
+    const pctRA = notaRA !== null && raInfo.valorTotal ? Math.round((notaRA / raInfo.valorTotal) * 100) : null;
+    // Notas por actividad
+    const actividades = raInfo.actividades || [];
+    return `
         <div class="perfil-ra-card">
           <div class="perfil-ra-header">
-            <span class="perfil-ra-modulo">${escapeHTML((raInfo.modulo||raInfo.label||rk).substring(0,40))}</span>
+            <span class="perfil-ra-modulo">${escapeHTML((raInfo.modulo || raInfo.label || rk).substring(0, 40))}</span>
             <span class="perfil-ra-total ${clsRA}">${notaRA !== null ? notaRA.toFixed(1) : '—'} / ${raInfo.valorTotal}</span>
           </div>
           ${pctRA !== null ? `
           <div class="perfil-ra-bar-wrap">
-            <div class="perfil-ra-bar" style="width:${pctRA}%;background:${pctRA>=70?'#2E7D32':pctRA>=60?'#E65100':'#C62828'};"></div>
+            <div class="perfil-ra-bar" style="width:${pctRA}%;background:${pctRA >= 70 ? '#2E7D32' : pctRA >= 60 ? '#E65100' : '#C62828'};"></div>
           </div>` : ''}
           ${actividades.length ? `
           <div class="perfil-ra-acts">
-            ${actividades.slice(0,8).map((actId, i) => {
-              const nota = curso.notas?.[estId]?.[rk]?.[actId];
-              const max  = raInfo.valores?.[actId] || 100;
-              const cls2 = nota !== undefined ? _clsNota(nota, max) : 'vacio';
-              return `<span class="perfil-act-badge ${cls2}" title="Act.${i+1} — Máx: ${max}pts">
+            ${actividades.slice(0, 8).map((actId, i) => {
+      const nota = curso.notas?.[estId]?.[rk]?.[actId];
+      const max = raInfo.valores?.[actId] || 100;
+      const cls2 = nota !== undefined ? _clsNota(nota, max) : 'vacio';
+      return `<span class="perfil-act-badge ${cls2}" title="Act.${i + 1} — Máx: ${max}pts">
                 ${nota !== undefined ? nota : '—'}
               </span>`;
-            }).join('')}
-            ${actividades.length > 8 ? `<span style="font-size:0.7rem;color:#9E9E9E;">+${actividades.length-8} más</span>` : ''}
+    }).join('')}
+            ${actividades.length > 8 ? `<span style="font-size:0.7rem;color:#9E9E9E;">+${actividades.length - 8} más</span>` : ''}
           </div>` : ''}
         </div>`;
-      }).join('')}
+  }).join('')}
     </div>` : `
     <div class="perfil-seccion" style="text-align:center;padding:16px;color:#9E9E9E;font-size:0.82rem;">
       <span class="material-icons" style="display:block;font-size:2rem;opacity:0.3;margin-bottom:6px;">assignment</span>
@@ -7988,18 +7988,18 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
         <span class="material-icons">edit_note</span>Notas recientes de clase (${escapeHTML(curso.nombre)})
       </div>
       ${notasClase.map(([k, v]) => {
-        const parts  = k.split('_'); // notaclase_FECHA_SECCION_PERIODO
-        const fecha  = parts[1] || '';
-        const periodo= parts[3] || '';
-        const fechaFmt = fecha ? new Date(fecha+'T12:00:00').toLocaleDateString('es-DO',{weekday:'short',day:'2-digit',month:'short'}) : '';
-        return `<div class="perfil-nota-clase">
+    const parts = k.split('_'); // notaclase_FECHA_SECCION_PERIODO
+    const fecha = parts[1] || '';
+    const periodo = parts[3] || '';
+    const fechaFmt = fecha ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' }) : '';
+    return `<div class="perfil-nota-clase">
           <div class="perfil-nota-meta">
             <span class="material-icons" style="font-size:13px;">today</span>
             ${fechaFmt}${periodo ? ` · P${periodo}` : ''}
           </div>
-          <div class="perfil-nota-txt">${escapeHTML(v.substring(0,160))}${v.length>160?'…':''}</div>
+          <div class="perfil-nota-txt">${escapeHTML(v.substring(0, 160))}${v.length > 160 ? '…' : ''}</div>
         </div>`;
-      }).join('')}
+  }).join('')}
     </div>` : ''}
 
     <!-- Comentarios del estudiante -->
@@ -8036,13 +8036,13 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
 // ════════════════════════════════════════════════════════════════════
 const COMENT_KEY = 'planificadorRA_comentarios_v1';
 const COMENT_CATEGORIAS = [
-  { id: 'academico',    label: 'Académico',     icono: 'school',       color: '#1565C0' },
-  { id: 'conducta',     label: 'Conducta',      icono: 'emoji_people', color: '#E65100' },
-  { id: 'asistencia',   label: 'Asistencia',    icono: 'how_to_reg',   color: '#00695C' },
-  { id: 'fortaleza',    label: 'Fortaleza',     icono: 'star',         color: '#F9A825' },
-  { id: 'seguimiento',  label: 'Seguimiento',   icono: 'track_changes',color: '#6A1B9A' },
-  { id: 'padre',        label: 'Contacto/Padre',icono: 'supervisor_account', color: '#AD1457' },
-  { id: 'otro',         label: 'Otro',          icono: 'label',        color: '#546E7A' },
+  { id: 'academico', label: 'Académico', icono: 'school', color: '#1565C0' },
+  { id: 'conducta', label: 'Conducta', icono: 'emoji_people', color: '#E65100' },
+  { id: 'asistencia', label: 'Asistencia', icono: 'how_to_reg', color: '#00695C' },
+  { id: 'fortaleza', label: 'Fortaleza', icono: 'star', color: '#F9A825' },
+  { id: 'seguimiento', label: 'Seguimiento', icono: 'track_changes', color: '#6A1B9A' },
+  { id: 'padre', label: 'Contacto/Padre', icono: 'supervisor_account', color: '#AD1457' },
+  { id: 'otro', label: 'Otro', icono: 'label', color: '#546E7A' },
 ];
 
 function cargarComentarios() {
@@ -8072,9 +8072,9 @@ function renderizarComentariosEnPerfil(estId) {
     const n = lista.filter(c => c.categoria === cat.id).length;
     if (!n) return '';
     const activo = catSelec === cat.id;
-    return `<button class="coment-cat-filter ${activo?'activo':''}"
+    return `<button class="coment-cat-filter ${activo ? 'activo' : ''}"
       style="${activo ? `background:${cat.color}18;border-color:${cat.color};color:${cat.color};` : ''}"
-      onclick="document.getElementById('coment-cat-select').value='${activo?'':cat.id}';renderizarComentariosEnPerfil('${estId}')">
+      onclick="document.getElementById('coment-cat-select').value='${activo ? '' : cat.id}';renderizarComentariosEnPerfil('${estId}')">
       <span class="material-icons" style="font-size:13px;">${cat.icono}</span>${cat.label}
       <span class="coment-cat-n">${n}</span>
     </button>`;
@@ -8125,19 +8125,19 @@ function renderizarComentariosEnPerfil(estId) {
         <div class="coment-vacio">
           <span class="material-icons">chat_bubble_outline</span>
           <p>${lista.length === 0
-            ? 'Sin comentarios aún. Usa el botón de arriba para agregar el primero.'
-            : 'Sin comentarios en esta categoría.'
-          }</p>
+        ? 'Sin comentarios aún. Usa el botón de arriba para agregar el primero.'
+        : 'Sin comentarios en esta categoría.'
+      }</p>
         </div>` :
-        filtrados.map(c => _renderComentarioHTML(c, estId)).join('')
-      }
+      filtrados.map(c => _renderComentarioHTML(c, estId)).join('')
+    }
     </div>`;
 }
 
 function _renderComentarioHTML(c, estId) {
-  const cat   = COMENT_CATEGORIAS.find(x => x.id === c.categoria) || COMENT_CATEGORIAS[6];
-  const fecha = new Date(c.ts).toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
-  const hora  = new Date(c.ts).toLocaleTimeString('es-DO', { hour:'2-digit', minute:'2-digit' });
+  const cat = COMENT_CATEGORIAS.find(x => x.id === c.categoria) || COMENT_CATEGORIAS[6];
+  const fecha = new Date(c.ts).toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+  const hora = new Date(c.ts).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
   return `
   <div class="coment-item" id="coment-${c.id}">
     <div class="coment-item-header">
@@ -8179,10 +8179,10 @@ function seleccionarCatComentario(btn, color, estId) {
     b.style.color = '';
     b.style.fontWeight = '';
   });
-  btn.style.background   = color + '18';
-  btn.style.borderColor  = color;
-  btn.style.color        = color;
-  btn.style.fontWeight   = '800';
+  btn.style.background = color + '18';
+  btn.style.borderColor = color;
+  btn.style.color = color;
+  btn.style.fontWeight = '800';
   const input = document.getElementById('coment-cat-nueva');
   if (input) input.value = btn.dataset.cat;
 }
@@ -8190,8 +8190,8 @@ function seleccionarCatComentario(btn, color, estId) {
 function guardarComentarioNuevo(estId) {
   const texto = document.getElementById('coment-texto-nueva')?.value?.trim();
   if (!texto) { mostrarToast('Escribe algo antes de guardar', 'error'); return; }
-  const cat   = document.getElementById('coment-cat-nueva')?.value || 'otro';
-  const data  = cargarComentarios();
+  const cat = document.getElementById('coment-cat-nueva')?.value || 'otro';
+  const data = cargarComentarios();
   if (!data[estId]) data[estId] = [];
   data[estId].push({ id: uid(), ts: Date.now(), categoria: cat, texto });
   guardarComentarios(data);
@@ -8232,7 +8232,7 @@ function editarComentario(comentId, estId) {
 function confirmarEditComentario(comentId, estId) {
   const nuevoTexto = document.getElementById(`edit-ta-${comentId}`)?.value?.trim();
   if (!nuevoTexto) { mostrarToast('El comentario no puede estar vacío', 'error'); return; }
-  const data  = cargarComentarios();
+  const data = cargarComentarios();
   const lista = data[estId] || [];
   const c = lista.find(x => x.id === comentId);
   if (c) { c.texto = nuevoTexto; c.editado = Date.now(); }
@@ -8243,7 +8243,7 @@ function confirmarEditComentario(comentId, estId) {
 
 function eliminarComentario(comentId, estId) {
   if (!confirm('¿Eliminar este comentario?')) return;
-  const data  = cargarComentarios();
+  const data = cargarComentarios();
   data[estId] = (data[estId] || []).filter(c => c.id !== comentId);
   guardarComentarios(data);
   renderizarComentariosEnPerfil(estId);
@@ -8263,7 +8263,7 @@ function abrirComentariosEstudiante(estId, nombreEstOrId) {
   let nombreEst = nombreEstOrId;
   if (!nombreEst || nombreEst === estId) {
     for (const curso of Object.values(calState.cursos)) {
-      const est = (curso.estudiantes||[]).find(e => e.id === estId);
+      const est = (curso.estudiantes || []).find(e => e.id === estId);
       if (est) { nombreEst = est.nombre; break; }
     }
   }
@@ -8295,7 +8295,7 @@ function guardarObsEstudiante(key, valor) {
   if (ind) ind.style.display = 'none';
   _obsDebounce = setTimeout(() => {
     if (valor.trim()) localStorage.setItem(key, valor);
-    else              localStorage.removeItem(key);
+    else localStorage.removeItem(key);
     if (ind) ind.style.display = 'inline';
   }, 600);
 }
@@ -8308,51 +8308,51 @@ function guardarObsEstudiante(key, valor) {
 // Genera la lista de notificaciones activas
 function _generarNotificaciones() {
   const notifs = [];
-  const hoy    = new Date(); hoy.setHours(0,0,0,0);
-  const ahora  = new Date();
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const ahora = new Date();
 
   // ── 1. Tareas vencidas ──────────────────────────────────────────
   const tareas = cargarTareas();
-  const tvenc  = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
-    new Date(t.fechaVencimiento).setHours(0,0,0,0) < hoy.getTime());
+  const tvenc = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
+    new Date(t.fechaVencimiento).setHours(0, 0, 0, 0) < hoy.getTime());
   if (tvenc.length) {
     notifs.push({
       id: 'tareas_vencidas', tipo: 'error', icono: 'assignment_late',
       titulo: `${tvenc.length} tarea(s) vencida(s)`,
-      detalle: tvenc.map(t => `• ${t.descripcion||'Sin descripción'} (${t.seccion||''})`).join('\n'),
+      detalle: tvenc.map(t => `• ${t.descripcion || 'Sin descripción'} (${t.seccion || ''})`).join('\n'),
       accion: { label: 'Ver tareas', fn: 'abrirTareas' }
     });
   }
 
   // ── 2. Tareas que vencen hoy ────────────────────────────────────
   const thoy = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
-    new Date(t.fechaVencimiento).setHours(0,0,0,0) === hoy.getTime());
+    new Date(t.fechaVencimiento).setHours(0, 0, 0, 0) === hoy.getTime());
   if (thoy.length) {
     notifs.push({
       id: 'tareas_hoy', tipo: 'warning', icono: 'alarm',
       titulo: `${thoy.length} tarea(s) vencen hoy`,
-      detalle: thoy.map(t => `• ${t.descripcion||'Sin descripción'} (${t.seccion||''})`).join('\n'),
+      detalle: thoy.map(t => `• ${t.descripcion || 'Sin descripción'} (${t.seccion || ''})`).join('\n'),
       accion: { label: 'Ver tareas', fn: 'abrirTareas' }
     });
   }
 
   // ── 3. Tareas que vencen mañana ─────────────────────────────────
   const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
-  const tman   = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
-    new Date(t.fechaVencimiento).setHours(0,0,0,0) === manana.getTime());
+  const tman = tareas.filter(t => t.estado !== 'entregada' && t.fechaVencimiento &&
+    new Date(t.fechaVencimiento).setHours(0, 0, 0, 0) === manana.getTime());
   if (tman.length) {
     notifs.push({
       id: 'tareas_manana', tipo: 'warning', icono: 'event',
       titulo: `${tman.length} tarea(s) vencen mañana`,
-      detalle: tman.map(t => `• ${t.descripcion||'Sin descripción'} (${t.seccion||''})`).join('\n'),
+      detalle: tman.map(t => `• ${t.descripcion || 'Sin descripción'} (${t.seccion || ''})`).join('\n'),
       accion: { label: 'Ver tareas', fn: 'abrirTareas' }
     });
   }
 
   // ── 4. Cursos sin planificación asignada ────────────────────────
-  const _biblioIds = new Set((cargarBiblioteca().items||[]).map(i => i.id));
+  const _biblioIds = new Set((cargarBiblioteca().items || []).map(i => i.id));
   const sinPlan = Object.values(calState.cursos).filter(c =>
-    !(c.planIds||[]).some(pid => _biblioIds.has(pid))
+    !(c.planIds || []).some(pid => _biblioIds.has(pid))
   );
   if (sinPlan.length) {
     notifs.push({
@@ -8364,7 +8364,7 @@ function _generarNotificaciones() {
   }
 
   // ── 5. Asistencia no pasada hace 2+ días hábiles ────────────────
-  const horario   = cargarHorario().filter(e => e.materia);
+  const horario = cargarHorario().filter(e => e.materia);
   const asistData = cargarAsistencia();
   const cursosConHorario = {};
   horario.forEach(e => {
@@ -8398,7 +8398,7 @@ function _generarNotificaciones() {
   const umbral = parseInt(localStorage.getItem('asist_umbral') || '80');
   const bajosUmbral = [];
   Object.values(calState.cursos).forEach(curso => {
-    (curso.estudiantes||[]).forEach(est => {
+    (curso.estudiantes || []).forEach(est => {
       const s = _statsAsistencia(curso.id, est.id);
       if (s.pct !== null && s.pct < umbral && s.total >= 3) {
         bajosUmbral.push({ nombre: est.nombre, curso: curso.nombre, pct: s.pct });
@@ -8406,33 +8406,33 @@ function _generarNotificaciones() {
     });
   });
   if (bajosUmbral.length) {
-    bajosUmbral.sort((a,b) => a.pct - b.pct);
+    bajosUmbral.sort((a, b) => a.pct - b.pct);
     notifs.push({
       id: 'bajo_umbral', tipo: 'error', icono: 'person_off',
       titulo: `${bajosUmbral.length} estudiante(s) bajo ${umbral}% de asistencia`,
-      detalle: bajosUmbral.slice(0,6).map(e =>
+      detalle: bajosUmbral.slice(0, 6).map(e =>
         `• ${e.nombre} (${e.curso}): ${e.pct}%`
-      ).join('\n') + (bajosUmbral.length > 6 ? `\n  …y ${bajosUmbral.length-6} más` : ''),
+      ).join('\n') + (bajosUmbral.length > 6 ? `\n  …y ${bajosUmbral.length - 6} más` : ''),
       accion: { label: 'Ver asistencia', fn: 'abrirCalificaciones' }
     });
   }
 
   // ── 7. Clases de hoy sin actividad planificada ─────────────────
-  const diasMap = [null,'Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const diasMap = [null, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
   const diaJS = ahora.getDay();
   if (diaJS >= 1 && diaJS <= 5) {
     const diaIdx = diaJS - 1;
-    const clasesHoy  = cargarHorario().filter(e => e.dia === diaIdx && e.materia);
-    const biblio     = cargarBiblioteca();
-    const hoyISO     = hoy.toISOString().split('T')[0];
+    const clasesHoy = cargarHorario().filter(e => e.dia === diaIdx && e.materia);
+    const biblio = cargarBiblioteca();
+    const hoyISO = hoy.toISOString().split('T')[0];
     const sinPlanHoy = [];
     clasesHoy.forEach(e => {
-      const tienePlan = (biblio.items||[]).some(reg => {
-        const cursosConReg = Object.values(calState.cursos).filter(c => (c.planIds||[]).includes(reg.id));
+      const tienePlan = (biblio.items || []).some(reg => {
+        const cursosConReg = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
         return cursosConReg.some(c => c.nombre === e.seccion) &&
-          (reg.planificacion?.actividades||[]).some(act => act.fecha === hoyISO);
+          (reg.planificacion?.actividades || []).some(act => act.fecha === hoyISO);
       });
-      if (!tienePlan) sinPlanHoy.push(`P${e.periodo}: ${e.materia}${e.seccion?' — '+e.seccion:''}`);
+      if (!tienePlan) sinPlanHoy.push(`P${e.periodo}: ${e.materia}${e.seccion ? ' — ' + e.seccion : ''}`);
     });
     if (sinPlanHoy.length) {
       notifs.push({
@@ -8447,9 +8447,9 @@ function _generarNotificaciones() {
   // ── 8. Notas pendientes de registrar ───────────────────────────
   let actsSinNota = 0;
   Object.values(calState.cursos).forEach(curso => {
-    Object.values(curso.ras||{}).forEach(ra => {
-      (ra.actividades||[]).forEach(actId => {
-        const hayNota = (curso.estudiantes||[]).some(e => {
+    Object.values(curso.ras || {}).forEach(ra => {
+      (ra.actividades || []).forEach(actId => {
+        const hayNota = (curso.estudiantes || []).some(e => {
           const n = curso.notas?.[e.id];
           return n && Object.values(n).some(rn => rn && rn[actId] !== undefined);
         });
@@ -8471,13 +8471,13 @@ function _generarNotificaciones() {
 
 // ── Actualizar badge del header ──────────────────────────────────
 function actualizarBadgeNotificaciones() {
-  const notifs  = _generarNotificaciones();
+  const notifs = _generarNotificaciones();
   const urgentes = notifs.filter(n => n.tipo === 'error' || n.tipo === 'warning').length;
-  const badge   = document.getElementById('notif-badge');
+  const badge = document.getElementById('notif-badge');
   if (!badge) return;
   if (urgentes > 0) {
     badge.style.display = 'flex';
-    badge.textContent   = urgentes > 9 ? '9+' : urgentes;
+    badge.textContent = urgentes > 9 ? '9+' : urgentes;
   } else {
     badge.style.display = 'none';
   }
@@ -8497,7 +8497,7 @@ function cerrarNotificaciones() {
 }
 
 function _renderizarNotificaciones() {
-  const body   = document.getElementById('notif-modal-body');
+  const body = document.getElementById('notif-modal-body');
   const header = document.getElementById('notif-count-header');
   if (!body) return;
   const notifs = _generarNotificaciones();
@@ -8514,13 +8514,13 @@ function _renderizarNotificaciones() {
   }
 
   const COLORES = {
-    error:   { bg:'#FFEBEE', border:'#FFCDD2', icon:'#C62828', label:'bg:#FFCDD2;color:#C62828' },
-    warning: { bg:'#FFF8E1', border:'#FFE082', icon:'#E65100', label:'bg:#FFF3E0;color:#E65100' },
-    info:    { bg:'#E3F2FD', border:'#90CAF9', icon:'#1565C0', label:'bg:#E3F2FD;color:#1565C0' },
+    error: { bg: '#FFEBEE', border: '#FFCDD2', icon: '#C62828', label: 'bg:#FFCDD2;color:#C62828' },
+    warning: { bg: '#FFF8E1', border: '#FFE082', icon: '#E65100', label: 'bg:#FFF3E0;color:#E65100' },
+    info: { bg: '#E3F2FD', border: '#90CAF9', icon: '#1565C0', label: 'bg:#E3F2FD;color:#1565C0' },
   };
 
   // Agrupar: errores primero, luego warnings, luego info
-  const orden = ['error','warning','info'];
+  const orden = ['error', 'warning', 'info'];
   const ordenados = orden.flatMap(tipo => notifs.filter(n => n.tipo === tipo));
 
   body.innerHTML = ordenados.map(n => {
@@ -8534,11 +8534,11 @@ function _renderizarNotificaciones() {
       </div>
       ${lineas.length ? `
       <div class="notif-detalle">
-        ${lineas.slice(0,5).map(l => `<div>${escapeHTML(l)}</div>`).join('')}
-        ${lineas.length > 5 ? `<div style="color:#9E9E9E;font-size:0.7rem;">…y ${lineas.length-5} más</div>` : ''}
+        ${lineas.slice(0, 5).map(l => `<div>${escapeHTML(l)}</div>`).join('')}
+        ${lineas.length > 5 ? `<div style="color:#9E9E9E;font-size:0.7rem;">…y ${lineas.length - 5} más</div>` : ''}
       </div>` : ''}
       ${n.accion ? `
-      <button class="notif-accion-btn" style="${n.tipo==='error'?'background:#FFCDD2;color:#C62828;':n.tipo==='warning'?'background:#FFE082;color:#E65100;':'background:#BBDEFB;color:#1565C0;'}"
+      <button class="notif-accion-btn" style="${n.tipo === 'error' ? 'background:#FFCDD2;color:#C62828;' : n.tipo === 'warning' ? 'background:#FFE082;color:#E65100;' : 'background:#BBDEFB;color:#1565C0;'}"
         onclick="cerrarNotificaciones();${n.accion.fn}();">
         <span class="material-icons" style="font-size:14px;">arrow_forward</span> ${n.accion.label}
       </button>` : ''}
@@ -8581,19 +8581,19 @@ function cerrarExpAsistencia() {
 function setExpAsistPeriodo(tipo) {
   const hoy = new Date();
   const desde = document.getElementById('exp-asist-desde');
-  const hasta  = document.getElementById('exp-asist-hasta');
+  const hasta = document.getElementById('exp-asist-hasta');
   if (!desde || !hasta) return;
   const fmt = d => d.toISOString().split('T')[0];
   if (tipo === 'mes') {
     desde.value = fmt(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
-    hasta.value  = fmt(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
+    hasta.value = fmt(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
   } else if (tipo === 'trimestre') {
     const d3 = new Date(hoy); d3.setMonth(d3.getMonth() - 3);
     desde.value = fmt(d3);
-    hasta.value  = fmt(hoy);
+    hasta.value = fmt(hoy);
   } else {
     desde.value = '2024-01-01';
-    hasta.value  = fmt(hoy);
+    hasta.value = fmt(hoy);
   }
   _actualizarPreviewAsistencia();
 }
@@ -8602,23 +8602,23 @@ function _actualizarPreviewAsistencia() {
   const preview = document.getElementById('exp-asist-preview');
   if (!preview) return;
   const cursoId = document.getElementById('exp-asist-curso')?.value;
-  const desde   = document.getElementById('exp-asist-desde')?.value;
-  const hasta   = document.getElementById('exp-asist-hasta')?.value;
+  const desde = document.getElementById('exp-asist-desde')?.value;
+  const hasta = document.getElementById('exp-asist-hasta')?.value;
   if (!cursoId) { preview.innerHTML = ''; return; }
-  const curso   = calState.cursos[cursoId];
-  if (!curso)   { preview.innerHTML = ''; return; }
+  const curso = calState.cursos[cursoId];
+  if (!curso) { preview.innerHTML = ''; return; }
   const { fechas } = _filtrarAsistencia(cursoId, desde, hasta);
   preview.innerHTML = `
     <div style="background:#F5F7FA;border-radius:8px;padding:10px 14px;border:1px solid #E0E0E0;">
       <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#1565C0;">preview</span>
-      <strong>${curso.nombre}</strong> · ${curso.estudiantes?.length||0} estudiantes ·
+      <strong>${curso.nombre}</strong> · ${curso.estudiantes?.length || 0} estudiantes ·
       <strong>${fechas.length}</strong> fecha(s) en el período seleccionado
     </div>`;
 }
 
 // Filtrar datos de asistencia por rango de fechas
 function _filtrarAsistencia(cursoId, desde, hasta) {
-  const data   = cargarAsistencia();
+  const data = cargarAsistencia();
   const byDate = data[cursoId] || {};
   const fechas = Object.keys(byDate)
     .filter(f => (!desde || f >= desde) && (!hasta || f <= hasta))
@@ -8629,11 +8629,11 @@ function _filtrarAsistencia(cursoId, desde, hasta) {
 // ── EXPORTAR A WORD ─────────────────────────────────────────────
 async function generarReporteAsistenciaWord() {
   const cursoId = document.getElementById('exp-asist-curso')?.value;
-  const desde   = document.getElementById('exp-asist-desde')?.value;
-  const hasta   = document.getElementById('exp-asist-hasta')?.value;
+  const desde = document.getElementById('exp-asist-desde')?.value;
+  const hasta = document.getElementById('exp-asist-hasta')?.value;
   if (!cursoId) { mostrarToast('Selecciona un curso', 'error'); return; }
   const curso = calState.cursos[cursoId];
-  if (!curso)  { mostrarToast('Curso no encontrado', 'error'); return; }
+  if (!curso) { mostrarToast('Curso no encontrado', 'error'); return; }
 
   mostrarToast('Generando documento Word…', 'success');
 
@@ -8647,24 +8647,24 @@ async function generarReporteAsistenciaWord() {
     PageOrientation
   } = docx;
 
-  const borderThin  = { style: BorderStyle.SINGLE, size: 4,  color: '90CAF9' };
-  const borderMed   = { style: BorderStyle.SINGLE, size: 8,  color: '1565C0' };
-  const borders     = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin };
-  const bordersHead = { top: borderMed,  bottom: borderMed,  left: borderMed,  right: borderMed  };
+  const borderThin = { style: BorderStyle.SINGLE, size: 4, color: '90CAF9' };
+  const borderMed = { style: BorderStyle.SINGLE, size: 8, color: '1565C0' };
+  const borders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin };
+  const bordersHead = { top: borderMed, bottom: borderMed, left: borderMed, right: borderMed };
 
   // Colores
   const C_HEADER = '1565C0';
-  const C_PRES   = 'E8F5E9';
-  const C_AUS    = 'FFEBEE';
-  const C_TARD   = 'FFF3E0';
-  const C_EXCU   = 'E3F2FD';
-  const C_SIN    = 'FAFAFA';
+  const C_PRES = 'E8F5E9';
+  const C_AUS = 'FFEBEE';
+  const C_TARD = 'FFF3E0';
+  const C_EXCU = 'E3F2FD';
+  const C_SIN = 'FAFAFA';
 
   function cell(text, opts = {}) {
     return new TableCell({
       borders: opts.borders || borders,
-      width:   opts.width   ? { size: opts.width, type: WidthType.DXA } : undefined,
-      shading: opts.shade   ? { fill: opts.shade, type: ShadingType.CLEAR } : undefined,
+      width: opts.width ? { size: opts.width, type: WidthType.DXA } : undefined,
+      shading: opts.shade ? { fill: opts.shade, type: ShadingType.CLEAR } : undefined,
       verticalAlign: VerticalAlign.CENTER,
       margins: { top: 60, bottom: 60, left: 80, right: 80 },
       children: [new Paragraph({
@@ -8685,54 +8685,62 @@ async function generarReporteAsistenciaWord() {
     width: { size: 9360, type: WidthType.DXA },
     columnWidths: [9360],
     rows: [
-      new TableRow({ children: [
-        new TableCell({
-          borders: bordersHead,
-          width: { size: 9360, type: WidthType.DXA },
-          shading: { fill: C_HEADER, type: ShadingType.CLEAR },
-          margins: { top: 120, bottom: 120, left: 160, right: 160 },
-          children: [
-            new Paragraph({ alignment: AlignmentType.CENTER, children: [
-              new TextRun({ text: 'REGISTRO DE ASISTENCIA', bold: true, color: 'FFFFFF', font: 'Arial', size: 28 })
-            ]}),
-            new Paragraph({ alignment: AlignmentType.CENTER, children: [
-              new TextRun({ text: `Curso: ${curso.nombre}`, bold: true, color: 'E3F2FD', font: 'Arial', size: 22 })
-            ]}),
-            new Paragraph({ alignment: AlignmentType.CENTER, children: [
-              new TextRun({
-                text: `Período: ${desde || 'inicio'} — ${hasta || 'hoy'}  ·  Docente: ${planificacion?.datosGenerales?.nombreDocente || '—'}`,
-                color: 'BBDEFB', font: 'Arial', size: 18
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: bordersHead,
+            width: { size: 9360, type: WidthType.DXA },
+            shading: { fill: C_HEADER, type: ShadingType.CLEAR },
+            margins: { top: 120, bottom: 120, left: 160, right: 160 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER, children: [
+                  new TextRun({ text: 'REGISTRO DE ASISTENCIA', bold: true, color: 'FFFFFF', font: 'Arial', size: 28 })
+                ]
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER, children: [
+                  new TextRun({ text: `Curso: ${curso.nombre}`, bold: true, color: 'E3F2FD', font: 'Arial', size: 22 })
+                ]
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER, children: [
+                  new TextRun({
+                    text: `Período: ${desde || 'inicio'} — ${hasta || 'hoy'}  ·  Docente: ${planificacion?.datosGenerales?.nombreDocente || '—'}`,
+                    color: 'BBDEFB', font: 'Arial', size: 18
+                  })
+                ]
               })
-            ]})
-          ]
-        })
-      ]})
+            ]
+          })
+        ]
+      })
     ]
   });
 
   // TABLA DE ASISTENCIA
   // Cada columna: nombre (2200) + fechas (420 c/u) + total P/A/T/E + %
   const COL_NOMBRE = 2200;
-  const COL_FECHA  = Math.min(420, Math.floor((9360 - COL_NOMBRE - 1200) / Math.max(fechas.length, 1)));
-  const COL_TOTAL  = 300;
-  const COL_PCT    = 380;
+  const COL_FECHA = Math.min(420, Math.floor((9360 - COL_NOMBRE - 1200) / Math.max(fechas.length, 1)));
+  const COL_TOTAL = 300;
+  const COL_PCT = 380;
   const totalFechasW = COL_FECHA * fechas.length;
   const restoW = 9360 - COL_NOMBRE - totalFechasW - COL_TOTAL * 4 - COL_PCT;
 
   // Header de fechas
-  const DIAS_ABREV = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
-  const headerRow  = new TableRow({
+  const DIAS_ABREV = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+  const headerRow = new TableRow({
     tableHeader: true,
     children: [
       cell('Estudiante', { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 17, align: AlignmentType.LEFT, width: COL_NOMBRE, borders: bordersHead }),
       ...fechas.map(f => {
         const d = new Date(f + 'T12:00:00');
-        const label = `${DIAS_ABREV[d.getDay()]}\n${d.getDate()}/${d.getMonth()+1}`;
+        const label = `${DIAS_ABREV[d.getDay()]}\n${d.getDate()}/${d.getMonth() + 1}`;
         return cell(label, { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 14, width: COL_FECHA, borders: bordersHead });
       }),
       cell('P', { shade: C_PRES, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
       cell('T', { shade: C_TARD, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
-      cell('A', { shade: C_AUS,  bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
+      cell('A', { shade: C_AUS, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
       cell('E', { shade: C_EXCU, bold: true, size: 15, width: COL_TOTAL, borders: bordersHead }),
       cell('%', { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 15, width: COL_PCT, borders: bordersHead }),
     ]
@@ -8740,29 +8748,31 @@ async function generarReporteAsistenciaWord() {
 
   // Filas de estudiantes
   const filasEst = estudiantes.map((est, idx) => {
-    let P=0, A=0, T=0, E=0;
+    let P = 0, A = 0, T = 0, E = 0;
     const celdas = fechas.map(f => {
       const v = byDate[f]?.[est.id] || '';
-      const shade = v==='P'?C_PRES : v==='A'?C_AUS : v==='T'?C_TARD : v==='E'?C_EXCU : C_SIN;
-      if (v==='P') P++; else if (v==='A') A++; else if (v==='T') T++; else if (v==='E') E++;
+      const shade = v === 'P' ? C_PRES : v === 'A' ? C_AUS : v === 'T' ? C_TARD : v === 'E' ? C_EXCU : C_SIN;
+      if (v === 'P') P++; else if (v === 'A') A++; else if (v === 'T') T++; else if (v === 'E') E++;
       return cell(v || '·', { shade, size: 14, width: COL_FECHA });
     });
-    const total  = P + A + T + E;
-    const pct    = total > 0 ? Math.round(((P + T*0.5 + E) / total) * 100) : null;
-    const rowShade = idx%2===0 ? 'FFFFFF' : 'F5F7FA';
-    const pctColor = pct===null ? '9E9E9E' : pct >= umbral ? '2E7D32' : pct >= 60 ? 'E65100' : 'C62828';
-    return new TableRow({ children: [
-      cell(est.nombre, { shade: rowShade, align: AlignmentType.LEFT, width: COL_NOMBRE, size: 17 }),
-      ...celdas,
-      cell(P,   { shade: C_PRES, bold: true, size: 15, width: COL_TOTAL }),
-      cell(T,   { shade: C_TARD, bold: true, size: 15, width: COL_TOTAL }),
-      cell(A,   { shade: C_AUS,  bold: true, size: 15, width: COL_TOTAL }),
-      cell(E,   { shade: C_EXCU, bold: true, size: 15, width: COL_TOTAL }),
-      cell(pct!==null?pct+'%':'—', { shade: rowShade, bold: true, color: pctColor, size: 15, width: COL_PCT }),
-    ]});
+    const total = P + A + T + E;
+    const pct = total > 0 ? Math.round(((P + T * 0.5 + E) / total) * 100) : null;
+    const rowShade = idx % 2 === 0 ? 'FFFFFF' : 'F5F7FA';
+    const pctColor = pct === null ? '9E9E9E' : pct >= umbral ? '2E7D32' : pct >= 60 ? 'E65100' : 'C62828';
+    return new TableRow({
+      children: [
+        cell(est.nombre, { shade: rowShade, align: AlignmentType.LEFT, width: COL_NOMBRE, size: 17 }),
+        ...celdas,
+        cell(P, { shade: C_PRES, bold: true, size: 15, width: COL_TOTAL }),
+        cell(T, { shade: C_TARD, bold: true, size: 15, width: COL_TOTAL }),
+        cell(A, { shade: C_AUS, bold: true, size: 15, width: COL_TOTAL }),
+        cell(E, { shade: C_EXCU, bold: true, size: 15, width: COL_TOTAL }),
+        cell(pct !== null ? pct + '%' : '—', { shade: rowShade, bold: true, color: pctColor, size: 15, width: COL_PCT }),
+      ]
+    });
   });
 
-  const colWidths = [COL_NOMBRE, ...fechas.map(()=>COL_FECHA), COL_TOTAL, COL_TOTAL, COL_TOTAL, COL_TOTAL, COL_PCT];
+  const colWidths = [COL_NOMBRE, ...fechas.map(() => COL_FECHA), COL_TOTAL, COL_TOTAL, COL_TOTAL, COL_TOTAL, COL_PCT];
   const tablaAsistencia = new Table({
     width: { size: 9360, type: WidthType.DXA },
     columnWidths: colWidths,
@@ -8771,25 +8781,33 @@ async function generarReporteAsistenciaWord() {
 
   // TABLA RESUMEN
   const resumenRows = [
-    new TableRow({ children: [
-      cell('RESUMEN', { shade: C_HEADER, bold: true, color:'FFFFFF', size: 18, width: 4680, borders: bordersHead }),
-      cell('', { shade: C_HEADER, width: 4680, borders: bordersHead }),
-    ]}),
-    new TableRow({ children: [
-      cell('Total de clases registradas',   { shade:'F5F7FA', align: AlignmentType.LEFT, width:4680, size:17 }),
-      cell(fechas.length,                   { bold:true, width:4680, size:17 }),
-    ]}),
-    new TableRow({ children: [
-      cell('Total de estudiantes',          { shade:'F5F7FA', align: AlignmentType.LEFT, width:4680, size:17 }),
-      cell(estudiantes.length,              { bold:true, width:4680, size:17 }),
-    ]}),
-    new TableRow({ children: [
-      cell(`Estudiantes bajo umbral (${umbral}%)`, { shade:'FFEBEE', align: AlignmentType.LEFT, width:4680, size:17 }),
-      cell(estudiantes.filter(e => {
-        const s = _statsAsistencia(cursoId, e.id);
-        return s.pct !== null && s.pct < umbral;
-      }).length, { bold:true, shade:'FFEBEE', color:'C62828', width:4680, size:17 }),
-    ]}),
+    new TableRow({
+      children: [
+        cell('RESUMEN', { shade: C_HEADER, bold: true, color: 'FFFFFF', size: 18, width: 4680, borders: bordersHead }),
+        cell('', { shade: C_HEADER, width: 4680, borders: bordersHead }),
+      ]
+    }),
+    new TableRow({
+      children: [
+        cell('Total de clases registradas', { shade: 'F5F7FA', align: AlignmentType.LEFT, width: 4680, size: 17 }),
+        cell(fechas.length, { bold: true, width: 4680, size: 17 }),
+      ]
+    }),
+    new TableRow({
+      children: [
+        cell('Total de estudiantes', { shade: 'F5F7FA', align: AlignmentType.LEFT, width: 4680, size: 17 }),
+        cell(estudiantes.length, { bold: true, width: 4680, size: 17 }),
+      ]
+    }),
+    new TableRow({
+      children: [
+        cell(`Estudiantes bajo umbral (${umbral}%)`, { shade: 'FFEBEE', align: AlignmentType.LEFT, width: 4680, size: 17 }),
+        cell(estudiantes.filter(e => {
+          const s = _statsAsistencia(cursoId, e.id);
+          return s.pct !== null && s.pct < umbral;
+        }).length, { bold: true, shade: 'FFEBEE', color: 'C62828', width: 4680, size: 17 }),
+      ]
+    }),
   ];
   const tablaResumen = new Table({
     width: { size: 9360, type: WidthType.DXA },
@@ -8802,11 +8820,11 @@ async function generarReporteAsistenciaWord() {
     : [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1080, right: 720, bottom: 1080, left: 720 } } }, children: [encabezado, new Paragraph({ text: '' }), tablaAsistencia, new Paragraph({ text: '' }), tablaResumen] }];
 
   const documento = new Document({ sections });
-  const buffer    = await Packer.toBlob(documento);
-  const url       = URL.createObjectURL(buffer);
-  const a         = document.createElement('a');
-  a.href          = url;
-  a.download      = `Asistencia_${curso.nombre.replace(/\s+/g,'_')}_${desde||'todo'}.docx`;
+  const buffer = await Packer.toBlob(documento);
+  const url = URL.createObjectURL(buffer);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Asistencia_${curso.nombre.replace(/\s+/g, '_')}_${desde || 'todo'}.docx`;
   a.click();
   URL.revokeObjectURL(url);
   mostrarToast('Documento Word generado 📄', 'success');
@@ -8815,29 +8833,29 @@ async function generarReporteAsistenciaWord() {
 // ── EXPORTAR A PDF (via ventana de impresión) ───────────────────
 function generarReporteAsistenciaPDF() {
   const cursoId = document.getElementById('exp-asist-curso')?.value;
-  const desde   = document.getElementById('exp-asist-desde')?.value;
-  const hasta   = document.getElementById('exp-asist-hasta')?.value;
+  const desde = document.getElementById('exp-asist-desde')?.value;
+  const hasta = document.getElementById('exp-asist-hasta')?.value;
   if (!cursoId) { mostrarToast('Selecciona un curso', 'error'); return; }
   const curso = calState.cursos[cursoId];
-  if (!curso)  { mostrarToast('Curso no encontrado', 'error'); return; }
+  if (!curso) { mostrarToast('Curso no encontrado', 'error'); return; }
 
   const { fechas, byDate } = _filtrarAsistencia(cursoId, desde, hasta);
   const estudiantes = curso.estudiantes || [];
   const umbral = parseInt(localStorage.getItem('asist_umbral') || '80');
-  const DIAS_ABREV = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  const DIAS_ABREV = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
 
   const filas = estudiantes.map((est, idx) => {
-    let P=0, A=0, T=0, E=0;
+    let P = 0, A = 0, T = 0, E = 0;
     const celdas = fechas.map(f => {
       const v = byDate[f]?.[est.id] || '';
-      const bg = v==='P'?'#C8E6C9':v==='A'?'#FFCDD2':v==='T'?'#FFE0B2':v==='E'?'#BBDEFB':'#F5F5F5';
-      if (v==='P') P++; else if (v==='A') A++; else if (v==='T') T++; else if (v==='E') E++;
-      return `<td style="background:${bg};font-size:9pt;">${v||'·'}</td>`;
+      const bg = v === 'P' ? '#C8E6C9' : v === 'A' ? '#FFCDD2' : v === 'T' ? '#FFE0B2' : v === 'E' ? '#BBDEFB' : '#F5F5F5';
+      if (v === 'P') P++; else if (v === 'A') A++; else if (v === 'T') T++; else if (v === 'E') E++;
+      return `<td style="background:${bg};font-size:9pt;">${v || '·'}</td>`;
     }).join('');
-    const total  = P+A+T+E;
-    const pct    = total > 0 ? Math.round(((P+T*0.5+E)/total)*100) : null;
-    const pctColor = pct===null?'#9E9E9E':pct>=umbral?'#2E7D32':pct>=60?'#E65100':'#C62828';
-    const rowBg  = idx%2===0?'#fff':'#F8F9FA';
+    const total = P + A + T + E;
+    const pct = total > 0 ? Math.round(((P + T * 0.5 + E) / total) * 100) : null;
+    const pctColor = pct === null ? '#9E9E9E' : pct >= umbral ? '#2E7D32' : pct >= 60 ? '#E65100' : '#C62828';
+    const rowBg = idx % 2 === 0 ? '#fff' : '#F8F9FA';
     return `<tr style="background:${rowBg};">
       <td style="text-align:left;padding:4px 6px;font-size:9.5pt;">${escapeHTML(est.nombre)}</td>
       ${celdas}
@@ -8845,13 +8863,13 @@ function generarReporteAsistenciaPDF() {
       <td style="background:#FFE0B2;font-weight:700;">${T}</td>
       <td style="background:#FFCDD2;font-weight:700;">${A}</td>
       <td style="background:#BBDEFB;font-weight:700;">${E}</td>
-      <td style="font-weight:800;color:${pctColor};">${pct!==null?pct+'%':'—'}</td>
+      <td style="font-weight:800;color:${pctColor};">${pct !== null ? pct + '%' : '—'}</td>
     </tr>`;
   }).join('');
 
   const headerFechas = fechas.map(f => {
-    const d = new Date(f+'T12:00:00');
-    return `<th style="background:#1565C0;color:#fff;font-size:8pt;padding:3px;">${DIAS_ABREV[d.getDay()]}<br>${d.getDate()}/${d.getMonth()+1}</th>`;
+    const d = new Date(f + 'T12:00:00');
+    return `<th style="background:#1565C0;color:#fff;font-size:8pt;padding:3px;">${DIAS_ABREV[d.getDay()]}<br>${d.getDate()}/${d.getMonth() + 1}</th>`;
   }).join('');
 
   const bajo = estudiantes.filter(e => {
@@ -8875,8 +8893,8 @@ function generarReporteAsistenciaPDF() {
   </head><body>
     <h1>Registro de Asistencia</h1>
     <p class="sub">Curso: <strong>${escapeHTML(curso.nombre)}</strong> &nbsp;·&nbsp;
-      Período: ${desde||'inicio'} — ${hasta||'hoy'} &nbsp;·&nbsp;
-      Docente: ${escapeHTML(planificacion?.datosGenerales?.nombreDocente||'—')}</p>
+      Período: ${desde || 'inicio'} — ${hasta || 'hoy'} &nbsp;·&nbsp;
+      Docente: ${escapeHTML(planificacion?.datosGenerales?.nombreDocente || '—')}</p>
     <table>
       <thead><tr>
         <th style="background:#1565C0;color:#fff;text-align:left;padding:5px 8px;min-width:130px;">Estudiante</th>
@@ -8906,27 +8924,27 @@ function generarReporteAsistenciaPDF() {
 }
 
 
-const HORARIO_KEY  = 'planificadorRA_horario_v1';
-const TAREAS_KEY   = 'planificadorRA_tareas_v1';
+const HORARIO_KEY = 'planificadorRA_horario_v1';
+const TAREAS_KEY = 'planificadorRA_tareas_v1';
 
 const PERIODOS = [
-  { id: 1, label: '1',  hora: '8:00 – 8:50 AM' },
-  { id: 2, label: '2',  hora: '8:50 – 9:40 AM' },
-  { id: 3, label: '3',  hora: '10:00 – 10:50 AM' },
-  { id: 4, label: '4',  hora: '10:50 – 11:40 AM' },
-  { id: 5, label: '5',  hora: '12:30 – 1:20 PM' },
-  { id: 6, label: '6',  hora: '1:20 – 2:10 PM' },
-  { id: 7, label: '7',  hora: '2:20 – 3:10 PM' },
-  { id: 8, label: '8',  hora: '3:10 – 4:00 PM' },
+  { id: 1, label: '1', hora: '8:00 – 8:50 AM' },
+  { id: 2, label: '2', hora: '8:50 – 9:40 AM' },
+  { id: 3, label: '3', hora: '10:00 – 10:50 AM' },
+  { id: 4, label: '4', hora: '10:50 – 11:40 AM' },
+  { id: 5, label: '5', hora: '12:30 – 1:20 PM' },
+  { id: 6, label: '6', hora: '1:20 – 2:10 PM' },
+  { id: 7, label: '7', hora: '2:20 – 3:10 PM' },
+  { id: 8, label: '8', hora: '3:10 – 4:00 PM' },
 ];
-const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-const DIAS_SHORT = ['Lu','Ma','Mi','Ju','Vi'];
+const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+const DIAS_SHORT = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
 
 // Colores para las materias
 const MATERIA_COLORES = [
-  '#1565C0','#2E7D32','#AD1457','#E65100','#4527A0',
-  '#00695C','#BF360C','#37474F','#F57F17','#1B5E20',
-  '#880E4F','#0D47A1','#1A237E','#006064','#33691E',
+  '#1565C0', '#2E7D32', '#AD1457', '#E65100', '#4527A0',
+  '#00695C', '#BF360C', '#37474F', '#F57F17', '#1B5E20',
+  '#880E4F', '#0D47A1', '#1A237E', '#006064', '#33691E',
 ];
 
 function _horarioColores() {
@@ -8934,7 +8952,7 @@ function _horarioColores() {
   const mapa = {};
   let ci = 0;
   h.forEach(e => {
-    const key = (e.materia||'').trim();
+    const key = (e.materia || '').trim();
     if (key && !mapa[key]) mapa[key] = MATERIA_COLORES[ci++ % MATERIA_COLORES.length];
   });
   return mapa;
@@ -8956,7 +8974,7 @@ function cerrarHorario() { _ocultarPaneles(); }
 function renderizarHorario() {
   const tabla = document.getElementById('horario-tabla');
   if (!tabla) return;
-  const data  = cargarHorario();
+  const data = cargarHorario();
   const colores = _horarioColores();
 
   // Construir mapa de búsqueda: dia-periodo → entrada
@@ -8973,17 +8991,17 @@ function renderizarHorario() {
     html += `<tr><td class="hor-td-dia"><span>${DIAS_SHORT[di]}</span></td>`;
     PERIODOS.forEach(p => {
       const key = `${di}-${p.id}`;
-      const e   = mapa[key];
+      const e = mapa[key];
       const color = e && e.materia ? (colores[e.materia.trim()] || '#78909C') : null;
-      const bg    = color ? color + '22' : '';
-      const border= color ? `2px solid ${color}` : '1px solid #E0E0E0';
+      const bg = color ? color + '22' : '';
+      const border = color ? `2px solid ${color}` : '1px solid #E0E0E0';
       html += `<td class="hor-td-celda" style="border-left:${border};background:${bg};"
         onclick="editarCeldaHorario(${di},${p.id})" title="Clic para editar">`;
       if (e && e.materia) {
         html += `<div class="hor-celda-inner">
           <div class="hor-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
           ${e.seccion ? `<div class="hor-seccion">${escapeHTML(e.seccion)}</div>` : ''}
-          ${e.aula    ? `<div class="hor-aula"><span class="material-icons" style="font-size:11px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
+          ${e.aula ? `<div class="hor-aula"><span class="material-icons" style="font-size:11px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
         </div>`;
       } else {
         html += `<div class="hor-celda-vacia"><span class="material-icons">add</span></div>`;
@@ -9002,18 +9020,18 @@ function renderizarHorario() {
     if (entries.length === 0) { leyenda.innerHTML = ''; return; }
     leyenda.innerHTML = '<div class="hor-leyenda-wrap">'
       + entries.map(([mat, col]) =>
-          `<span class="hor-leyenda-item" style="border-color:${col};color:${col};">
+        `<span class="hor-leyenda-item" style="border-color:${col};color:${col};">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col};margin-right:5px;"></span>
             ${escapeHTML(mat)}
           </span>`
-        ).join('')
+      ).join('')
       + '</div>';
   }
 }
 
 function editarCeldaHorario(diaIdx, periodoId) {
   const data = cargarHorario();
-  const key  = `${diaIdx}-${periodoId}`;
+  const key = `${diaIdx}-${periodoId}`;
   const existente = data.find(e => e.dia === diaIdx && e.periodo === periodoId) || {};
   const periodo = PERIODOS.find(p => p.id === periodoId);
 
@@ -9029,24 +9047,24 @@ function editarCeldaHorario(diaIdx, periodoId) {
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">
           Materia / Módulo
         </label>
-        <input id="hor-inp-materia" list="dl-materias" placeholder="Ej: Diseño de Portales Web" value="${escapeHTML(existente.materia||'')}"
+        <input id="hor-inp-materia" list="dl-materias" placeholder="Ej: Diseño de Portales Web" value="${escapeHTML(existente.materia || '')}"
           style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
           <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Sección</label>
-          <input id="hor-inp-seccion" placeholder="Ej: 4to B" value="${escapeHTML(existente.seccion||'')}"
+          <input id="hor-inp-seccion" placeholder="Ej: 4to B" value="${escapeHTML(existente.seccion || '')}"
             style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
         </div>
         <div>
           <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Aula (opcional)</label>
-          <input id="hor-inp-aula" placeholder="Ej: Lab 3" value="${escapeHTML(existente.aula||'')}"
+          <input id="hor-inp-aula" placeholder="Ej: Lab 3" value="${escapeHTML(existente.aula || '')}"
             style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
         </div>
       </div>
       <div>
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Notas (opcional)</label>
-        <input id="hor-inp-notas" placeholder="Ej: Trae USB" value="${escapeHTML(existente.notas||'')}"
+        <input id="hor-inp-notas" placeholder="Ej: Trae USB" value="${escapeHTML(existente.notas || '')}"
           style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #E0E0E0;flex-wrap:wrap;">
@@ -9070,8 +9088,8 @@ function editarCeldaHorario(diaIdx, periodoId) {
 function guardarCeldaHorario(diaIdx, periodoId) {
   const materia = document.getElementById('hor-inp-materia')?.value.trim();
   const seccion = document.getElementById('hor-inp-seccion')?.value.trim();
-  const aula    = document.getElementById('hor-inp-aula')?.value.trim();
-  const notas   = document.getElementById('hor-inp-notas')?.value.trim();
+  const aula = document.getElementById('hor-inp-aula')?.value.trim();
+  const notas = document.getElementById('hor-inp-notas')?.value.trim();
   const data = cargarHorario().filter(e => !(e.dia === diaIdx && e.periodo === periodoId));
   if (materia) data.push({ dia: diaIdx, periodo: periodoId, materia, seccion, aula, notas });
   guardarHorario(data);
@@ -9111,10 +9129,10 @@ function abrirTareas() {
   if (sel) {
     const secsHor = [...new Set(cargarHorario().map(e => e.seccion).filter(Boolean))];
     const secsCur = Object.values(calState.cursos).map(c => c.nombre);
-    const todas   = [...new Set([...secsHor, ...secsCur])].sort();
+    const todas = [...new Set([...secsHor, ...secsCur])].sort();
     const cur = sel.value;
     sel.innerHTML = '<option value="">Todas las secciones</option>'
-      + todas.map(s => `<option value="${escapeHTML(s)}" ${cur===s?'selected':''}>${escapeHTML(s)}</option>`).join('');
+      + todas.map(s => `<option value="${escapeHTML(s)}" ${cur === s ? 'selected' : ''}>${escapeHTML(s)}</option>`).join('');
   }
   renderizarTareas();
 }
@@ -9123,16 +9141,16 @@ function cerrarTareas() { _ocultarPaneles(); }
 function _estadoTarea(tarea) {
   if (tarea.estado === 'entregada') return 'entregada';
   if (!tarea.fechaLimite) return 'pendiente';
-  const hoy  = new Date(); hoy.setHours(0,0,0,0);
-  const fl   = new Date(tarea.fechaLimite); fl.setHours(0,0,0,0);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const fl = new Date(tarea.fechaLimite); fl.setHours(0, 0, 0, 0);
   if (fl < hoy) return 'vencida';
   return 'pendiente';
 }
 
 function _diasRestantes(fechaLimite) {
   if (!fechaLimite) return null;
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
-  const fl  = new Date(fechaLimite); fl.setHours(0,0,0,0);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const fl = new Date(fechaLimite); fl.setHours(0, 0, 0, 0);
   return Math.ceil((fl - hoy) / 86400000);
 }
 
@@ -9141,7 +9159,7 @@ function renderizarTareas() {
   if (!container) return;
   const tareas = cargarTareas();
 
-  const filtroActivo  = document.querySelector('.tarea-filtro-btn.activo')?.dataset.filtro || 'todas';
+  const filtroActivo = document.querySelector('.tarea-filtro-btn.activo')?.dataset.filtro || 'todas';
   const filtroSeccion = document.getElementById('tarea-filtro-seccion')?.value || '';
 
   let filtradas = tareas.map(t => ({ ...t, _estado: _estadoTarea(t) }));
@@ -9157,8 +9175,8 @@ function renderizarTareas() {
 
   // Contadores para los filtros (siempre sobre el total sin filtro de estado)
   const counts = { todas: tareas.length, pendiente: 0, entregada: 0, vencida: 0 };
-  tareas.forEach(t => { const e = _estadoTarea(t); counts[e] = (counts[e]||0) + 1; });
-  ['todas','pendiente','entregada','vencida'].forEach(f => {
+  tareas.forEach(t => { const e = _estadoTarea(t); counts[e] = (counts[e] || 0) + 1; });
+  ['todas', 'pendiente', 'entregada', 'vencida'].forEach(f => {
     const btn = document.querySelector(`.tarea-filtro-btn[data-filtro="${f}"]`);
     if (btn) { const badge = btn.querySelector('.tarea-count'); if (badge) badge.textContent = counts[f] || 0; }
   });
@@ -9188,31 +9206,31 @@ function renderizarTareas() {
 
   const _renderTarjeta = t => {
     const dias = _diasRestantes(t.fechaLimite);
-    const estadoCls   = { pendiente:'tarea-pendiente', entregada:'tarea-entregada', vencida:'tarea-vencida' }[t._estado];
-    const estadoLabel = { pendiente:'Pendiente', entregada:'Entregada', vencida:'Vencida' }[t._estado];
+    const estadoCls = { pendiente: 'tarea-pendiente', entregada: 'tarea-entregada', vencida: 'tarea-vencida' }[t._estado];
+    const estadoLabel = { pendiente: 'Pendiente', entregada: 'Entregada', vencida: 'Vencida' }[t._estado];
     let diasLabel = '';
     if (t._estado === 'pendiente' && dias !== null) {
-      if (dias === 0)      diasLabel = '<span class="tarea-dias hoy">Hoy</span>';
+      if (dias === 0) diasLabel = '<span class="tarea-dias hoy">Hoy</span>';
       else if (dias === 1) diasLabel = '<span class="tarea-dias pronto">Mañana</span>';
-      else if (dias <= 3)  diasLabel = `<span class="tarea-dias pronto">En ${dias} días</span>`;
-      else                 diasLabel = `<span class="tarea-dias">En ${dias} días</span>`;
+      else if (dias <= 3) diasLabel = `<span class="tarea-dias pronto">En ${dias} días</span>`;
+      else diasLabel = `<span class="tarea-dias">En ${dias} días</span>`;
     } else if (t._estado === 'vencida') {
       diasLabel = `<span class="tarea-dias vencida">Venció hace ${Math.abs(dias)} día(s)</span>`;
     }
     const fechaFmt = t.fechaLimite
-      ? new Date(t.fechaLimite + 'T12:00:00').toLocaleDateString('es-DO', { weekday:'short', day:'2-digit', month:'short' })
-        + (t.horaLimite ? ' a las ' + t.horaLimite : '') : '';
+      ? new Date(t.fechaLimite + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' })
+      + (t.horaLimite ? ' a las ' + t.horaLimite : '') : '';
     return `<div class="tarea-card ${estadoCls}" id="tarea-card-${t.id}">
       <div class="tarea-card-header">
         <div class="tarea-status-badge ${estadoCls}">${estadoLabel}</div>
         ${diasLabel}
         <div style="margin-left:auto;display:flex;gap:6px;">
           ${t._estado !== 'entregada'
-            ? `<button class="tarea-btn-accion" onclick="marcarTareaEntregada('${t.id}')" title="Marcar como entregada"
+        ? `<button class="tarea-btn-accion" onclick="marcarTareaEntregada('${t.id}')" title="Marcar como entregada"
                 style="background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;">
                 <span class="material-icons" style="font-size:15px;">check_circle</span>
               </button>`
-            : `<button class="tarea-btn-accion" onclick="marcarTareaPendiente('${t.id}')" title="Revertir a pendiente"
+        : `<button class="tarea-btn-accion" onclick="marcarTareaPendiente('${t.id}')" title="Revertir a pendiente"
                 style="background:#FFF8E1;border-color:#FFE082;color:#F57F17;">
                 <span class="material-icons" style="font-size:15px;">refresh</span>
               </button>`}
@@ -9225,7 +9243,7 @@ function renderizarTareas() {
           </button>
         </div>
       </div>
-      <div class="tarea-descripcion">${escapeHTML(t.descripcion||'Sin descripción')}</div>
+      <div class="tarea-descripcion">${escapeHTML(t.descripcion || 'Sin descripción')}</div>
       ${fechaFmt ? `<div class="tarea-fecha"><span class="material-icons" style="font-size:14px;">event</span>${fechaFmt}</div>` : ''}
       ${t.observaciones ? `<div class="tarea-obs"><span class="material-icons" style="font-size:13px;">notes</span>${escapeHTML(t.observaciones)}</div>` : ''}
     </div>`;
@@ -9242,7 +9260,7 @@ function renderizarTareas() {
       nPend ? `<span style="background:#FFF3E0;color:#E65100;border-radius:12px;padding:2px 9px;font-size:0.7rem;font-weight:700;">${nPend} pendiente(s)</span>` : '',
       nEntr ? `<span style="background:#E8F5E9;color:#2E7D32;border-radius:12px;padding:2px 9px;font-size:0.7rem;font-weight:700;">${nEntr} entregada(s)</span>` : '',
     ].filter(Boolean).join('');
-    const grupoEsc = grupo.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const grupoEsc = grupo.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     return `<div class="tarea-grupo">
       <div class="tarea-grupo-header" style="border-left-color:${headerColor};">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -9271,14 +9289,14 @@ function abrirEditarTarea(id) {
 
 function _abrirModalTarea(id, seccionSugerida) {
   const tareas = cargarTareas();
-  const tarea  = id ? tareas.find(t => t.id === id) : null;
+  const tarea = id ? tareas.find(t => t.id === id) : null;
 
   // Opciones de sección: del horario + de los cursos del libro de calificaciones
   const seccionesHorario = [...new Set(cargarHorario().map(e => e.seccion).filter(Boolean))].sort();
-  const seccionesCursos  = Object.values(calState.cursos).map(c => c.nombre);
-  const todasSecciones   = [...new Set([...seccionesHorario, ...seccionesCursos])];
+  const seccionesCursos = Object.values(calState.cursos).map(c => c.nombre);
+  const todasSecciones = [...new Set([...seccionesHorario, ...seccionesCursos])];
   const optsSecc = `<option value="">— Sin sección —</option>`
-    + todasSecciones.map(s => `<option value="${escapeHTML(s)}" ${(tarea?.seccion||seccionSugerida||'')===s?'selected':''}>${escapeHTML(s)}</option>`).join('');
+    + todasSecciones.map(s => `<option value="${escapeHTML(s)}" ${(tarea?.seccion || seccionSugerida || '') === s ? 'selected' : ''}>${escapeHTML(s)}</option>`).join('');
 
   const hoy = new Date().toISOString().split('T')[0];
 
@@ -9289,7 +9307,7 @@ function _abrirModalTarea(id, seccionSugerida) {
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Descripción de la tarea *</label>
         <textarea id="tarea-inp-desc" rows="3" placeholder="Ej: Entregar práctica de HTML con formulario responsivo"
           style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"
-        >${escapeHTML(tarea?.descripcion||'')}</textarea>
+        >${escapeHTML(tarea?.descripcion || '')}</textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
@@ -9301,24 +9319,24 @@ function _abrirModalTarea(id, seccionSugerida) {
         </div>
         <div>
           <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Fecha límite</label>
-          <input type="date" id="tarea-inp-fecha" value="${tarea?.fechaLimite||hoy}"
+          <input type="date" id="tarea-inp-fecha" value="${tarea?.fechaLimite || hoy}"
             style="width:100%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
         </div>
       </div>
       <div>
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Hora límite (opcional)</label>
-        <input type="time" id="tarea-inp-hora" value="${tarea?.horaLimite||''}"
+        <input type="time" id="tarea-inp-hora" value="${tarea?.horaLimite || ''}"
           style="width:50%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
       </div>
       <div>
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Observaciones (opcional)</label>
         <textarea id="tarea-inp-obs" rows="2" placeholder="Ej: Debe subirse al aula virtual antes de las 9:40 AM"
           style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;"
-        >${escapeHTML(tarea?.observaciones||'')}</textarea>
+        >${escapeHTML(tarea?.observaciones || '')}</textarea>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
-        <button class="btn-siguiente" onclick="_guardarTarea('${id||''}')">
+        <button class="btn-siguiente" onclick="_guardarTarea('${id || ''}')">
           <span class="material-icons">save</span> Guardar
         </button>
       </div>
@@ -9331,13 +9349,13 @@ function _abrirModalTarea(id, seccionSugerida) {
 }
 
 function _guardarTarea(id) {
-  const desc  = document.getElementById('tarea-inp-desc')?.value.trim();
+  const desc = document.getElementById('tarea-inp-desc')?.value.trim();
   if (!desc) { mostrarToast('Escribe una descripción', 'error'); return; }
   const seccion = document.getElementById('tarea-inp-seccion')?.value;
-  const fecha   = document.getElementById('tarea-inp-fecha')?.value;
-  const hora    = document.getElementById('tarea-inp-hora')?.value;
-  const obs     = document.getElementById('tarea-inp-obs')?.value.trim();
-  const tareas  = cargarTareas();
+  const fecha = document.getElementById('tarea-inp-fecha')?.value;
+  const hora = document.getElementById('tarea-inp-hora')?.value;
+  const obs = document.getElementById('tarea-inp-obs')?.value.trim();
+  const tareas = cargarTareas();
 
   if (id) {
     const idx = tareas.findIndex(t => t.id === id);
@@ -9761,8 +9779,8 @@ function guardarPlanificacionActual() {
   const cursosExist = Object.values(calState.cursos);
   if (cursosExist.length > 0) {
     // Usar registro.id (el ID final guardado), no el 'id' temporal inicial
-    const finalId    = registro.id;
-    const yaAsignada = cursosExist.some(c => (c.planIds||[]).includes(finalId));
+    const finalId = registro.id;
+    const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
     if (!yaAsignada) {
       const opsCursos = cursosExist.map(c => `<option value="${c.id}">${escapeHTML(c.nombre)}</option>`).join('');
       document.getElementById('modal-title').textContent = 'Asignar al libro de calificaciones';
@@ -9784,8 +9802,8 @@ function guardarPlanificacionActual() {
           </div>
         </div>`;
       // botones en el body
-  _usarFooterDinamico('');
-  document.getElementById('modal-overlay').classList.remove('hidden');
+      _usarFooterDinamico('');
+      document.getElementById('modal-overlay').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
   }
@@ -9986,7 +10004,7 @@ let _dupPlanId = null; // id del registro original a duplicar
 
 function abrirDuplicarPlan(id) {
   const biblio = cargarBiblioteca();
-  const reg    = (biblio.items || []).find(i => i.id === id);
+  const reg = (biblio.items || []).find(i => i.id === id);
   if (!reg) return;
   _dupPlanId = id;
 
@@ -10045,8 +10063,8 @@ function abrirDuplicarPlan(id) {
   // Guardar contexto de fechas en el input (como data attrs accesibles)
   if (inputFecha) {
     inputFecha.dataset.primeraOriginal = primerFecha || '';
-    inputFecha.dataset.ultimaOriginal  = ultimaFecha || '';
-    inputFecha.dataset.totalActs       = fechasActs.length;
+    inputFecha.dataset.ultimaOriginal = ultimaFecha || '';
+    inputFecha.dataset.totalActs = fechasActs.length;
     inputFecha.oninput = () => _actualizarPreviewDupFechas(primerFecha, ultimaFecha, fechasActs.length);
   }
 
@@ -10066,7 +10084,7 @@ function toggleDupFechas(on) {
 }
 
 function _actualizarPreviewDupFechas(primeraOriginal, ultimaOriginal, totalActs) {
-  const preview  = document.getElementById('dup-plan-fechas-preview');
+  const preview = document.getElementById('dup-plan-fechas-preview');
   const inputVal = document.getElementById('dup-plan-fecha-inicio')?.value;
   if (!preview) return;
   if (!primeraOriginal || !totalActs) {
@@ -10075,14 +10093,14 @@ function _actualizarPreviewDupFechas(primeraOriginal, ultimaOriginal, totalActs)
   }
   if (!inputVal) { preview.innerHTML = ''; return; }
   // Calcular el desplazamiento en días
-  const orig  = new Date(primeraOriginal + 'T12:00:00');
-  const nueva = new Date(inputVal       + 'T12:00:00');
-  const diffMs  = nueva - orig;
+  const orig = new Date(primeraOriginal + 'T12:00:00');
+  const nueva = new Date(inputVal + 'T12:00:00');
+  const diffMs = nueva - orig;
   const diffDias = Math.round(diffMs / 86400000);
-  const signo   = diffDias >= 0 ? '+' : '';
+  const signo = diffDias >= 0 ? '+' : '';
   // Calcular nueva fecha final
   const nuevaFin = ultimaOriginal
-    ? new Date(new Date(ultimaOriginal + 'T12:00:00').getTime() + diffMs).toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'})
+    ? new Date(new Date(ultimaOriginal + 'T12:00:00').getTime() + diffMs).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—';
   preview.innerHTML = `
     <span class="material-icons" style="font-size:12px;vertical-align:middle;color:#1565C0;">info</span>
@@ -10092,7 +10110,7 @@ function _actualizarPreviewDupFechas(primeraOriginal, ultimaOriginal, totalActs)
 
 function confirmarDuplicarPlan() {
   if (!_dupPlanId) return;
-  const biblio  = cargarBiblioteca();
+  const biblio = cargarBiblioteca();
   const original = (biblio.items || []).find(i => i.id === _dupPlanId);
   if (!original) { mostrarToast('Planificación no encontrada', 'error'); return; }
 
@@ -10102,8 +10120,8 @@ function confirmarDuplicarPlan() {
   // Nuevo id y fecha de guardado
   const ahora = new Date();
   copia.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  copia.fechaGuardado      = ahora.toISOString();
-  copia.fechaGuardadoLabel = ahora.toLocaleDateString('es-DO',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  copia.fechaGuardado = ahora.toISOString();
+  copia.fechaGuardadoLabel = ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   // Nombre personalizado
   const inputNombre = document.getElementById('dup-plan-nombre')?.value?.trim();
@@ -10120,13 +10138,13 @@ function confirmarDuplicarPlan() {
 
   const _primeraOrig = inputFecha?.dataset?.primeraOriginal || primeraOriginal || '';
   if (ajustar && inputFecha?.value && _primeraOrig && _primeraOrig.length === 10) {
-    const orig    = new Date(_primeraOrig + 'T12:00:00');
-    const nueva   = new Date(inputFecha.value + 'T12:00:00');
+    const orig = new Date(_primeraOrig + 'T12:00:00');
+    const nueva = new Date(inputFecha.value + 'T12:00:00');
     if (isNaN(orig.getTime()) || isNaN(nueva.getTime())) {
       mostrarToast('Fecha inválida, se copiarán las fechas originales', 'warning');
     }
-    const diffMs  = isNaN(orig.getTime()) ? 0 : (nueva - orig);
-    const acts    = copia.planificacion?.actividades || [];
+    const diffMs = isNaN(orig.getTime()) ? 0 : (nueva - orig);
+    const acts = copia.planificacion?.actividades || [];
     acts.forEach(act => {
       if (act.fecha) {
         try {
@@ -10141,14 +10159,14 @@ function confirmarDuplicarPlan() {
             else { const d = new Date(s); fechaISO = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]; }
           }
           if (fechaISO) {
-            const fechaAct   = new Date(fechaISO + 'T12:00:00');
+            const fechaAct = new Date(fechaISO + 'T12:00:00');
             const nuevaFecha = new Date(fechaAct.getTime() + diffMs);
             if (!isNaN(nuevaFecha.getTime())) {
-              act.fecha    = nuevaFecha.toISOString().split('T')[0];
-              act.fechaStr = nuevaFecha.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+              act.fecha = nuevaFecha.toISOString().split('T')[0];
+              act.fechaStr = nuevaFecha.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
             }
           }
-        } catch(e) { /* conservar fecha original */ }
+        } catch (e) { /* conservar fecha original */ }
       }
     });
   }
@@ -10279,12 +10297,12 @@ function filtrarPlanificaciones() {
 
 
 function renderizarBiblioteca() {
-  const grid  = document.getElementById('pln-grid');
+  const grid = document.getElementById('pln-grid');
   const vacio = document.getElementById('pln-vacio');
   if (!grid || !vacio) return;
   const biblio = cargarBiblioteca();
-  const items  = biblio.items || [];
-  const query  = (document.getElementById('pln-buscar')?.value || '').toLowerCase();
+  const items = biblio.items || [];
+  const query = (document.getElementById('pln-buscar')?.value || '').toLowerCase();
 
   if (items.length === 0) {
     grid.innerHTML = '';
@@ -10300,7 +10318,7 @@ function renderizarBiblioteca() {
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
     return [dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato,
-            dg.familiaProfesional, ra.descripcion].join(' ').toLowerCase().includes(query);
+    dg.familiaProfesional, ra.descripcion].join(' ').toLowerCase().includes(query);
   });
 
   if (filtrados.length === 0) {
@@ -10314,7 +10332,7 @@ function renderizarBiblioteca() {
   const cursosMap = calState.cursos || {};
 
   filtrados.forEach(reg => {
-    const cursosDePlan = Object.values(cursosMap).filter(c => (c.planIds||[]).includes(reg.id));
+    const cursosDePlan = Object.values(cursosMap).filter(c => (c.planIds || []).includes(reg.id));
     if (cursosDePlan.length === 0) {
       sinCurso.push(reg);
     } else {
@@ -10332,11 +10350,11 @@ function renderizarBiblioteca() {
   const _renderCard = (reg, esPlanActiva) => {
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
-    const ec   = reg.planificacion?.elementosCapacidad || [];
+    const ec = reg.planificacion?.elementosCapacidad || [];
     const acts = reg.planificacion?.actividades || [];
     const horasTotal = reg.planificacion?.horasTotal || 0;
-    const resumenRA  = ra.descripcion
-      ? ra.descripcion.substring(0,120) + (ra.descripcion.length > 120 ? '…' : '')
+    const resumenRA = ra.descripcion
+      ? ra.descripcion.substring(0, 120) + (ra.descripcion.length > 120 ? '…' : '')
       : 'Sin descripción del RA';
 
     const card = document.createElement('div');
@@ -10352,14 +10370,14 @@ function renderizarBiblioteca() {
         <span><span class="material-icons">person</span>${escHTML(dg.nombreDocente || '—')}</span>
         <span><span class="material-icons">school</span>${escHTML(dg.nombreBachillerato || '—')}</span>
         ${dg.fechaInicio ? '<span><span class="material-icons">date_range</span>' +
-          escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
+        escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
       </div>
       <div class="pln-card-ra">${escHTML(resumenRA)}</div>
       <div class="pln-card-chips">
-        ${ec.length   ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
+        ${ec.length ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
         ${acts.length ? '<span class="pln-chip pln-chip-acts"><span class="material-icons" style="font-size:12px;">event_note</span>' + acts.length + ' actividades</span>' : ''}
-        ${horasTotal  ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
-        ${dg.valorRA  ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
+        ${horasTotal ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
+        ${dg.valorRA ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
       </div>
       <div class="pln-card-actions">
         <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')">
@@ -11239,13 +11257,13 @@ function generarContenidoSesion(act, ec, horasSesion) {
 // GENERAR SESIÓN DIARIA CON GROQ — PROMPT PERSONALIZADO
 // ════════════════════════════════════════════════════════════════════
 async function _generarSesionConGroq(actId, act, ec) {
-  const dg         = planificacion.datosGenerales || {};
-  const ra         = planificacion.ra || {};
-  const horasAct   = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades||[]).filter(a=>a.ecCodigo===ec.codigo).length)) : 1.5;
-  const minTotal   = Math.round((horasAct || 1.5) * 60);
-  const minInicio  = Math.round(minTotal * 0.20);
-  const minDesarr  = Math.round(minTotal * 0.60);
-  const minCierre  = minTotal - minInicio - minDesarr;
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
+  const minTotal = Math.round((horasAct || 1.5) * 60);
+  const minInicio = Math.round(minTotal * 0.20);
+  const minDesarr = Math.round(minTotal * 0.60);
+  const minCierre = minTotal - minInicio - minDesarr;
 
   // Botón: estado cargando
   const btn = document.querySelector(`[onclick*="generarSesion('${actId}')"]`);
@@ -11292,18 +11310,18 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     const tIni = minInicio, tDes = minDesarr, tCie = minCierre;
     const gen = {
       inicio: {
-        apertura:     data.apertura     || '',
-        encuadre:     data.encuadre     || '',
+        apertura: data.apertura || '',
+        encuadre: data.encuadre || '',
         organizacion: data.organizacion || ''
       },
       desarrollo: {
         procedimental: data.procedimental || '',
-        conceptual:    data.conceptual    || ''
+        conceptual: data.conceptual || ''
       },
       cierre: {
-        sintesis:     data.sintesis || '',
-        conexion:     data.conceptual || '',
-        proximopaso:  'Continuar con la siguiente actividad del EC.'
+        sintesis: data.sintesis || '',
+        conexion: data.conceptual || '',
+        proximopaso: 'Continuar con la siguiente actividad del EC.'
       },
       estrategias: data.estrategias || '',
       recursos: ra.recursosDid || 'Material del módulo, pizarrón, guías de trabajo.',
@@ -11317,34 +11335,34 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
 
     // Actualizar textareas en pantalla
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-    set(`pd-inicio-apertura-${actId}`,     gen.inicio.apertura);
-    set(`pd-inicio-encuadre-${actId}`,     gen.inicio.encuadre);
+    set(`pd-inicio-apertura-${actId}`, gen.inicio.apertura);
+    set(`pd-inicio-encuadre-${actId}`, gen.inicio.encuadre);
     set(`pd-inicio-organizacion-${actId}`, gen.inicio.organizacion);
-    set(`pd-desarrollo-proc-${actId}`,     gen.desarrollo.procedimental);
-    set(`pd-desarrollo-conc-${actId}`,     gen.desarrollo.conceptual);
-    set(`pd-cierre-sintesis-${actId}`,     gen.cierre.sintesis);
-    set(`pd-estrategias-${actId}`,         gen.estrategias);
-    set(`pd-recursos-${actId}`,            gen.recursos);
+    set(`pd-desarrollo-proc-${actId}`, gen.desarrollo.procedimental);
+    set(`pd-desarrollo-conc-${actId}`, gen.desarrollo.conceptual);
+    set(`pd-cierre-sintesis-${actId}`, gen.cierre.sintesis);
+    set(`pd-estrategias-${actId}`, gen.estrategias);
+    set(`pd-recursos-${actId}`, gen.recursos);
 
     mostrarToast('✅ Sesión generada con IA', 'success');
-  } catch(e) {
+  } catch (e) {
     console.error('_generarSesionConGroq error:', e);
     mostrarToast('⚠️ Error con IA, usando generación local', 'warning');
     // Fallback a generación local
-    const ec2 = (planificacion.elementosCapacidad||[]).find(e=>e.codigo===act.ecCodigo);
+    const ec2 = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
     const gen = generarContenidoSesion(act, ec2, horasAct);
     estadoDiarias.sesiones[actId] = gen;
     persistirDiarias();
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     const s = gen;
-    set(`pd-inicio-apertura-${actId}`,     s.inicio.apertura);
-    set(`pd-inicio-encuadre-${actId}`,     s.inicio.encuadre);
+    set(`pd-inicio-apertura-${actId}`, s.inicio.apertura);
+    set(`pd-inicio-encuadre-${actId}`, s.inicio.encuadre);
     set(`pd-inicio-organizacion-${actId}`, s.inicio.organizacion);
-    set(`pd-desarrollo-proc-${actId}`,     s.desarrollo.procedimental);
-    set(`pd-desarrollo-conc-${actId}`,     s.desarrollo.conceptual);
-    set(`pd-cierre-sintesis-${actId}`,     s.cierre.sintesis);
-    set(`pd-estrategias-${actId}`,         s.estrategias);
-    set(`pd-recursos-${actId}`,            s.recursos);
+    set(`pd-desarrollo-proc-${actId}`, s.desarrollo.procedimental);
+    set(`pd-desarrollo-conc-${actId}`, s.desarrollo.conceptual);
+    set(`pd-cierre-sintesis-${actId}`, s.cierre.sintesis);
+    set(`pd-estrategias-${actId}`, s.estrategias);
+    set(`pd-recursos-${actId}`, s.recursos);
     mostrarToast('Sesión generada (modo local)', 'info');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:14px;">auto_awesome</span> Generar'; }
@@ -12310,11 +12328,11 @@ function renderizarDiarias() {
           </div>
           <div style="border:1.5px solid #C8E6C9;border-top:none;border-radius:0 0 8px 8px;padding:16px;">
             ${act.instrumento
-              ? (act.instrumento.tipo === 'cotejo'
-                  ? renderizarListaCotejoHTML(act.instrumento)
-                  : renderizarRubricaHTML(act.instrumento))
-              : '<p style=\"color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;\">No hay instrumento generado para esta actividad.</p>'
-            }
+        ? (act.instrumento.tipo === 'cotejo'
+          ? renderizarListaCotejoHTML(act.instrumento)
+          : renderizarRubricaHTML(act.instrumento))
+        : '<p style=\"color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;\">No hay instrumento generado para esta actividad.</p>'
+      }
           </div>
         </div>
 
@@ -12359,8 +12377,8 @@ function exportarDiariasWord() {
     ShadingType, VerticalAlign, TableLayoutType
   } = docx;
 
-  const dg  = planificacion.datosGenerales || {};
-  const ra  = planificacion.ra || {};
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
 
   // Cargar logos institucionales (deben estar en la misma carpeta que index.html)
   function fetchImg(url) {
@@ -12421,11 +12439,11 @@ function exportarDiariasWord() {
     if (!inst) return '\u2014';
     var txt = (inst.tipoLabel || '') + ': ' + (inst.titulo || '') + '\n';
     if (inst.tipo === 'cotejo') {
-      (inst.criterios || []).forEach(function(c, i) { txt += (i+1) + '. ' + (c.indicador || c) + '\n'; });
+      (inst.criterios || []).forEach(function (c, i) { txt += (i + 1) + '. ' + (c.indicador || c) + '\n'; });
     } else if (inst.tipo === 'rubrica') {
-      (inst.criterios || []).forEach(function(c, i) {
-        txt += (i+1) + '. ' + c.criterio + '\n';
-        (c.descriptores || []).forEach(function(d) { txt += '   \u2022 ' + d + '\n'; });
+      (inst.criterios || []).forEach(function (c, i) {
+        txt += (i + 1) + '. ' + c.criterio + '\n';
+        (c.descriptores || []).forEach(function (d) { txt += '   \u2022 ' + d + '\n'; });
       });
     }
     return txt;
@@ -12440,14 +12458,14 @@ function exportarDiariasWord() {
   const BDRS = { top: bdr, bottom: bdr, left: bdr, right: bdr };
 
   function _generarDocxDiarias(img1, img2) {
-    const sections = actividades.map(function(act) {
-      const s   = estadoDiarias.sesiones[act.id] || {};
-      const ti  = (s.tiempos && s.tiempos.ini) || 20;
-      const td  = (s.tiempos && s.tiempos.des) || 55;
-      const tc  = (s.tiempos && s.tiempos.cie) || 15;
+    const sections = actividades.map(function (act) {
+      const s = estadoDiarias.sesiones[act.id] || {};
+      const ti = (s.tiempos && s.tiempos.ini) || 20;
+      const td = (s.tiempos && s.tiempos.des) || 55;
+      const tc = (s.tiempos && s.tiempos.cie) || 15;
       const tot = ti + td + tc;
       const raW = Math.round(COL2 * 0.68);
-      const tW  = COL2 - raW;
+      const tW = COL2 - raW;
 
       var headerChildren = [];
       if (img1) headerChildren.push(new ImageRun({ data: img1, transformation: { width: 115, height: 48 }, type: 'jpg' }));
@@ -12462,77 +12480,85 @@ function exportarDiariasWord() {
         children: [new TextRun({ text: 'Matriz de Planificaci\u00f3n Diaria o por Actividad de Aprendizaje', bold: true, italics: true, font: 'Arial', size: 24, color: '1F3864' })]
       });
 
-      const inicio   = s.inicio   || {};
+      const inicio = s.inicio || {};
       const desarrollo = s.desarrollo || {};
-      const cierre   = s.cierre   || {};
+      const cierre = s.cierre || {};
 
       const tabla = new Table({
         width: { size: TABLE_W, type: WidthType.DXA },
         columnWidths: [COL1, raW, tW],
         layout: TableLayoutType.FIXED,
         rows: [
-          new TableRow({ children: [ mkLabel('M\u00f3dulo formativo (MF)'),               mkContent(textParas(dg.moduloFormativo), COL2) ] }),
-          new TableRow({ children: [ mkLabel('Nombre del docente'),                         mkContent(textParas(dg.nombreDocente),    COL2) ] }),
-          new TableRow({ children: [ mkLabel('Fecha'),                                       mkContent(textParas(act.fechaStr),         COL2) ] }),
-          new TableRow({ children: [ mkLabel('Actividad'),                                   mkContent(textParas(act.enunciado),        COL2) ] }),
+          new TableRow({ children: [mkLabel('M\u00f3dulo formativo (MF)'), mkContent(textParas(dg.moduloFormativo), COL2)] }),
+          new TableRow({ children: [mkLabel('Nombre del docente'), mkContent(textParas(dg.nombreDocente), COL2)] }),
+          new TableRow({ children: [mkLabel('Fecha'), mkContent(textParas(act.fechaStr), COL2)] }),
+          new TableRow({ children: [mkLabel('Actividad'), mkContent(textParas(act.enunciado), COL2)] }),
           // RA + Tiempo (3 columnas)
-          new TableRow({ children: [
-            mkLabel('Resultado de Aprendizaje (RA)'),
-            mkContent(textParas(ra.descripcion), raW),
-            new TableCell({
-              borders: BDRS, margins: MARG,
-              width: { size: tW, type: WidthType.DXA },
-              shading: { fill: 'FFF2CC', type: ShadingType.CLEAR },
-              verticalAlign: VerticalAlign.CENTER,
-              children: [
-                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tiempo', bold: true, font: 'Arial', size: 20, color: '7F6000' })] }),
-                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: tot + ' minutos', bold: true, font: 'Arial', size: 20, color: 'BF8F00' })] }),
-                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'I:'+ti+' D:'+td+' C:'+tc+' min', font: 'Arial', size: 16, color: '7F6000' })] }),
-              ]
-            })
-          ]}),
+          new TableRow({
+            children: [
+              mkLabel('Resultado de Aprendizaje (RA)'),
+              mkContent(textParas(ra.descripcion), raW),
+              new TableCell({
+                borders: BDRS, margins: MARG,
+                width: { size: tW, type: WidthType.DXA },
+                shading: { fill: 'FFF2CC', type: ShadingType.CLEAR },
+                verticalAlign: VerticalAlign.CENTER,
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tiempo', bold: true, font: 'Arial', size: 20, color: '7F6000' })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: tot + ' minutos', bold: true, font: 'Arial', size: 20, color: 'BF8F00' })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'I:' + ti + ' D:' + td + ' C:' + tc + ' min', font: 'Arial', size: 16, color: '7F6000' })] }),
+                ]
+              })
+            ]
+          }),
           // 1er momento
-          new TableRow({ children: [
-            mkMomento('1er momento.\nInicio', ti),
-            mkContent([
-              ...textParas('Apertura:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(inicio.apertura),
-              new Paragraph({ spacing: { before: 60 }, children: [] }),
-              ...textParas('Encuadre:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(inicio.encuadre),
-              new Paragraph({ spacing: { before: 60 }, children: [] }),
-              ...textParas('Organizaci\u00f3n:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(inicio.organizacion),
-            ], COL2)
-          ]}),
+          new TableRow({
+            children: [
+              mkMomento('1er momento.\nInicio', ti),
+              mkContent([
+                ...textParas('Apertura:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(inicio.apertura),
+                new Paragraph({ spacing: { before: 60 }, children: [] }),
+                ...textParas('Encuadre:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(inicio.encuadre),
+                new Paragraph({ spacing: { before: 60 }, children: [] }),
+                ...textParas('Organizaci\u00f3n:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(inicio.organizacion),
+              ], COL2)
+            ]
+          }),
           // 2do momento
-          new TableRow({ children: [
-            mkMomento('2do momento.\nDesarrollo (conceptual, procedimental y/o actitudinal)', td),
-            mkContent([
-              ...textParas('Procedimental / Actividad principal:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(desarrollo.procedimental),
-              new Paragraph({ spacing: { before: 80 }, children: [] }),
-              ...textParas('Conceptual / Actitudinal:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(desarrollo.conceptual),
-            ], COL2)
-          ]}),
+          new TableRow({
+            children: [
+              mkMomento('2do momento.\nDesarrollo (conceptual, procedimental y/o actitudinal)', td),
+              mkContent([
+                ...textParas('Procedimental / Actividad principal:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(desarrollo.procedimental),
+                new Paragraph({ spacing: { before: 80 }, children: [] }),
+                ...textParas('Conceptual / Actitudinal:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(desarrollo.conceptual),
+              ], COL2)
+            ]
+          }),
           // 3er momento
-          new TableRow({ children: [
-            mkMomento('3er momento.\nCierre', tc),
-            mkContent([
-              ...textParas('S\u00edntesis:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(cierre.sintesis),
-              new Paragraph({ spacing: { before: 60 }, children: [] }),
-              ...textParas('Conexi\u00f3n con el mundo real:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(cierre.conexion),
-              new Paragraph({ spacing: { before: 60 }, children: [] }),
-              ...textParas('Pr\u00f3ximo paso:', { bold: true, size: 19, color: '1F3864' }),
-              ...textParas(cierre.proximopaso),
-            ], COL2)
-          ]}),
-          new TableRow({ children: [ mkLabel('Estrategia(s) utilizada(s):'),        mkContent(textParas(s.estrategias), COL2) ] }),
-          new TableRow({ children: [ mkLabel('Recursos:'),                            mkContent(textParas(s.recursos),    COL2) ] }),
-          new TableRow({ children: [ mkLabel('Instrumentos de evaluaci\u00f3n'),      mkContent(textParas(instTexto(act.instrumento)), COL2) ] }),
+          new TableRow({
+            children: [
+              mkMomento('3er momento.\nCierre', tc),
+              mkContent([
+                ...textParas('S\u00edntesis:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(cierre.sintesis),
+                new Paragraph({ spacing: { before: 60 }, children: [] }),
+                ...textParas('Conexi\u00f3n con el mundo real:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(cierre.conexion),
+                new Paragraph({ spacing: { before: 60 }, children: [] }),
+                ...textParas('Pr\u00f3ximo paso:', { bold: true, size: 19, color: '1F3864' }),
+                ...textParas(cierre.proximopaso),
+              ], COL2)
+            ]
+          }),
+          new TableRow({ children: [mkLabel('Estrategia(s) utilizada(s):'), mkContent(textParas(s.estrategias), COL2)] }),
+          new TableRow({ children: [mkLabel('Recursos:'), mkContent(textParas(s.recursos), COL2)] }),
+          new TableRow({ children: [mkLabel('Instrumentos de evaluaci\u00f3n'), mkContent(textParas(instTexto(act.instrumento)), COL2)] }),
         ]
       });
 
@@ -12552,7 +12578,7 @@ function exportarDiariasWord() {
       sections: sections
     });
 
-    Packer.toBlob(docObj).then(function(blob) {
+    Packer.toBlob(docObj).then(function (blob) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -12560,7 +12586,7 @@ function exportarDiariasWord() {
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
       mostrarToast('\u00a1Planificaciones exportadas con la plantilla del centro!', 'success');
-    }).catch(function(e) {
+    }).catch(function (e) {
       console.error(e);
       mostrarToast('Error al generar Word: ' + e.message, 'error');
     });
@@ -12996,7 +13022,7 @@ async function _llamarModeloGroq(modelo, groqKey, prompt) {
       // Intentar extraer JSON aunque venga con texto extra
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) {}
+        try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
       }
       console.error('JSON inválido de Groq:', cleaned.substring(0, 300));
       return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de Groq. Intenta de nuevo.' };
@@ -13597,9 +13623,9 @@ function imp_htmlPaso1() {
     <div style="margin-top:12px;">
       <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:8px;">Días de clase y horas por día:</label>
       <div class="imp-dias-grid">
-        ${['lunes','martes','miercoles','jueves','viernes'].map(d => `
+        ${['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map(d => `
           <div class="imp-dia-item">
-            <label><input type="checkbox" id="imp-dia-${d}" style="margin-right:4px;">${d.charAt(0).toUpperCase()+d.slice(1)}</label>
+            <label><input type="checkbox" id="imp-dia-${d}" style="margin-right:4px;">${d.charAt(0).toUpperCase() + d.slice(1)}</label>
             <input type="number" id="imp-hrs-${d}" min="1" max="8" value="2" title="Horas ese día">
             <span style="font-size:0.7rem;color:#9E9E9E;">hrs</span>
           </div>`).join('')}
@@ -13610,7 +13636,7 @@ function imp_htmlPaso1() {
 
 function imp_poblarPaso1() {
   const dg = impState.datos.dg;
-  const set = (id, val) => { const el = document.getElementById(id); if(el && val !== undefined) el.value = val; };
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
   // Renderizar selector de curso
   const cf = document.getElementById('imp-curso-field');
   if (cf) {
@@ -13639,11 +13665,11 @@ function imp_poblarPaso1() {
   set('imp-fechaInicio', dg.fechaInicio);
   set('imp-fechaTermino', dg.fechaTermino);
   if (dg.diasClase) {
-    ['lunes','martes','miercoles','jueves','viernes'].forEach(d => {
+    ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(d => {
       const cfg = dg.diasClase[d];
       if (!cfg) return;
-      const cb = document.getElementById('imp-dia-'+d);
-      const hr = document.getElementById('imp-hrs-'+d);
+      const cb = document.getElementById('imp-dia-' + d);
+      const hr = document.getElementById('imp-hrs-' + d);
       if (cb) cb.checked = cfg.activo;
       if (hr) hr.value = cfg.horas || 2;
     });
@@ -13654,9 +13680,9 @@ function imp_leerPaso1() {
   const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   impState.datos.cursoId = document.getElementById('imp-cursoId')?.value || null;
   const diasClase = {};
-  ['lunes','martes','miercoles','jueves','viernes'].forEach(d => {
-    const cb = document.getElementById('imp-dia-'+d);
-    const hr = document.getElementById('imp-hrs-'+d);
+  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(d => {
+    const cb = document.getElementById('imp-dia-' + d);
+    const hr = document.getElementById('imp-hrs-' + d);
     diasClase[d] = { activo: cb ? cb.checked : false, horas: parseInt(hr?.value || '2', 10) };
   });
   impState.datos.dg = {
@@ -13679,8 +13705,8 @@ function imp_leerPaso1() {
 function imp_validarPaso1() {
   const dg = impState.datos.dg;
   if (!dg.moduloFormativo) { mostrarToast('El Módulo Formativo es obligatorio', 'error'); return false; }
-  if (!dg.nombreDocente)   { mostrarToast('El Nombre del Docente es obligatorio', 'error'); return false; }
-  if (!dg.fechaInicio)     { mostrarToast('La Fecha de inicio es obligatoria', 'error'); return false; }
+  if (!dg.nombreDocente) { mostrarToast('El Nombre del Docente es obligatorio', 'error'); return false; }
+  if (!dg.fechaInicio) { mostrarToast('La Fecha de inicio es obligatoria', 'error'); return false; }
   const diasActivos = Object.values(dg.diasClase || {}).filter(d => d.activo);
   if (diasActivos.length === 0) { mostrarToast('Selecciona al menos un día de clase', 'error'); return false; }
   return true;
@@ -13731,12 +13757,12 @@ function imp_poblarPaso2() {
   if (ra.nivelBloom === 'otro') {
     ra.nivelBloom = document.getElementById('imp-ra-nivel-otro')?.value.trim() || 'otro';
   }
-  const set = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
   set('imp-ra-descripcion', ra.descripcion);
   set('imp-ra-criterios', ra.criterios);
   set('imp-ra-recursos', ra.recursos);
-  set('imp-ra-nivel', ra.nivelBloom && ['conocimiento','comprension','aplicacion','analisis','evaluacion','creacion','actitudinal'].includes(ra.nivelBloom) ? ra.nivelBloom : (ra.nivelBloom ? 'otro' : 'aplicacion'));
-  if (ra.nivelBloom && !['conocimiento','comprension','aplicacion','analisis','evaluacion','creacion','actitudinal'].includes(ra.nivelBloom)) {
+  set('imp-ra-nivel', ra.nivelBloom && ['conocimiento', 'comprension', 'aplicacion', 'analisis', 'evaluacion', 'creacion', 'actitudinal'].includes(ra.nivelBloom) ? ra.nivelBloom : (ra.nivelBloom ? 'otro' : 'aplicacion'));
+  if (ra.nivelBloom && !['conocimiento', 'comprension', 'aplicacion', 'analisis', 'evaluacion', 'creacion', 'actitudinal'].includes(ra.nivelBloom)) {
     const otrEl = document.getElementById('imp-ra-nivel-otro');
     if (otrEl) { otrEl.value = ra.nivelBloom; otrEl.style.display = ''; }
   }
@@ -13748,7 +13774,7 @@ function imp_leerPaso2() {
     descripcion: get('imp-ra-descripcion'),
     criterios: get('imp-ra-criterios'),
     recursos: get('imp-ra-recursos'),
-    nivelBloom: (function() {
+    nivelBloom: (function () {
       const v = get('imp-ra-nivel');
       return v === 'otro' ? (document.getElementById('imp-ra-nivel-otro')?.value.trim() || 'otro') : v;
     })()
@@ -13793,9 +13819,9 @@ function imp_htmlPaso3() {
         <div class="imp-field">
           <label>Nivel Bloom</label>
           <select id="imp-ec-nivel-${i}" onchange="imp_actualizarEC(${i})">
-            ${['conocimiento','comprension','aplicacion','actitudinal'].map(n =>
-              `<option value="${n}" ${ec.nivel===n?'selected':''}>${n.charAt(0).toUpperCase()+n.slice(1)}</option>`
-            ).join('')}
+            ${['conocimiento', 'comprension', 'aplicacion', 'actitudinal'].map(n =>
+      `<option value="${n}" ${ec.nivel === n ? 'selected' : ''}>${n.charAt(0).toUpperCase() + n.slice(1)}</option>`
+    ).join('')}
           </select>
         </div>
         <div class="imp-field" style="grid-column:1/-1;">
@@ -13826,14 +13852,14 @@ function imp_htmlPaso3() {
 
 function imp_htmlActRow(ecIdx, actIdx, act) {
   const INST_OPTS = [
-    { v: 'cotejo',  l: 'Lista de Cotejo' },
-    { v: 'rubrica', l: 'Rúbrica'         },
+    { v: 'cotejo', l: 'Lista de Cotejo' },
+    { v: 'rubrica', l: 'Rúbrica' },
   ];
   const instSel = (v) => INST_OPTS.map(o =>
     `<option value="${o.v}" ${(act && act.instrumento) === o.v ? 'selected' : ''}>${o.l}</option>`
   ).join('');
   return `<div class="imp-act-row" id="imp-act-${ecIdx}-${actIdx}">
-    <div class="imp-act-num">Act.${actIdx+1}</div>
+    <div class="imp-act-num">Act.${actIdx + 1}</div>
     <textarea rows="2" id="imp-act-enun-${ecIdx}-${actIdx}" placeholder="Describe la actividad de evaluación…"
       onchange="imp_actualizarAct(${ecIdx},${actIdx})">${escHTML((act && act.enunciado) || '')}</textarea>
     <input type="date" id="imp-act-fecha-${ecIdx}-${actIdx}" value="${(act && act.fecha) || ''}"
@@ -13856,20 +13882,20 @@ function imp_htmlActRow(ecIdx, actIdx, act) {
 function imp_actualizarEC(i) {
   const ec = impState.datos.ecs[i];
   if (!ec) return;
-  ec.codigo = document.getElementById('imp-ec-cod-'+i)?.value.trim() || ec.codigo;
-  ec.enunciado = document.getElementById('imp-ec-enun-'+i)?.value.trim() || ec.enunciado;
-  ec.nivel = document.getElementById('imp-ec-nivel-'+i)?.value || ec.nivel;
-  ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-'+i)?.value) || ec.horasAsignadas;
+  ec.codigo = document.getElementById('imp-ec-cod-' + i)?.value.trim() || ec.codigo;
+  ec.enunciado = document.getElementById('imp-ec-enun-' + i)?.value.trim() || ec.enunciado;
+  ec.nivel = document.getElementById('imp-ec-nivel-' + i)?.value || ec.nivel;
+  ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-' + i)?.value) || ec.horasAsignadas;
 }
 
 function imp_actualizarAct(ecIdx, actIdx) {
   if (!impState.datos.actividades[ecIdx]) return;
   const act = impState.datos.actividades[ecIdx][actIdx] || {};
-  act.enunciado   = document.getElementById(`imp-act-enun-${ecIdx}-${actIdx}`)?.value.trim() || '';
-  act.fecha       = document.getElementById(`imp-act-fecha-${ecIdx}-${actIdx}`)?.value || '';
+  act.enunciado = document.getElementById(`imp-act-enun-${ecIdx}-${actIdx}`)?.value.trim() || '';
+  act.fecha = document.getElementById(`imp-act-fecha-${ecIdx}-${actIdx}`)?.value || '';
   act.instrumento = document.getElementById(`imp-act-inst-${ecIdx}-${actIdx}`)?.value || 'cotejo';
-  const valRaw    = document.getElementById(`imp-act-valor-${ecIdx}-${actIdx}`)?.value;
-  act.valor       = valRaw !== '' && !isNaN(parseFloat(valRaw)) ? parseFloat(valRaw) : null;
+  const valRaw = document.getElementById(`imp-act-valor-${ecIdx}-${actIdx}`)?.value;
+  act.valor = valRaw !== '' && !isNaN(parseFloat(valRaw)) ? parseFloat(valRaw) : null;
   impState.datos.actividades[ecIdx][actIdx] = act;
 }
 
@@ -13889,7 +13915,7 @@ function imp_onBloomOtroChange() {
 function imp_agregarEC() {
   imp_leerPaso3();
   const n = impState.datos.ecs.length + 1;
-  impState.datos.ecs.push({ codigo: 'CE'+n, enunciado: '', nivel: 'aplicacion', horasAsignadas: 2 });
+  impState.datos.ecs.push({ codigo: 'CE' + n, enunciado: '', nivel: 'aplicacion', horasAsignadas: 2 });
   impState.datos.actividades.push([]);
   document.getElementById('imp-body').innerHTML = imp_htmlPaso3();
 }
@@ -13917,17 +13943,17 @@ function imp_eliminarActividad(ecIdx, actIdx) {
 
 function imp_leerPaso3() {
   impState.datos.ecs.forEach((ec, i) => {
-    ec.codigo = document.getElementById('imp-ec-cod-'+i)?.value.trim() || ec.codigo;
-    ec.enunciado = document.getElementById('imp-ec-enun-'+i)?.value.trim() || '';
-    ec.nivel = document.getElementById('imp-ec-nivel-'+i)?.value || 'aplicacion';
-    ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-'+i)?.value) || 2;
+    ec.codigo = document.getElementById('imp-ec-cod-' + i)?.value.trim() || ec.codigo;
+    ec.enunciado = document.getElementById('imp-ec-enun-' + i)?.value.trim() || '';
+    ec.nivel = document.getElementById('imp-ec-nivel-' + i)?.value || 'aplicacion';
+    ec.horasAsignadas = parseFloat(document.getElementById('imp-ec-hrs-' + i)?.value) || 2;
     if (!impState.datos.actividades[i]) impState.datos.actividades[i] = [];
     impState.datos.actividades[i].forEach((act, j) => {
-      act.enunciado   = document.getElementById(`imp-act-enun-${i}-${j}`)?.value.trim() || '';
-      act.fecha       = document.getElementById(`imp-act-fecha-${i}-${j}`)?.value || '';
+      act.enunciado = document.getElementById(`imp-act-enun-${i}-${j}`)?.value.trim() || '';
+      act.fecha = document.getElementById(`imp-act-fecha-${i}-${j}`)?.value || '';
       act.instrumento = document.getElementById(`imp-act-inst-${i}-${j}`)?.value || 'cotejo';
-      const valRaw    = document.getElementById(`imp-act-valor-${i}-${j}`)?.value;
-      act.valor       = valRaw !== '' && !isNaN(parseFloat(valRaw)) ? parseFloat(valRaw) : null;
+      const valRaw = document.getElementById(`imp-act-valor-${i}-${j}`)?.value;
+      act.valor = valRaw !== '' && !isNaN(parseFloat(valRaw)) ? parseFloat(valRaw) : null;
     });
   });
 }
@@ -13936,15 +13962,15 @@ function imp_validarPaso3() {
   imp_leerPaso3();
   for (let i = 0; i < impState.datos.ecs.length; i++) {
     if (!impState.datos.ecs[i].enunciado) {
-      mostrarToast(`El EC ${i+1} necesita un enunciado`, 'error'); return false;
+      mostrarToast(`El EC ${i + 1} necesita un enunciado`, 'error'); return false;
     }
     const acts = impState.datos.actividades[i] || [];
     if (acts.length === 0) {
-      mostrarToast(`El EC ${i+1} debe tener al menos 1 actividad`, 'error'); return false;
+      mostrarToast(`El EC ${i + 1} debe tener al menos 1 actividad`, 'error'); return false;
     }
     for (let j = 0; j < acts.length; j++) {
       if (!acts[j].enunciado) {
-        mostrarToast(`La actividad ${j+1} del EC ${i+1} necesita descripción`, 'error'); return false;
+        mostrarToast(`La actividad ${j + 1} del EC ${i + 1} necesita descripción`, 'error'); return false;
       }
     }
   }
@@ -13958,15 +13984,15 @@ function imp_htmlPaso4() {
   const ecs = impState.datos.ecs;
   const acts = impState.datos.actividades;
   const totalActs = acts.reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
-  const diasActivos = Object.entries(dg.diasClase || {}).filter(([,v]) => v.activo).map(([k]) => k).join(', ');
+  const diasActivos = Object.entries(dg.diasClase || {}).filter(([, v]) => v.activo).map(([k]) => k).join(', ');
 
   let ecResumen = ecs.map((ec, i) => {
     const aa = (acts[i] || []);
     return `<div style="margin:6px 0 2px;font-size:0.82rem;">
       <span style="font-weight:700;color:#1565C0;">${escHTML(ec.codigo)}</span>
       <span style="color:#616161;"> · ${ec.nivel} · ${ec.horasAsignadas}h</span><br>
-      <span style="color:#424242;">${escHTML((ec.enunciado||'').substring(0,80))}${ec.enunciado.length>80?'…':''}</span>
-      <span style="font-size:0.75rem;color:#9E9E9E;"> (${aa.length} actividad${aa.length!==1?'es':''})</span>
+      <span style="color:#424242;">${escHTML((ec.enunciado || '').substring(0, 80))}${ec.enunciado.length > 80 ? '…' : ''}</span>
+      <span style="font-size:0.75rem;color:#9E9E9E;"> (${aa.length} actividad${aa.length !== 1 ? 'es' : ''})</span>
     </div>`;
   }).join('');
 
@@ -13981,24 +14007,24 @@ function imp_htmlPaso4() {
 
   <div class="imp-resumen-card">
     <h4><span class="material-icons" style="font-size:16px;">assignment</span>Datos Generales</h4>
-    <div class="imp-resumen-row"><strong>Módulo:</strong><span>${escHTML(dg.moduloFormativo||'—')}</span></div>
-    <div class="imp-resumen-row"><strong>Bachillerato:</strong><span>${escHTML(dg.nombreBachillerato||'—')}</span></div>
-    <div class="imp-resumen-row"><strong>Familia Profesional:</strong><span>${escHTML(dg.familiaProfesional||'—')}</span></div>
-    <div class="imp-resumen-row"><strong>Docente:</strong><span>${escHTML(dg.nombreDocente||'—')}</span></div>
-    <div class="imp-resumen-row"><strong>Período:</strong><span>${dg.fechaInicio||'—'} → ${dg.fechaTermino||'—'}</span></div>
-    <div class="imp-resumen-row"><strong>Días de clase:</strong><span>${diasActivos||'—'}</span></div>
-    <div class="imp-resumen-row"><strong>Horas semanales:</strong><span>${dg.horasSemana||'—'}</span></div>
-    <div class="imp-resumen-row"><strong>Valor del RA:</strong><span>${dg.valorRA||'—'} pts</span></div>
+    <div class="imp-resumen-row"><strong>Módulo:</strong><span>${escHTML(dg.moduloFormativo || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Bachillerato:</strong><span>${escHTML(dg.nombreBachillerato || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Familia Profesional:</strong><span>${escHTML(dg.familiaProfesional || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Docente:</strong><span>${escHTML(dg.nombreDocente || '—')}</span></div>
+    <div class="imp-resumen-row"><strong>Período:</strong><span>${dg.fechaInicio || '—'} → ${dg.fechaTermino || '—'}</span></div>
+    <div class="imp-resumen-row"><strong>Días de clase:</strong><span>${diasActivos || '—'}</span></div>
+    <div class="imp-resumen-row"><strong>Horas semanales:</strong><span>${dg.horasSemana || '—'}</span></div>
+    <div class="imp-resumen-row"><strong>Valor del RA:</strong><span>${dg.valorRA || '—'} pts</span></div>
   </div>
 
   <div class="imp-resumen-card">
     <h4><span class="material-icons" style="font-size:16px;">psychology</span>Resultado de Aprendizaje</h4>
-    <div style="font-size:0.82rem;color:#424242;line-height:1.5;">${escHTML((ra.descripcion||'—').substring(0,200))}${(ra.descripcion||'').length>200?'…':''}</div>
-    <div class="imp-resumen-row" style="margin-top:8px;"><strong>Nivel Bloom:</strong><span>${ra.nivelBloom||'—'}</span></div>
+    <div style="font-size:0.82rem;color:#424242;line-height:1.5;">${escHTML((ra.descripcion || '—').substring(0, 200))}${(ra.descripcion || '').length > 200 ? '…' : ''}</div>
+    <div class="imp-resumen-row" style="margin-top:8px;"><strong>Nivel Bloom:</strong><span>${ra.nivelBloom || '—'}</span></div>
   </div>
 
   <div class="imp-resumen-card">
-    <h4><span class="material-icons" style="font-size:16px;">task_alt</span>${ecs.length} Elemento${ecs.length!==1?'s':''} de Capacidad · ${totalActs} Actividad${totalActs!==1?'es':''}</h4>
+    <h4><span class="material-icons" style="font-size:16px;">task_alt</span>${ecs.length} Elemento${ecs.length !== 1 ? 's' : ''} de Capacidad · ${totalActs} Actividad${totalActs !== 1 ? 'es' : ''}</h4>
     ${ecResumen}
   </div>`;
 }
@@ -14058,10 +14084,10 @@ function imp_guardar() {
     actsEC.forEach((act, actIdx) => {
       const fechaObj = act.fecha ? new Date(act.fecha + 'T12:00:00') : null;
       const fechaStr = fechaObj
-        ? fechaObj.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })
+        ? fechaObj.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
         : '';
       const actObj = {
-        id: `ACT-IMP-${ecIdx+1}-${actIdx+1}-${Date.now()}`,
+        id: `ACT-IMP-${ecIdx + 1}-${actIdx + 1}-${Date.now()}`,
         ecCodigo: ec.codigo,
         ecNivel: ec.nivel,
         enunciado: act.enunciado,
@@ -14097,7 +14123,7 @@ function imp_guardar() {
   const registro = {
     id,
     fechaGuardado: ahora.toISOString(),
-    fechaGuardadoLabel: ahora.toLocaleDateString('es-DO', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+    fechaGuardadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
     nombre: (dg.moduloFormativo || 'Sin módulo') + ' — ' + (dg.nombreDocente || 'Sin docente'),
     planificacion: planImportada
   };
@@ -14127,10 +14153,10 @@ function imp_guardar() {
 /** Genera fechas de clase a partir de diasClase + fechaInicio + fechaTermino */
 function _generarFechasDesde(dg) {
   if (!dg.fechaInicio || !dg.fechaTermino) return [];
-  const DIAS = { lunes:1, martes:2, miercoles:3, jueves:4, viernes:5 };
+  const DIAS = { lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5 };
   const activosDias = Object.entries(dg.diasClase || {})
-    .filter(([,v]) => v.activo)
-    .map(([k,v]) => ({ dia: DIAS[k], horas: v.horas || 2 }));
+    .filter(([, v]) => v.activo)
+    .map(([k, v]) => ({ dia: DIAS[k], horas: v.horas || 2 }));
   if (activosDias.length === 0) return [];
 
   const inicio = new Date(dg.fechaInicio + 'T12:00:00');
@@ -14141,7 +14167,7 @@ function _generarFechasDesde(dg) {
     const dow = cur.getDay(); // 0=dom
     const cfg = activosDias.find(d => d.dia === dow);
     if (cfg) {
-      const fechaStr = cur.toLocaleDateString('es-DO', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+      const fechaStr = cur.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
       result.push({ fecha: new Date(cur), fechaStr, horas: cfg.horas });
     }
     cur.setDate(cur.getDate() + 1);
@@ -14193,22 +14219,22 @@ function abrirConfiguracion() {
   const overlay = document.getElementById('config-overlay');
   if (!overlay) return;
   // Cargar valores guardados en los toggles
-  const dark     = localStorage.getItem('cfg_dark_mode')  === 'true';
-  const grande   = localStorage.getItem('cfg_fuente_grande') === 'true';
-  const alertas  = localStorage.getItem('cfg_alertas') !== 'false';
-  const manana   = localStorage.getItem('cfg_manana')  !== 'false';
-  const umbral   = localStorage.getItem('asist_umbral') || '80';
-  const cfgDark   = document.getElementById('cfg-dark-mode');
+  const dark = localStorage.getItem('cfg_dark_mode') === 'true';
+  const grande = localStorage.getItem('cfg_fuente_grande') === 'true';
+  const alertas = localStorage.getItem('cfg_alertas') !== 'false';
+  const manana = localStorage.getItem('cfg_manana') !== 'false';
+  const umbral = localStorage.getItem('asist_umbral') || '80';
+  const cfgDark = document.getElementById('cfg-dark-mode');
   const cfgGrande = document.getElementById('cfg-fuente-grande');
-  const cfgAlert  = document.getElementById('cfg-alertas');
-  const cfgMan    = document.getElementById('cfg-manana');
+  const cfgAlert = document.getElementById('cfg-alertas');
+  const cfgMan = document.getElementById('cfg-manana');
   const cfgUmbral = document.getElementById('cfg-umbral-asist');
-  if (cfgDark)   cfgDark.checked   = dark;
+  if (cfgDark) cfgDark.checked = dark;
   if (cfgGrande) cfgGrande.checked = grande;
-  if (cfgAlert)  cfgAlert.checked  = alertas;
-  if (cfgMan)    cfgMan.checked    = manana;
-  if (cfgUmbral) cfgUmbral.value   = umbral;
-    overlay.classList.remove('hidden');
+  if (cfgAlert) cfgAlert.checked = alertas;
+  if (cfgMan) cfgMan.checked = manana;
+  if (cfgUmbral) cfgUmbral.value = umbral;
+  overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   const _mf = document.getElementById('modal-footer');
   if (_mf) _mf.style.visibility = 'hidden';
@@ -14239,7 +14265,7 @@ function limpiarTodosDatos() {
 }
 
 function _aplicarPreferencias() {
-  if (localStorage.getItem('cfg_dark_mode')     === 'true') document.body.classList.add('dark-mode');
+  if (localStorage.getItem('cfg_dark_mode') === 'true') document.body.classList.add('dark-mode');
   if (localStorage.getItem('cfg_fuente_grande') === 'true') document.body.classList.add('fuente-grande');
 }
 
@@ -14267,21 +14293,21 @@ function exportarDatos() {
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
-    biblioteca:      localStorage.getItem(BIBLIO_KEY)       || '{"items":[]}',
-    calificaciones:  localStorage.getItem(CAL_STORAGE_KEY)  || '{"cursos": {}}',
-    horario:         localStorage.getItem(HORARIO_KEY)        || '[]',
-    tareas:          localStorage.getItem(TAREAS_KEY)         || '[]',
-    asistencia:      localStorage.getItem(ASIST_KEY)          || '{}',
-    comentarios:     localStorage.getItem(COMENT_KEY)          || '{}',
-    notasClase:      JSON.stringify(Object.fromEntries(
+    biblioteca: localStorage.getItem(BIBLIO_KEY) || '{"items":[]}',
+    calificaciones: localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos": {}}',
+    horario: localStorage.getItem(HORARIO_KEY) || '[]',
+    tareas: localStorage.getItem(TAREAS_KEY) || '[]',
+    asistencia: localStorage.getItem(ASIST_KEY) || '{}',
+    comentarios: localStorage.getItem(COMENT_KEY) || '{}',
+    notasClase: JSON.stringify(Object.fromEntries(
       Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_'))
     )),
-    obsEstudiantes:  JSON.stringify(Object.fromEntries(
+    obsEstudiantes: JSON.stringify(Object.fromEntries(
       Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_'))
     )),
-    diarias:         localStorage.getItem(DIARIAS_KEY)       || '{"sesiones":{}}',
-    borrador:        localStorage.getItem(STORAGE_KEY)       || 'null',
-    groqKey:         localStorage.getItem(GROQ_KEY_STORAGE)  || ''
+    diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
+    borrador: localStorage.getItem(STORAGE_KEY) || 'null',
+    groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || ''
   };
 
   const json = JSON.stringify(backup, null, 2);
@@ -14304,7 +14330,7 @@ function onBackupFileSelected(input) {
   document.getElementById('backup-file-name').textContent = file.name;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const data = JSON.parse(e.target.result);
 
@@ -14318,7 +14344,7 @@ function onBackupFileSelected(input) {
 
       // Generar preview
       const biblio = JSON.parse(data.biblioteca || '{"items":[]}');
-      const cal    = JSON.parse(data.calificaciones || '{"cursos":{}}');
+      const cal = JSON.parse(data.calificaciones || '{"cursos":{}}');
       const nPlans = (biblio.items || []).length;
       const nCursos = Object.keys(cal.cursos || {}).length;
       const diariasData = JSON.parse(data.diarias || '{"sesiones":{}}');
@@ -14356,27 +14382,27 @@ function importarDatos() {
   try {
     const d = _backupFileData;
 
-    if (d.biblioteca)     localStorage.setItem(BIBLIO_KEY, d.biblioteca);
+    if (d.biblioteca) localStorage.setItem(BIBLIO_KEY, d.biblioteca);
     if (d.calificaciones) localStorage.setItem(CAL_STORAGE_KEY, d.calificaciones);
-    if (d.horario)        localStorage.setItem(HORARIO_KEY, d.horario);
-    if (d.tareas)         localStorage.setItem(TAREAS_KEY, d.tareas);
-    if (d.asistencia)     localStorage.setItem(ASIST_KEY, d.asistencia);
-    if (d.comentarios)    localStorage.setItem(COMENT_KEY, d.comentarios);
+    if (d.horario) localStorage.setItem(HORARIO_KEY, d.horario);
+    if (d.tareas) localStorage.setItem(TAREAS_KEY, d.tareas);
+    if (d.asistencia) localStorage.setItem(ASIST_KEY, d.asistencia);
+    if (d.comentarios) localStorage.setItem(COMENT_KEY, d.comentarios);
     if (d.notasClase) {
       try {
         const nc = JSON.parse(d.notasClase);
-        Object.entries(nc).forEach(([k,v]) => localStorage.setItem(k, v));
-      } catch {}
+        Object.entries(nc).forEach(([k, v]) => localStorage.setItem(k, v));
+      } catch { }
     }
     if (d.obsEstudiantes) {
       try {
         const obs = JSON.parse(d.obsEstudiantes);
-        Object.entries(obs).forEach(([k,v]) => localStorage.setItem(k, v));
-      } catch {}
+        Object.entries(obs).forEach(([k, v]) => localStorage.setItem(k, v));
+      } catch { }
     }
-    if (d.diarias)        localStorage.setItem(DIARIAS_KEY, d.diarias);
+    if (d.diarias) localStorage.setItem(DIARIAS_KEY, d.diarias);
     if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
-    if (d.groqKey)        localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
+    if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
 
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
     cerrarBackup();
@@ -14410,9 +14436,9 @@ function renderizarDashboard() {
 // ── Saludo + estadísticas ────────────────────────────────────────
 function _renderizarSaludo() {
   const ahora = new Date();
-  const DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const hora  = ahora.getHours();
+  const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const hora = ahora.getHours();
   const saludo = hora < 12 ? '¡Buenos días' : hora < 18 ? '¡Buenas tardes' : '¡Buenas noches';
   const dg = planificacion.datosGenerales || {};
   const nombre = dg.nombreDocente
@@ -14420,17 +14446,17 @@ function _renderizarSaludo() {
     : '!';
   const fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' · ' + ahora.getFullYear();
 
-  const biblio   = cargarBiblioteca();
-  const nPlans   = (biblio.items || []).length;
-  const nCursos  = Object.keys(calState.cursos || {}).length;
-  const tareas   = cargarTareas();
-  const nPend    = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
-  const nVenc    = tareas.filter(t => _estadoTarea(t) === 'vencida').length;
+  const biblio = cargarBiblioteca();
+  const nPlans = (biblio.items || []).length;
+  const nCursos = Object.keys(calState.cursos || {}).length;
+  const tareas = cargarTareas();
+  const nPend = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
+  const nVenc = tareas.filter(t => _estadoTarea(t) === 'vencida').length;
 
   // Clases hoy desde horario
-  const horario  = cargarHorario();
-  const diaHoy   = new Date().getDay(); // 0=Dom…6=Sab
-  const diaIdx   = diaHoy === 0 ? -1 : diaHoy - 1; // 0=Lu…4=Vi
+  const horario = cargarHorario();
+  const diaHoy = new Date().getDay(); // 0=Dom…6=Sab
+  const diaIdx = diaHoy === 0 ? -1 : diaHoy - 1; // 0=Lu…4=Vi
   const clasesHoy = diaIdx >= 0 ? horario.filter(e => e.dia === diaIdx && e.materia).length : 0;
 
   const el = document.getElementById('dash-greeting');
@@ -14476,44 +14502,44 @@ function _renderizarAlertas() {
   const vencidas = tareas.filter(t => _estadoTarea(t) === 'vencida');
   if (vencidas.length > 0) {
     const grupos = {};
-    vencidas.forEach(t => { grupos[t.seccion||'?'] = (grupos[t.seccion||'?']||0)+1; });
-    const txt = Object.entries(grupos).map(([s,n]) => `${s} (${n})`).join(', ');
+    vencidas.forEach(t => { grupos[t.seccion || '?'] = (grupos[t.seccion || '?'] || 0) + 1; });
+    const txt = Object.entries(grupos).map(([s, n]) => `${s} (${n})`).join(', ');
     alertas.push({ tipo: 'error', icono: 'warning', msg: `${vencidas.length} tarea(s) vencida(s): ${txt}`, accion: 'abrirTareas()', label: 'Ver tareas' });
   }
 
   // Tareas que vencen hoy o mañana
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
-  const manana = new Date(hoy); manana.setDate(manana.getDate()+1);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
   const urgentes = tareas.filter(t => {
     if (!t.fechaLimite || _estadoTarea(t) !== 'pendiente') return false;
-    const fl = new Date(t.fechaLimite); fl.setHours(0,0,0,0);
+    const fl = new Date(t.fechaLimite); fl.setHours(0, 0, 0, 0);
     return fl <= manana;
   });
   urgentes.forEach(t => {
-    const fl = new Date(t.fechaLimite); fl.setHours(0,0,0,0);
+    const fl = new Date(t.fechaLimite); fl.setHours(0, 0, 0, 0);
     const esHoy = fl.getTime() === hoy.getTime();
     alertas.push({
       tipo: 'warning',
       icono: 'schedule',
-      msg: `Tarea de ${t.seccion||'?'} vence ${esHoy ? 'HOY' : 'mañana'}${t.horaLimite ? ' a las ' + t.horaLimite : ''}: "${(t.descripcion||'').substring(0,50)}"`,
+      msg: `Tarea de ${t.seccion || '?'} vence ${esHoy ? 'HOY' : 'mañana'}${t.horaLimite ? ' a las ' + t.horaLimite : ''}: "${(t.descripcion || '').substring(0, 50)}"`,
       accion: 'abrirTareas()', label: 'Ver'
     });
   });
 
   // Cursos sin planificación asignada
-  const _bibIds = new Set((cargarBiblioteca().items||[]).map(i => i.id));
+  const _bibIds = new Set((cargarBiblioteca().items || []).map(i => i.id));
   const cursosSinPlan = Object.values(calState.cursos).filter(c =>
-    !(c.planIds||[]).some(pid => _bibIds.has(pid))
+    !(c.planIds || []).some(pid => _bibIds.has(pid))
   );
   if (cursosSinPlan.length > 0) {
-    alertas.push({ tipo: 'info', icono: 'link_off', msg: `${cursosSinPlan.length} curso(s) sin planificación asignada: ${cursosSinPlan.map(c=>c.nombre).join(', ')}`, accion: 'abrirPlanificaciones()', label: 'Asignar' });
+    alertas.push({ tipo: 'info', icono: 'link_off', msg: `${cursosSinPlan.length} curso(s) sin planificación asignada: ${cursosSinPlan.map(c => c.nombre).join(', ')}`, accion: 'abrirPlanificaciones()', label: 'Asignar' });
   }
 
   // Actividades sin instrumento
   const biblio = cargarBiblioteca();
   let sinInst = 0;
-  (biblio.items||[]).forEach(r => {
-    (r.planificacion?.actividades||[]).forEach(a => { if (!a.instrumento) sinInst++; });
+  (biblio.items || []).forEach(r => {
+    (r.planificacion?.actividades || []).forEach(a => { if (!a.instrumento) sinInst++; });
   });
   if (sinInst > 0) {
     alertas.push({ tipo: 'info', icono: 'assignment_late', msg: `${sinInst} actividad(es) sin instrumento de evaluación asignado`, accion: 'abrirPlanificaciones()', label: 'Revisar' });
@@ -14529,7 +14555,7 @@ function _renderizarAlertas() {
         <button onclick="${a.accion}" class="dash-alerta-btn">${a.label} →</button>
       </div>`
     ).join('') +
-  `</div>`;
+    `</div>`;
 }
 
 // ── Clases de hoy desde horario ──────────────────────────────────
@@ -14544,19 +14570,19 @@ function _renderizarClasesManana() {
 function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   const cont = document.getElementById(contId);
   if (!cont) return;
-  const DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const target = new Date();
   target.setDate(target.getDate() + offsetDias);
-  target.setHours(0,0,0,0);
-  const diaJS  = target.getDay();            // 0=Dom…6=Sab
+  target.setHours(0, 0, 0, 0);
+  const diaJS = target.getDay();            // 0=Dom…6=Sab
   const diaIdx = diaJS === 0 || diaJS === 6 ? -1 : diaJS - 1; // 0=Lu…4=Vi
 
   const fechaEl = document.getElementById(fechaLabelId);
   if (fechaEl) fechaEl.textContent = DIAS[diaJS] + ' ' + target.getDate() + ' de ' + MESES[target.getMonth()];
 
   if (diaIdx < 0) {
-    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">weekend</span><p>${offsetDias===0?'¡Es fin de semana!':'Mañana es fin de semana 😄'}</p></div>`;
+    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">weekend</span><p>${offsetDias === 0 ? '¡Es fin de semana!' : 'Mañana es fin de semana 😄'}</p></div>`;
     return;
   }
 
@@ -14573,7 +14599,7 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   // Buscar actividades de planificaciones para esa fecha
   const planPorSeccion = {};
   const biblio = cargarBiblioteca();
-  (biblio.items||[]).forEach(reg => {
+  (biblio.items || []).forEach(reg => {
     (reg.planificacion?.actividades || []).forEach(act => {
       if (!act.fecha) return;
       // Normalizar act.fecha a ISO string YYYY-MM-DD
@@ -14582,57 +14608,57 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
         _fechaISO = act.fecha.toISOString().split('T')[0];
       } else {
         const s = String(act.fecha);
-        _fechaISO = s.includes('T') ? s.split('T')[0] : s.substring(0,10);
+        _fechaISO = s.includes('T') ? s.split('T')[0] : s.substring(0, 10);
       }
       // Parsear como fecha LOCAL (no UTC) agregando T12:00:00
-      const fa = new Date(_fechaISO + 'T12:00:00'); fa.setHours(0,0,0,0);
+      const fa = new Date(_fechaISO + 'T12:00:00'); fa.setHours(0, 0, 0, 0);
       if (fa.getTime() === target.getTime()) {
-        const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds||[]).includes(reg.id));
+        const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
         cursosConPlan.forEach(c => {
           if (!planPorSeccion[c.nombre]) planPorSeccion[c.nombre] = [];
-          planPorSeccion[c.nombre].push({ act, dg: reg.planificacion?.datosGenerales||{}, planId: reg.id });
+          planPorSeccion[c.nombre].push({ act, dg: reg.planificacion?.datosGenerales || {}, planId: reg.id });
         });
       }
     });
   });
 
   const horaActual = offsetDias === 0 ? new Date().getHours() * 60 + new Date().getMinutes() : -1;
-  const horasPer = {1:480,2:530,3:600,4:650,5:750,6:800,7:860,8:910};
+  const horasPer = { 1: 480, 2: 530, 3: 600, 4: 650, 5: 750, 6: 800, 7: 860, 8: 910 };
 
   cont.innerHTML = horario.map(e => {
-    const color  = coloresMateria[e.materia.trim()] || '#78909C';
-    const per    = PERIODOS.find(p => p.id === e.periodo);
+    const color = coloresMateria[e.materia.trim()] || '#78909C';
+    const per = PERIODOS.find(p => p.id === e.periodo);
     const sesiones = planPorSeccion[e.seccion] || [];
     const inicioMin = horasPer[e.periodo] || 0;
-    const finMin    = inicioMin + 50;
+    const finMin = inicioMin + 50;
     const estado = horaActual < 0 ? 'futura'
       : horaActual > finMin ? 'pasada'
-      : horaActual >= inicioMin ? 'ahora' : 'futura';
+        : horaActual >= inicioMin ? 'ahora' : 'futura';
 
     // Datos para el modal — serializados en data-attrs
     const dataClase = JSON.stringify({
-      materia: e.materia, seccion: e.seccion||'', aula: e.aula||'', notas: e.notas||'',
-      periodo: e.periodo, hora: per?.hora||'', color,
-      sesiones: sesiones.map(s=>({ enunciado: s.act.enunciado||'', actId: s.act.id||'', planId: s.planId||'', instrumento: s.act.instrumento||null, dg: s.dg })),
+      materia: e.materia, seccion: e.seccion || '', aula: e.aula || '', notas: e.notas || '',
+      periodo: e.periodo, hora: per?.hora || '', color,
+      sesiones: sesiones.map(s => ({ enunciado: s.act.enunciado || '', actId: s.act.id || '', planId: s.planId || '', instrumento: s.act.instrumento || null, dg: s.dg })),
       fecha: target.toISOString().split('T')[0]
-    }).replace(/'/g,'&apos;');
+    }).replace(/'/g, '&apos;');
 
-    return `<div class="dash-clase-card" style="--clase-color:${color};opacity:${estado==='pasada'?'0.65':'1'};"
+    return `<div class="dash-clase-card" style="--clase-color:${color};opacity:${estado === 'pasada' ? '0.65' : '1'};"
       onclick="abrirModalClase('${encodeURIComponent(dataClase)}')" title="Ver detalles de la clase">
       <div class="dash-clase-barra" style="background:${color};"></div>
       <div class="dash-clase-body">
         <div class="dash-clase-header">
-          <span class="dash-clase-periodo">P${e.periodo} · ${per?.hora||''}</span>
-          ${estado==='ahora'  ? '<span class="dash-clase-ahora"><span class="material-icons" style="font-size:12px;">fiber_manual_record</span>Ahora</span>' : ''}
-          ${estado==='pasada' ? '<span class="dash-clase-pasada">Finalizada</span>' : ''}
+          <span class="dash-clase-periodo">P${e.periodo} · ${per?.hora || ''}</span>
+          ${estado === 'ahora' ? '<span class="dash-clase-ahora"><span class="material-icons" style="font-size:12px;">fiber_manual_record</span>Ahora</span>' : ''}
+          ${estado === 'pasada' ? '<span class="dash-clase-pasada">Finalizada</span>' : ''}
         </div>
         <div class="dash-clase-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
         ${e.seccion ? `<div class="dash-clase-seccion"><span class="material-icons" style="font-size:13px;">group</span>${escapeHTML(e.seccion)}</div>` : ''}
-        ${e.aula    ? `<div class="dash-clase-aula"><span class="material-icons" style="font-size:13px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
-        ${sesiones.length ? sesiones.map(s=>`
+        ${e.aula ? `<div class="dash-clase-aula"><span class="material-icons" style="font-size:13px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
+        ${sesiones.length ? sesiones.map(s => `
           <div class="dash-clase-plan">
             <span class="material-icons" style="font-size:12px;">description</span>
-            ${escapeHTML((s.act.enunciado||'').substring(0,52))}${(s.act.enunciado||'').length>52?'…':''}
+            ${escapeHTML((s.act.enunciado || '').substring(0, 52))}${(s.act.enunciado || '').length > 52 ? '…' : ''}
           </div>`).join('') : ''}
       </div>
       <span class="material-icons dash-clase-chevron" style="color:${color};">chevron_right</span>
@@ -14647,35 +14673,35 @@ function abrirModalClase(encodedData) {
   const color = d.color || '#1565C0';
 
   const FORM_EVAL = [
-    { id:'exposicion',    icono:'mic',                label:'Exposición oral' },
-    { id:'cuaderno',      icono:'menu_book',           label:'Cuaderno / Portafolio' },
-    { id:'participacion', icono:'record_voice_over',   label:'Participación' },
-    { id:'practica',      icono:'computer',            label:'Práctica / Lab' },
-    { id:'trabajo',       icono:'assignment',          label:'Trabajo escrito' },
-    { id:'examen',        icono:'quiz',                label:'Examen / Prueba' },
-    { id:'proyecto',      icono:'engineering',         label:'Proyecto' },
-    { id:'actitud',       icono:'emoji_people',        label:'Actitud / Comportamiento' },
+    { id: 'exposicion', icono: 'mic', label: 'Exposición oral' },
+    { id: 'cuaderno', icono: 'menu_book', label: 'Cuaderno / Portafolio' },
+    { id: 'participacion', icono: 'record_voice_over', label: 'Participación' },
+    { id: 'practica', icono: 'computer', label: 'Práctica / Lab' },
+    { id: 'trabajo', icono: 'assignment', label: 'Trabajo escrito' },
+    { id: 'examen', icono: 'quiz', label: 'Examen / Prueba' },
+    { id: 'proyecto', icono: 'engineering', label: 'Proyecto' },
+    { id: 'actitud', icono: 'emoji_people', label: 'Actitud / Comportamiento' },
   ];
 
-  const evalKey  = `eval_${d.fecha}_${d.seccion}_${d.periodo}`;
-  const notaKey  = `notaclase_${d.fecha}_${d.seccion}_${d.periodo}`;
-  let savedEval  = {};
-  let savedNota  = '';
-  try { savedEval = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch {}
-  try { savedNota = localStorage.getItem(notaKey) || ''; } catch {}
+  const evalKey = `eval_${d.fecha}_${d.seccion}_${d.periodo}`;
+  const notaKey = `notaclase_${d.fecha}_${d.seccion}_${d.periodo}`;
+  let savedEval = {};
+  let savedNota = '';
+  try { savedEval = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch { }
+  try { savedNota = localStorage.getItem(notaKey) || ''; } catch { }
 
   const asistData = cargarAsistencia();
   const cursoConSeccion = Object.values(calState.cursos).find(c => c.nombre === d.seccion);
-  const asistDia = cursoConSeccion ? ((asistData[cursoConSeccion.id]||{})[d.fecha]||{}) : {};
-  const nEst   = cursoConSeccion ? (cursoConSeccion.estudiantes||[]).length : 0;
-  const nPres  = Object.values(asistDia).filter(v=>v==='P').length;
-  const nAus   = Object.values(asistDia).filter(v=>v==='A').length;
-  const nTard  = Object.values(asistDia).filter(v=>v==='T').length;
+  const asistDia = cursoConSeccion ? ((asistData[cursoConSeccion.id] || {})[d.fecha] || {}) : {};
+  const nEst = cursoConSeccion ? (cursoConSeccion.estudiantes || []).length : 0;
+  const nPres = Object.values(asistDia).filter(v => v === 'P').length;
+  const nAus = Object.values(asistDia).filter(v => v === 'A').length;
+  const nTard = Object.values(asistDia).filter(v => v === 'T').length;
   const asistRegistrada = nPres + nAus + nTard > 0;
 
   const sesionInfo = d.sesiones && d.sesiones[0];
-  const sesion     = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : {};
-  const tiempos    = sesion.tiempos || { ini: 20, des: 55, cie: 15 };
+  const sesion = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : {};
+  const tiempos = sesion.tiempos || { ini: 20, des: 55, cie: 15 };
 
   document.getElementById('modal-title').innerHTML =
     `<span style="color:${color};">●</span> ${escapeHTML(d.materia)}
@@ -14687,8 +14713,8 @@ function abrirModalClase(encodedData) {
       <!-- Info básica -->
       <div class="modal-clase-header" style="border-left:4px solid ${color};padding-left:12px;">
         ${d.seccion ? `<div class="mcl-row"><span class="material-icons">group</span><strong>${escapeHTML(d.seccion)}</strong></div>` : ''}
-        ${d.aula    ? `<div class="mcl-row"><span class="material-icons">room</span>${escapeHTML(d.aula)}</div>` : ''}
-        ${d.notas   ? `<div class="mcl-row"><span class="material-icons">info</span>${escapeHTML(d.notas)}</div>` : ''}
+        ${d.aula ? `<div class="mcl-row"><span class="material-icons">room</span>${escapeHTML(d.aula)}</div>` : ''}
+        ${d.notas ? `<div class="mcl-row"><span class="material-icons">info</span>${escapeHTML(d.notas)}</div>` : ''}
       </div>
 
       <!-- Actividad / Planificación -->
@@ -14698,8 +14724,8 @@ function abrirModalClase(encodedData) {
         <div class="mcl-actividad-txt">${escapeHTML(sesionInfo.enunciado)}</div>
         ${sesionInfo.instrumento ? `
         <div class="mcl-instrumento" style="background:${color}18;border-color:${color}44;">
-          <span class="material-icons" style="color:${color};">${sesionInfo.instrumento.tipo==='rubrica'?'table_chart':'checklist'}</span>
-          <span><strong>${escapeHTML(sesionInfo.instrumento.tipoLabel||'')}</strong>: ${escapeHTML(sesionInfo.instrumento.titulo||'')}</span>
+          <span class="material-icons" style="color:${color};">${sesionInfo.instrumento.tipo === 'rubrica' ? 'table_chart' : 'checklist'}</span>
+          <span><strong>${escapeHTML(sesionInfo.instrumento.tipoLabel || '')}</strong>: ${escapeHTML(sesionInfo.instrumento.titulo || '')}</span>
         </div>` : ''}
         <div class="mcl-tiempos">
           <span class="mcl-tiempo ini">Inicio&nbsp;${tiempos.ini}min</span>
@@ -14708,12 +14734,12 @@ function abrirModalClase(encodedData) {
         </div>
         <!-- Planificación diaria expandida -->
         ${(() => {
-          const s = sesion;
-          const ini = s.inicio || {};
-          const dev = s.desarrollo || {};
-          const cie = s.cierre || {};
-          if (!ini.apertura && !dev.procedimental && !cie.sintesis) return '';
-          return `
+        const s = sesion;
+        const ini = s.inicio || {};
+        const dev = s.desarrollo || {};
+        const cie = s.cierre || {};
+        if (!ini.apertura && !dev.procedimental && !cie.sintesis) return '';
+        return `
           <div class="mcl-sesion-diaria">
             <!-- Toggle header -->
             <button class="mcl-sesion-toggle" onclick="this.parentElement.classList.toggle('mcl-sesion-open')" style="color:${color};border-color:${color}44;">
@@ -14726,26 +14752,26 @@ function abrirModalClase(encodedData) {
               ${ini.apertura ? `
               <div class="mcl-momento" style="border-left:3px solid #4CAF50;">
                 <div class="mcl-momento-hdr" style="color:#2E7D32;"><span class="material-icons">play_circle_filled</span>1er Momento — Inicio (${tiempos.ini} min)</div>
-                <div class="mcl-momento-txt">${ini.apertura.replace(/\n/g,'<br>')}</div>
+                <div class="mcl-momento-txt">${ini.apertura.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
               ${dev.procedimental ? `
               <div class="mcl-momento" style="border-left:3px solid #2196F3;">
                 <div class="mcl-momento-hdr" style="color:#1565C0;"><span class="material-icons">play_circle_filled</span>2do Momento — Desarrollo (${tiempos.des} min)</div>
-                <div class="mcl-momento-txt">${dev.procedimental.replace(/\n/g,'<br>')}</div>
+                <div class="mcl-momento-txt">${dev.procedimental.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
               ${cie.sintesis ? `
               <div class="mcl-momento" style="border-left:3px solid #FF9800;">
                 <div class="mcl-momento-hdr" style="color:#E65100;"><span class="material-icons">play_circle_filled</span>3er Momento — Cierre (${tiempos.cie} min)</div>
-                <div class="mcl-momento-txt">${cie.sintesis.replace(/\n/g,'<br>')}</div>
+                <div class="mcl-momento-txt">${cie.sintesis.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
               ${s.estrategias ? `
               <div class="mcl-momento" style="border-left:3px solid #9C27B0;margin-top:4px;">
                 <div class="mcl-momento-hdr" style="color:#6A1B9A;"><span class="material-icons">lightbulb</span>Estrategias</div>
-                <div class="mcl-momento-txt">${s.estrategias.replace(/\n/g,'<br>')}</div>
+                <div class="mcl-momento-txt">${s.estrategias.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
             </div>
           </div>`;
-        })()} 
+      })()} 
         <button onclick="cerrarModalBtn();abrirDiarias();" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
           <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
         </button>
@@ -14783,8 +14809,8 @@ function abrirModalClase(encodedData) {
         <p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">¿Cómo vas a evaluar esta clase?</p>
         <div class="mcl-eval-grid">
           ${FORM_EVAL.map(f => `
-          <button class="mcl-eval-btn ${savedEval[f.id]?'activo':''}"
-            style="${savedEval[f.id]?`background:${color}18;border-color:${color};color:${color};`:''}"
+          <button class="mcl-eval-btn ${savedEval[f.id] ? 'activo' : ''}"
+            style="${savedEval[f.id] ? `background:${color}18;border-color:${color};color:${color};` : ''}"
             onclick="toggleFormaEval('${evalKey}','${f.id}','${color}',this)">
             <span class="material-icons">${f.icono}</span>
             <span>${f.label}</span>
@@ -14857,14 +14883,14 @@ function borrarNotaClase(key) {
 
 function toggleFormaEval(evalKey, formaId, color, btn) {
   let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch {}
+  try { saved = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch { }
   saved[formaId] = !saved[formaId];
   localStorage.setItem(evalKey, JSON.stringify(saved));
   const activo = saved[formaId];
   btn.classList.toggle('activo', activo);
-  btn.style.background  = activo ? color + '18' : '';
+  btn.style.background = activo ? color + '18' : '';
   btn.style.borderColor = activo ? color : '';
-  btn.style.color       = activo ? color : '';
+  btn.style.color = activo ? color : '';
 }
 
 
@@ -14874,15 +14900,15 @@ function _renderizarTareasProximas() {
   if (!cont) return;
 
   const tareas = cargarTareas();
-  const hoy    = new Date(); hoy.setHours(0,0,0,0);
-  const en7    = new Date(hoy); en7.setDate(en7.getDate() + 7);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const en7 = new Date(hoy); en7.setDate(en7.getDate() + 7);
 
   const proximas = tareas
     .map(t => ({ ...t, _estado: _estadoTarea(t) }))
     .filter(t => {
       if (t._estado === 'entregada') return false;
       if (!t.fechaLimite) return t._estado === 'vencida';
-      const fl = new Date(t.fechaLimite); fl.setHours(0,0,0,0);
+      const fl = new Date(t.fechaLimite); fl.setHours(0, 0, 0, 0);
       return fl <= en7;
     })
     .sort((a, b) => {
@@ -14899,7 +14925,7 @@ function _renderizarTareasProximas() {
 
   cont.innerHTML = proximas.map(t => {
     const dias = _diasRestantes(t.fechaLimite);
-    const estadoCls = { pendiente:'dash-tarea-pend', vencida:'dash-tarea-venc' }[t._estado] || 'dash-tarea-pend';
+    const estadoCls = { pendiente: 'dash-tarea-pend', vencida: 'dash-tarea-venc' }[t._estado] || 'dash-tarea-pend';
     let diasStr = '';
     if (t._estado === 'vencida') diasStr = `<span class="dt-dias venc">Vencida</span>`;
     else if (dias === 0) diasStr = `<span class="dt-dias hoy">Hoy</span>`;
@@ -14908,13 +14934,13 @@ function _renderizarTareasProximas() {
 
     const horaStr = t.horaLimite ? ` · ${t.horaLimite}` : '';
     const fechaStr = t.fechaLimite
-      ? new Date(t.fechaLimite+'T12:00:00').toLocaleDateString('es-DO',{weekday:'short',day:'2-digit',month:'short'}) + horaStr
+      ? new Date(t.fechaLimite + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' }) + horaStr
       : '';
 
     return `<div class="dash-tarea-row ${estadoCls}">
       <div class="dt-left">
-        <span class="dt-seccion">${escapeHTML(t.seccion||'—')}</span>
-        <span class="dt-desc">${escapeHTML((t.descripcion||'').substring(0,50))}${(t.descripcion||'').length>50?'…':''}</span>
+        <span class="dt-seccion">${escapeHTML(t.seccion || '—')}</span>
+        <span class="dt-desc">${escapeHTML((t.descripcion || '').substring(0, 50))}${(t.descripcion || '').length > 50 ? '…' : ''}</span>
         ${fechaStr ? `<span class="dt-fecha"><span class="material-icons" style="font-size:11px;">event</span>${fechaStr}</span>` : ''}
       </div>
       <div class="dt-right">
@@ -14939,13 +14965,13 @@ function _renderizarResumenCursos() {
   }
 
   cont.innerHTML = `<div class="dash-cursos-grid">` + cursos.map(curso => {
-    const nEst  = (curso.estudiantes||[]).length;
-    const nPlans = (curso.planIds||[]).length;
+    const nEst = (curso.estudiantes || []).length;
+    const nPlans = (curso.planIds || []).length;
     const _biblioItems = cargarBiblioteca().items || [];
     // Si planActivaId no existe en biblioteca, buscar la primera de planIds que sí exista
     let planActiva = null;
     if (curso.planActivaId) planActiva = _biblioItems.find(i => i.id === curso.planActivaId);
-    if (!planActiva && (curso.planIds||[]).length) {
+    if (!planActiva && (curso.planIds || []).length) {
       for (const pid of curso.planIds) {
         const found = _biblioItems.find(i => i.id === pid);
         if (found) { planActiva = found; curso.planActivaId = pid; break; }
@@ -14956,7 +14982,7 @@ function _renderizarResumenCursos() {
     // Calcular promedio general del curso
     let promedioLabel = '—';
     if (nEst > 0 && planActiva) {
-      const raKey = Object.keys(curso.ras||{})[0];
+      const raKey = Object.keys(curso.ras || {})[0];
       if (raKey) {
         const pf = _promedioFinal(curso);
         if (pf !== null) promedioLabel = pf.toFixed(1);
@@ -14977,17 +15003,17 @@ function _renderizarResumenCursos() {
         <div class="dash-curso-nombre">${escapeHTML(curso.nombre)}</div>
         <div class="dash-curso-dot" style="background:${statusColor};"></div>
       </div>
-      <div class="dash-curso-modulo" title="${escapeHTML(modulo)}">${escapeHTML(modulo.substring(0,40))}${modulo.length>40?'…':''}</div>
+      <div class="dash-curso-modulo" title="${escapeHTML(modulo)}">${escapeHTML(modulo.substring(0, 40))}${modulo.length > 40 ? '…' : ''}</div>
       <div class="dash-curso-stats">
         <span title="Estudiantes"><span class="material-icons" style="font-size:13px;">group</span>${nEst}</span>
         <span title="Planificaciones"><span class="material-icons" style="font-size:13px;">description</span>${nPlans}</span>
-          ${promedioLabel !== '—' ? '<span title="Promedio general"><span class="material-icons" style="font-size:13px;">grade</span>'+promedioLabel+'</span>' : ''}
-        ${nTareasPend+nTareasVenc > 0 ? '<span style="color:'+statusColor+';" title="Tareas"><span class="material-icons" style="font-size:13px;">assignment</span>'+(nTareasPend+nTareasVenc)+'</span>' : ''}
+          ${promedioLabel !== '—' ? '<span title="Promedio general"><span class="material-icons" style="font-size:13px;">grade</span>' + promedioLabel + '</span>' : ''}
+        ${nTareasPend + nTareasVenc > 0 ? '<span style="color:' + statusColor + ';" title="Tareas"><span class="material-icons" style="font-size:13px;">assignment</span>' + (nTareasPend + nTareasVenc) + '</span>' : ''}
       </div>
     </div>`;
   }).join('') + `</div>`;
 }
 
 // ════════════════════════════════════════════════════════════════════
-  const _mf2 = document.getElementById('modal-footer');
-  if (_mf2) _mf2.style.visibility = '';
+const _mf2 = document.getElementById('modal-footer');
+if (_mf2) _mf2.style.visibility = '';
