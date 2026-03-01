@@ -10413,7 +10413,14 @@ function eliminarPlanificacionGuardada(id) {
 
   biblio.items = biblio.items.filter(i => i.id !== id);
 
-
+  // Limpiar el ID eliminado de todos los cursos en calificaciones
+  Object.values(calState.cursos).forEach(curso => {
+    if ((curso.planIds || []).includes(id)) {
+      curso.planIds = curso.planIds.filter(pid => pid !== id);
+      if (curso.planActivaId === id) curso.planActivaId = curso.planIds[0] || null;
+    }
+  });
+  guardarCalificaciones();
 
   persistirBiblioteca(biblio);
 
