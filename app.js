@@ -4054,6 +4054,7 @@ function guardarBorrador() {
 
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(copia));
+    if (window._syncFirebase) _syncFirebase('planificacion', copia);
 
 
 
@@ -6338,6 +6339,7 @@ function guardarNotasDocente() {
       localStorage.removeItem(NOTAS_DOCENTE_KEY);
     }
     if (ind) ind.style.display = 'inline';
+    if (window._syncFirebase) _syncFirebase('notas', val || '');
   }, 500);
 }
 
@@ -6487,6 +6489,7 @@ function guardarCalificaciones() {
 
 
   localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState));
+  if (window._syncFirebase) _syncFirebase('calificaciones', calState);
 
 
 
@@ -7416,6 +7419,7 @@ function cargarAsistencia() {
 }
 function guardarAsistencia(data) {
   localStorage.setItem(ASIST_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('asistencia', data);
   setTimeout(actualizarBadgeNotificaciones, 100);
 }
 
@@ -8187,6 +8191,7 @@ function cargarComentarios() {
 }
 function guardarComentarios(data) {
   localStorage.setItem(COMENT_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('comentarios', data);
 }
 
 // Obtener comentarios de un estudiante, ordenados más reciente primero
@@ -9101,6 +9106,7 @@ function cargarHorario() {
 }
 function guardarHorario(data) {
   localStorage.setItem(HORARIO_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('horario', data);
 }
 
 function abrirHorario() {
@@ -9257,6 +9263,7 @@ function cargarTareas() {
 }
 function guardarTareas(data) {
   localStorage.setItem(TAREAS_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('tareas', data);
   setTimeout(actualizarBadgeNotificaciones, 100);
 }
 
@@ -9772,6 +9779,7 @@ function persistirBiblioteca(biblio) {
 
 
   localStorage.setItem(BIBLIO_KEY, JSON.stringify(biblio));
+  if (window._syncFirebase) _syncFirebase('biblioteca', biblio);
 
 
 
@@ -10875,6 +10883,7 @@ function persistirDiarias() {
 
 
   localStorage.setItem(DIARIAS_KEY, JSON.stringify(estadoDiarias));
+  if (window._syncFirebase) _syncFirebase('diarias', estadoDiarias);
 
 
 
@@ -13640,22 +13649,31 @@ generarPlanificacion = async function () {
 // ─────────────────────────────────────────────────────────────
 // INICIALIZAR ESTADO DEL BOTÓN AL CARGAR
 // ─────────────────────────────────────────────────────────────
+// _arrancarApp: llamado por auth.js tras confirmar sesión, o en DOMContentLoaded si no hay Firebase
+function _arrancarApp() {
+  if (window._appArranada) return;
+  window._appArranada = true;
+  if (sessionStorage.getItem('planificador_goto') === 'step1') {
+    sessionStorage.removeItem('planificador_goto');
+    irAlHomeBase();
+  } else {
+    abrirDashboard();
+  }
+  actualizarBadgeNotificaciones();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   actualizarBtnConfigIA();
   const mf = document.querySelector('.modal-footer');
   if (mf && !mf.id) mf.id = 'modal-footer';
   // Aplicar preferencias de apariencia antes de mostrar
   _aplicarPreferencias();
-  // Mostrar dashboard al iniciar (o paso 1 si viene de "Nueva Planificación")
+  // Si Firebase no está configurado (firebase-config sin datos reales), arrancar directamente
   setTimeout(() => {
-    if (sessionStorage.getItem('planificador_goto') === 'step1') {
-      sessionStorage.removeItem('planificador_goto');
-      irAlHomeBase();
-    } else {
-      abrirDashboard();
-    }
-    actualizarBadgeNotificaciones();
-  }, 50);
+    const cfg = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : {};
+    const sinConfigurar = !cfg.apiKey || cfg.apiKey.startsWith('PEGA_');
+    if (sinConfigurar) _arrancarApp();
+  }, 200);
 });
 
 // ================================================================
@@ -14608,7 +14626,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v8.0</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v9.0</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

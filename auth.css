@@ -1,0 +1,359 @@
+/* ================================================================
+   AUTH — Pantalla de Login / Registro
+   El Gran Planificador Educativo
+   ================================================================ */
+
+/* Overlay que bloquea la app hasta que el usuario inicie sesión */
+#auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #0D1B2A 0%, #1A237E 60%, #0D47A1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+#auth-overlay.hidden {
+  display: none;
+}
+
+/* Tarjeta central del login */
+.auth-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  animation: authFadeIn 0.4s ease;
+}
+
+@keyframes authFadeIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo + nombre */
+.auth-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.auth-app-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1565C0;
+  line-height: 1.2;
+}
+
+.auth-app-sub {
+  font-size: 0.78rem;
+  color: #78909C;
+  margin-top: 4px;
+}
+
+/* Tabs Entrar / Registrarse */
+.auth-tabs {
+  display: flex;
+  border-bottom: 2px solid #E0E0E0;
+  margin-bottom: 24px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #9E9E9E;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.auth-tab.activo {
+  color: #1565C0;
+  border-bottom-color: #1565C0;
+}
+
+/* Formulario */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auth-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #424242;
+}
+
+.auth-field input {
+  border: 1.5px solid #CFD8DC;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #FAFAFA;
+}
+
+.auth-field input:focus {
+  border-color: #1565C0;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+}
+
+/* Mensaje de error */
+.auth-error {
+  font-size: 0.8rem;
+  color: #C62828;
+  background: #FFEBEE;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: none;
+}
+
+.auth-error.visible {
+  display: block;
+}
+
+/* Botón principal */
+.auth-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #1565C0, #1976D2);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  font-family: inherit;
+}
+
+.auth-btn-primary:hover  { opacity: 0.9; }
+.auth-btn-primary:active { transform: scale(0.98); }
+.auth-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Separador */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #BDBDBD;
+  font-size: 0.78rem;
+  margin: 4px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #E0E0E0;
+}
+
+/* Botón Google */
+.auth-btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px;
+  background: #fff;
+  color: #3C4043;
+  border: 1.5px solid #DADCE0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+
+.auth-btn-google:hover {
+  background: #F8F9FA;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.auth-btn-google svg {
+  flex-shrink: 0;
+}
+
+/* Loading spinner dentro del botón */
+.auth-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+
+.auth-spinner.visible { display: inline-block; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Toast de migración */
+.auth-migration-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1B5E20;
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 99999;
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Botón de usuario en el header ── */
+.btn-user-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(21, 101, 192, 0.1);
+  border: 1.5px solid rgba(21, 101, 192, 0.25);
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.btn-user-account:hover {
+  background: rgba(21, 101, 192, 0.18);
+}
+
+.btn-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1565C0, #7E57C2);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-user-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1565C0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Menú desplegable del usuario */
+.user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  min-width: 200px;
+  z-index: 1000;
+  overflow: hidden;
+  display: none;
+}
+
+.user-menu.visible { display: block; }
+
+.user-menu-email {
+  padding: 12px 16px;
+  font-size: 0.78rem;
+  color: #616161;
+  border-bottom: 1px solid #F0F0F0;
+  word-break: break-all;
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #424242;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.user-menu-item:hover { background: #F5F5F5; }
+
+.user-menu-item.danger { color: #C62828; }
+.user-menu-item.danger:hover { background: #FFEBEE; }
+
+.btn-user-wrap {
+  position: relative;
+}
+
+/* Dark mode */
+body.dark-mode .auth-card { background: #1A1D2E; }
+body.dark-mode .auth-app-name { color: #90CAF9; }
+body.dark-mode .auth-app-sub { color: #78909C; }
+body.dark-mode .auth-tab { color: #78909C; }
+body.dark-mode .auth-tab.activo { color: #90CAF9; border-bottom-color: #90CAF9; }
+body.dark-mode .auth-field label { color: #CFD8DC; }
+body.dark-mode .auth-field input { background: #252836; border-color: #455A64; color: #E0E0E0; }
+body.dark-mode .auth-field input:focus { border-color: #64B5F6; background: #1A1D2E; }
+body.dark-mode .auth-btn-google { background: #252836; border-color: #455A64; color: #E0E0E0; }
+body.dark-mode .auth-btn-google:hover { background: #2E3246; }
+body.dark-mode .user-menu { background: #1E2130; border-color: #37474F; }
+body.dark-mode .user-menu-email { color: #90A4AE; border-bottom-color: #2A2D3E; }
+body.dark-mode .user-menu-item { color: #CFD8DC; }
+body.dark-mode .user-menu-item:hover { background: #252836; }
+body.dark-mode .user-menu-item.danger { color: #EF9A9A; }
+body.dark-mode .user-menu-item.danger:hover { background: #3B1A1A; }
+body.dark-mode .btn-user-account { background: rgba(100,181,246,0.1); border-color: rgba(100,181,246,0.25); }
+body.dark-mode .btn-user-name { color: #90CAF9; }
