@@ -11500,26 +11500,42 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     const data = await _llamarGroqConFallback(prompt, 'Generando sesión');
     if (!data) throw new Error('Sin respuesta de Groq');
 
-    // Mapear respuesta al formato interno
-    const minSesion = minTotal;
+    // Normaliza un campo: convierte arrays u objetos a texto legible
+    const toStr = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') return val;
+      if (Array.isArray(val)) return val.map(item =>
+        typeof item === 'string' ? item
+          : (item.nombre || item.name || item.estrategia || item.descripcion || item.paso || JSON.stringify(item))
+      ).join('\n');
+      if (typeof val === 'object') return val.texto || val.text || val.descripcion || val.contenido || JSON.stringify(val);
+      return String(val);
+    };
+
+    // Si la IA devolvió sesionDiaria anidado (otro formato), usar ese
+    const d = data.sesionDiaria || data;
+
+    // Generación local de respaldo para campos vacíos
+    const local = generarContenidoSesion(act, ec, horasAct);
+
     const tIni = minInicio, tDes = minDesarr, tCie = minCierre;
     const gen = {
       inicio: {
-        apertura: data.apertura || '',
-        encuadre: data.encuadre || '',
-        organizacion: data.organizacion || ''
+        apertura:      toStr(d.apertura)      || local.inicio.apertura,
+        encuadre:      toStr(d.encuadre)      || local.inicio.encuadre,
+        organizacion:  toStr(d.organizacion)  || local.inicio.organizacion
       },
       desarrollo: {
-        procedimental: data.procedimental || '',
-        conceptual: data.conceptual || ''
+        procedimental: toStr(d.procedimental) || local.desarrollo.procedimental,
+        conceptual:    toStr(d.conceptual)    || local.desarrollo.conceptual
       },
       cierre: {
-        sintesis: data.sintesis || '',
-        conexion: data.conceptual || '',
-        proximopaso: 'Continuar con la siguiente actividad del EC.'
+        sintesis:      toStr(d.sintesis)      || local.cierre.sintesis,
+        conexion:      toStr(d.conexion || d.conceptual) || local.cierre.conexion,
+        proximopaso:   toStr(d.proximopaso)   || local.cierre.proximopaso
       },
-      estrategias: data.estrategias || '',
-      recursos: ra.recursosDid || 'Material del módulo, pizarrón, guías de trabajo.',
+      estrategias: toStr(d.estrategias) || local.estrategias,
+      recursos: ra.recursosDid || local.recursos,
       tiempos: { ini: tIni, des: tDes, cie: tCie }
     };
 
