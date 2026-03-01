@@ -1614,6 +1614,68 @@
   <script src="app.js"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
+
+  <!-- ===== MODAL MI CUENTA ===== -->
+  <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
+    <div class="modal-box" style="max-width:480px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">manage_accounts</span>Mi cuenta</h3>
+        <button class="modal-close" onclick="cerrarMiCuenta()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:24px;">
+
+        <!-- Cambiar correo -->
+        <div class="cuenta-seccion">
+          <div class="cuenta-seccion-titulo">
+            <span class="material-icons">email</span> Cambiar correo electrónico
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-email-nuevo">Nuevo correo</label>
+            <input type="email" id="cuenta-email-nuevo" placeholder="nuevo@ejemplo.com" autocomplete="email" />
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-para-email">Contraseña actual (para confirmar)</label>
+            <input type="password" id="cuenta-pass-para-email" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <div class="auth-error" id="cuenta-msg-email"></div>
+          <button class="auth-btn-primary" id="cuenta-btn-email" onclick="authCambiarEmail()">
+            <div class="auth-spinner" id="cuenta-spin-email"></div>
+            <span class="material-icons">save</span> Guardar correo
+          </button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--color-borde,#E0E0E0);">
+
+        <!-- Cambiar contraseña -->
+        <div class="cuenta-seccion">
+          <div class="cuenta-seccion-titulo">
+            <span class="material-icons">lock_reset</span> Cambiar contraseña
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-actual">Contraseña actual</label>
+            <input type="password" id="cuenta-pass-actual" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-nueva">Nueva contraseña</label>
+            <input type="password" id="cuenta-pass-nueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-nueva2">Confirmar nueva contraseña</label>
+            <input type="password" id="cuenta-pass-nueva2" placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+          </div>
+          <div class="auth-error" id="cuenta-msg-pass"></div>
+          <button class="auth-btn-primary" id="cuenta-btn-pass" onclick="authCambiarPassword()">
+            <div class="auth-spinner" id="cuenta-spin-pass"></div>
+            <span class="material-icons">lock</span> Cambiar contraseña
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn-secundario" onclick="cerrarMiCuenta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

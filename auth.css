@@ -357,3 +357,33 @@ body.dark-mode .user-menu-item.danger { color: #EF9A9A; }
 body.dark-mode .user-menu-item.danger:hover { background: #3B1A1A; }
 body.dark-mode .btn-user-account { background: rgba(100,181,246,0.1); border-color: rgba(100,181,246,0.25); }
 body.dark-mode .btn-user-name { color: #90CAF9; }
+
+/* ── Mi Cuenta ── */
+.cuenta-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cuenta-seccion-titulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1565C0;
+  margin-bottom: 2px;
+}
+
+.cuenta-seccion-titulo .material-icons {
+  font-size: 18px;
+}
+
+.auth-error.ok {
+  color: #1B5E20;
+  background: #E8F5E9;
+  border: none;
+}
+
+body.dark-mode .cuenta-seccion-titulo { color: #90CAF9; }
+body.dark-mode .auth-error.ok { color: #A5D6A7; background: #1B2E1B; }

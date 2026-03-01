@@ -245,7 +245,10 @@ function _actualizarHeaderUsuario(user) {
       </button>
       <div class="user-menu" id="user-menu">
         <div class="user-menu-email">${user.email}</div>
-        <button class="user-menu-item" onclick="authCerrarSesion()">
+        <button class="user-menu-item" onclick="_cerrarUserMenu();abrirMiCuenta()">
+          <span class="material-icons" style="font-size:18px;">manage_accounts</span> Mi cuenta
+        </button>
+        <button class="user-menu-item danger" onclick="authCerrarSesion()">
           <span class="material-icons" style="font-size:18px;">logout</span> Cerrar sesión
         </button>
       </div>
@@ -276,3 +279,95 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') authRegistrarse();
   });
 });
+
+// ================================================================
+// MI CUENTA — Cambiar email y contraseña
+// ================================================================
+
+function abrirMiCuenta() {
+  const user = window.currentUser;
+  if (!user) return;
+  // Poblar email actual
+  const emailInput = document.getElementById('cuenta-email-nuevo');
+  if (emailInput) emailInput.value = user.email || '';
+  // Limpiar campos de contraseña y mensajes
+  ['cuenta-pass-actual','cuenta-pass-nueva','cuenta-pass-nueva2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  _cuentaMsg('email', '');
+  _cuentaMsg('pass', '');
+  document.getElementById('cuenta-overlay')?.classList.remove('hidden');
+}
+
+function cerrarMiCuenta() {
+  document.getElementById('cuenta-overlay')?.classList.add('hidden');
+}
+
+// Reautenticar (necesario antes de cambiar email o contraseña)
+async function _reautenticar(passActual) {
+  const user = window.currentUser;
+  const credential = firebase.auth.EmailAuthProvider.credential(user.email, passActual);
+  await user.reauthenticateWithCredential(credential);
+}
+
+async function authCambiarEmail() {
+  const user = window.currentUser;
+  if (!user) return;
+  const nuevoEmail = document.getElementById('cuenta-email-nuevo').value.trim();
+  const passActual = document.getElementById('cuenta-pass-para-email').value;
+  if (!nuevoEmail) return _cuentaMsg('email', 'Ingresa el nuevo correo.');
+  if (!passActual) return _cuentaMsg('email', 'Ingresa tu contraseña actual para confirmar.');
+  if (nuevoEmail === user.email) return _cuentaMsg('email', 'Es el mismo correo actual.');
+
+  _cuentaLoading('email', true);
+  try {
+    await _reautenticar(passActual);
+    await user.verifyBeforeUpdateEmail(nuevoEmail);
+    _cuentaMsg('email', '✓ Se envió un correo de verificación a ' + nuevoEmail + '. Confirma el enlace para aplicar el cambio.', true);
+    document.getElementById('cuenta-pass-para-email').value = '';
+  } catch (e) {
+    _cuentaMsg('email', _tradError(e.code));
+  }
+  _cuentaLoading('email', false);
+}
+
+async function authCambiarPassword() {
+  const user = window.currentUser;
+  if (!user) return;
+  const passActual = document.getElementById('cuenta-pass-actual').value;
+  const passNueva  = document.getElementById('cuenta-pass-nueva').value;
+  const passNueva2 = document.getElementById('cuenta-pass-nueva2').value;
+  if (!passActual) return _cuentaMsg('pass', 'Ingresa tu contraseña actual.');
+  if (!passNueva)  return _cuentaMsg('pass', 'Ingresa la nueva contraseña.');
+  if (passNueva.length < 6) return _cuentaMsg('pass', 'La contraseña debe tener al menos 6 caracteres.');
+  if (passNueva !== passNueva2) return _cuentaMsg('pass', 'Las contraseñas no coinciden.');
+
+  _cuentaLoading('pass', true);
+  try {
+    await _reautenticar(passActual);
+    await user.updatePassword(passNueva);
+    _cuentaMsg('pass', '✓ Contraseña actualizada correctamente.', true);
+    ['cuenta-pass-actual','cuenta-pass-nueva','cuenta-pass-nueva2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  } catch (e) {
+    _cuentaMsg('pass', _tradError(e.code));
+  }
+  _cuentaLoading('pass', false);
+}
+
+function _cuentaMsg(section, msg, ok = false) {
+  const el = document.getElementById('cuenta-msg-' + section);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'auth-error' + (msg ? ' visible' : '') + (ok ? ' ok' : '');
+}
+
+function _cuentaLoading(section, loading) {
+  const btn  = document.getElementById('cuenta-btn-' + section);
+  const spin = document.getElementById('cuenta-spin-' + section);
+  if (btn)  btn.disabled = loading;
+  if (spin) spin.classList.toggle('visible', loading);
+}
