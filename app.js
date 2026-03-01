@@ -1,4 +1,4 @@
-function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+﻿function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 
 // ─── Funciones de gestión de cursos ───────────────────────────────
 function eliminarCurso(id) {
@@ -11448,6 +11448,23 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
+/** Regenera el instrumento de evaluación de una actividad y actualiza su sección en la tarjeta de sesión */
+function _regenerarInstrumentoEnCard(act, ec) {
+  const nivel = ec?.nivelBloom || ec?.nivel || 'aplicacion';
+  act.instrumento = generarInstrumento(act, nivel);
+  guardarBorrador();
+  const body = document.getElementById(`pd-instrumento-body-${act.id}`);
+  if (body) {
+    body.innerHTML = act.instrumento
+      ? (act.instrumento.tipo === 'cotejo'
+          ? renderizarListaCotejoHTML(act.instrumento)
+          : renderizarRubricaHTML(act.instrumento))
+      : '<p style="color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;">No hay instrumento generado.</p>';
+  }
+  const label = document.getElementById(`pd-instrumento-label-${act.id}`);
+  if (label) label.textContent = act.instrumento?.tipoLabel || 'Sin instrumento';
+}
+
 // ════════════════════════════════════════════════════════════════════
 // GENERAR SESIÓN DIARIA CON GROQ — PROMPT PERSONALIZADO
 // ════════════════════════════════════════════════════════════════════
@@ -11556,6 +11573,7 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     set(`pd-cierre-proximopaso-${actId}`, gen.cierre.proximopaso);
     set(`pd-estrategias-${actId}`, gen.estrategias);
     set(`pd-recursos-${actId}`, gen.recursos);
+    _regenerarInstrumentoEnCard(act, ec);
 
     mostrarToast('✅ Sesión generada con IA', 'success');
   } catch (e) {
@@ -11578,6 +11596,7 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     set(`pd-cierre-proximopaso-${actId}`, s.cierre.proximopaso);
     set(`pd-estrategias-${actId}`, s.estrategias);
     set(`pd-recursos-${actId}`, s.recursos);
+    _regenerarInstrumentoEnCard(act, ec2);
     mostrarToast('Sesión generada (modo local)', 'info');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:14px;">auto_awesome</span> Generar'; }
@@ -11695,6 +11714,7 @@ function generarSesion(actId) {
 
 
   set(`pd-recursos-${actId}`, s.recursos);
+  _regenerarInstrumentoEnCard(act, ec);
 
 
 
@@ -12539,9 +12559,9 @@ function renderizarDiarias() {
           <div class="pd-sec-header" style="background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#fff;border-radius:8px 8px 0 0;padding:10px 14px;margin-top:0;">
             <span class="material-icons">assignment_turned_in</span>
             INSTRUMENTO DE EVALUACION
-            <span style="margin-left:auto;font-size:0.78rem;font-weight:400;opacity:0.9;">${act.instrumento ? act.instrumento.tipoLabel : 'Sin instrumento'}</span>
+            <span id="pd-instrumento-label-${act.id}" style="margin-left:auto;font-size:0.78rem;font-weight:400;opacity:0.9;">${act.instrumento ? act.instrumento.tipoLabel : 'Sin instrumento'}</span>
           </div>
-          <div style="border:1.5px solid #C8E6C9;border-top:none;border-radius:0 0 8px 8px;padding:16px;">
+          <div id="pd-instrumento-body-${act.id}" style="border:1.5px solid #C8E6C9;border-top:none;border-radius:0 0 8px 8px;padding:16px;">
             ${act.instrumento
         ? (act.instrumento.tipo === 'cotejo'
           ? renderizarListaCotejoHTML(act.instrumento)
