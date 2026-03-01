@@ -6844,10 +6844,11 @@ function renderizarTabsCursos() {
     container.innerHTML = '<span style="color:#9E9E9E;font-size:0.85rem;">Sin cursos. Crea uno →</span>';
     return;
   }
+  const biblioIds = new Set((cargarBiblioteca().items || []).map(i => i.id));
   cursos.forEach(curso => {
     const tab = document.createElement('button');
     tab.className = 'cal-tab' + (curso.id === calState.cursoActivoId ? ' activo' : '');
-    const nPlanes = (curso.planIds || []).length;
+    const nPlanes = (curso.planIds || []).filter(id => biblioIds.has(id)).length;
     tab.innerHTML = '<span class="material-icons" style="font-size:16px;">class</span>'
       + escapeHTML(curso.nombre)
       + (nPlanes ? ` <span style="background:#E3F2FD;color:#1565C0;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700;">${nPlanes}</span>` : '')
