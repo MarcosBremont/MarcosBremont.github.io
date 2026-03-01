@@ -297,6 +297,14 @@
           <span class="step-number">5</span>
           <span class="material-icons step-check hidden">check</span>
         </div>
+        <span class="step-label">Plan. Diaria</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="6">
+        <div class="step-circle">
+          <span class="step-number">6</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
         <span class="step-label">Vista Previa</span>
       </div>
     </div>
@@ -672,17 +680,17 @@
           Anterior
         </button>
         <button class="btn-siguiente" onclick="irAlPaso(5)">
-          Ver Vista Previa
-          <span class="material-icons">preview</span>
+          Plan. Diaria
+          <span class="material-icons">today</span>
         </button>
       </div>
     </section>
 
 
     <!-- =========================================
-         PASO 5: VISTA PREVIA Y EXPORTACIÓN
+         PASO 6: VISTA PREVIA Y EXPORTACIÓN
          ========================================= -->
-    <section class="step-section" id="section-5">
+    <section class="step-section" id="section-6">
       <div class="section-card">
         <div class="section-header">
           <span class="material-icons section-icon">picture_as_pdf</span>
@@ -714,9 +722,9 @@
 
       <!-- Navegación -->
       <div class="nav-buttons">
-        <button class="btn-anterior" onclick="irAlPaso(4)">
+        <button class="btn-anterior" onclick="irAlPaso(5)">
           <span class="material-icons">arrow_back</span>
-          Anterior
+          Plan. Diaria
         </button>
         <div></div>
       </div>
@@ -824,7 +832,7 @@
     </div>
 
     <div class="nav-buttons">
-      <button class="btn-anterior" onclick="cerrarDiarias()">
+      <button class="btn-anterior" onclick="cerrarDiariasContextual()">
         <span class="material-icons">arrow_back</span> Volver
       </button>
       <button class="btn-guardar-plan" onclick="guardarTodasDiarias()">
@@ -1153,6 +1161,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v10.0<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Diaria integrada en el stepper y correcciones de modo oscuro</div>
+              <ul class="about-ver-items">
+                <li>Planificación Diaria añadida como paso 5 del wizard de planificación (antes de Vista Previa, que pasa al paso 6)</li>
+                <li>Modo oscuro: chips EC (pd-ec-chip) ahora muestran texto en blanco para mejor legibilidad</li>
+                <li>Modo oscuro: caja RA en Vista Previa (vp-ra-box) con fondo azul oscuro y texto celeste legible</li>
+                <li>Selector de planificaciones diarias ahora muestra módulo, curso asignado y descripción del RA (truncada) para identificar fácilmente cada planificación</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">

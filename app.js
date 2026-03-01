@@ -2730,7 +2730,8 @@ function abrirModalInstrumento(idxActividad) {
 
   const inst = act.instrumento;
 
-
+  // Buscar el EC asociado a esta actividad
+  const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
 
   document.getElementById('modal-title').textContent = inst.titulo;
 
@@ -2738,21 +2739,24 @@ function abrirModalInstrumento(idxActividad) {
 
 
 
-
-
   const body = document.getElementById('modal-body');
 
+  const ecHTML = ec ? `
+    <div style="background:var(--color-primario-surface,#E3F2FD);border-left:4px solid var(--color-primario,#1565C0);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:0.83rem;">
+      <div style="font-weight:700;color:var(--color-primario-dark,#0D47A1);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:16px;">psychology</span>
+        Elemento de Capacidad: <span style="font-weight:800;margin-left:4px;">${ec.codigo || ''}</span>
+      </div>
+      <div style="color:#37474F;line-height:1.5;">${ec.enunciado || '—'}</div>
+      ${ec.nivel ? `<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+        <span style="background:#1565C0;color:#fff;border-radius:12px;padding:2px 10px;font-size:0.72rem;font-weight:700;">${ec.nivel.charAt(0).toUpperCase()+ec.nivel.slice(1)}</span>
+        ${ec.horasAsignadas ? `<span style="background:#E8F5E9;color:#2E7D32;border-radius:12px;padding:2px 10px;font-size:0.72rem;font-weight:700;">${ec.horasAsignadas}h asignadas</span>` : ''}
+      </div>` : ''}
+    </div>` : '';
 
-
-  body.innerHTML = inst.tipo === 'cotejo'
-
-
-
+  body.innerHTML = ecHTML + (inst.tipo === 'cotejo'
     ? renderizarListaCotejoHTML(inst)
-
-
-
-    : renderizarRubricaHTML(inst);
+    : renderizarRubricaHTML(inst));
 
 
 
@@ -4435,7 +4439,7 @@ let pasoActual = 1;
 
 
 
-const TOTAL_PASOS = 5;
+const TOTAL_PASOS = 6;
 
 
 
@@ -4503,10 +4507,39 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
 
+  // Si veníamos del paso 5 (Plan. Diaria en stepper), guardar y ocultar panel-diarias
+  if (pasoActual === 5 && nuevoPaso !== 5) {
+    guardarTodasDiarias();
+    document.getElementById('panel-diarias')?.classList.add('hidden');
+  }
+
+  // PASO 5: Planificación Diaria → muestra panel-diarias inline dentro del stepper
+  if (nuevoPaso === 5) {
+    document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
+    actualizarStepper(5);
+    ['panel-calificaciones', 'panel-planificaciones', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas'].forEach(id => {
+      document.getElementById(id)?.classList.add('hidden');
+    });
+    document.getElementById('panel-diarias')?.classList.remove('hidden');
+    const navBtns = document.querySelector('#panel-diarias .nav-buttons');
+    if (navBtns) navBtns.innerHTML = `
+      <button class="btn-anterior" onclick="cerrarDiariasContextual()">
+        <span class="material-icons">arrow_back</span> Anterior
+      </button>
+      <button class="btn-siguiente" onclick="guardarTodasDiarias(); irAlPaso(6, false)">
+        Ver Vista Previa <span class="material-icons">preview</span>
+      </button>`;
+    cargarDiarias();
+    const tieneActividades = (planificacion.actividades || []).length > 0;
+    _actualizarSelectorPlanDiarias(tieneActividades);
+    renderizarDiarias();
+    pasoActual = 5;
+    guardarBorrador();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
   // Actualizar secciones visibles
-
-
-
   document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
 
 
@@ -4535,13 +4568,9 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
 
-  // Al entrar al paso 5, regenerar vista previa
-
-
-
+  // Acciones al entrar en pasos específicos
   if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
-  if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
-  if (nuevoPaso === 5) renderizarVistaPrevia();
+  if (nuevoPaso === 6) renderizarVistaPrevia();
 
 
 
@@ -4580,6 +4609,16 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
 
+
+/** Cierra Plan. Diaria de forma contextual: vuelve al paso 4 si estamos en el stepper, o al dashboard si no */
+function cerrarDiariasContextual() {
+  guardarTodasDiarias();
+  if (pasoActual === 5) {
+    irAlPaso(4, false);
+  } else {
+    abrirDashboard();
+  }
+}
 
 /** Actualiza el estado visual del stepper */
 
@@ -5772,9 +5811,26 @@ function mostrarToast(mensaje, tipo = 'success') {
 
 function _getBiblioOpts() {
   const biblio = cargarBiblioteca();
+  const cursos = calState.cursos || {};
+
   return (biblio.items || []).map(it => {
     const dg = it.planificacion && it.planificacion.datosGenerales ? it.planificacion.datosGenerales : {};
-    const label = [dg.moduloFormativo, dg.nombreBachillerato, it.fechaGuardadoLabel].filter(Boolean).join(' — ');
+    const modulo = dg.moduloFormativo || dg.nombreBachillerato || 'Sin título';
+
+    // Buscar cursos que tengan esta planificación asignada
+    const cursosAsignados = Object.values(cursos)
+      .filter(c => (c.planIds || []).includes(it.id))
+      .map(c => c.nombre)
+      .filter(Boolean);
+
+    const cursoLabel = cursosAsignados.length
+      ? ' [' + cursosAsignados.join(', ') + ']'
+      : '';
+
+    const raDesc = it.planificacion && it.planificacion.ra ? (it.planificacion.ra.descripcion || '') : '';
+    const raCorto = raDesc.length > 55 ? raDesc.substring(0, 55) + '…' : raDesc;
+
+    const label = modulo + cursoLabel + (raCorto ? ' · ' + raCorto : '') + (it.fechaGuardadoLabel ? ' — ' + it.fechaGuardadoLabel : '');
     return '<option value="' + it.id + '">' + label + '</option>';
   }).join('');
 }
@@ -6277,7 +6333,7 @@ function _mostrarPanel(panelId) {
   // Ocultar stepper
   document.querySelector('.stepper-container')?.classList.add('hidden');
   // Ocultar secciones de pasos por ID
-  ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
+  ['section-1', 'section-2', 'section-3', 'section-4', 'section-6'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   _stepSectionsOcultas = true;
@@ -6293,7 +6349,7 @@ function _mostrarPanel(panelId) {
 function _ocultarPaneles() {
   document.querySelector('.stepper-container')?.classList.remove('hidden');
   // Restaurar secciones de pasos - solo la activa debe verse
-  ['section-1', 'section-2', 'section-3', 'section-4', 'section-5'].forEach(id => {
+  ['section-1', 'section-2', 'section-3', 'section-4', 'section-6'].forEach(id => {
     document.getElementById(id)?.classList.remove('hidden');
   });
   _stepSectionsOcultas = false;
@@ -10670,11 +10726,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // Lo inyectamos en el footer del paso 5
+  // Lo inyectamos en el footer del paso 6 (Vista Previa)
 
 
 
-  const navPaso5 = document.querySelector('#section-5 .nav-buttons');
+  const navPaso5 = document.querySelector('#section-6 .nav-buttons');
 
 
 
@@ -14626,7 +14682,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v9.0</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v10.0</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

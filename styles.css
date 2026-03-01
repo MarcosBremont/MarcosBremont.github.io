@@ -5879,6 +5879,15 @@ body.dark-mode .pd-panel {
   background: var(--color-fondo) !important;
 }
 
+body.dark-mode .pd-ec-chip {
+  color: #fff !important;
+}
+
+body.dark-mode .vp-ra-box {
+  background: #1A2744 !important;
+  color: #90CAF9 !important;
+}
+
 body.dark-mode .dash-main {
   background: transparent;
 }
