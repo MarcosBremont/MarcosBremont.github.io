@@ -11533,9 +11533,11 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     set(`pd-inicio-apertura-${actId}`, gen.inicio.apertura);
     set(`pd-inicio-encuadre-${actId}`, gen.inicio.encuadre);
     set(`pd-inicio-organizacion-${actId}`, gen.inicio.organizacion);
-    set(`pd-desarrollo-proc-${actId}`, gen.desarrollo.procedimental);
-    set(`pd-desarrollo-conc-${actId}`, gen.desarrollo.conceptual);
+    set(`pd-desarrollo-procedimental-${actId}`, gen.desarrollo.procedimental);
+    set(`pd-desarrollo-conceptual-${actId}`, gen.desarrollo.conceptual);
     set(`pd-cierre-sintesis-${actId}`, gen.cierre.sintesis);
+    set(`pd-cierre-conexion-${actId}`, gen.cierre.conexion);
+    set(`pd-cierre-proximopaso-${actId}`, gen.cierre.proximopaso);
     set(`pd-estrategias-${actId}`, gen.estrategias);
     set(`pd-recursos-${actId}`, gen.recursos);
 
@@ -11553,9 +11555,11 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     set(`pd-inicio-apertura-${actId}`, s.inicio.apertura);
     set(`pd-inicio-encuadre-${actId}`, s.inicio.encuadre);
     set(`pd-inicio-organizacion-${actId}`, s.inicio.organizacion);
-    set(`pd-desarrollo-proc-${actId}`, s.desarrollo.procedimental);
-    set(`pd-desarrollo-conc-${actId}`, s.desarrollo.conceptual);
+    set(`pd-desarrollo-procedimental-${actId}`, s.desarrollo.procedimental);
+    set(`pd-desarrollo-conceptual-${actId}`, s.desarrollo.conceptual);
     set(`pd-cierre-sintesis-${actId}`, s.cierre.sintesis);
+    set(`pd-cierre-conexion-${actId}`, s.cierre.conexion);
+    set(`pd-cierre-proximopaso-${actId}`, s.cierre.proximopaso);
     set(`pd-estrategias-${actId}`, s.estrategias);
     set(`pd-recursos-${actId}`, s.recursos);
     mostrarToast('Sesión generada (modo local)', 'info');
