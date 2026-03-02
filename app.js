@@ -33,6 +33,42 @@ function agregarEstudiantes() {
   mostrarToast(`${nombres.length} estudiante(s) agregado(s)`, 'success');
 }
 
+function importarAlumnosCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const texto = e.target.result;
+    const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const nombres = lineas.map(l => {
+      const partes = l.split(/[,;]/);
+      return partes[0].replace(/^"+|"+$/g, '').trim();
+    }).filter(n => n.length > 0);
+    const cabeceras = ['nombre', 'alumno', 'estudiante', 'name', 'student'];
+    const inicio = cabeceras.includes((nombres[0] || '').toLowerCase()) ? 1 : 0;
+    const nombresFinales = nombres.slice(inicio);
+    if (!nombresFinales.length) { mostrarToast('No se encontraron nombres en el archivo', 'error'); return; }
+    document.getElementById('input-estudiantes').value = nombresFinales.join('\n');
+    agregarEstudiantes();
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function exportarAlumnosCSV() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.estudiantes?.length) { mostrarToast('No hay estudiantes en este curso', 'error'); return; }
+  const csv = 'Nombre\n' + curso.estudiantes.map(e => '"' + e.nombre.replace(/"/g, '""') + '"').join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'alumnos-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Lista exportada', 'success');
+}
+
 function eliminarEstudiante(estudianteId) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
@@ -6981,19 +7017,21 @@ function renderizarTablaCalificaciones() {
     + ' &mdash; RA&nbsp;(' + raInfo.valorTotal + '&nbsp;pts)'
     + (raDescCorta ? '<br><small style="font-weight:400;opacity:0.88;font-size:0.72rem;">' + raDescCorta + '</small>' : '');
 
+  const sumaAsignada = actividades.reduce((s, a) => s + (raInfo.valores[a.id] || 0), 0);
+  const sumaDiff = Math.round((sumaAsignada - raInfo.valorTotal) * 100) / 100;
+  const sumaColor = sumaDiff === 0 ? '#69F0AE' : (sumaDiff > 0 ? '#EF5350' : '#FF8F00');
+  const sumaLabel = sumaDiff === 0
+    ? '✓ ' + sumaAsignada.toFixed(1) + ' / ' + raInfo.valorTotal
+    : (sumaDiff > 0 ? '+' + sumaDiff.toFixed(1) + ' excede' : sumaDiff.toFixed(1) + ' faltan');
+
   let h1 = '<tr class="tr-ec-header">'
+    + '<th rowspan="2" style="min-width:32px;width:32px;text-align:center;background:#1565C0;color:#fff;font-size:0.75rem;">#</th>'
     + '<th class="th-nombre" rowspan="2">Estudiante</th>'
     + '<th colspan="' + actividades.length + '" style="text-align:start;background:#1565C0;color:#fff;padding:6px 8px;">'
     + raLabel + '</th>'
-    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small></th>';
-
-  rasKeys.filter(rk => rk !== raKey).forEach(rk => {
-    const ri = curso.ras[rk];
-    h1 += '<th rowspan="2" style="background:#4527A0;color:#fff;min-width:72px;font-size:0.75rem;vertical-align:middle;text-align:center;white-space:nowrap;" title="' + escapeHTML(ri.label) + '">'
-      + escapeHTML(ri.modulo.substring(0, 14) || 'RA') + '<br><small style=\'font-weight:400;\'>(' + ri.valorTotal + ' pts)</small></th>';
-  });
-  h1 += '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;">FINAL</th>'
-    + '<th rowspan="2" style="background:#00695C;color:#fff;min-width:62px;font-size:0.78rem;vertical-align:middle;text-align:center;">Asist.</th></tr>';
+    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small></th>'
+    + '<th rowspan="2" style="background:#E65100;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Recuper.<br><small style=\'font-weight:400;opacity:0.85;\'>2da oport.</small></th>'
+    + '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:80px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total<br><small style=\'font-weight:400;\'>RA + Recup.</small></th></tr>';
 
   // ─── Fila 2: actividades con contador correcto por EC ───
   const _cntEC = {};
@@ -7014,7 +7052,7 @@ function renderizarTablaCalificaciones() {
       + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + '</div>'
       + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
       + ' title="Valor máximo de esta actividad" placeholder="pts"'
-      + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value)"'
+      + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
       + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #90CAF9;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
       + '</th>';
   });
@@ -7029,14 +7067,32 @@ function renderizarTablaCalificaciones() {
   }
 
   tbody.innerHTML = '';
-  curso.estudiantes.forEach(est => {
+  const recupCache = cargarRecuperaciones();
+  curso.estudiantes.forEach((est, estIdx) => {
     const tr = document.createElement('tr');
-    let cells = '<td class="td-nombre" id="nombre-' + est.id + '">'
+    const recupMapEst = recupCache[cursoId]?.[est.id] || {};
+    const nRecupPendiente = Object.values(recupMapEst).filter(r => r.estado === 'pendiente').length;
+    let cells = '<td style="text-align:center;font-size:0.8rem;color:#90CAF9;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
+      + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
       + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
       + '<button class="btn-coment-est" onclick="abrirComentariosEstudiante(\'' + est.id + '\',\'' + est.id + '\')" title="Comentarios" data-nombre="' + escapeHTML(est.nombre) + '">'
       + '<span class="material-icons" style="font-size:14px;">comment</span>'
       + (_getComentariosEst(est.id).length ? '<span class="coment-count-badge">' + _getComentariosEst(est.id).length + '</span>' : '')
+      + '</button>'
+      + '<button class="btn-coment-est" onclick="abrirIncidencias(\'' + est.id + '\')" title="Eventos / reuniones / tutorías" style="color:#00695C;">'
+      + '<span class="material-icons" style="font-size:14px;">event_note</span>'
+      + (_getIncidenciasEst(est.id).length ? '<span class="coment-count-badge" style="background:#00695C;">' + _getIncidenciasEst(est.id).length + '</span>' : '')
+      + '</button>'
+      + '<button class="btn-coment-est" onclick="abrirRecuperaciones(\'' + est.id + '\')" title="Recuperaciones / 2da oportunidad" style="color:#E65100;">'
+      + '<span class="material-icons" style="font-size:14px;">replay</span>'
+      + (nRecupPendiente ? '<span class="coment-count-badge" style="background:#E65100;">' + nRecupPendiente + '</span>' : '')
+      + '</button>'
+      + '<button class="btn-coment-est" onclick="abrirVistaEstudiante(\'' + est.id + '\')" title="Vista del estudiante (QR)" style="color:#00838F;">'
+      + '<span class="material-icons" style="font-size:14px;">qr_code_2</span>'
+      + '</button>'
+      + '<button class="btn-coment-est" onclick="abrirBoletin(\'' + est.id + '\')" title="Boletín de notas" style="color:#6A1B9A;">'
+      + '<span class="material-icons" style="font-size:14px;">receipt_long</span>'
       + '</button>'
       + '<button class="btn-del-estudiante" onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar"><span class="material-icons" style="font-size:16px;">close</span></button>'
       + '</div></td>';
@@ -7046,44 +7102,57 @@ function renderizarTablaCalificaciones() {
       const val = nota !== undefined ? nota : '';
       const max = raInfo.valores[a.id] || 100;
       const cls = nota !== undefined ? _clsNota(nota, max) : '';
-      cells += '<td><input type="number" class="input-nota ' + cls + '"'
+      const recKey = raKey + '__' + a.id;
+      const recup = recupMapEst[recKey];
+      const tdStyle = recup
+        ? (recup.estado === 'pendiente'
+            ? ' style="position:relative;background:rgba(255,143,0,0.08);"'
+            : ' style="position:relative;background:rgba(46,125,50,0.06);"')
+        : '';
+      const recupDot = recup
+        ? '<span style="position:absolute;bottom:2px;right:2px;width:6px;height:6px;border-radius:50%;background:'
+          + (recup.estado === 'pendiente' ? '#FF8F00' : '#2E7D32')
+          + ';pointer-events:none;" title="' + (recup.estado === 'pendiente' ? 'Recuperación pendiente' : 'Recuperación completada') + '"></span>'
+        : '';
+      const isTouchMode = document.body.classList.contains('touch-mode');
+      cells += '<td' + tdStyle + '><input type="number" class="input-nota ' + cls + '"'
         + ' id="nota-' + est.id + '-' + a.id + '"'
         + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
+        + (isTouchMode ? ' inputmode="none" readonly' : '')
         + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
         + ' oninput="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
         + ' onkeydown="_notaKeyNav(event,this)"'
         + ' onwheel="event.preventDefault()"'
         + ' onfocus="_focusNotaInput(this)"'
         + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado || '').substring(0, 40)) + '"'
-        + '/></td>';
+        + '/>' + recupDot + '</td>';
     });
 
     const notaRA = _calcNotaRA(curso, est.id, raKey);
     cells += '<td class="td-total-ra ' + _clsNota(notaRA, raInfo.valorTotal) + '" id="total-ra-' + est.id + '-' + raKey + '">'
       + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</td>';
 
-    rasKeys.filter(rk => rk !== raKey).forEach(rk => {
-      const ri = curso.ras[rk];
-      const n = _calcNotaRA(curso, est.id, rk);
-      cells += '<td class="td-total-ra ' + _clsNota(n, ri.valorTotal) + '" style="background:#F3E5F5;">'
-        + (n !== null ? n.toFixed(1) : '—') + '</td>';
-    });
+    // Columna Recuperación: suma de notas de recuperación del RA activo
+    const notaRecupSum = actividades.reduce((sum, a) => {
+      const r = recupMapEst[raKey + '__' + a.id];
+      return sum + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
+    }, 0);
+    const hasRecup = actividades.some(a => recupMapEst[raKey + '__' + a.id]?.notaRecuperacion != null);
+    cells += '<td class="td-total-ra ' + (hasRecup ? _clsNota(notaRecupSum, raInfo.valorTotal) : '') + '" style="' + (hasRecup ? '' : 'color:#555;') + '">'
+      + (hasRecup ? notaRecupSum.toFixed(1) : '—') + '</td>';
 
-    const notaFinal = _calcNotaFinal(curso, est.id);
-    cells += '<td class="td-promedio ' + _clsProm(notaFinal) + '" id="final-' + est.id + '">'
-      + (notaFinal !== null ? notaFinal.toFixed(1) : '—') + '</td>';
-
-    // Columna asistencia
-    const asistStats = _statsAsistencia(calState.cursoActivoId, est.id);
-    const asistCls = asistStats.pct === null ? '' : asistStats.pct >= 80 ? 'nota-aprobado' : asistStats.pct >= 60 ? 'nota-regular' : 'nota-reprobado';
-    cells += '<td class="td-total-ra ' + asistCls + '" style="cursor:pointer;" onclick="toggleVistaAsistencia()" title="P:' + asistStats.P + ' T:' + asistStats.T + ' A:' + asistStats.A + ' / ' + asistStats.total + ' clases">'
-      + (asistStats.pct !== null ? asistStats.pct + '%' : '—') + '</td>';
+    // Columna Total RA + Recuperación (capped al valorTotal del RA)
+    const totalConRecupRaw = (notaRA !== null || hasRecup) ? (notaRA || 0) + notaRecupSum : null;
+    const totalConRecup = totalConRecupRaw !== null ? Math.min(totalConRecupRaw, raInfo.valorTotal) : null;
+    const excedido = totalConRecupRaw !== null && totalConRecupRaw > raInfo.valorTotal;
+    cells += '<td class="td-promedio" style="font-weight:700;background:rgba(27,94,32,0.15);" title="' + (excedido ? 'Límite aplicado: máx. ' + raInfo.valorTotal + ' pts' : '') + '">'
+      + (totalConRecup !== null ? totalConRecup.toFixed(1) : '—') + '</td>';
     tr.innerHTML = cells;
     tbody.appendChild(tr);
   });
 
   // ─── Footer ───
-  let footCells = '<td class="tf-label">Promedio</td>';
+  let footCells = '<td style="min-width:32px;width:32px;"></td><td class="tf-label">Promedio</td>';
   actividades.forEach(a => {
     const notas = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[a.id]).filter(n => n !== undefined && n !== null);
     const avg = notas.length ? notas.reduce((s, n) => s + n, 0) / notas.length : null;
@@ -7094,17 +7163,34 @@ function renderizarTablaCalificaciones() {
   const avgRA = _promedioColRA(curso, raKey);
   footCells += '<td class="td-total-ra ' + (avgRA !== null ? _clsNota(avgRA, raInfo.valorTotal) : '') + '">'
     + (avgRA !== null ? avgRA.toFixed(1) : '—') + '</td>';
-  rasKeys.filter(rk => rk !== raKey).forEach(() => { footCells += '<td>—</td>'; });
-  const avgFinal = _promedioFinal(curso);
-  footCells += '<td class="td-promedio ' + _clsProm(avgFinal) + '">'
-    + (avgFinal !== null ? avgFinal.toFixed(1) : '—') + '</td>';
-  // Footer asistencia: promedio de % de asistencia del curso
-  const asistProms = curso.estudiantes
-    .map(e => _statsAsistencia(calState.cursoActivoId, e.id).pct)
-    .filter(p => p !== null);
-  const avgAsist = asistProms.length ? Math.round(asistProms.reduce((s, p) => s + p, 0) / asistProms.length) : null;
-  const asistFootCls = avgAsist === null ? '' : avgAsist >= 80 ? 'nota-aprobado' : avgAsist >= 60 ? 'nota-regular' : 'nota-reprobado';
-  footCells += '<td class="td-total-ra ' + asistFootCls + '">' + (avgAsist !== null ? avgAsist + '%' : '—') + '</td>';
+  // Footer Recuperación: promedio de sumas de recuperación
+  const recupSumsFoot = curso.estudiantes.map(e => {
+    const rm = recupCache[cursoId]?.[e.id] || {};
+    const s = actividades.reduce((acc, a) => {
+      const r = rm[raKey + '__' + a.id];
+      return acc + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
+    }, 0);
+    const has = actividades.some(a => rm[raKey + '__' + a.id]?.notaRecuperacion != null);
+    return has ? s : null;
+  }).filter(v => v !== null);
+  const avgRecup = recupSumsFoot.length ? recupSumsFoot.reduce((s, v) => s + v, 0) / recupSumsFoot.length : null;
+  footCells += '<td class="td-total-ra ' + (avgRecup !== null ? _clsNota(avgRecup, raInfo.valorTotal) : '') + '">'
+    + (avgRecup !== null ? avgRecup.toFixed(1) : '—') + '</td>';
+  // Footer Total+Recup: promedio de (Total RA + Recuperación) por estudiante
+  const totalesConRecup = curso.estudiantes.map(e => {
+    const notaRa2 = _calcNotaRA(curso, e.id, raKey);
+    const rm = recupCache[cursoId]?.[e.id] || {};
+    const s = actividades.reduce((acc, a) => {
+      const r = rm[raKey + '__' + a.id];
+      return acc + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
+    }, 0);
+    const has = actividades.some(a => rm[raKey + '__' + a.id]?.notaRecuperacion != null);
+    const raw = (notaRa2 !== null || has) ? (notaRa2 || 0) + s : null;
+    return raw !== null ? Math.min(raw, raInfo.valorTotal) : null;
+  }).filter(v => v !== null);
+  const avgTotal = totalesConRecup.length ? totalesConRecup.reduce((s, v) => s + v, 0) / totalesConRecup.length : null;
+  footCells += '<td class="td-promedio" style="font-weight:700;">'
+    + (avgTotal !== null ? avgTotal.toFixed(1) : '—') + '</td>';
   tfoot.innerHTML = '<tr>' + footCells + '</tr>';
 }
 
@@ -7166,6 +7252,10 @@ function _moverNotaVertical(el, direccion) {
 }
 
 function _focusNotaInput(el) {
+  if (document.body.classList.contains('touch-mode')) {
+    el.blur(); // en modo táctil el teclado custom se abre vía touchstart
+    return;
+  }
   _notaActiva = true;
   el.focus({ preventScroll: true });
   el.select();
@@ -7231,18 +7321,56 @@ function registrarNota(estudianteId, actividadId, valor) {
   _actualizarFooterRA(raKey);
 }
 
-function actualizarValorActividad(actividadId, nuevoValor) {
+function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
   const raKey = _getRaKey();
   _ensureRA(curso, raKey);
+  const raInfo = curso.ras[raKey];
   const num = parseFloat(nuevoValor);
-  if (!isNaN(num) && num > 0) {
-    curso.ras[raKey].valores[actividadId] = num;
-    registrarCambio(`Valor de actividad actualizado a ${num} pts`);
-    guardarCalificaciones();
-    renderizarTablaCalificaciones();
+
+  // Revertir si valor inválido
+  if (isNaN(num) || num <= 0) {
+    if (inputEl) inputEl.value = raInfo.valores[actividadId] || '';
+    return;
   }
+
+  const valorAnterior = raInfo.valores[actividadId] || 0;
+  // Suma de todas las actividades excepto la que se está editando
+  const planActiva = _getPlanActivaDeCurso();
+  let acts = (planActiva && planActiva.actividades) || [];
+  if (acts.length === 0) acts = raInfo._actividadesSnapshot || [];
+  const sumaOtras = acts.reduce((s, a) => a.id === actividadId ? s : s + (raInfo.valores[a.id] || 0), 0);
+  const nuevaSuma = sumaOtras + num;
+  const sumaAnterior = sumaOtras + valorAnterior;
+  const valorTotal = raInfo.valorTotal;
+
+  // Bloquear solo si el cambio EMPEORA la situación (excede Y es mayor que antes)
+  if (nuevaSuma > valorTotal && nuevaSuma > sumaAnterior) {
+    const disponible = Math.max(0, valorTotal - sumaOtras);
+    mostrarToast(
+      'Excede el total del RA (' + valorTotal + ' pts). '
+      + 'Máximo disponible: ' + disponible.toFixed(1) + ' pts', 'error'
+    );
+    if (inputEl) inputEl.value = valorAnterior || '';
+    return;
+  }
+
+  raInfo.valores[actividadId] = num;
+  registrarCambio(`Valor de actividad actualizado a ${num} pts`);
+  guardarCalificaciones();
+
+  if (nuevaSuma > valorTotal) {
+    mostrarToast(
+      'Suma actual: ' + nuevaSuma.toFixed(1) + ' pts — aún excede ' + valorTotal + ' pts. Ajusta las demás actividades.', 'warning'
+    );
+  } else if (Math.abs(nuevaSuma - valorTotal) > 0.01) {
+    mostrarToast(
+      'Faltan ' + (valorTotal - nuevaSuma).toFixed(1) + ' pts por asignar (total RA: ' + valorTotal + ' pts)', 'warning'
+    );
+  }
+
+  renderizarTablaCalificaciones();
 }
 
 
@@ -7451,6 +7579,595 @@ function imprimirCalificaciones() {
 
 
 
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: SELECTOR ALEATORIO DE ALUMNO
+// ════════════════════════════════════════════════════════════════════
+function elegirAlumnoAleatorio() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.estudiantes || curso.estudiantes.length === 0) {
+    mostrarToast('No hay estudiantes en este curso', 'error'); return;
+  }
+  const lista = curso.estudiantes;
+  if (lista.length === 1) { _mostrarGanador(lista[0]); return; }
+  const btn = document.querySelector('[onclick="elegirAlumnoAleatorio()"]');
+  if (btn) btn.disabled = true;
+  let i = 0;
+  const timer = setInterval(() => {
+    i = (i + 1) % lista.length;
+    mostrarToast('🎲 ' + lista[i].nombre, 'info', 250);
+  }, 130);
+  setTimeout(() => {
+    clearInterval(timer);
+    if (btn) btn.disabled = false;
+    const elegido = lista[Math.floor(Math.random() * lista.length)];
+    _mostrarGanador(elegido);
+  }, 1100);
+}
+function _mostrarGanador(est) {
+  document.getElementById('modal-title').textContent = '🎲 Estudiante seleccionado';
+  document.getElementById('modal-body').innerHTML =
+    '<div style="text-align:center;padding:2.5rem 1rem;">'
+    + '<div style="font-size:2.2rem;font-weight:800;color:#1565C0;margin-bottom:0.5rem;">' + escapeHTML(est.nombre) + '</div>'
+    + '<div style="color:#78909C;font-size:0.9rem;">Seleccionado aleatoriamente 🎉</div>'
+    + '</div>';
+  document.getElementById('modal-footer').innerHTML =
+    '<button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: BOLETÍN INDIVIDUAL DE NOTAS
+// ════════════════════════════════════════════════════════════════════
+function abrirBoletin(estId) {
+  const cursoId = calState.cursoActivoId;
+  const curso = cursoId ? calState.cursos[cursoId] : null;
+  if (!curso) { mostrarToast('Sin curso activo', 'error'); return; }
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+
+  const planActiva = _getPlanActivaDeCurso();
+  const actividades = (planActiva && planActiva.actividades) || [];
+  const dg = planActiva ? (planActiva.datosGenerales || {}) : {};
+  const ra = planActiva ? (planActiva.ra || {}) : {};
+  const raKey = _getRaKey();
+  const raInfo = _ensureRA(curso, raKey);
+  const comentarios = _getComentariosEst(estId);
+  const incidencias = _getIncidenciasEst(estId);
+  const asist = _statsAsistencia(cursoId, estId);
+  const notaFinal = _calcNotaFinal(curso, estId);
+  const notaRA = _calcNotaRA(curso, estId, raKey);
+
+  const hoy = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const modulo = esc(dg.moduloFormativo || 'Módulo');
+  const periodo = (dg.fechaInicio || '') + (dg.fechaTermino ? ' — ' + dg.fechaTermino : '');
+  const instit = esc(dg.institucion || dg.establecimiento || '');
+  const raDesc = esc((ra.descripcion || '').substring(0, 120));
+
+  let filasActs = '';
+  actividades.forEach((a, idx) => {
+    const nota = curso.notas?.[estId]?.[raKey]?.[a.id];
+    const max = raInfo.valores[a.id] || 10;
+    const pct = (nota !== undefined && nota !== null) ? Math.round((nota / max) * 100) : null;
+    const color = pct === null ? '#9E9E9E' : pct >= 70 ? '#2E7D32' : pct >= 50 ? '#E65100' : '#C62828';
+    const barra = pct !== null
+      ? '<div style="height:8px;background:#eee;border-radius:4px;margin-top:4px;"><div style="height:8px;background:' + color + ';border-radius:4px;width:' + Math.min(100,pct) + '%;"></div></div>'
+      : '';
+    const enun = esc((a.enunciado||'').substring(0,55)) + (a.enunciado && a.enunciado.length>55 ? '…' : '');
+    const ecCorto = esc((a.ecCodigo||'').replace('E.C.','').replace('CE',''));
+    filasActs += '<tr>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:0.82rem;">Act.' + (idx+1)
+      + ' <span style="color:#78909C;font-size:0.75rem;">' + ecCorto + '</span>'
+      + '<br><span style="font-size:0.72rem;color:#546E7A;">' + enun + '</span></td>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;color:' + color + ';">'
+      + (nota !== undefined && nota !== null ? nota : '—') + '</td>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center;color:#546E7A;">' + max + '</td>'
+      + '<td style="padding:6px 8px;border-bottom:1px solid #eee;min-width:100px;">' + barra + '</td>'
+      + '</tr>';
+  });
+  if (!filasActs) filasActs = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:#9E9E9E;">Sin actividades registradas</td></tr>';
+
+  let secComent = '';
+  if (comentarios.length) {
+    secComent = '<div style="margin-top:1.5rem;"><h3 style="font-size:0.95rem;font-weight:700;color:#37474F;border-bottom:2px solid #E3F2FD;padding-bottom:4px;margin-bottom:0.75rem;">Observaciones del docente</h3>';
+    comentarios.slice(0,8).forEach(c => {
+      const cat = COMENT_CATEGORIAS.find(x => x.id === c.categoria) || COMENT_CATEGORIAS[COMENT_CATEGORIAS.length-1];
+      const fecha = new Date(c.ts).toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});
+      secComent += '<div style="margin-bottom:0.6rem;padding:8px 10px;background:#F5F5F5;border-radius:6px;border-left:3px solid ' + cat.color + ';">'
+        + '<span style="font-size:0.72rem;font-weight:600;color:' + cat.color + ';">' + esc(cat.label) + '</span>'
+        + '<span style="font-size:0.72rem;color:#9E9E9E;margin-left:8px;">' + fecha + '</span>'
+        + '<div style="font-size:0.83rem;color:#37474F;margin-top:4px;">' + esc(c.texto) + '</div>'
+        + '</div>';
+    });
+    secComent += '</div>';
+  }
+
+  let secIncid = '';
+  if (incidencias.length) {
+    secIncid = '<div style="margin-top:1.5rem;"><h3 style="font-size:0.95rem;font-weight:700;color:#37474F;border-bottom:2px solid #E8F5E9;padding-bottom:4px;margin-bottom:0.75rem;">Registro de eventos</h3>';
+    incidencias.slice(0,6).forEach(inc => {
+      const tipo = INCID_TIPOS.find(t => t.id === inc.tipo) || INCID_TIPOS[INCID_TIPOS.length-1];
+      secIncid += '<div style="margin-bottom:0.6rem;padding:8px 10px;background:#F5F5F5;border-radius:6px;border-left:3px solid ' + tipo.color + ';">'
+        + '<span style="font-size:0.72rem;font-weight:600;color:' + tipo.color + ';">' + esc(tipo.label) + '</span>'
+        + (inc.fechaEvento ? '<span style="font-size:0.72rem;color:#9E9E9E;margin-left:8px;">' + inc.fechaEvento + '</span>' : '')
+        + (inc.participantes ? '<div style="font-size:0.75rem;color:#546E7A;margin-top:2px;"><b>Participantes:</b> ' + esc(inc.participantes) + '</div>' : '')
+        + (inc.descripcion ? '<div style="font-size:0.83rem;color:#37474F;margin-top:4px;">' + esc(inc.descripcion) + '</div>' : '')
+        + (inc.acuerdos ? '<div style="font-size:0.78rem;color:#1565C0;margin-top:4px;"><b>Acuerdos:</b> ' + esc(inc.acuerdos) + '</div>' : '')
+        + '</div>';
+    });
+    secIncid += '</div>';
+  }
+
+  const notaFinalColor = notaFinal === null ? '#9E9E9E' : notaFinal >= 7 ? '#2E7D32' : notaFinal >= 5 ? '#E65100' : '#C62828';
+  const asistColor = asist.pct === null ? '#9E9E9E' : asist.pct >= 80 ? '#2E7D32' : asist.pct >= 60 ? '#E65100' : '#C62828';
+  const raColor = notaRA === null ? '#9E9E9E' : notaRA >= raInfo.valorTotal * 0.7 ? '#2E7D32' : '#E65100';
+
+  const css = `*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:14px;color:#212121;background:#fff;}
+    .page{max-width:720px;margin:0 auto;padding:2rem;}
+    header{background:#1565C0;color:#fff;padding:1.2rem 1.5rem;border-radius:8px 8px 0 0;}
+    h1{font-size:1.1rem;font-weight:700;}h2{font-size:0.88rem;font-weight:400;opacity:0.85;margin-top:4px;}
+    .alumno-card{background:#E3F2FD;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;}
+    .alumno-nombre{font-size:1.4rem;font-weight:800;color:#0D47A1;}.alumno-info{font-size:0.82rem;color:#546E7A;margin-top:4px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;}
+    th{background:#1565C0;color:#fff;padding:8px;text-align:left;font-size:0.82rem;}
+    .resumen{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+    .resumen-card{flex:1;min-width:120px;background:#F5F5F5;border-radius:8px;padding:0.8rem;text-align:center;}
+    .resumen-val{font-size:1.6rem;font-weight:800;}.resumen-label{font-size:0.72rem;color:#78909C;margin-top:2px;}
+    hr{border:none;border-top:1px solid #eee;margin:1.5rem 0;}
+    .btn-print{display:block;margin:1.5rem auto 0;padding:10px 2rem;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;}
+    @media print{.btn-print{display:none;}.page{padding:0;}}`;
+
+  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    + '<title>Boletín ' + esc(est.nombre) + '</title><style>' + css + '</style></head><body><div class="page">'
+    + '<header><h1>📋 Boletín de Calificaciones</h1><h2>' + modulo + (instit ? ' · ' + instit : '') + '</h2></header>'
+    + '<div class="alumno-card"><div>'
+    + '<div class="alumno-nombre">' + esc(est.nombre) + '</div>'
+    + '<div class="alumno-info">Curso: ' + esc(curso.nombre) + (periodo ? ' &nbsp;|&nbsp; Período: ' + esc(periodo) : '') + '</div>'
+    + (raDesc ? '<div class="alumno-info" style="margin-top:4px;">RA: ' + raDesc + '</div>' : '')
+    + '</div><div style="text-align:right;font-size:0.78rem;color:#546E7A;">Emitido:<br>' + hoy + '</div></div>'
+    + '<table><thead><tr>'
+    + '<th style="width:45%;">Actividad</th><th style="width:12%;text-align:center;">Nota</th>'
+    + '<th style="width:12%;text-align:center;">Máx.</th><th>Progreso</th>'
+    + '</tr></thead><tbody>' + filasActs + '</tbody></table>'
+    + '<div class="resumen">'
+    + '<div class="resumen-card"><div class="resumen-val" style="color:' + raColor + ';">' + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</div><div class="resumen-label">Total RA / ' + raInfo.valorTotal + ' pts</div></div>'
+    + '<div class="resumen-card"><div class="resumen-val" style="color:' + asistColor + ';">' + (asist.pct !== null ? asist.pct + '%' : '—') + '</div><div class="resumen-label">Asistencia</div></div>'
+    + '<div class="resumen-card" style="background:#E8F5E9;"><div class="resumen-val" style="color:' + notaFinalColor + ';">' + (notaFinal !== null ? notaFinal.toFixed(1) : '—') + '</div><div class="resumen-label">NOTA FINAL</div></div>'
+    + '</div>'
+    + secComent + secIncid
+    + '<hr><button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'
+    + '</div></body></html>';
+
+  const w = window.open('', '_blank');
+  if (!w) { mostrarToast('Permite ventanas emergentes para ver el boletín', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: REGISTRO DE INCIDENCIAS / REUNIONES / TUTORÍAS
+// ════════════════════════════════════════════════════════════════════
+const INCID_KEY = 'planificadorRA_incidencias_v1';
+const INCID_TIPOS = [
+  { id: 'reunion_familia', label: 'Reunión con familia', icono: 'people',        color: '#1565C0' },
+  { id: 'tutoria',         label: 'Tutoría',             icono: 'school',        color: '#6A1B9A' },
+  { id: 'incidencia',      label: 'Incidencia',          icono: 'warning',       color: '#C62828' },
+  { id: 'seguimiento',     label: 'Seguimiento',         icono: 'track_changes', color: '#E65100' },
+  { id: 'otro',            label: 'Otro',                icono: 'label',         color: '#546E7A' }
+];
+function cargarIncidencias() {
+  try { return JSON.parse(localStorage.getItem(INCID_KEY) || '{}'); } catch { return {}; }
+}
+function guardarIncidencias(data) {
+  localStorage.setItem(INCID_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('incidencias', data);
+}
+function _getIncidenciasEst(estId) {
+  const data = cargarIncidencias();
+  return (data[estId] || []).slice().sort((a, b) => (b.fechaEvento || b.ts) > (a.fechaEvento || a.ts) ? 1 : -1);
+}
+function abrirIncidencias(estId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+  document.getElementById('inc-titulo').textContent = 'Eventos — ' + est.nombre;
+  renderizarIncidencias(estId);
+  document.getElementById('incidencias-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarIncidenciasBtn() {
+  document.getElementById('incidencias-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function cerrarIncidencias(e) {
+  if (e.target === document.getElementById('incidencias-overlay')) cerrarIncidenciasBtn();
+}
+function renderizarIncidencias(estId) {
+  const lista = _getIncidenciasEst(estId);
+  const hoyISO = new Date().toISOString().split('T')[0];
+  let html = '<div style="padding:1rem;">';
+
+  if (lista.length === 0) {
+    html += '<p style="color:#9E9E9E;font-size:0.88rem;text-align:center;padding:1rem 0;">No hay eventos registrados para este estudiante.</p>';
+  } else {
+    lista.forEach(inc => {
+      const tipo = INCID_TIPOS.find(t => t.id === inc.tipo) || INCID_TIPOS[INCID_TIPOS.length-1];
+      html += '<div style="background:#F8F9FA;border-radius:8px;border-left:4px solid ' + tipo.color + ';padding:10px 12px;margin-bottom:10px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+        + '<span class="material-icons" style="font-size:16px;color:' + tipo.color + ';">' + tipo.icono + '</span>'
+        + '<strong style="font-size:0.85rem;color:' + tipo.color + ';">' + escapeHTML(tipo.label) + '</strong>'
+        + (inc.fechaEvento ? '<span style="font-size:0.78rem;color:#78909C;margin-left:4px;"> · ' + inc.fechaEvento + '</span>' : '')
+        + '<button onclick="eliminarIncidencia(\'' + inc.id + '\',\'' + estId + '\')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#EF5350;padding:2px;" title="Eliminar"><span class="material-icons" style="font-size:16px;">delete</span></button>'
+        + '</div>'
+        + (inc.participantes ? '<div style="font-size:0.78rem;color:#546E7A;"><b>Participantes:</b> ' + escapeHTML(inc.participantes) + '</div>' : '')
+        + (inc.descripcion ? '<div style="font-size:0.85rem;color:#37474F;margin-top:4px;">' + escapeHTML(inc.descripcion) + '</div>' : '')
+        + (inc.acuerdos ? '<div style="font-size:0.8rem;color:#1565C0;margin-top:4px;"><b>Acuerdos:</b> ' + escapeHTML(inc.acuerdos) + '</div>' : '')
+        + '</div>';
+    });
+  }
+
+  html += '<div style="border-top:2px solid #E3F2FD;margin-top:1rem;padding-top:1rem;">'
+    + '<h4 style="font-size:0.9rem;font-weight:700;color:#1565C0;margin-bottom:0.75rem;">+ Registrar nuevo evento</h4>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+    + '<div><label style="font-size:0.78rem;color:#546E7A;display:block;margin-bottom:3px;">Tipo</label>'
+    + '<select id="inc-tipo" style="width:100%;padding:6px 8px;border:1px solid #B0BEC5;border-radius:6px;font-size:0.85rem;">'
+    + INCID_TIPOS.map(t => '<option value="' + t.id + '">' + t.label + '</option>').join('')
+    + '</select></div>'
+    + '<div><label style="font-size:0.78rem;color:#546E7A;display:block;margin-bottom:3px;">Fecha del evento</label>'
+    + '<input type="date" id="inc-fecha" value="' + hoyISO + '" style="width:100%;padding:6px 8px;border:1px solid #B0BEC5;border-radius:6px;font-size:0.85rem;"></div>'
+    + '</div>'
+    + '<div style="margin-bottom:8px;"><label style="font-size:0.78rem;color:#546E7A;display:block;margin-bottom:3px;">Participantes</label>'
+    + '<input type="text" id="inc-participantes" placeholder="Ej: padre, madre, apoderado..." style="width:100%;padding:6px 8px;border:1px solid #B0BEC5;border-radius:6px;font-size:0.85rem;"></div>'
+    + '<div style="margin-bottom:8px;"><label style="font-size:0.78rem;color:#546E7A;display:block;margin-bottom:3px;">Descripción</label>'
+    + '<textarea id="inc-descripcion" rows="3" placeholder="¿Qué ocurrió? ¿De qué se trató?" style="width:100%;padding:6px 8px;border:1px solid #B0BEC5;border-radius:6px;font-size:0.85rem;resize:vertical;"></textarea></div>'
+    + '<div style="margin-bottom:12px;"><label style="font-size:0.78rem;color:#546E7A;display:block;margin-bottom:3px;">Acuerdos / compromisos</label>'
+    + '<textarea id="inc-acuerdos" rows="2" placeholder="¿Qué se acordó? ¿Cuáles son los próximos pasos?" style="width:100%;padding:6px 8px;border:1px solid #B0BEC5;border-radius:6px;font-size:0.85rem;resize:vertical;"></textarea></div>'
+    + '<button onclick="guardarIncidenciaNueva(\'' + estId + '\')" style="width:100%;padding:10px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Guardar evento</button>'
+    + '</div></div>';
+
+  document.getElementById('inc-body').innerHTML = html;
+}
+function guardarIncidenciaNueva(estId) {
+  const tipo = document.getElementById('inc-tipo')?.value;
+  const fechaEvento = document.getElementById('inc-fecha')?.value;
+  const participantes = (document.getElementById('inc-participantes')?.value || '').trim();
+  const descripcion = (document.getElementById('inc-descripcion')?.value || '').trim();
+  const acuerdos = (document.getElementById('inc-acuerdos')?.value || '').trim();
+  if (!descripcion) { mostrarToast('Escribe al menos una descripción', 'error'); return; }
+  const data = cargarIncidencias();
+  if (!data[estId]) data[estId] = [];
+  data[estId].push({ id: uid(), ts: Date.now(), fechaEvento, tipo, participantes, descripcion, acuerdos });
+  guardarIncidencias(data);
+  renderizarIncidencias(estId);
+  renderizarTablaCalificaciones();
+  mostrarToast('Evento registrado', 'success');
+}
+function eliminarIncidencia(incId, estId) {
+  if (!confirm('¿Eliminar este evento?')) return;
+  const data = cargarIncidencias();
+  if (data[estId]) data[estId] = data[estId].filter(i => i.id !== incId);
+  guardarIncidencias(data);
+  renderizarIncidencias(estId);
+  renderizarTablaCalificaciones();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: VISTA DEL ESTUDIANTE (solo lectura + QR)
+// ════════════════════════════════════════════════════════════════════
+let _vistaEstUrl = '';
+function abrirVistaEstudiante(estId) {
+  const cursoId = calState.cursoActivoId;
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+
+  const raKey = calState.raActivaKey || _getRaKey();
+  const raInfo = curso.ras?.[raKey];
+  const planActiva = _getPlanActivaDeCurso();
+  let actividades = (planActiva && planActiva.actividades) || [];
+  if (actividades.length === 0) actividades = raInfo?._actividadesSnapshot || [];
+  const planDg = planActiva?.datosGenerales || {};
+  const planRa = planActiva?.ra || {};
+  const recupMap = _getRecuperacionesEst(cursoId, estId);
+
+  const notaRA = _calcNotaRA(curso, estId, raKey);
+  const notaRecupSum = actividades.reduce((sum, a) => {
+    const r = recupMap[raKey + '__' + a.id];
+    return sum + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
+  }, 0);
+  const hasRecup = actividades.some(a => recupMap[raKey + '__' + a.id]?.notaRecuperacion != null);
+  const tTotal = (notaRA !== null || hasRecup)
+    ? Math.min((notaRA || 0) + notaRecupSum, raInfo?.valorTotal || 0)
+    : null;
+
+  const data = {
+    n: est.nombre,
+    c: curso.nombre || cursoId,
+    m: (planDg.moduloFormativo || '').substring(0, 50),
+    ra: (planRa.descripcion || '').substring(0, 100),
+    vt: raInfo?.valorTotal || 0,
+    f: new Date().toISOString().slice(0, 10),
+    acts: actividades.map(a => {
+      const r = recupMap[raKey + '__' + a.id];
+      return {
+        l: (a.enunciado || a.ecCodigo || '').substring(0, 50),
+        v: raInfo?.valores?.[a.id] || 0,
+        n: curso.notas?.[estId]?.[raKey]?.[a.id] ?? null,
+        r: r?.notaRecuperacion ?? null,
+        rs: r?.estado ?? null
+      };
+    }),
+    tRA: notaRA,
+    tTotal: tTotal,
+    asist: _statsAsistencia(cursoId, estId).pct
+  };
+
+  const base = window.location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+
+  // URL COMPLETA → para botón Abrir y Copiar (incluye enunciados completos)
+  const b64Full = btoa(encodeURIComponent(JSON.stringify(data)));
+  _vistaEstUrl = base + 'viewer.html#data=' + b64Full;
+
+  // URL COMPACTA → para el QR (menos datos = QR menos denso y más escaneable)
+  const dataCompacta = {
+    n: data.n,
+    c: data.c,
+    vt: data.vt,
+    f: data.f,
+    acts: data.acts.map(a => ({ v: a.v, n: a.n, r: a.r, rs: a.rs })),
+    tRA: data.tRA,
+    tTotal: data.tTotal,
+    asist: data.asist
+  };
+  const b64QR = btoa(encodeURIComponent(JSON.stringify(dataCompacta)));
+  const urlQR = base + 'viewer.html#data=' + b64QR;
+
+  document.getElementById('vista-est-titulo').textContent = est.nombre;
+  document.getElementById('vista-est-url').value = _vistaEstUrl;
+
+  // Generar QR como <img> usando api.qrserver.com (sin librería JS)
+  const qrDiv = document.getElementById('vista-est-qr');
+  qrDiv.innerHTML = '<div style="width:220px;height:220px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;">'
+    + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=210x210&margin=6&ecc=M&data='
+    + encodeURIComponent(urlQR)
+    + '" alt="QR" style="border-radius:6px;" width="210" height="210"'
+    + ' onerror="this.parentElement.innerHTML=\'<span style=\\\'color:#9E9E9E;font-size:0.8rem;text-align:center;padding:10px;\\\'>Sin conexión — usa el botón Abrir o Copiar enlace</span>\'" />'
+    + '</div>';
+
+  document.getElementById('vista-est-overlay').classList.remove('hidden');
+}
+function cerrarVistaEstudianteBtn() {
+  document.getElementById('vista-est-overlay').classList.add('hidden');
+}
+function cerrarVistaEstudiante(e) {
+  if (e.target === document.getElementById('vista-est-overlay')) cerrarVistaEstudianteBtn();
+}
+function abrirVistaEstudianteTab() {
+  window.open(_vistaEstUrl, '_blank');
+}
+function copiarLinkEstudiante() {
+  navigator.clipboard?.writeText(_vistaEstUrl).then(() => {
+    mostrarToast('Enlace copiado al portapapeles', 'success');
+  }).catch(() => {
+    const inp = document.getElementById('vista-est-url');
+    inp.select(); document.execCommand('copy');
+    mostrarToast('Enlace copiado', 'success');
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: MODO RECUPERACIÓN / SEGUNDA OPORTUNIDAD
+// ════════════════════════════════════════════════════════════════════
+const RECUP_KEY = 'planificadorRA_recuperaciones_v1';
+function cargarRecuperaciones() {
+  try { return JSON.parse(localStorage.getItem(RECUP_KEY) || '{}'); } catch { return {}; }
+}
+function guardarRecuperaciones(data) {
+  localStorage.setItem(RECUP_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('recuperaciones', data);
+}
+function _getRecuperacionesEst(cursoId, estId) {
+  return cargarRecuperaciones()[cursoId]?.[estId] || {};
+}
+function abrirRecuperaciones(estId) {
+  const cursoId = calState.cursoActivoId;
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+  // Limpiar entradas corruptas con actividadId 'undefined' (generadas antes del fix)
+  const data = cargarRecuperaciones();
+  let dirty = false;
+  if (data[cursoId]?.[estId]) {
+    Object.keys(data[cursoId][estId]).forEach(k => {
+      if (k.endsWith('__undefined')) { delete data[cursoId][estId][k]; dirty = true; }
+    });
+    if (dirty) guardarRecuperaciones(data);
+  }
+  document.getElementById('recup-titulo').textContent = 'Recuperaciones — ' + est.nombre;
+  document.getElementById('recuperaciones-overlay')._estId = estId;
+  renderizarRecuperaciones(estId);
+  document.getElementById('recuperaciones-overlay').classList.remove('hidden');
+}
+function cerrarRecuperacionesBtn() {
+  document.getElementById('recuperaciones-overlay').classList.add('hidden');
+}
+function cerrarRecuperaciones(e) {
+  if (e.target === document.getElementById('recuperaciones-overlay')) cerrarRecuperacionesBtn();
+}
+function renderizarRecuperaciones(estId) {
+  const cursoId = calState.cursoActivoId;
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const raKey = calState.raActivaKey || _getRaKey();
+  const raInfo = curso.ras?.[raKey];
+  if (!raInfo) {
+    document.getElementById('recup-body').innerHTML = '<p style="padding:1rem;color:#9E9E9E;">Sin RA activo.</p>';
+    return;
+  }
+  // Actividades como objetos {id, enunciado, ecCodigo, ...}
+  const planActiva = _getPlanActivaDeCurso();
+  let actividades = (planActiva && planActiva.actividades) || [];
+  if (actividades.length === 0) actividades = raInfo._actividadesSnapshot || [];
+  const recupMap = _getRecuperacionesEst(cursoId, estId);
+  let html = '<div style="padding:12px 16px;">';
+  if (actividades.length === 0) {
+    html += '<p style="color:#9E9E9E;">Este RA no tiene actividades definidas.</p>';
+  } else {
+    actividades.forEach(a => {
+      const max = raInfo.valores?.[a.id] || 100;
+      const nota = curso.notas?.[estId]?.[raKey]?.[a.id];
+      const notaStr = nota !== undefined ? nota.toFixed(1) : '—';
+      const pct = nota !== undefined ? (nota / max) * 100 : null;
+      const emoji = pct === null ? '⬜' : (pct >= 70 ? '✅' : (pct >= 50 ? '🟡' : '❌'));
+      const recKey = raKey + '__' + a.id;
+      const recup = recupMap[recKey];
+      html += '<div style="border:1px solid #2a2a3a;border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#1a1a2a;">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        + '<span style="font-weight:600;flex:1;font-size:0.88rem;">' + escapeHTML((a.enunciado || ('Act. ' + a.id)).substring(0, 60)) + '</span>'
+        + '<span style="font-size:1.1rem;">' + emoji + '</span>'
+        + '<span style="color:#B0BEC5;font-size:0.82rem;white-space:nowrap;">Nota: <strong>' + notaStr + '</strong> / ' + max + '</span>'
+        + '</div>';
+      if (recup) {
+        const isPendiente = recup.estado === 'pendiente';
+        const colorEstado = isPendiente ? '#FF8F00' : '#2E7D32';
+        const bgEstado = isPendiente ? 'rgba(255,143,0,0.12)' : 'rgba(46,125,50,0.12)';
+        html += '<div style="background:' + bgEstado + ';border-radius:6px;padding:10px 12px;">';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+          + '<span class="material-icons" style="font-size:15px;color:' + colorEstado + ';">' + (isPendiente ? 'schedule' : 'check_circle') + '</span>'
+          + '<strong style="color:' + colorEstado + ';font-size:0.85rem;">' + (isPendiente ? 'PENDIENTE' : 'COMPLETADA') + '</strong>'
+          + '<span style="color:#9E9E9E;font-size:0.8rem;margin-left:4px;">· Vence: ' + (recup.fechaLimite || '—') + '</span>'
+          + '</div>';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+          + '<label style="font-size:0.82rem;color:#CFD8DC;">Nota recuperación (0–' + max + '):</label>'
+          + '<input type="number" id="recup-nota-' + a.id + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
+          + ' value="' + (recup.notaRecuperacion !== null && recup.notaRecuperacion !== undefined ? recup.notaRecuperacion : '') + '"'
+          + ' style="width:80px;padding:4px 6px;border-radius:4px;border:1px solid #444;background:#0e0e1a;color:#fff;font-size:0.9rem;"'
+          + ' onwheel="event.preventDefault()" /></div>';
+        html += '<div style="display:flex;gap:8px;">'
+          + '<button onclick="guardarRecuperacion(\'' + estId + '\',\'' + a.id + '\',\'' + recKey + '\')" style="padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">save</span>Guardar nota</button>'
+          + '<button onclick="quitarRecuperacion(\'' + estId + '\',\'' + recKey + '\')" style="padding:5px 12px;background:none;color:#EF5350;border:1px solid #EF5350;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">close</span>Quitar</button>'
+          + '</div></div>';
+      } else {
+        html += '<div id="recup-form-' + a.id + '">'
+          + '<button onclick="_abrirFormRecup(\'' + a.id + '\')" style="padding:5px 12px;background:none;color:#E65100;border:1px solid #E65100;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;">'
+          + '<span class="material-icons" style="font-size:13px;">replay</span>Marcar para recuperar</button>'
+          + '</div>';
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+  document.getElementById('recup-body').innerHTML = html;
+}
+// Calcula cuántos puntos de recuperación quedan disponibles para un estudiante
+// en el RA activo, excluyendo opcionalmente la actividad que se está editando.
+function _calcMaxRecupPermitida(cursoId, estId, raKey, excludeActId) {
+  const curso = calState.cursos[cursoId];
+  const raInfo = curso?.ras?.[raKey];
+  if (!raInfo) return 0;
+  const notaRA = _calcNotaRA(curso, estId, raKey) || 0;
+  const planActiva = _getPlanActivaDeCurso();
+  let acts = (planActiva && planActiva.actividades) || [];
+  if (acts.length === 0) acts = raInfo._actividadesSnapshot || [];
+  const data = cargarRecuperaciones();
+  const otrasRecup = acts.reduce((sum, a) => {
+    if (a.id === excludeActId) return sum;
+    const r = data[cursoId]?.[estId]?.[raKey + '__' + a.id];
+    return sum + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
+  }, 0);
+  return Math.max(0, raInfo.valorTotal - notaRA - otrasRecup);
+}
+function _abrirFormRecup(actId) {
+  const overlay = document.getElementById('recuperaciones-overlay');
+  const estId = overlay._estId;
+  const cursoId = calState.cursoActivoId;
+  const raKey = calState.raActivaKey || _getRaKey();
+  const raInfo = calState.cursos[cursoId]?.ras?.[raKey];
+  const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const div = document.getElementById('recup-form-' + actId);
+  if (!div) return;
+  div.innerHTML = '<div style="background:rgba(230,81,0,0.08);border:1px solid #E65100;border-radius:6px;padding:10px 12px;">'
+    + '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">'
+    + '<div><label style="font-size:0.78rem;color:#CFD8DC;display:block;margin-bottom:3px;">Fecha límite</label>'
+    + '<input type="date" id="recup-fecha-' + actId + '" value="' + hoy + '" style="padding:4px 6px;border-radius:4px;border:1px solid #E65100;background:#0e0e1a;color:#fff;font-size:0.88rem;" /></div>'
+    + '<div><label style="font-size:0.78rem;color:#CFD8DC;display:block;margin-bottom:3px;">Nota <span style="color:#FF8F00;">(máx. ' + maxRecup.toFixed(1) + ' pts)</span></label>'
+    + '<input type="number" id="recup-nota-inline-' + actId + '" min="0" max="' + maxRecup + '" step="0.5" placeholder="—" style="width:80px;padding:4px 6px;border-radius:4px;border:1px solid #444;background:#0e0e1a;color:#fff;font-size:0.88rem;" onwheel="event.preventDefault()" /></div>'
+    + '</div>'
+    + (maxRecup <= 0 ? '<p style="color:#EF5350;font-size:0.8rem;margin:0 0 8px;">⚠ El estudiante ya alcanzó el máximo del RA. No hay margen de recuperación.</p>' : '')
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="guardarNuevaRecuperacion(\'' + estId + '\',\'' + actId + '\',\'' + (raKey + '__' + actId) + '\')" style="padding:5px 12px;background:#E65100;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">save</span>Guardar</button>'
+    + '<button onclick="renderizarRecuperaciones(\'' + estId + '\')" style="padding:5px 12px;background:none;color:#9E9E9E;border:1px solid #9E9E9E;border-radius:5px;cursor:pointer;font-size:0.82rem;">Cancelar</button>'
+    + '</div></div>';
+}
+function guardarNuevaRecuperacion(estId, actId, recKey) {
+  const cursoId = calState.cursoActivoId;
+  const raKey = calState.raActivaKey || _getRaKey();
+  const fecha = (document.getElementById('recup-fecha-' + actId)?.value || '').trim();
+  const notaVal = (document.getElementById('recup-nota-inline-' + actId)?.value || '').trim();
+  const nota = notaVal !== '' ? parseFloat(notaVal) : null;
+  if (!fecha) { mostrarToast('Indica una fecha límite', 'error'); return; }
+  if (nota !== null) {
+    const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId);
+    if (nota > maxRecup) {
+      mostrarToast('La nota excede el límite del RA. Máximo permitido: ' + maxRecup.toFixed(1) + ' pts', 'error');
+      return;
+    }
+  }
+  const data = cargarRecuperaciones();
+  if (!data[cursoId]) data[cursoId] = {};
+  if (!data[cursoId][estId]) data[cursoId][estId] = {};
+  data[cursoId][estId][recKey] = {
+    id: recKey, actividadId: actId, raKey,
+    notaRecuperacion: nota,
+    fechaLimite: fecha,
+    estado: nota !== null ? 'completada' : 'pendiente'
+  };
+  guardarRecuperaciones(data);
+  renderizarRecuperaciones(estId);
+  renderizarTablaCalificaciones();
+  mostrarToast('Recuperación registrada', 'success');
+}
+function guardarRecuperacion(estId, actId, recKey) {
+  const cursoId = calState.cursoActivoId;
+  const raKey = calState.raActivaKey || _getRaKey();
+  const notaVal = (document.getElementById('recup-nota-' + actId)?.value || '').trim();
+  const nota = notaVal !== '' ? parseFloat(notaVal) : null;
+  if (nota !== null) {
+    const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId);
+    if (nota > maxRecup) {
+      mostrarToast('La nota excede el límite del RA. Máximo permitido: ' + maxRecup.toFixed(1) + ' pts', 'error');
+      return;
+    }
+  }
+  const data = cargarRecuperaciones();
+  if (!data[cursoId]?.[estId]?.[recKey]) return;
+  data[cursoId][estId][recKey].notaRecuperacion = nota;
+  data[cursoId][estId][recKey].estado = nota !== null ? 'completada' : 'pendiente';
+  guardarRecuperaciones(data);
+  renderizarRecuperaciones(estId);
+  renderizarTablaCalificaciones();
+  mostrarToast('Nota de recuperación guardada', 'success');
+}
+function quitarRecuperacion(estId, recKey) {
+  if (!confirm('¿Quitar esta recuperación?')) return;
+  const cursoId = calState.cursoActivoId;
+  const data = cargarRecuperaciones();
+  if (data[cursoId]?.[estId]) {
+    delete data[cursoId][estId][recKey];
+    if (Object.keys(data[cursoId][estId]).length === 0) delete data[cursoId][estId];
+    if (Object.keys(data[cursoId]).length === 0) delete data[cursoId];
+  }
+  guardarRecuperaciones(data);
+  renderizarRecuperaciones(estId);
+  renderizarTablaCalificaciones();
+  mostrarToast('Recuperación eliminada', 'success');
 }
 
 
@@ -14489,11 +15206,14 @@ function abrirConfiguracion() {
   const cfgAlert = document.getElementById('cfg-alertas');
   const cfgMan = document.getElementById('cfg-manana');
   const cfgUmbral = document.getElementById('cfg-umbral-asist');
+  const tactil = localStorage.getItem('planificadorRA_touchMode_v1') === 'true';
   if (cfgDark) cfgDark.checked = dark;
   if (cfgGrande) cfgGrande.checked = grande;
   if (cfgAlert) cfgAlert.checked = alertas;
   if (cfgMan) cfgMan.checked = manana;
   if (cfgUmbral) cfgUmbral.value = umbral;
+  const cfgTouch = document.getElementById('cfg-touch-mode');
+  if (cfgTouch) cfgTouch.checked = tactil;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   const _mf = document.getElementById('modal-footer');
@@ -14527,9 +15247,145 @@ function limpiarTodosDatos() {
 function _aplicarPreferencias() {
   if (localStorage.getItem('cfg_dark_mode') === 'true') document.body.classList.add('dark-mode');
   if (localStorage.getItem('cfg_fuente_grande') === 'true') document.body.classList.add('fuente-grande');
+  if (localStorage.getItem('planificadorRA_touchMode_v1') === 'true') {
+    document.body.classList.add('touch-mode');
+    _inyectarCSSTouch(true);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: MODO TÁCTIL
+// ════════════════════════════════════════════════════════════════════
+function toggleModoTactil(on) {
+  localStorage.setItem('planificadorRA_touchMode_v1', on ? 'true' : 'false');
+  document.body.classList.toggle('touch-mode', on);
+  _inyectarCSSTouch(on);
+  renderizarTablaCalificaciones();
+  mostrarToast(on ? 'Modo táctil activado ✋' : 'Modo táctil desactivado', 'success');
+}
+
+function _inyectarCSSTouch(activo) {
+  let el = document.getElementById('touch-mode-css');
+  if (activo && !el) {
+    el = document.createElement('style');
+    el.id = 'touch-mode-css';
+    el.textContent = `
+      body.touch-mode .input-nota {
+        height:54px!important;font-size:1.2rem!important;
+        cursor:pointer!important;caret-color:transparent;
+        user-select:none;-webkit-user-select:none;
+      }
+      body.touch-mode .btn-coment-est {
+        width:38px!important;height:38px!important;min-width:38px!important;
+      }
+      body.touch-mode .btn-del-estudiante {
+        width:36px!important;height:36px!important;
+      }
+      body.touch-mode .btn-accion, body.touch-mode .btn-export, body.touch-mode .btn-sm {
+        padding:12px 18px!important;font-size:0.95rem!important;min-height:46px!important;
+      }
+      body.touch-mode .asist-btn-estado {
+        padding:14px 20px!important;font-size:1.05rem!important;min-width:58px!important;gap:6px!important;
+      }
+      body.touch-mode .asist-row { padding:14px 12px!important;min-height:64px!important; }
+      body.touch-mode button { touch-action:manipulation;-webkit-tap-highlight-color:rgba(21,101,192,0.15); }
+      body.touch-mode *:hover { transform:none!important; }
+      body.touch-mode .th-act .input-valor-act { width:58px!important;height:34px!important;font-size:0.88rem!important; }
+      body.touch-mode .td-nombre { min-width:180px!important; }
+      body.touch-mode .tab-curso { padding:10px 14px!important;font-size:0.9rem!important; }
+    `;
+    document.head.appendChild(el);
+  } else if (!activo && el) {
+    el.remove();
+  }
+}
+
+// ─── Teclado numérico en pantalla ─────────────────────────────────
+let _tecladoInputActivo = null;
+let _tecladoValor = '';
+
+function abrirTecladoNotas(inputEl) {
+  _tecladoInputActivo = inputEl;
+  _tecladoValor = (inputEl.value !== undefined && inputEl.value !== '') ? String(inputEl.value) : '';
+  document.getElementById('teclado-display').textContent = _tecladoValor || '—';
+  document.getElementById('teclado-max-label').textContent = 'Máx: ' + (inputEl.max || '100') + ' pts';
+  document.getElementById('teclado-notas-overlay').classList.remove('hidden');
+}
+
+function cerrarTecladoNotas() {
+  document.getElementById('teclado-notas-overlay').classList.add('hidden');
+  _tecladoInputActivo = null;
+  _tecladoValor = '';
+}
+
+function tecladoPresionar(val) {
+  if (val === 'DEL') {
+    _tecladoValor = _tecladoValor.slice(0, -1);
+  } else if (val === 'AC') {
+    _tecladoValor = '';
+  } else if (val === '.') {
+    if (!_tecladoValor.includes('.')) _tecladoValor += (_tecladoValor === '' ? '0.' : '.');
+  } else {
+    // No permitir más de 5 dígitos total
+    if (_tecladoValor.replace('.', '').length >= 5) return;
+    _tecladoValor = (_tecladoValor === '0') ? val : _tecladoValor + val;
+  }
+  document.getElementById('teclado-display').textContent = _tecladoValor || '—';
+}
+
+function tecladoConfirmar() {
+  if (!_tecladoInputActivo) { cerrarTecladoNotas(); return; }
+  if (_tecladoValor === '' || _tecladoValor === null) {
+    _tecladoInputActivo.value = '';
+    _tecladoInputActivo.dispatchEvent(new Event('input', { bubbles: true }));
+    _tecladoInputActivo.dispatchEvent(new Event('change', { bubbles: true }));
+    cerrarTecladoNotas();
+    return;
+  }
+  const num = parseFloat(_tecladoValor);
+  const max = parseFloat(_tecladoInputActivo.max) || 100;
+  if (isNaN(num) || num < 0) { mostrarToast('Valor inválido', 'error'); return; }
+  if (num > max) { mostrarToast('La nota no puede superar ' + max + ' pts', 'error'); return; }
+  _tecladoInputActivo.value = num;
+  _tecladoInputActivo.dispatchEvent(new Event('input', { bubbles: true }));
+  _tecladoInputActivo.dispatchEvent(new Event('change', { bubbles: true }));
+  cerrarTecladoNotas();
+}
+
+// ─── Interceptar toque en inputs de nota para mostrar teclado táctil ──
+document.addEventListener('touchstart', function (e) {
+  if (!document.body.classList.contains('touch-mode')) return;
+  const target = e.target.closest('.input-nota');
+  if (!target) return;
+  e.preventDefault();
+  abrirTecladoNotas(target);
+}, { passive: false });
+
+// ─── Swipe horizontal en el wizard ────────────────────────────────
+(function _initWizardSwipe() {
+  let _sx = null, _sy = null;
+  document.addEventListener('touchstart', function (e) {
+    _sx = e.touches[0].clientX;
+    _sy = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (_sx === null) return;
+    const dx = e.changedTouches[0].clientX - _sx;
+    const dy = e.changedTouches[0].clientY - _sy;
+    _sx = null; _sy = null;
+    if (!document.body.classList.contains('touch-mode')) return;
+    // Solo swipe horizontal marcado (>70px y más ancho que alto)
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    // Solo si el wizard está visible
+    const wizardPanel = document.getElementById('panel-planificacion');
+    if (!wizardPanel || wizardPanel.classList.contains('hidden')) return;
+    if (typeof irAlPaso !== 'function') return;
+    if (dx < 0) irAlPaso(pasoActual + 1, true);   // swipe ← → siguiente
+    else         irAlPaso(pasoActual - 1, false);  // swipe → ← anterior
+  }, { passive: true });
+})();
+
 // MÓDULO: ACERCA DE
 // ════════════════════════════════════════════════════════════════════
 function abrirAcercaDe() {
@@ -14566,8 +15422,11 @@ function exportarDatos() {
       Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_'))
     )),
     diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
+    incidencias: localStorage.getItem(INCID_KEY) || '{}',
+    recuperaciones: localStorage.getItem(RECUP_KEY) || '{}',
     borrador: localStorage.getItem(STORAGE_KEY) || 'null',
     groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || '',
+    geminiKey: localStorage.getItem('planificadorRA_geminiKey') || '',
     notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || ''
   };
 
@@ -14666,8 +15525,11 @@ function importarDatos() {
       } catch { }
     }
     if (d.diarias) localStorage.setItem(DIARIAS_KEY, d.diarias);
+    if (d.incidencias) localStorage.setItem(INCID_KEY, d.incidencias);
+    if (d.recuperaciones) localStorage.setItem(RECUP_KEY, d.recuperaciones);
     if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
     if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
+    if (d.geminiKey) localStorage.setItem('planificadorRA_geminiKey', d.geminiKey);
 
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
     cerrarBackup();
@@ -14696,6 +15558,7 @@ function renderizarDashboard() {
   _renderizarClasesManana();
   _renderizarTareasProximas();
   _renderizarResumenCursos();
+  _renderizarEstadisticasDashboard();
 }
 
 // ── Saludo + estadísticas ────────────────────────────────────────
@@ -15279,6 +16142,109 @@ function _renderizarResumenCursos() {
       </div>
     </div>`;
   }).join('') + `</div>`;
+}
+
+// ── Estadísticas de rendimiento (por curso y por RA) ────────────
+function _renderizarEstadisticasDashboard() {
+  const cont = document.getElementById('dash-estadisticas');
+  if (!cont) return;
+
+  const cursos = Object.values(calState.cursos || {});
+  const cursosConEst = cursos.filter(c => (c.estudiantes || []).length > 0 && (c.planIds || []).length > 0);
+
+  if (cursosConEst.length === 0) {
+    cont.innerHTML = '<div class="dash-empty-card"><span class="material-icons">bar_chart</span><p>Las estadísticas aparecerán cuando tengas cursos con estudiantes y planificaciones asignadas.</p></div>';
+    return;
+  }
+
+  // Cargar biblioteca una sola vez
+  const biblio = cargarBiblioteca();
+  const biblioMap = {};
+  (biblio.items || []).forEach(i => { biblioMap[i.id] = i.planificacion; });
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">';
+
+  cursosConEst.forEach(curso => {
+    const estudiantes = curso.estudiantes || [];
+    const planIdsValidos = (curso.planIds || []).filter(pid => biblioMap[pid]);
+    if (!planIdsValidos.length) return;
+
+    // Inasistencias a nivel de curso (una sola vez por curso)
+    const inasistentes = estudiantes
+      .map(est => ({ nombre: est.nombre, stats: _statsAsistencia(curso.id, est.id) }))
+      .filter(x => x.stats.total > 0 && x.stats.pct !== null && x.stats.pct < 80)
+      .sort((a, b) => a.stats.pct - b.stats.pct)
+      .slice(0, 3);
+
+    html += '<div style="background:var(--card-bg,#fff);border:1px solid #E3F2FD;border-radius:12px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">';
+
+    // Cabecera del curso
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #E3F2FD;">'
+      + '<strong style="font-size:1rem;color:var(--text-primary,#212121);">'
+      + '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;color:#1565C0;">school</span>'
+      + escapeHTML(curso.nombre) + '</strong>'
+      + '<span style="font-size:0.75rem;background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:10px;">'
+      + estudiantes.length + ' estudiantes</span>'
+      + '</div>';
+
+    // Una fila por RA/planificación
+    planIdsValidos.forEach(planId => {
+      const plan = biblioMap[planId];
+      const raKey = _getPlanIdClave(planId);
+      const raInfo = curso.ras?.[raKey];
+      const dg = plan?.datosGenerales || {};
+      const ra = plan?.ra || {};
+      const moduloLabel = (dg.moduloFormativo || 'Módulo').substring(0, 35);
+      const raDesc = (ra.descripcion || '').substring(0, 70);
+      const valorTotal = raInfo?.valorTotal || parseFloat(dg.valorRA) || 10;
+
+      let aprobados = 0, reprobados = 0, sinNotas = 0, sumaNotas = 0, conNotas = 0;
+      estudiantes.forEach(est => {
+        const nota = raInfo ? _calcNotaRA(curso, est.id, raKey) : null;
+        if (nota === null) { sinNotas++; return; }
+        conNotas++;
+        sumaNotas += nota;
+        if ((nota / valorTotal) * 100 >= 70) aprobados++; else reprobados++;
+      });
+
+      const total = aprobados + reprobados;
+      const pctBar = total > 0 ? Math.round((aprobados / total) * 100) : 0;
+      const barColor = pctBar >= 70 ? '#2E7D32' : pctBar >= 50 ? '#E65100' : '#C62828';
+      const promedio = conNotas > 0 ? (sumaNotas / conNotas).toFixed(1) : null;
+
+      html += '<div style="margin-bottom:10px;padding-left:10px;border-left:3px solid ' + barColor + ';">';
+      html += '<div style="font-size:0.82rem;font-weight:700;color:#1565C0;">' + escapeHTML(moduloLabel) + (moduloLabel.length === 35 ? '…' : '') + '</div>';
+      if (raDesc) html += '<div style="font-size:0.72rem;color:#78909C;margin-bottom:4px;">' + escapeHTML(raDesc) + (raDesc.length === 70 ? '…' : '') + '</div>';
+
+      if (total > 0) {
+        html += '<div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:3px;">'
+          + '<div style="height:8px;background:' + barColor + ';border-radius:4px;width:' + pctBar + '%;"></div></div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.72rem;">'
+          + '<span style="color:' + barColor + ';font-weight:600;">' + aprobados + ' aprobados</span>'
+          + '<span style="color:#C62828;">' + reprobados + ' reprobados</span>'
+          + (sinNotas ? '<span style="color:#9E9E9E;">' + sinNotas + ' sin notas</span>' : '')
+          + (promedio !== null ? '<span style="color:#546E7A;margin-left:auto;">Prom: <strong>' + promedio + '</strong>/' + valorTotal + '</span>' : '')
+          + '</div>';
+      } else {
+        html += '<div style="font-size:0.72rem;color:#9E9E9E;font-style:italic;">Sin calificaciones registradas</div>';
+      }
+      html += '</div>';
+    });
+
+    // Alerta de inasistencias al pie de la tarjeta
+    if (inasistentes.length > 0) {
+      html += '<div style="font-size:0.75rem;color:#E65100;padding-top:8px;border-top:1px dashed #FFE0B2;margin-top:6px;">'
+        + '<span class="material-icons" style="font-size:14px;vertical-align:middle;margin-right:2px;">warning</span>'
+        + '<strong>Baja asistencia:</strong> '
+        + inasistentes.map(x => escapeHTML(x.nombre.split(' ')[0]) + ' (' + x.stats.pct + '%)').join(' · ')
+        + '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+  cont.innerHTML = html;
 }
 
 // ════════════════════════════════════════════════════════════════════

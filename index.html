@@ -207,6 +207,12 @@
       </div>
       <div id="dash-cursos"></div>
 
+      <!-- ── Estadísticas de rendimiento ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">bar_chart</span>Estadísticas de rendimiento
+      </div>
+      <div id="dash-estadisticas"></div>
+
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">apps</span>Accesos rápidos
@@ -888,6 +894,10 @@
             style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;">
             <span class="material-icons">how_to_reg</span> Asistencia
           </button>
+          <button class="btn-export btn-sm" onclick="elegirAlumnoAleatorio()"
+            style="background:#FFF3E0;border:1.5px solid #FFB74D;color:#E65100;">
+            <span class="material-icons">casino</span> Aleatorio
+          </button>
           <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
             <span class="material-icons">description</span> Exportar Word
           </button>
@@ -918,10 +928,18 @@
             onclick="agregarEstudiantes()">
             <span class="material-icons">group_add</span> Agregar
           </button>
+          <label class="btn-export btn-sm" style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;align-self:flex-end;white-space:nowrap;" title="Importar desde archivo CSV o Excel guardado como CSV">
+            <span class="material-icons">upload_file</span> Importar CSV
+            <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none" onchange="importarAlumnosCSV(this)">
+          </label>
+          <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()" style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;align-self:flex-end;white-space:nowrap;" title="Exportar lista de alumnos a CSV">
+            <span class="material-icons">download</span> Exportar CSV
+          </button>
         </div>
         <p class="subsection-hint" style="margin-top:4px;">
           También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
           <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
+          Para importar desde Excel: guarda como <strong>CSV (.csv)</strong> y usa el botón Importar CSV.
         </p>
       </div>
 
@@ -1077,6 +1095,17 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;color:#00838F;">touch_app</span>
+              Modo Pantalla Táctil
+              <small>Botones grandes, teclado numérico en pantalla, swipe en wizard</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-touch-mode" onchange="toggleModoTactil(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
 
         <!-- Asistencia -->
@@ -1161,6 +1190,26 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#BF360C;">v11.0<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Recuperaciones, Vista del Estudiante, Modo Táctil y mejoras al Libro de Calificaciones</div>
+              <ul class="about-ver-items">
+                <li><strong>Modo Recuperación / 2da Oportunidad:</strong> registra notas de recuperación por actividad (independientes de la nota final). Botón ↺ por estudiante, punto de color en cada celda (naranja = pendiente, verde = completada), columnas Recuper. y Total RA + Recup. en la tabla</li>
+                <li><strong>Control de límite en recuperaciones:</strong> la nota de recuperación no puede hacer que el total supere el valorTotal del RA; el formulario muestra el máximo disponible</li>
+                <li><strong>Control de valores de actividades:</strong> la suma de los valores de las actividades no puede exceder el Total del RA; indicador verde/naranja/rojo en el encabezado de la tabla</li>
+                <li><strong>Vista del Estudiante (QR):</strong> genera un enlace y código QR para que el estudiante vea sus calificaciones en modo solo lectura (viewer.html)</li>
+                <li><strong>Modo Pantalla Táctil:</strong> botones y celdas de notas más grandes, teclado numérico en pantalla tipo calculadora, swipe izquierda/derecha en el wizard, sin efectos hover. Se activa en Configuración</li>
+                <li><strong>Tabla de calificaciones simplificada:</strong> se eliminaron las columnas "Otros RAs", "FINAL" y "Asistencia"; se agregaron "Recuper." y "Total RA + Recup."</li>
+                <li><strong>Columna # de estudiante</strong> en la tabla de calificaciones</li>
+                <li>Backup completo: incluye recuperaciones, incidencias, geminiKey y groqKey</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -1697,6 +1746,100 @@
       </div>
       <div class="modal-footer" style="justify-content:flex-end;">
         <button class="btn-secundario" onclick="cerrarMiCuenta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay: Recuperaciones / segunda oportunidad -->
+  <div id="recuperaciones-overlay" class="modal-overlay hidden" onclick="cerrarRecuperaciones(event)">
+    <div class="modal-box" style="max-width:580px;max-height:88vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3 id="recup-titulo">Recuperaciones</h3>
+        <button class="modal-close" onclick="cerrarRecuperacionesBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="recup-body" style="padding:0;"></div>
+    </div>
+  </div>
+
+  <!-- Overlay: Registro de incidencias/eventos por estudiante -->
+  <div id="incidencias-overlay" class="modal-overlay hidden" onclick="cerrarIncidencias(event)">
+    <div class="modal-box" style="max-width:620px;max-height:88vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3 id="inc-titulo">Eventos del estudiante</h3>
+        <button class="modal-close" onclick="cerrarIncidenciasBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="inc-body" style="padding:0;"></div>
+    </div>
+  </div>
+
+  <!-- Teclado numérico táctil para notas -->
+  <div id="teclado-notas-overlay" class="hidden"
+    style="position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#16162a;border-top:2px solid #1565C0;box-shadow:0 -8px 32px rgba(0,0,0,0.65);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #2a2a3a;">
+      <div style="display:flex;align-items:baseline;gap:10px;">
+        <span id="teclado-display" style="font-size:2.4rem;font-weight:700;color:#90CAF9;min-width:110px;display:inline-block;letter-spacing:1px;">—</span>
+        <span id="teclado-max-label" style="font-size:0.8rem;color:#546E7A;">Máx: 100</span>
+      </div>
+      <button onclick="cerrarTecladoNotas()"
+        style="background:none;border:1px solid #37474F;color:#78909C;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:0.88rem;touch-action:manipulation;display:flex;align-items:center;gap:4px;">
+        <span class="material-icons" style="font-size:16px;">close</span>Cancelar
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;max-width:440px;margin:0 auto;">
+      <button onclick="tecladoPresionar('7')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">7</button>
+      <button onclick="tecladoPresionar('8')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">8</button>
+      <button onclick="tecladoPresionar('9')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">9</button>
+      <button onclick="tecladoPresionar('DEL')" style="background:#2a1a1a;border:1px solid #3a2020;color:#EF5350;font-size:1.5rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;"><span class="material-icons">backspace</span></button>
+
+      <button onclick="tecladoPresionar('4')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">4</button>
+      <button onclick="tecladoPresionar('5')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">5</button>
+      <button onclick="tecladoPresionar('6')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">6</button>
+      <button onclick="tecladoConfirmar()" style="background:#1B5E20;border:1px solid #2E7D32;color:#69F0AE;font-size:2.2rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;grid-row:span 2;display:flex;align-items:center;justify-content:center;"><span class="material-icons" style="font-size:2.4rem;">check</span></button>
+
+      <button onclick="tecladoPresionar('1')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">1</button>
+      <button onclick="tecladoPresionar('2')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">2</button>
+      <button onclick="tecladoPresionar('3')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">3</button>
+
+      <button onclick="tecladoPresionar('0')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">0</button>
+      <button onclick="tecladoPresionar('.')" style="background:#252535;border:1px solid #2a2a3a;color:#90CAF9;font-size:1.7rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">.</button>
+      <button onclick="tecladoPresionar('AC')" style="background:#1a0a0a;border:1px solid #3a1a1a;color:#EF5350;font-size:1rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">AC</button>
+    </div>
+  </div>
+
+  <!-- Vista del estudiante (QR + enlace) -->
+  <div id="vista-est-overlay" class="modal-overlay hidden" onclick="cerrarVistaEstudiante(event)">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 id="vista-est-titulo">Vista del estudiante</h3>
+        <button class="modal-close" onclick="cerrarVistaEstudianteBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" style="padding:20px;text-align:center;">
+        <p style="color:#9E9E9E;font-size:0.82rem;margin-bottom:16px;">
+          El estudiante escanea el QR o abre el enlace para ver sus calificaciones en modo solo lectura.
+        </p>
+        <div id="vista-est-qr" style="display:flex;justify-content:center;align-items:center;min-height:224px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input id="vista-est-url" readonly
+            style="flex:1;padding:7px 10px;background:#0e0e1a;border:1px solid #333;border-radius:6px;color:#90CAF9;font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" />
+          <button onclick="copiarLinkEstudiante()"
+            style="padding:7px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:0.82rem;white-space:nowrap;">
+            <span class="material-icons" style="font-size:15px;">content_copy</span>Copiar
+          </button>
+        </div>
+        <button onclick="abrirVistaEstudianteTab()"
+          style="width:100%;padding:10px;background:#1B5E20;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;">
+          <span class="material-icons">open_in_new</span>Abrir vista completa
+        </button>
+        <p style="color:#455A64;font-size:0.72rem;display:flex;align-items:center;justify-content:center;gap:4px;">
+          <span class="material-icons" style="font-size:13px;">wifi</span>
+          El QR funciona si el estudiante está en la misma red WiFi que este equipo.
+        </p>
       </div>
     </div>
   </div>
