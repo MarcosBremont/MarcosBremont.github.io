@@ -7932,10 +7932,10 @@ function abrirVistaEstudiante(estId) {
 
   // Generar QR como <img> usando api.qrserver.com (sin librería JS)
   const qrDiv = document.getElementById('vista-est-qr');
-  qrDiv.innerHTML = '<div style="width:220px;height:220px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;">'
-    + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=210x210&margin=6&ecc=M&data='
+  qrDiv.innerHTML = '<div style="width:210px;height:210px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:6px;">'
+    + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&ecc=L&data='
     + encodeURIComponent(urlQR)
-    + '" alt="QR" style="border-radius:6px;" width="210" height="210"'
+    + '" alt="QR" style="width:198px;height:198px;border-radius:4px;image-rendering:crisp-edges;image-rendering:-moz-crisp-edges;image-rendering:pixelated;"'
     + ' onerror="this.parentElement.innerHTML=\'<span style=\\\'color:#9E9E9E;font-size:0.8rem;text-align:center;padding:10px;\\\'>Sin conexión — usa el botón Abrir o Copiar enlace</span>\'" />'
     + '</div>';
 
@@ -16170,9 +16170,10 @@ function _renderizarEstadisticasDashboard() {
     if (!planIdsValidos.length) return;
 
     // Inasistencias a nivel de curso (una sola vez por curso)
+    // Requiere al menos 2 sesiones para evitar falsos positivos de prueba
     const inasistentes = estudiantes
       .map(est => ({ nombre: est.nombre, stats: _statsAsistencia(curso.id, est.id) }))
-      .filter(x => x.stats.total > 0 && x.stats.pct !== null && x.stats.pct < 80)
+      .filter(x => x.stats.total >= 2 && x.stats.pct !== null && x.stats.pct < 80)
       .sort((a, b) => a.stats.pct - b.stats.pct)
       .slice(0, 3);
 
@@ -16236,7 +16237,7 @@ function _renderizarEstadisticasDashboard() {
       html += '<div style="font-size:0.75rem;color:#E65100;padding-top:8px;border-top:1px dashed #FFE0B2;margin-top:6px;">'
         + '<span class="material-icons" style="font-size:14px;vertical-align:middle;margin-right:2px;">warning</span>'
         + '<strong>Baja asistencia:</strong> '
-        + inasistentes.map(x => escapeHTML(x.nombre.split(' ')[0]) + ' (' + x.stats.pct + '%)').join(' · ')
+        + inasistentes.map(x => escapeHTML(x.nombre.split(' ')[0]) + ' (' + x.stats.pct + '% · ' + x.stats.total + ' cls)').join(' · ')
         + '</div>';
     }
 
