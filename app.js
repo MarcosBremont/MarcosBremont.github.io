@@ -13633,17 +13633,29 @@ function abrirDiarias() {
 
 /** Abre diarias precargando directamente la planificación indicada por su ID */
 function abrirDiariasConPlan(planId) {
-  if (!planId) { abrirDiarias(); return; }
+  console.log('[abrirDiariasConPlan] planId recibido:', JSON.stringify(planId));
+  if (!planId) {
+    console.log('[abrirDiariasConPlan] planId vacío → fallback abrirDiarias()');
+    abrirDiarias(); return;
+  }
   const biblio = cargarBiblioteca();
+  const ids = (biblio.items || []).map(i => i.id);
+  console.log('[abrirDiariasConPlan] IDs en biblioteca:', ids);
   const item = (biblio.items || []).find(it => it.id === planId);
-  if (!item || !item.planificacion) { abrirDiarias(); return; }
+  console.log('[abrirDiariasConPlan] item encontrado:', !!item, '| tiene planificacion:', !!item?.planificacion, '| actividades:', item?.planificacion?.actividades?.length ?? 'n/a');
+  if (!item || !item.planificacion) {
+    console.log('[abrirDiariasConPlan] no encontrado → fallback abrirDiarias()');
+    abrirDiarias(); return;
+  }
   planificacion = item.planificacion;
   (planificacion.actividades || []).forEach(a => { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
   (planificacion.fechasClase || []).forEach(f => { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
+  console.log('[abrirDiariasConPlan] planificacion cargada | actividades:', planificacion.actividades?.length);
   cargarDiarias();
   _mostrarPanel('panel-diarias');
   _actualizarSelectorPlanDiarias(true);
   renderizarDiarias();
+  console.log('[abrirDiariasConPlan] ✓ completado');
 }
 // __old_abrirDiarias__
 
