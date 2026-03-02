@@ -13630,6 +13630,21 @@ function abrirDiarias() {
   _actualizarSelectorPlanDiarias(tieneActividades);
   renderizarDiarias();
 }
+
+/** Abre diarias precargando directamente la planificación indicada por su ID */
+function abrirDiariasConPlan(planId) {
+  if (!planId) { abrirDiarias(); return; }
+  const biblio = cargarBiblioteca();
+  const item = (biblio.items || []).find(it => it.id === planId);
+  if (!item || !item.planificacion) { abrirDiarias(); return; }
+  planificacion = item.planificacion;
+  (planificacion.actividades || []).forEach(a => { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
+  (planificacion.fechasClase || []).forEach(f => { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
+  cargarDiarias();
+  _mostrarPanel('panel-diarias');
+  _actualizarSelectorPlanDiarias(true);
+  renderizarDiarias();
+}
 // __old_abrirDiarias__
 
 
@@ -15900,7 +15915,7 @@ function abrirModalClase(encodedData) {
             </div>
           </div>`;
       })()} 
-        <button onclick="cerrarModalBtn();abrirDiarias();" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+        <button onclick="cerrarModalBtn();abrirDiariasConPlan('${sesionInfo.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
           <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
         </button>
       </div>` : `
