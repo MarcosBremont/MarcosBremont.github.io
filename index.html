@@ -55,15 +55,14 @@
       </div>
       <button id="btn-notificaciones" class="btn-config-ia" onclick="abrirNotificaciones()"
         title="Notificaciones y recordatorios"
-        style="position:relative;background:rgba(245,124,0,0.1);border-color:rgba(245,124,0,0.3);color:#E65100;">
+        style="position:relative;">
         <span class="material-icons">notifications</span>
         <span class="btn-nueva-label">Avisos</span>
         <span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;background:#E53935;color:#fff;
           border-radius:50%;width:16px;height:16px;font-size:0.6rem;font-weight:800;
           display:flex;align-items:center;justify-content:center;"></span>
       </button>
-      <button id="btn-buscar-est" class="btn-config-ia" onclick="abrirBuscadorEstudiante()" title="Buscar estudiante"
-        style="background:rgba(0,105,92,0.1);border-color:rgba(0,150,136,0.3);color:#00695C;">
+      <button id="btn-buscar-est" class="btn-config-ia" onclick="abrirBuscadorEstudiante()" title="Buscar estudiante">
         <span class="material-icons">search</span>
         <span class="btn-nueva-label">Buscar</span>
       </button>
@@ -71,19 +70,16 @@
         <span class="material-icons">settings</span>
         <span class="btn-nueva-label">Config. IA</span>
       </button>
-      <button id="btn-backup" class="btn-config-ia" onclick="abrirBackup()" title="Exportar / Importar todos los datos"
-        style="background:rgba(230,81,0,0.1);border-color:rgba(230,81,0,0.3);color:#E65100;">
+      <button id="btn-backup" class="btn-config-ia" onclick="abrirBackup()" title="Exportar / Importar todos los datos">
         <span class="material-icons">backup</span>
         <span class="btn-nueva-label">Mis datos</span>
       </button>
       <button id="btn-configuracion" class="btn-config-ia" onclick="abrirConfiguracion()"
-        title="Configuración de la app"
-        style="background:rgba(69,39,160,0.1);border-color:rgba(149,117,205,0.3);color:#4527A0;">
+        title="Configuración de la app">
         <span class="material-icons">tune</span>
         <span class="btn-nueva-label">Config.</span>
       </button>
-      <button id="btn-acercade" class="btn-config-ia" onclick="abrirAcercaDe()" title="Acerca de Metabot"
-        style="background:rgba(0,105,92,0.1);border-color:rgba(0,150,136,0.3);color:#00695C;">
+      <button id="btn-acercade" class="btn-config-ia" onclick="abrirAcercaDe()" title="Acerca de Metabot">
         <span class="material-icons">info_outline</span>
         <span class="btn-nueva-label">Info</span>
       </button>
@@ -1369,8 +1365,7 @@
   </div>
 
   <!-- PICKER DE CURSO para Modo Presentación -->
-  <div id="pres-picker-overlay" class="modal-overlay hidden"
-    onclick="this.id==='pres-picker-overlay'&&cerrarPresPicker()">
+  <div id="pres-picker-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:420px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">cast_for_education</span>Seleccionar clase</h3>
@@ -1426,7 +1421,7 @@
   </div>
 
   <!-- ===== MODAL CONFIGURACIÓN ===== -->
-  <div id="config-overlay" class="modal-overlay hidden" onclick="this.id==='config-overlay'&&cerrarConfiguracion()">
+  <div id="config-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons"
@@ -1598,7 +1593,7 @@
   </div>
 
   <!-- ===== MODAL ACERCA DE ===== -->
-  <div id="acercade-overlay" class="modal-overlay hidden" onclick="this.id==='acercade-overlay'&&cerrarAcercaDe()">
+  <div id="acercade-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;" onclick="event.stopPropagation()">
       <div class="modal-header" style="position:sticky;top:0;z-index:1;">
         <h3><span class="material-icons"
@@ -1948,7 +1943,7 @@
   </div>
 
   <!-- ===== MODAL NOTIFICACIONES ===== -->
-  <div id="notif-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarNotificaciones()">
+  <div id="notif-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:520px;max-height:88vh;display:flex;flex-direction:column;"
       onclick="event.stopPropagation()">
       <div class="modal-header" style="flex-shrink:0;">
@@ -1967,7 +1962,7 @@
   </div>
 
   <!-- ===== MODAL EXPORTAR ASISTENCIA ===== -->
-  <div id="exp-asist-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarExpAsistencia()">
+  <div id="exp-asist-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons"
@@ -2022,7 +2017,7 @@
   </div>
 
   <!-- ===== MODAL DUPLICAR PLANIFICACIÓN ===== -->
-  <div id="dup-plan-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarDuplicarPlan()">
+  <div id="dup-plan-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons"
@@ -2089,7 +2084,7 @@
   </div>
 
   <!-- ===== MODAL BUSCADOR DE ESTUDIANTES ===== -->
-  <div id="buscar-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarBuscadorEstudiante()">
+  <div id="buscar-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;"
       onclick="event.stopPropagation()">
       <div class="modal-header" style="flex-shrink:0;">
@@ -2122,7 +2117,7 @@
   </div>
 
   <!-- ===== MODAL DE INSTRUMENTO ===== -->
-  <div id="modal-overlay" class="modal-overlay hidden" onclick="cerrarModal(event)">
+  <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-box" id="modal-box">
       <div class="modal-header">
         <h3 id="modal-title">Instrumento de Evaluación</h3>

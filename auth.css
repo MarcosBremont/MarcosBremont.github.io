@@ -252,8 +252,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(21, 101, 192, 0.1);
-  border: 1.5px solid rgba(21, 101, 192, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   cursor: pointer;
   font-family: inherit;
@@ -261,7 +261,7 @@
 }
 
 .btn-user-account:hover {
-  background: rgba(21, 101, 192, 0.18);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .btn-user-avatar {
@@ -281,7 +281,7 @@
 .btn-user-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #1565C0;
+  color: #fff;
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;

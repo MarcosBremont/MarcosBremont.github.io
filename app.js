@@ -16788,7 +16788,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v10.0</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v12.6</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -19170,7 +19170,6 @@ function _calEscModalEfemeride(mes, idx, ef) {
           style="background:#6A1B9A;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;">Guardar</button>
       </div>
     </div>`;
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
   setTimeout(() => document.getElementById('cef-titulo')?.focus(), 50);
 }

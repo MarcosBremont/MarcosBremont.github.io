@@ -4605,6 +4605,7 @@ body.dark-mode .imp-resumen-row span {
   padding: 10px 16px;
   min-width: 72px;
   transition: box-shadow 0.15s, transform 0.12s;
+  color: var(--color-texto-primario);
 }
 
 .dash-stat-pill:hover {
