@@ -10,8 +10,6 @@ const STATIC_ASSETS = [
   '/docx.js',
   '/firebase-config.js',
   '/Metabotlogo.svg',
-  '/MetaBotLogo.png',
-  '/MetaBotLogo_transparent.png',
   '/manifest.json'
 ];
 

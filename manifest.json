@@ -11,22 +11,10 @@
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "MetaBotLogo.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "MetaBotLogo_transparent.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
       "src": "Metabotlogo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [],
@@ -36,7 +24,7 @@
       "short_name": "Nueva",
       "description": "Crear una nueva planificación educativa",
       "url": "/index.html#nueva",
-      "icons": [{ "src": "MetaBotLogo.png", "sizes": "any" }]
+      "icons": [{ "src": "Metabotlogo.svg", "sizes": "any" }]
     }
   ]
 }
