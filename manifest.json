@@ -11,9 +11,9 @@
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "Metabotlogo.svg",
+      "src": "LogoMetabot.png",
       "sizes": "any",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
@@ -24,7 +24,7 @@
       "short_name": "Nueva",
       "description": "Crear una nueva planificación educativa",
       "url": "/index.html#nueva",
-      "icons": [{ "src": "Metabotlogo.svg", "sizes": "any" }]
+      "icons": [{ "src": "LogoMetabot.png", "sizes": "any" }]
     }
   ]
 }
