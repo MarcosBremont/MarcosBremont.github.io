@@ -18801,7 +18801,7 @@ function abrirPresPicker() {
         'width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;' +
         'border:2px solid ' + (esActual ? '#1565C0' : 'var(--color-borde,#E0E0E0)') + ';' +
         'background:' + (esActual ? '#EEF2FF' : 'transparent') + ';cursor:pointer;' +
-        'font-size:0.95rem;font-weight:600;color:var(--color-texto,#212121);">' +
+        'font-size:0.95rem;font-weight:600;color:var(--color-texto-primario,#212121);">' +
         escapeHTML(c.nombre || 'Curso sin nombre') +
         (esActual ? ' <span style="font-size:0.72rem;background:#1565C0;color:#fff;' +
           'border-radius:4px;padding:1px 6px;margin-left:8px;">Ahora</span>' : '') +
