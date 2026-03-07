@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog del Docente — Metabot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #F4F6F8;
+      color: #212121;
+      min-height: 100vh;
+    }
+    /* Header */
+    .blog-header {
+      background: linear-gradient(135deg, #006064 0%, #00838F 100%);
+      color: #fff;
+      padding: 20px 20px 16px;
+      text-align: center;
+    }
+    .blog-header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+    .blog-header .sub { font-size: 0.85rem; opacity: 0.85; }
+    .blog-header .curso-nombre {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+    /* RA tabs */
+    .ra-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 16px;
+      background: #fff;
+      border-bottom: 1px solid #E0E0E0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .ra-tab {
+      background: #F5F5F5;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #616161;
+      transition: all 0.15s;
+    }
+    .ra-tab.activo {
+      background: #006064;
+      border-color: #006064;
+      color: #fff;
+    }
+    /* Main container */
+    .blog-main { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+    /* Post card */
+    .post-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    .post-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .tipo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .tipo-pc       { background: #E3F2FD; color: #1565C0; }
+    .tipo-cuaderno { background: #E8F5E9; color: #2E7D32; }
+    .tipo-info     { background: #FFF3E0; color: #E65100; }
+
+    .post-fecha-limite {
+      font-size: 0.72rem;
+      background: #FFF8E1;
+      color: #E65100;
+      border-radius: 20px;
+      padding: 3px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-weight: 600;
+    }
+    .post-fecha-limite.vencida { background: #FFEBEE; color: #C62828; }
+    .post-titulo {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #212121;
+      margin-bottom: 6px;
+    }
+    .post-meta {
+      font-size: 0.76rem;
+      color: #9E9E9E;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .post-meta span { display: inline-flex; align-items: center; gap: 3px; }
+    /* Notebook task box */
+    .contenido-cuaderno {
+      background: #FFFDE7;
+      border: 2px dashed #FDD835;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: #212121;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .contenido-cuaderno .copy-hint {
+      font-size: 0.72rem;
+      color: #F9A825;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 700;
+    }
+    /* Info/PC content */
+    .contenido-normal {
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: #424242;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 12px;
+    }
+    /* Attachments */
+    .adjuntos-section { margin-top: 10px; margin-bottom: 14px; }
+    .adjunto-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #E8F5E9;
+      border: 1.5px solid #A5D6A7;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.80rem;
+      color: #2E7D32;
+      text-decoration: none;
+      margin: 4px 4px 0 0;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .adjunto-btn:hover { background: #C8E6C9; }
+    /* Submission form */
+    .entrega-form {
+      background: #F8FAFF;
+      border: 1.5px solid #90CAF9;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-top: 14px;
+    }
+    .entrega-form h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #1565C0;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { font-size: 0.78rem; font-weight: 600; color: #616161; display: block; margin-bottom: 4px; }
+    .form-group input[type="text"],
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: #212121;
+      background: #fff;
+      box-sizing: border-box;
+    }
+    .form-group input[type="text"]:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #1565C0;
+    }
+    .file-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #E3F2FD;
+      border: 1.5px dashed #90CAF9;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 0.80rem;
+      color: #1565C0;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .file-label:hover { background: #BBDEFB; }
+    .file-selected {
+      font-size: 0.76rem;
+      color: #2E7D32;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .submit-btn {
+      width: 100%;
+      background: #1565C0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 12px;
+      transition: background 0.15s;
+    }
+    .submit-btn:hover:not(:disabled) { background: #1976D2; }
+    .submit-btn:disabled { background: #BDBDBD; cursor: not-allowed; }
+    .entrega-ok {
+      background: #E8F5E9;
+      border: 1.5px solid #A5D6A7;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      text-align: center;
+      color: #2E7D32;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    /* Loading / Error */
+    .loading-state, .error-state, .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #9E9E9E;
+    }
+    .loading-state .material-icons { font-size: 48px; display: block; margin-bottom: 10px; }
+    .error-state { color: #C62828; }
+    .error-state .material-icons { color: #C62828; font-size: 40px; display: block; margin-bottom: 10px; }
+    /* RA section title */
+    .ra-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #006064;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 6px 0 10px;
+      border-bottom: 2px solid #B2EBF2;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    /* Footer */
+    .blog-footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.72rem;
+      color: #BDBDBD;
+    }
+    @media (max-width: 480px) {
+      .post-card { padding: 14px; }
+      .blog-main { padding: 14px 12px 50px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="blog-header">
+    <h1><span class="material-icons" style="vertical-align:middle;font-size:1.3rem;margin-right:4px;">article</span> Blog del Docente</h1>
+    <div class="sub" id="blog-sub">Cargando...</div>
+    <div id="blog-curso-nombre-chip"></div>
+  </div>
+
+  <div class="ra-tabs" id="ra-tabs" style="display:none;"></div>
+
+  <div class="blog-main">
+    <div id="blog-content">
+      <div class="loading-state">
+        <span class="material-icons">hourglass_empty</span>
+        <p>Cargando publicaciones...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="blog-footer">Metabot — Plataforma de Docentes</div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ── Config Firebase (mismo proyecto) ─────────────────────────
+    const firebaseConfig = {
+      apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
+      authDomain:        "metabot-7af4d.firebaseapp.com",
+      projectId:         "metabot-7af4d",
+      storageBucket:     "metabot-7af4d.firebasestorage.app",
+      messagingSenderId: "872698787040",
+      appId:             "1:872698787040:web:9f8914b0601996d1f68c85"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ── Parámetros de URL ─────────────────────────────────────────
+    const params  = new URLSearchParams(window.location.search);
+    const teacherUid = params.get('uid');
+    const cursoFiltro = params.get('curso') || '';
+    let postId = params.get('post') || '';
+
+    // ── Estado ────────────────────────────────────────────────────
+    let _allPosts = [];
+    let _raActivo = '';
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function esc(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtFecha(iso) {
+      return new Date(iso + 'T12:00:00').toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+    function isVencida(fechaLimite) {
+      if (!fechaLimite) return false;
+      return new Date(fechaLimite + 'T23:59:59') < new Date();
+    }
+
+    // ── Cargar posts desde Firestore ──────────────────────────────
+    async function cargarPosts() {
+      if (!teacherUid) {
+        mostrarError('URL inválida: falta el parámetro uid.');
+        return;
+      }
+      try {
+        const snap = await db.collection('public_blogs').doc(teacherUid).collection('posts').get();
+        const todosLosPosts = snap.docs
+          .map(d => d.data())
+          .filter(p => p.publicado !== false)
+          .sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+
+        // Si NO hay filtro de curso → mostrar selector de cursos
+        if (!cursoFiltro) {
+          const cursosMap = new Map();
+          todosLosPosts.forEach(p => {
+            if (!cursosMap.has(p.cursoId)) cursosMap.set(p.cursoId, { nombre: p.cursoNombre, total: 0 });
+            cursosMap.get(p.cursoId).total++;
+          });
+          document.getElementById('blog-sub').textContent = 'Selecciona tu curso';
+          if (cursosMap.size === 0) {
+            document.getElementById('blog-content').innerHTML =
+              '<div class="empty-state"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span><p>El docente aún no ha publicado nada.</p></div>';
+            return;
+          }
+          // Render course picker
+          let html = '<div style="display:grid;gap:12px;max-width:420px;margin:0 auto;">';
+          cursosMap.forEach(({ nombre, total }, cid) => {
+            const url = window.location.href.split('?')[0] + '?uid=' + encodeURIComponent(teacherUid) + '&curso=' + encodeURIComponent(cid);
+            html += `<a href="${esc(url)}" style="display:flex;align-items:center;gap:14px;background:#fff;border:1.5px solid #B2EBF2;border-radius:12px;padding:16px 18px;text-decoration:none;color:#006064;transition:box-shadow 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+              <span class="material-icons" style="font-size:32px;color:#00838F;">school</span>
+              <div>
+                <div style="font-weight:700;font-size:1rem;color:#212121;">${esc(nombre || cid)}</div>
+                <div style="font-size:0.78rem;color:#757575;margin-top:2px;">${total} publicación${total !== 1 ? 'es' : ''}</div>
+              </div>
+              <span class="material-icons" style="margin-left:auto;color:#B0BEC5;">chevron_right</span>
+            </a>`;
+          });
+          html += '</div>';
+          document.getElementById('blog-content').innerHTML = html;
+          return;
+        }
+
+        // Con filtro de curso: mostrar solo los posts de ese curso
+        _allPosts = todosLosPosts.filter(p => p.cursoId === cursoFiltro);
+
+        if (_allPosts.length === 0) {
+          document.getElementById('blog-sub').textContent = 'Sin publicaciones disponibles';
+          document.getElementById('blog-content').innerHTML =
+            '<div class="empty-state"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span><p>El docente aún no ha publicado nada para este curso.</p></div>';
+          return;
+        }
+
+        // Nombre del curso en header
+        const cursoNombre = _allPosts[0]?.cursoNombre || '';
+        document.getElementById('blog-sub').textContent = cursoNombre || 'Blog del Docente';
+        if (cursoNombre) {
+          document.getElementById('blog-curso-nombre-chip').innerHTML =
+            `<span class="curso-nombre"><span class="material-icons" style="font-size:13px;vertical-align:middle;">school</span> ${esc(cursoNombre)}</span>`;
+        }
+
+        // Si hay postId directo en URL, mostrar solo ese
+        if (postId) {
+          const soloPost = _allPosts.find(p => p.id === postId);
+          if (soloPost) { renderPost(soloPost); return; }
+        }
+
+        // Tabs de RA (solo si hay más de uno)
+        const rasUnicos = [...new Map(_allPosts.map(p => [p.planId, p.raLabel])).entries()];
+        const tabsEl = document.getElementById('ra-tabs');
+        if (rasUnicos.length > 1) {
+          tabsEl.style.display = 'flex';
+          tabsEl.innerHTML = `<span class="ra-tab activo" onclick="filtrarRA('')">Todos</span>`
+            + rasUnicos.map(([pid, lbl]) =>
+                `<span class="ra-tab" data-plan="${esc(pid)}" onclick="filtrarRA('${esc(pid)}')">${esc((lbl||'').substring(0,40))}</span>`
+              ).join('');
+        }
+
+        renderPosts(_allPosts);
+
+      } catch (e) {
+        mostrarError('No se pudo cargar el blog. ' + e.message);
+      }
+    }
+
+    function filtrarRA(planId) {
+      _raActivo = planId;
+      // Actualizar tabs
+      document.querySelectorAll('.ra-tab').forEach(t => {
+        const tp = t.dataset.plan || '';
+        t.classList.toggle('activo', tp === planId);
+      });
+      const filtered = planId ? _allPosts.filter(p => p.planId === planId) : _allPosts;
+      renderPosts(filtered);
+    }
+
+    function renderPosts(posts) {
+      const cont = document.getElementById('blog-content');
+      if (!posts.length) {
+        cont.innerHTML = '<div class="empty-state"><p>No hay publicaciones para esta sección.</p></div>';
+        return;
+      }
+      // Agrupar por RA si hay varios
+      const raGroups = new Map();
+      posts.forEach(p => {
+        if (!raGroups.has(p.planId)) raGroups.set(p.planId, { label: p.raLabel, posts: [] });
+        raGroups.get(p.planId).posts.push(p);
+      });
+      let html = '';
+      raGroups.forEach(({ label, posts: raPosts }) => {
+        if (raGroups.size > 1) {
+          html += `<div class="ra-section-title"><span class="material-icons" style="font-size:16px;color:#00838F;">bookmark</span>${esc((label||'').substring(0,60))}</div>`;
+        }
+        raPosts.forEach(p => { html += buildPostHTML(p); });
+      });
+      cont.innerHTML = html;
+    }
+
+    function renderPost(p) {
+      document.getElementById('blog-content').innerHTML = buildPostHTML(p);
+    }
+
+    function buildPostHTML(p) {
+      const tipoMap = {
+        pc:       { label: '🖥️ Tarea en PC',       cls: 'tipo-pc' },
+        cuaderno: { label: '📓 Tarea en cuaderno',  cls: 'tipo-cuaderno' },
+        info:     { label: 'ℹ️ Información',         cls: 'tipo-info' }
+      };
+      const ti = tipoMap[p.tipo] || tipoMap.info;
+      const vencida = isVencida(p.fechaLimite);
+
+      let fechaBadge = '';
+      if (p.fechaLimite) {
+        fechaBadge = `<span class="post-fecha-limite ${vencida ? 'vencida' : ''}">
+          <span class="material-icons" style="font-size:12px;">event</span>
+          ${vencida ? 'Venció' : 'Límite'}: ${fmtFecha(p.fechaLimite)}
+        </span>`;
+      }
+
+      // Adjuntos del docente
+      const adjuntos = p.adjuntos || [];
+      let adjuntosHTML = '';
+      if (adjuntos.length > 0) {
+        adjuntosHTML = `<div class="adjuntos-section">
+          <div style="font-size:0.76rem;font-weight:700;color:#616161;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+            <span class="material-icons" style="font-size:14px;">attach_file</span> Archivos adjuntos
+          </div>
+          ${adjuntos.map(a =>
+            `<a class="adjunto-btn" onclick="_descargarAdjunto('${esc(p.id)}','${esc(a.nombre)}')" download="${esc(a.nombre)}">
+              <span class="material-icons" style="font-size:14px;">download</span> ${esc(a.nombre)}
+            </a>`
+          ).join('')}
+        </div>`;
+      }
+
+      // Sección de contenido según tipo
+      let contenidoHTML = '';
+      if (p.tipo === 'cuaderno') {
+        contenidoHTML = `<div class="contenido-cuaderno">
+          <div class="copy-hint"><span class="material-icons" style="font-size:13px;">edit_note</span> Copia esto en tu cuaderno</div>
+          ${esc(p.contenido || '').replace(/\n/g, '<br>')}
+        </div>`;
+      } else {
+        contenidoHTML = `<div class="contenido-normal">${esc(p.contenido || '').replace(/\n/g, '<br>')}</div>`;
+      }
+
+      // Formulario de entrega (solo tipo PC, y no vencida)
+      let entregaHTML = '';
+      if (p.tipo === 'pc') {
+        if (vencida) {
+          entregaHTML = `<div style="background:#FFEBEE;border:1.5px solid #EF9A9A;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:0.82rem;color:#C62828;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">lock</span>
+            El plazo para entregar esta tarea ya venció.
+          </div>`;
+        } else {
+          entregaHTML = buildEntregaForm(p.id);
+        }
+      }
+
+      return `<div class="post-card" id="post-${esc(p.id)}">
+        <div class="post-header">
+          <span class="tipo-badge ${ti.cls}">${ti.label}</span>
+          ${fechaBadge}
+        </div>
+        <div class="post-titulo">${esc(p.titulo)}</div>
+        <div class="post-meta">
+          <span><span class="material-icons" style="font-size:13px;">schedule</span> ${new Date(p.creadoEn).toLocaleDateString('es')}</span>
+        </div>
+        ${contenidoHTML}
+        ${adjuntosHTML}
+        ${entregaHTML}
+      </div>`;
+    }
+
+    function buildEntregaForm(postId) {
+      return `<div class="entrega-form" id="form-${postId}">
+        <h4><span class="material-icons" style="font-size:18px;">upload_file</span> Entregar tarea</h4>
+        <div class="form-group">
+          <label>Tu nombre completo *</label>
+          <input type="text" id="nombre-${postId}" placeholder="Escribe tu nombre..." maxlength="80">
+        </div>
+        <div class="form-group">
+          <label>Comentario (opcional)</label>
+          <textarea id="comentario-${postId}" rows="2" placeholder="Ej: Aquí está mi tarea, tuve duda en..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Archivo (opcional, máx. 400 KB)</label>
+          <label class="file-label" for="archivo-${postId}">
+            <span class="material-icons" style="font-size:16px;">attach_file</span> Seleccionar archivo
+          </label>
+          <input type="file" id="archivo-${postId}" style="display:none;" onchange="onFileChange('${postId}')">
+          <div id="file-nombre-${postId}" class="file-selected" style="display:none;"></div>
+        </div>
+        <button class="submit-btn" id="btn-entregar-${postId}" onclick="entregarTarea('${postId}')">
+          <span class="material-icons">send</span> Enviar entrega
+        </button>
+      </div>`;
+    }
+
+    function onFileChange(postId) {
+      const input = document.getElementById('archivo-' + postId);
+      const label = document.getElementById('file-nombre-' + postId);
+      if (!input || !label) return;
+      const file = input.files[0];
+      if (!file) { label.style.display = 'none'; return; }
+      if (file.size > 400 * 1024) {
+        alert('El archivo supera los 400 KB. Por favor elige un archivo más pequeño.');
+        input.value = '';
+        label.style.display = 'none';
+        return;
+      }
+      label.style.display = 'flex';
+      label.innerHTML = `<span class="material-icons" style="font-size:14px;">check_circle</span> ${esc(file.name)}`;
+    }
+
+    async function entregarTarea(postId) {
+      const nombreEl   = document.getElementById('nombre-' + postId);
+      const comentEl   = document.getElementById('comentario-' + postId);
+      const archivoEl  = document.getElementById('archivo-' + postId);
+      const btn        = document.getElementById('btn-entregar-' + postId);
+      const nombre     = (nombreEl?.value || '').trim();
+      if (!nombre) { alert('Por favor escribe tu nombre.'); nombreEl?.focus(); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-icons" style="animation:spin 1s linear infinite;display:inline-block;">hourglass_empty</span> Enviando...';
+
+      let archivo = null;
+      const file = archivoEl?.files?.[0];
+      if (file) {
+        try {
+          archivo = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload  = e => resolve({ nombre: file.name, datos: e.target.result });
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        } catch (e) {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-icons">send</span> Enviar entrega';
+          alert('Error al leer el archivo. Intenta de nuevo.');
+          return;
+        }
+      }
+
+      const submission = {
+        postId,
+        nombre,
+        comentario: (comentEl?.value || '').trim(),
+        archivo,
+        fecha: new Date().toISOString()
+      };
+
+      try {
+        const subId = 'sub-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+        await db.collection('public_blogs').doc(teacherUid).collection('submissions').doc(subId).set(submission);
+        // Mostrar éxito
+        const formEl = document.getElementById('form-' + postId);
+        if (formEl) {
+          formEl.outerHTML = `<div class="entrega-ok">
+            <span class="material-icons" style="font-size:24px;">check_circle</span>
+            ¡Entrega enviada exitosamente, ${esc(nombre)}!
+          </div>`;
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">send</span> Enviar entrega';
+        alert('Error al enviar: ' + e.message + '\nRevisa tu conexión e intenta de nuevo.');
+      }
+    }
+
+    function _descargarAdjunto(postId, nombre) {
+      const post = _allPosts.find(p => p.id === postId);
+      if (!post) return;
+      const adj = (post.adjuntos || []).find(a => a.nombre === nombre);
+      if (!adj) return;
+      const a = document.createElement('a');
+      a.href = adj.datos;
+      a.download = nombre;
+      a.click();
+    }
+
+    function mostrarError(msg) {
+      document.getElementById('blog-sub').textContent = 'Error';
+      document.getElementById('blog-content').innerHTML =
+        `<div class="error-state"><span class="material-icons">error_outline</span><p>${esc(msg)}</p></div>`;
+    }
+
+    // Spinner CSS keyframe
+    const style = document.createElement('style');
+    style.textContent = '@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
+    document.head.appendChild(style);
+
+    // ── Iniciar ───────────────────────────────────────────────────
+    cargarPosts();
+  </script>
+</body>
+</html>

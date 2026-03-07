@@ -1,0 +1,42 @@
+{
+  "name": "Metabot - Planificador Educativo",
+  "short_name": "Metabot",
+  "description": "Sistema de Planificación Educativa por Resultados de Aprendizaje para docentes de educación técnico profesional de la República Dominicana.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1565C0",
+  "background_color": "#F5F7FA",
+  "lang": "es",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "MetaBotLogo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "MetaBotLogo_transparent.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "Metabotlogo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nueva Planificación",
+      "short_name": "Nueva",
+      "description": "Crear una nueva planificación educativa",
+      "url": "/index.html#nueva",
+      "icons": [{ "src": "MetaBotLogo.png", "sizes": "any" }]
+    }
+  ]
+}

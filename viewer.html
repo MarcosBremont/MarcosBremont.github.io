@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mis Calificaciones</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0e0e1a;color:#e0e0e0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:16px;max-width:580px;margin:0 auto}
+    .header{background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);border-radius:14px;padding:22px 20px;margin-bottom:14px}
+    .header-meta{font-size:0.78rem;color:#90CAF9;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .header h1{font-size:1.3rem;color:#fff;font-weight:700;margin-bottom:8px}
+    .badge{display:inline-block;background:rgba(255,255,255,0.18);color:#fff;font-size:0.72rem;font-weight:600;padding:3px 12px;border-radius:20px;margin-right:6px;margin-bottom:4px}
+    .header-ra{font-size:0.78rem;color:#90CAF9;margin-top:6px;line-height:1.4;opacity:.9}
+    .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+    .sum-card{background:#1a1a2a;border:1px solid #2a2a3a;border-radius:12px;padding:14px;text-align:center}
+    .sum-val{font-size:1.9rem;font-weight:700;line-height:1}
+    .sum-label{font-size:0.7rem;color:#9E9E9E;margin-top:4px;line-height:1.4}
+    .bar{height:5px;background:#2a2a3a;border-radius:3px;overflow:hidden;margin-top:8px}
+    .bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+    .card{background:#1a1a2a;border:1px solid #2a2a3a;border-radius:12px;margin-bottom:14px;overflow:hidden}
+    .card-head{padding:10px 16px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#90CAF9;border-bottom:1px solid #2a2a3a;background:#12122a}
+    .act-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #1e1e2e;gap:8px}
+    .act-row:last-child{border-bottom:none}
+    .act-num{font-size:0.68rem;color:#546E7A;font-weight:600;min-width:34px}
+    .act-label{flex:1;font-size:0.82rem;line-height:1.35;color:#CFD8DC}
+    .act-max{font-size:0.7rem;color:#546E7A;white-space:nowrap}
+    .nota{font-size:1rem;font-weight:700;white-space:nowrap;text-align:right;min-width:44px}
+    .recup-tag{display:inline-flex;align-items:center;gap:2px;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:12px;margin-top:2px}
+    .recup-p{background:rgba(255,143,0,.18);color:#FF8F00}
+    .recup-d{background:rgba(105,240,174,.15);color:#69F0AE}
+    .c-ok{color:#69F0AE}.c-mid{color:#FFD740}.c-bad{color:#EF5350}.c-none{color:#444}
+    .bc-ok{background:#69F0AE}.bc-mid{background:#FFD740}.bc-bad{background:#EF5350}.bc-none{background:#333}
+    .readonly-bar{display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.72rem;color:#444;padding:14px 0 20px;text-align:center}
+    .readonly-bar .material-icons{font-size:13px}
+    .error-wrap{text-align:center;padding:60px 20px}
+    .error-wrap .material-icons{font-size:54px;color:#EF5350;display:block;margin-bottom:12px}
+    .error-wrap p{color:#9E9E9E;font-size:.9rem}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function () {
+  var app = document.getElementById('app');
+
+  function err(msg) {
+    app.innerHTML = '<div class="error-wrap"><span class="material-icons">error_outline</span><p>' + msg + '</p></div>';
+  }
+
+  var hash = location.hash.slice(1);
+  if (!hash.startsWith('data=')) { err('Enlace inválido o sin datos.'); return; }
+
+  var d;
+  try {
+    d = JSON.parse(decodeURIComponent(atob(hash.slice(5))));
+  } catch (e) { err('No se pudo leer la información. El enlace puede estar dañado.'); return; }
+
+  document.title = 'Calificaciones — ' + (d.n || 'Estudiante');
+
+  function cls(n, v) {
+    if (n === null || n === undefined) return 'none';
+    var p = v > 0 ? (n / v) * 100 : 0;
+    return p >= 70 ? 'ok' : p >= 50 ? 'mid' : 'bad';
+  }
+  function pct(n, v) {
+    return (n !== null && n !== undefined && v > 0) ? Math.min(100, Math.round((n / v) * 100)) : 0;
+  }
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var tRAcls = cls(d.tRA, d.vt);
+  var asistCls = (d.asist === null || d.asist === undefined) ? 'none' : d.asist >= 80 ? 'ok' : d.asist >= 60 ? 'mid' : 'bad';
+  var totalCls = cls(d.tTotal !== null && d.tTotal !== undefined ? d.tTotal : d.tRA, d.vt);
+
+  var sumCards = '<div class="sum-card">'
+    + '<div class="sum-val c-' + tRAcls + '">' + (d.tRA !== null && d.tRA !== undefined ? d.tRA.toFixed(1) : '—') + '</div>'
+    + '<div class="sum-label">Total RA<br>' + (d.vt || 0) + ' pts</div>'
+    + '<div class="bar"><div class="bar-fill bc-' + tRAcls + '" style="width:' + pct(d.tRA, d.vt) + '%;"></div></div>'
+    + '</div>';
+
+  if (d.tTotal !== null && d.tTotal !== undefined) {
+    sumCards += '<div class="sum-card">'
+      + '<div class="sum-val c-' + totalCls + '">' + d.tTotal.toFixed(1) + '</div>'
+      + '<div class="sum-label">Total + Recup.<br>' + (d.vt || 0) + ' pts máx.</div>'
+      + '<div class="bar"><div class="bar-fill bc-' + totalCls + '" style="width:' + pct(d.tTotal, d.vt) + '%;"></div></div>'
+      + '</div>';
+  }
+
+  sumCards += '<div class="sum-card">'
+    + '<div class="sum-val c-' + asistCls + '">' + (d.asist !== null && d.asist !== undefined ? d.asist + '%' : '—') + '</div>'
+    + '<div class="sum-label">Asistencia</div>'
+    + '<div class="bar"><div class="bar-fill bc-' + asistCls + '" style="width:' + (d.asist || 0) + '%;"></div></div>'
+    + '</div>';
+
+  var actsHtml = (d.acts || []).map(function (a, i) {
+    var notaStr = (a.n !== null && a.n !== undefined) ? a.n.toFixed(1) : '—';
+    var c = cls(a.n, a.v);
+    var recupHtml = '';
+    if (a.r !== null && a.r !== undefined) {
+      var rcls = a.rs === 'completada' ? 'recup-d' : 'recup-p';
+      var ricon = a.rs === 'completada' ? 'check_circle' : 'schedule';
+      var rlabel = (a.rs === 'completada' ? '+' : '↻ ') + a.r + ' recup.';
+      recupHtml = '<br><span class="recup-tag ' + rcls + '"><span class="material-icons" style="font-size:10px;">' + ricon + '</span>' + rlabel + '</span>';
+    }
+    return '<div class="act-row">'
+      + '<div class="act-num">Act.' + (i + 1) + '</div>'
+      + '<div class="act-label">' + esc(a.l) + recupHtml + '</div>'
+      + '<div class="act-max">' + (a.v || 0) + ' pts</div>'
+      + '<div class="nota c-' + c + '">' + notaStr + '</div>'
+      + '</div>';
+  }).join('');
+
+  app.innerHTML =
+    '<div class="header">'
+    + '<div class="header-meta"><span class="material-icons" style="font-size:14px;">school</span>' + esc(d.c) + ' &nbsp;·&nbsp; ' + esc(d.f) + '</div>'
+    + '<h1>' + esc(d.n) + '</h1>'
+    + (d.m ? '<span class="badge">' + esc(d.m) + '</span>' : '')
+    + (d.ra ? '<div class="header-ra">' + esc(d.ra) + '</div>' : '')
+    + '</div>'
+    + '<div class="summary">' + sumCards + '</div>'
+    + '<div class="card">'
+    + '<div class="card-head">Detalle de actividades</div>'
+    + (actsHtml || '<div style="padding:16px;color:#555;text-align:center;font-size:.85rem;">Sin actividades registradas.</div>')
+    + '</div>'
+    + '<div class="readonly-bar"><span class="material-icons">lock</span>Vista de solo lectura &nbsp;·&nbsp; Generado el ' + esc(d.f) + '</div>';
+})();
+</script>
+</body>
+</html>

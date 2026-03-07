@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metabot</title>
+  <meta name="description"
+    content="Sistema de Planificación Educativa por Resultados de Aprendizaje para docentes de educación técnico profesional de la República Dominicana." />
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1565C0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Metabot" />
+  <link rel="apple-touch-icon" href="MetaBotLogo.png" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Auth -->
+  <link rel="stylesheet" href="auth.css" />
+</head>
+
+<body>
+
+  <!-- ===== BANNER DE BORRADOR ===== -->
+  <div id="banner-borrador" class="banner-borrador hidden">
+    <span class="material-icons">restore</span>
+    <span>Se encontró un borrador guardado. ¿Deseas restaurarlo?</span>
+    <div class="banner-actions">
+      <button id="btn-restaurar" class="btn-banner btn-primary-banner">Restaurar borrador</button>
+      <button id="btn-descartar-borrador" class="btn-banner btn-secondary-banner">Descartar</button>
+    </div>
+  </div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <button class="logo-btn" onclick="irAlHome()" title="Inicio – Metabot">
+          <img src="Metabotlogo.svg" alt="Metabot" class="header-logo" />
+        </button>
+        <div>
+          <h1 class="header-title">Planificador Educativo por RA</h1>
+          <p class="header-subtitle">Sistema de Educación Técnico Profesional · República Dominicana</p>
+        </div>
+      </div>
+      <button id="btn-notificaciones" class="btn-config-ia" onclick="abrirNotificaciones()"
+        title="Notificaciones y recordatorios"
+        style="position:relative;background:rgba(245,124,0,0.1);border-color:rgba(245,124,0,0.3);color:#E65100;">
+        <span class="material-icons">notifications</span>
+        <span class="btn-nueva-label">Avisos</span>
+        <span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;background:#E53935;color:#fff;
+          border-radius:50%;width:16px;height:16px;font-size:0.6rem;font-weight:800;
+          display:flex;align-items:center;justify-content:center;"></span>
+      </button>
+      <button id="btn-buscar-est" class="btn-config-ia" onclick="abrirBuscadorEstudiante()" title="Buscar estudiante"
+        style="background:rgba(0,105,92,0.1);border-color:rgba(0,150,136,0.3);color:#00695C;">
+        <span class="material-icons">search</span>
+        <span class="btn-nueva-label">Buscar</span>
+      </button>
+      <button id="btn-config-ia" class="btn-config-ia" onclick="abrirConfigIA()" title="Configurar clave de IA (Groq)">
+        <span class="material-icons">settings</span>
+        <span class="btn-nueva-label">Config. IA</span>
+      </button>
+      <button id="btn-backup" class="btn-config-ia" onclick="abrirBackup()" title="Exportar / Importar todos los datos"
+        style="background:rgba(230,81,0,0.1);border-color:rgba(230,81,0,0.3);color:#E65100;">
+        <span class="material-icons">backup</span>
+        <span class="btn-nueva-label">Mis datos</span>
+      </button>
+      <button id="btn-configuracion" class="btn-config-ia" onclick="abrirConfiguracion()"
+        title="Configuración de la app"
+        style="background:rgba(69,39,160,0.1);border-color:rgba(149,117,205,0.3);color:#4527A0;">
+        <span class="material-icons">tune</span>
+        <span class="btn-nueva-label">Config.</span>
+      </button>
+      <button id="btn-acercade" class="btn-config-ia" onclick="abrirAcercaDe()" title="Acerca de Metabot"
+        style="background:rgba(0,105,92,0.1);border-color:rgba(0,150,136,0.3);color:#00695C;">
+        <span class="material-icons">info_outline</span>
+        <span class="btn-nueva-label">Info</span>
+      </button>
+      <button id="btn-nueva-planificacion" class="btn-nueva" title="Nueva Planificación">
+        <span class="material-icons">add_circle_outline</span>
+        <span class="btn-nueva-label">Nueva Planificación</span>
+      </button>
+      <!-- Usuario autenticado -->
+      <div id="auth-user-wrap"></div>
+    </div>
+  </header>
+
+  <!-- ===== OVERLAY DE LOGIN ===== -->
+  <div id="auth-overlay" class="hidden">
+    <div class="auth-card">
+      <div class="auth-header">
+        <img src="Metabotlogo.svg" alt="Logo" class="auth-logo" onerror="this.style.display='none'">
+        <div class="auth-app-name">Metabot</div>
+        <div class="auth-app-sub">Sistema de Planificación Educativa · Educación Técnico Profesional</div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab activo" onclick="authCambiarTab('login')">Iniciar sesión</button>
+        <button class="auth-tab" onclick="authCambiarTab('reg')">Registrarse</button>
+      </div>
+
+      <!-- Formulario Login -->
+      <div id="auth-form-login" class="auth-form">
+        <div class="auth-field">
+          <label for="auth-email">Correo electrónico</label>
+          <input type="email" id="auth-email" placeholder="docente@ejemplo.com" autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label for="auth-pass">Contraseña</label>
+          <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <div class="auth-error" id="auth-error-login"></div>
+        <button class="auth-btn-primary" id="auth-btn-login" onclick="authIniciarSesionEmail()">
+          <div class="auth-spinner" id="auth-spin-login"></div>
+          <span class="material-icons">login</span> Entrar
+        </button>
+        <div class="auth-divider">o</div>
+        <button class="auth-btn-google" onclick="authIniciarSesionGoogle()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continuar con Google
+        </button>
+      </div>
+
+      <!-- Panel OTP — verificación por código -->
+      <div id="auth-verificacion-panel" style="display:none;text-align:center;padding:8px 0 4px;">
+        <span class="material-icons" style="font-size:52px;color:#1565C0;display:block;margin-bottom:8px;">mark_email_unread</span>
+        <div style="font-weight:800;font-size:1.05rem;color:#212121;margin-bottom:6px;">Revisa tu correo electrónico</div>
+        <p style="font-size:0.83rem;color:#546E7A;margin:0 0 4px;">Te enviamos un código de 6 dígitos a:</p>
+        <div id="auth-ver-email" style="font-weight:700;color:#1565C0;font-size:0.88rem;margin-bottom:14px;word-break:break-all;"></div>
+        <input type="text" id="auth-otp-input" maxlength="6" inputmode="numeric"
+          placeholder="000000"
+          style="width:100%;text-align:center;font-size:1.8rem;letter-spacing:0.35em;font-weight:800;
+                 padding:12px 8px;border:2px solid #90CAF9;border-radius:12px;margin-bottom:6px;
+                 box-sizing:border-box;outline:none;color:#1565C0;font-family:monospace;"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+          onkeydown="if(event.key==='Enter') authVerificarOTPRegistro()" />
+        <div id="auth-ver-msg" style="font-size:0.78rem;margin-bottom:10px;min-height:18px;color:#C62828;"></div>
+        <button onclick="authVerificarOTPRegistro()" id="auth-btn-otp"
+          style="width:100%;background:#1565C0;color:#fff;border:none;border-radius:8px;
+                 padding:11px;font-size:0.88rem;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px;">
+          <span class="material-icons" style="font-size:17px;">check_circle</span> Verificar código
+        </button>
+        <button onclick="authReenviarOTPRegistro()" id="auth-btn-otp-reenv"
+          style="width:100%;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;
+                 border-radius:8px;padding:10px;font-size:0.84rem;font-weight:700;cursor:pointer;
+                 display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px;">
+          <span class="material-icons" style="font-size:16px;">refresh</span> Reenviar código
+        </button>
+        <button onclick="authVolverAlLogin()"
+          style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;
+                 border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;
+                 display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">arrow_back</span> Volver al inicio
+        </button>
+        <div id="auth-otp-timer" style="font-size:0.75rem;color:#90A4AE;margin-top:10px;min-height:16px;"></div>
+      </div>
+
+      <!-- Formulario Registro -->
+      <div id="auth-form-registro" class="auth-form" style="display:none;">
+        <div class="auth-field">
+          <label for="auth-nombre-reg">Nombre (opcional)</label>
+          <input type="text" id="auth-nombre-reg" placeholder="Lic. María García" autocomplete="name" />
+        </div>
+        <div class="auth-field">
+          <label for="auth-email-reg">Correo electrónico</label>
+          <input type="email" id="auth-email-reg" placeholder="docente@ejemplo.com" autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label for="auth-pass-reg">Contraseña</label>
+          <input type="password" id="auth-pass-reg" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+        </div>
+        <div class="auth-field">
+          <label for="auth-pass-reg2">Confirmar contraseña</label>
+          <input type="password" id="auth-pass-reg2" placeholder="Repite la contraseña" autocomplete="new-password" />
+        </div>
+        <div class="auth-error" id="auth-error-reg"></div>
+        <button class="auth-btn-primary" id="auth-btn-reg" onclick="authRegistrarse()">
+          <div class="auth-spinner" id="auth-spin-reg"></div>
+          <span class="material-icons">person_add</span> Crear cuenta
+        </button>
+        <div class="auth-divider">o</div>
+        <button class="auth-btn-google" onclick="authMostrarCodigoGoogle()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Registrarme con Google
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: CÓDIGO PARA GOOGLE REGISTRO ===== -->
+  <div id="auth-google-code-overlay" class="hidden" style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:28px 24px;width:min(340px,calc(100vw - 32px));box-shadow:0 8px 40px rgba(0,0,0,0.28);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="material-icons" style="color:#6A1B9A;">vpn_key</span>
+        <span style="font-size:1rem;font-weight:800;color:#212121;">Código de invitación</span>
+      </div>
+      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Ingresa el código secreto para completar el registro con Google.</p>
+      <input type="text" id="auth-codigo-google" placeholder="Código secreto"
+        style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;box-sizing:border-box;letter-spacing:0.1em;"
+        onkeydown="if(event.key==='Enter') _confirmarCodigoGoogle()" />
+      <div class="auth-error" id="auth-codigo-google-error" style="margin-top:6px;min-height:18px;"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+        <button onclick="document.getElementById('auth-google-code-overlay').classList.add('hidden');document.getElementById('auth-codigo-google').value='';document.getElementById('auth-codigo-google-error').textContent='';"
+          style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">
+          Cancelar
+        </button>
+        <button onclick="_confirmarCodigoGoogle()"
+          style="background:#4285F4;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">check</span> Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="panel-dashboard" class="dashboard-panel hidden">
+    <div class="dash-main">
+
+      <!-- ── Saludo + stats ── -->
+      <div class="dash-greeting" id="dash-greeting"></div>
+
+      <!-- ── Accesos rápidos ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">apps</span>Accesos rápidos
+      </div>
+      <div class="dash-nav-grid">
+        <button class="dash-nav-btn" onclick="irAlHomeBase()" style="--accent:#1565C0;">
+          <span class="material-icons">add_circle_outline</span>
+          <span>Nueva Planificación</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirPlanificaciones()" style="--accent:#4527A0;">
+          <span class="material-icons">folder_special</span>
+          <span>Mis Planificaciones</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirDiarias()" style="--accent:#00695C;">
+          <span class="material-icons">today</span>
+          <span>Planificaciones Diarias</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirCalificaciones()" style="--accent:#E65100;">
+          <span class="material-icons">grade</span>
+          <span>Libro de Calificaciones</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirHorario()" style="--accent:#0277BD;">
+          <span class="material-icons">calendar_view_week</span>
+          <span>Mi Horario</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirTareas()" style="--accent:#E65100;">
+          <span class="material-icons">assignment</span>
+          <span>Tareas</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirNotas()" style="--accent:#5D4037;">
+          <span class="material-icons">sticky_note_2</span>
+          <span>Mis Notas</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirLibreta()" style="--accent:#00695C;">
+          <span class="material-icons">menu_book</span>
+          <span>Mi Libreta</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirRendimiento()" style="--accent:#6A1B9A;">
+          <span class="material-icons">insights</span>
+          <span>Rendimiento</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirConfigIA()" style="--accent:#AD1457;">
+          <span class="material-icons">auto_awesome</span>
+          <span>Configurar IA</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirImportarPlanificacion()" style="--accent:#1B5E20;">
+          <span class="material-icons">upload_file</span>
+          <span>Importar Planificación</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirBackup()" style="--accent:#BF360C;">
+          <span class="material-icons">backup</span>
+          <span>Mis Datos</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirBlog()" style="--accent:#006064;">
+          <span class="material-icons">article</span>
+          <span>Blog</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirCalendarioEscolar()" style="--accent:#1565C0;">
+          <span class="material-icons">event_note</span>
+          <span>Calendario Escolar</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirAuditoria()" style="--accent:#4A148C;">
+          <span class="material-icons">security</span>
+          <span>Auditoría</span>
+        </button>
+        <button class="dash-nav-btn" onclick="abrirModoPresent()" style="--accent:#E65100;">
+          <span class="material-icons">cast_for_education</span>
+          <span>Presentación</span>
+        </button>
+      </div>
+
+      <!-- ── Alertas inteligentes ── -->
+      <div id="dash-alertas" style="margin-top:16px;"></div>
+
+      <!-- ── Grid principal: Hoy | Mañana | Tareas ── -->
+      <div class="dash-grid-3col">
+        <!-- Columna 1: clases de hoy -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">today</span>Clases de hoy
+            <span id="dash-hoy-fecha" style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
+          </div>
+          <div id="dash-hoy"></div>
+        </div>
+        <!-- Columna 2: clases de mañana -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">event</span>Mañana
+            <span id="dash-manana-fecha"
+              style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
+          </div>
+          <div id="dash-manana"></div>
+        </div>
+        <!-- Columna 3: tareas próximas -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">assignment</span>Tareas próximas
+            <button onclick="abrirTareas()"
+              style="margin-left:auto;background:none;border:none;color:#1565C0;font-size:0.75rem;font-weight:700;cursor:pointer;">Ver
+              todas →</button>
+          </div>
+          <div id="dash-tareas-proximas"></div>
+        </div>
+      </div>
+
+      <!-- ── Resumen de cursos ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">school</span>Estado de cursos
+        <button onclick="abrirCalificaciones()"
+          style="margin-left:auto;background:none;border:none;color:#1565C0;font-size:0.75rem;font-weight:700;cursor:pointer;">Ir
+          al libro →</button>
+      </div>
+      <div id="dash-cursos"></div>
+
+      <!-- ── Estadísticas de rendimiento ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">bar_chart</span>Estadísticas de rendimiento
+      </div>
+      <div id="dash-estadisticas"></div>
+
+    </div>
+  </div>
+
+  <!-- ===== STEPPER ===== -->
+  <div class="stepper-container">
+    <div class="stepper" id="stepper">
+      <div class="step active" data-step="1">
+        <div class="step-circle">
+          <span class="step-number">1</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Datos Generales</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="2">
+        <div class="step-circle">
+          <span class="step-number">2</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Resultado de Aprendizaje</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="3">
+        <div class="step-circle">
+          <span class="step-number">3</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Elementos de Capacidad</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="4">
+        <div class="step-circle">
+          <span class="step-number">4</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Actividades</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="5">
+        <div class="step-circle">
+          <span class="step-number">5</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Plan. Diaria</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="6">
+        <div class="step-circle">
+          <span class="step-number">6</span>
+          <span class="material-icons step-check hidden">check</span>
+        </div>
+        <span class="step-label">Vista Previa</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTENIDO PRINCIPAL ===== -->
+  <main class="main-content">
+
+    <!-- =========================================
+         PASO 1: DATOS GENERALES
+         ========================================= -->
+    <section class="step-section active" id="section-1">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">assignment</span>
+          <h2>Datos Generales del Módulo</h2>
+        </div>
+
+        <div class="form-grid">
+          <!-- Familia Profesional -->
+          <div class="form-group">
+            <label for="familia-profesional">Familia Profesional *</label>
+            <input type="text" id="familia-profesional" placeholder="Ej: Informática y Comunicaciones" required />
+          </div>
+
+          <!-- Código FP -->
+          <div class="form-group">
+            <label for="codigo-fp">Código FP *</label>
+            <input type="text" id="codigo-fp" placeholder="Ej: IFC-001" required />
+          </div>
+
+          <!-- Nombre del Bachillerato Técnico -->
+          <div class="form-group form-group--full">
+            <label for="nombre-bachillerato">Nombre del Bachillerato Técnico *</label>
+            <input type="text" id="nombre-bachillerato" placeholder="Ej: Bachillerato Técnico en Desarrollo de Software"
+              required />
+          </div>
+
+          <!-- Código del Título -->
+          <div class="form-group">
+            <label for="codigo-titulo">Código del Título *</label>
+            <input type="text" id="codigo-titulo" placeholder="Ej: BT-DS-2024" required />
+          </div>
+
+          <!-- Módulo Formativo -->
+          <div class="form-group">
+            <label for="modulo-formativo">Módulo Formativo *</label>
+            <input type="text" id="modulo-formativo" placeholder="Ej: Programación Web Avanzada" required />
+          </div>
+
+          <!-- Código del Módulo -->
+          <div class="form-group">
+            <label for="codigo-modulo">Código del Módulo *</label>
+            <input type="text" id="codigo-modulo" placeholder="Ej: MF-PWA-301" required />
+          </div>
+
+          <!-- Nombre del Docente -->
+          <div class="form-group">
+            <label for="nombre-docente">Nombre del Docente *</label>
+            <input type="text" id="nombre-docente" placeholder="Ej: Prof. Ana García Pérez" required />
+          </div>
+
+          <!-- Cantidad de RA del Módulo -->
+          <div class="form-group">
+            <label for="cantidad-ra">Cantidad de RA del Módulo *</label>
+            <input type="number" id="cantidad-ra" min="1" max="20" placeholder="Ej: 5" required />
+          </div>
+
+          <!-- Valor del RA (puntos) -->
+          <div class="form-group">
+            <label for="valor-ra">Valor del RA (puntos) *</label>
+            <input type="number" id="valor-ra" min="1" max="100" placeholder="Ej: 20" required />
+          </div>
+
+          <!-- Horas por semana -->
+          <div class="form-group">
+            <label for="horas-semana">Horas por Semana *</label>
+            <input type="number" id="horas-semana" min="1" max="40" placeholder="Ej: 6" required />
+          </div>
+
+          <!-- Fecha de Inicio -->
+          <div class="form-group">
+            <label for="fecha-inicio">Fecha de Inicio *</label>
+            <input type="date" id="fecha-inicio" required />
+          </div>
+
+          <!-- Fecha de Término -->
+          <div class="form-group">
+            <label for="fecha-termino">Fecha de Término *</label>
+            <input type="date" id="fecha-termino" required />
+          </div>
+        </div>
+
+        <!-- Días de clase + horas por día -->
+        <div class="dias-clase-section">
+          <h3 class="subsection-title">
+            <span class="material-icons">calendar_today</span>
+            Días de Clase por Semana
+          </h3>
+          <p class="subsection-hint">Selecciona los días y especifica las horas de clase cada día.</p>
+          <div class="dias-grid">
+            <!-- Lunes -->
+            <div class="dia-card" id="dia-card-lunes">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-lunes" class="dia-checkbox" value="lunes" />
+                <span class="dia-nombre">Lunes</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-lunes-wrap">
+                <input type="number" id="horas-lunes" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Martes -->
+            <div class="dia-card" id="dia-card-martes">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-martes" class="dia-checkbox" value="martes" />
+                <span class="dia-nombre">Martes</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-martes-wrap">
+                <input type="number" id="horas-martes" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Miércoles -->
+            <div class="dia-card" id="dia-card-miercoles">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-miercoles" class="dia-checkbox" value="miercoles" />
+                <span class="dia-nombre">Miércoles</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-miercoles-wrap">
+                <input type="number" id="horas-miercoles" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Jueves -->
+            <div class="dia-card" id="dia-card-jueves">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-jueves" class="dia-checkbox" value="jueves" />
+                <span class="dia-nombre">Jueves</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-jueves-wrap">
+                <input type="number" id="horas-jueves" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+            <!-- Viernes -->
+            <div class="dia-card" id="dia-card-viernes">
+              <label class="dia-checkbox-label">
+                <input type="checkbox" id="dia-viernes" class="dia-checkbox" value="viernes" />
+                <span class="dia-nombre">Viernes</span>
+              </label>
+              <div class="dia-horas hidden" id="horas-viernes-wrap">
+                <input type="number" id="horas-viernes" min="1" max="8" value="2" class="input-horas" />
+                <span class="horas-label">hrs</span>
+              </div>
+            </div>
+          </div>
+          <!-- Resumen de horas calculadas -->
+          <div id="resumen-horas" class="resumen-horas hidden">
+            <span class="material-icons">schedule</span>
+            <span id="resumen-horas-texto"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <div></div>
+        <button class="btn-siguiente" onclick="irAlPaso(2)">
+          Siguiente
+          <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 2: RESULTADO DE APRENDIZAJE
+         ========================================= -->
+    <section class="step-section" id="section-2">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">psychology</span>
+          <h2>Resultado de Aprendizaje y Criterios</h2>
+        </div>
+
+        <div class="form-grid">
+          <!-- Descripción del RA -->
+          <div class="form-group form-group--full">
+            <label for="descripcion-ra">Descripción del Resultado de Aprendizaje (RA) *</label>
+            <textarea id="descripcion-ra" rows="5"
+              placeholder="Escribe aquí la descripción completa del RA. Ej: El/la estudiante será capaz de desarrollar aplicaciones web usando JavaScript moderno, aplicando principios de diseño responsivo y buenas prácticas de programación, demostrando compromiso con la calidad del código..."
+              required></textarea>
+            <div id="nivel-bloom-detectado" class="bloom-badge hidden"></div>
+          </div>
+
+          <!-- Criterios de Evaluación de Referencia -->
+          <div class="form-group form-group--full">
+            <label for="criterios-referencia">
+              Criterios de Evaluación de Referencia del Currículo
+              <span class="label-optional">(opcional, uno por línea)</span>
+            </label>
+            <textarea id="criterios-referencia" rows="5"
+              placeholder="Ingresa los criterios del currículo, uno por línea. Ej:&#10;Identifica los fundamentos de la programación orientada a objetos&#10;Desarrolla interfaces de usuario responsivas&#10;Aplica buenas prácticas de codificación"></textarea>
+          </div>
+
+          <!-- Recursos didácticos -->
+          <div class="form-group form-group--full">
+            <label for="recursos-didacticos">Recursos Didácticos Disponibles</label>
+            <textarea id="recursos-didacticos" rows="3"
+              placeholder="Ej: Computadoras con acceso a internet, proyector, pizarrón digital, plataforma Moodle, herramientas de desarrollo VS Code..."></textarea>
+          </div>
+        </div>
+
+        <!-- Info tip -->
+        <div class="info-tip">
+          <span class="material-icons">lightbulb</span>
+          <p>El sistema analizará el texto del RA para detectar su nivel de dominio según la <strong>Taxonomía de
+              Bloom</strong> y generará automáticamente los Elementos de Capacidad (EC) adecuados.</p>
+        </div>
+
+      </div>
+
+      <!-- Botón Generar -->
+      <div class="generar-section">
+        <button id="btn-generar" class="btn-generar" onclick="generarPlanificacion()">
+          <span class="material-icons btn-generar-icon">auto_awesome</span>
+          <span id="btn-generar-texto">Generar Planificación</span>
+        </button>
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(1)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <button class="btn-siguiente" onclick="irAlPaso(3)" id="btn-paso2-siguiente" disabled>
+          Siguiente
+          <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 3: ELEMENTOS DE CAPACIDAD
+         ========================================= -->
+    <section class="step-section" id="section-3">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">layers</span>
+          <h2>Elementos de Capacidad (EC)</h2>
+        </div>
+
+        <div class="info-tip">
+          <span class="material-icons">edit_note</span>
+          <p>Los EC han sido generados automáticamente. Puedes <strong>editarlos</strong> haciendo clic en el texto. Los
+            cambios se guardan automáticamente.</p>
+        </div>
+
+        <!-- Resumen de horas distribuidas -->
+        <div id="resumen-distribucion" class="resumen-distribucion hidden">
+          <div class="resumen-item">
+            <span class="material-icons">schedule</span>
+            <div>
+              <strong id="total-horas-display">--</strong>
+              <small>Horas totales</small>
+            </div>
+          </div>
+          <div class="resumen-item">
+            <span class="material-icons">calendar_month</span>
+            <div>
+              <strong id="total-semanas-display">--</strong>
+              <small>Semanas</small>
+            </div>
+          </div>
+          <div class="resumen-item">
+            <span class="material-icons">bar_chart</span>
+            <div>
+              <strong id="horas-por-ec-display">--</strong>
+              <small>Horas por EC</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjetas de EC -->
+        <div id="ec-container" class="ec-container">
+          <!-- Se genera dinámicamente por JS -->
+        </div>
+
+        <!-- Botón agregar EC -->
+        <div style="display:flex;justify-content:center;margin-top:16px;">
+          <button onclick="_agregarNuevoEC()"
+            style="display:flex;align-items:center;gap:7px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:9px 22px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            <span class="material-icons">add_circle</span> Agregar Elemento de Capacidad
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(2)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <button class="btn-siguiente" onclick="irAlPaso(4)">
+          Siguiente
+          <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 4: ACTIVIDADES E INSTRUMENTOS
+         ========================================= -->
+    <section class="step-section" id="section-4">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">event_note</span>
+          <h2>Actividades e Instrumentos de Evaluación</h2>
+        </div>
+
+        <div class="info-tip">
+          <span class="material-icons">info</span>
+          <p>Las actividades tienen fechas reales calculadas según los días de clase ingresados. Haz clic en
+            <strong>"Ver instrumento"</strong> para visualizar la lista de cotejo o rúbrica correspondiente.
+          </p>
+        </div>
+
+        <!-- Alerta ECs sin actividades -->
+        <div id="alerta-ec-sin-act" style="display:none;align-items:center;gap:8px;
+          background:#FFF3E0;border:1.5px solid #FFCC80;border-radius:9px;
+          padding:10px 14px;font-size:0.82rem;color:#E65100;margin-bottom:12px;">
+        </div>
+
+        <!-- Tabla de actividades -->
+        <div class="tabla-responsiva">
+          <table id="tabla-actividades" class="tabla-actividades">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>EC</th>
+                <th>Actividad</th>
+                <th>Instrumento</th>
+                <th style="text-align:center;">Valor (pts)</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-actividades-body">
+              <!-- Se llena dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Botón agregar nueva actividad -->
+        <div style="display:flex;justify-content:center;margin-top:14px;">
+          <button onclick="_agregarNuevaActividad()"
+            style="display:flex;align-items:center;gap:6px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            <span class="material-icons">add_circle</span> Agregar actividad
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(3)">
+          <span class="material-icons">arrow_back</span>
+          Anterior
+        </button>
+        <button class="btn-siguiente" onclick="irAlPaso(5)">
+          Plan. Diaria
+          <span class="material-icons">today</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         PASO 6: VISTA PREVIA Y EXPORTACIÓN
+         ========================================= -->
+    <section class="step-section" id="section-6">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">picture_as_pdf</span>
+          <h2>Vista Previa y Exportación</h2>
+        </div>
+
+        <!-- Botones de exportación -->
+        <div class="export-buttons">
+          <button class="btn-export btn-print" onclick="imprimirPDF()">
+            <span class="material-icons">print</span>
+            Imprimir / PDF
+          </button>
+          <button class="btn-export btn-word" onclick="exportarWord()">
+            <span class="material-icons">description</span>
+            Exportar a Word
+          </button>
+          <button class="btn-export btn-copy" onclick="copiarPortapapeles()">
+            <span class="material-icons">content_copy</span>
+            Copiar al portapapeles
+          </button>
+        </div>
+
+        <!-- Vista previa imprimible -->
+        <div id="vista-previa" class="vista-previa">
+          <!-- Se genera dinámicamente -->
+        </div>
+
+      </div>
+
+      <!-- Navegación -->
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPaso(5)">
+          <span class="material-icons">arrow_back</span>
+          Plan. Diaria
+        </button>
+        <div></div>
+      </div>
+    </section>
+
+
+  </main>
+
+
+  <!-- ===== PANEL PLANIFICACIONES (Biblioteca) ===== -->
+  <div id="panel-planificaciones" class="pln-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#EDE7F6;color:#4527A0;">folder_special</span>
+        <h2>Mis Planificaciones Guardadas</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-nueva"
+            style="background:rgba(21,101,192,0.12);border-color:rgba(144,202,249,0.6);color:#1565C0;"
+            onclick="abrirImportarPlanificacion()">
+            <span class="material-icons">upload_file</span>
+            <span class="btn-nueva-label">Importar planificación</span>
+          </button>
+          <button class="btn-nueva" style="background:rgba(69,39,160,0.18);border-color:rgba(179,157,219,0.6);"
+            onclick="nuevaPlanificacion()">
+            <span class="material-icons">add_circle_outline</span>
+            <span class="btn-nueva-label">Nueva planificación</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="info-tip" style="border-color:#7E57C2;background:#EDE7F6;">
+        <span class="material-icons" style="color:#4527A0;">save</span>
+        <p>Guarda la planificación actual con el botón <strong>"Guardar planificación"</strong> en cualquier paso.
+          Aquí aparecerán todas las que hayas guardado para retomarlas cuando quieras.</p>
+      </div>
+
+      <!-- Buscador -->
+      <div class="pln-search-bar">
+        <span class="material-icons" style="color:#9E9E9E;">search</span>
+        <input type="text" id="pln-buscador" placeholder="Buscar por módulo, docente o bachillerato..."
+          oninput="filtrarPlanificaciones()" />
+      </div>
+
+      <!-- Grid de tarjetas -->
+      <div id="pln-grid" class="pln-grid">
+        <!-- Se llena dinámicamente -->
+      </div>
+
+      <!-- Estado vacío -->
+      <div id="pln-vacio" class="pln-vacio hidden">
+        <span class="material-icons">folder_open</span>
+        <p>No hay planificaciones guardadas todavía.</p>
+        <p>Completa una planificación y haz clic en <strong>"Guardar planificación"</strong>.</p>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarPlanificaciones()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL PLANIFICACIONES DIARIAS ===== -->
+  <div id="panel-diarias" class="pd-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E3F2FD;color:#0D47A1;">today</span>
+        <h2>Planificaciones Diarias</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-export btn-word btn-sm" onclick="exportarDiariasWord()">
+            <span class="material-icons">description</span> Exportar Word
+          </button>
+          <button class="btn-export btn-print btn-sm" onclick="imprimirDiarias()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
+        </div>
+      </div>
+
+      <div class="info-tip" style="border-color:#1565C0;background:#E3F2FD;">
+        <span class="material-icons" style="color:#0D47A1;">lightbulb</span>
+        <p>Cada <strong>actividad</strong> de tu planificación general se convierte en una sesión diaria con sus
+          tres momentos pedagógicos. Haz clic en <strong>"Generar"</strong> para auto-generar el contenido, o
+          escribe directamente en los campos.</p>
+      </div>
+
+      <!-- Sin actividades -->
+      <div id="pd-sin-actividades" class="pln-vacio hidden">
+        <span class="material-icons">event_busy</span>
+        <p>No hay actividades generadas.</p>
+        <p>Completa los primeros 4 pasos de la planificación y vuelve aquí.</p>
+      </div>
+
+      <!-- Selector de EC -->
+      <div id="pd-filtro-bar" class="pd-filtro-bar hidden">
+        <span style="font-weight:600;color:#0D47A1;font-size:0.9rem;">Filtrar por EC:</span>
+        <div id="pd-filtro-chips" class="pd-filtro-chips">
+          <button class="pd-chip-flt activo" data-ec="todos" onclick="filtrarSesionesEC(this,'todos')">Todas</button>
+        </div>
+      </div>
+
+      <!-- Lista de sesiones -->
+      <div id="pd-sesiones-lista" class="pd-sesiones-lista"></div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarDiariasContextual()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+      <button class="btn-guardar-plan" onclick="guardarTodasDiarias()">
+        <span class="material-icons">save</span> Guardar cambios
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL NOTAS DEL DOCENTE ===== -->
+  <div id="panel-notas" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#EFEBE9;color:#5D4037;">sticky_note_2</span>
+        <h2>Mis Notas</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <span id="notas-guardado-ind" style="display:none;font-size:0.78rem;color:#2E7D32;font-weight:600;">✓
+            Guardado</span>
+        </div>
+      </div>
+      <p style="font-size:0.85rem;color:#757575;margin-bottom:12px;">Espacio libre para anotar recordatorios, ideas,
+        pendientes o cualquier cosa importante. Se guarda automáticamente.</p>
+      <textarea id="notas-docente-textarea"
+        placeholder="Escribe aquí tus notas...&#10;&#10;Ejemplo:&#10;• Recordar revisar exámenes del 2do B&#10;• Pedir materiales para el laboratorio&#10;• Reunión con padres el viernes"
+        style="width:100%;min-height:400px;border:1.5px solid #BCAAA4;border-radius:10px;padding:16px;font-family:'Roboto',sans-serif;font-size:0.95rem;line-height:1.7;resize:vertical;background:#FAFAFA;color:#333;transition:border-color 0.2s;"
+        oninput="guardarNotasDocente()" onfocus="this.style.borderColor='#5D4037'"
+        onblur="this.style.borderColor='#BCAAA4'"></textarea>
+      <div style="display:flex;gap:12px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:0.78rem;color:#9E9E9E;"><span class="material-icons"
+            style="font-size:14px;vertical-align:middle;">info</span> Las notas se guardan automáticamente mientras
+          escribes</span>
+        <button class="btn-anterior" style="margin-left:auto;" onclick="limpiarNotasDocente()">
+          <span class="material-icons">delete_outline</span> Borrar todo
+        </button>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarNotas()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL LIBRETA / AGENDA VIRTUAL ===== -->
+  <div id="panel-libreta" class="cal-panel hidden">
+    <div class="section-card" style="padding:0;overflow:hidden;">
+      <div class="section-header" style="padding:20px 24px;">
+        <span class="material-icons section-icon" style="background:#E0F2F1;color:#00695C;">menu_book</span>
+        <h2>Mi Libreta</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <button class="btn-siguiente" onclick="_abrirFormLibreta(null)" style="font-size:0.82rem;padding:8px 16px;">
+            <span class="material-icons">add</span> Nueva anotación
+          </button>
+        </div>
+      </div>
+      <!-- Layout: lista de días (izq) + entradas del día (der) -->
+      <div style="display:flex;min-height:480px;border-top:1px solid #E0E0E0;">
+        <div id="libreta-lista-dias"
+          style="width:210px;flex-shrink:0;border-right:1px solid #E0E0E0;overflow-y:auto;max-height:600px;background:#FAFAFA;"></div>
+        <div id="libreta-panel-dia"
+          style="flex:1;padding:20px;overflow-y:auto;max-height:600px;min-width:0;"></div>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarLibreta()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL RENDIMIENTO ===== -->
+  <div id="panel-rendimiento" class="cal-panel hidden">
+    <div class="rend-panel-header">
+      <div class="rend-header-left">
+        <button class="btn-back-rend" onclick="cerrarRendimiento()">
+          <span class="material-icons">arrow_back</span>
+        </button>
+        <span class="material-icons" style="color:#9C27B0;font-size:26px;">insights</span>
+        <h2 class="rend-titulo">Gráficas de Rendimiento</h2>
+      </div>
+      <select id="rend-selector-curso" class="rend-selector" onchange="_rendCambiarCurso()">
+        <option value="">Selecciona un curso</option>
+      </select>
+    </div>
+    <div id="rend-contenido" class="rend-contenido"></div>
+  </div>
+
+  <!-- ===== PANEL CALIFICACIONES (outside stepper) ===== -->
+  <div id="panel-calificaciones" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E8F5E9;color:#2E7D32;">grade</span>
+        <h2>Libro de Calificaciones</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-export btn-sm" id="btn-toggle-asistencia" onclick="toggleVistaAsistencia()"
+            style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;">
+            <span class="material-icons">how_to_reg</span> Asistencia
+          </button>
+          <button class="btn-export btn-sm" id="btn-toggle-participacion" onclick="toggleVistaParticipacion()"
+            style="background:#F3E5F5;border:1.5px solid #CE93D8;color:#6A1B9A;">
+            <span class="material-icons">record_voice_over</span> Participación
+          </button>
+          <button class="btn-export btn-sm" onclick="elegirAlumnoAleatorio()"
+            style="background:#FFF3E0;border:1.5px solid #FFB74D;color:#E65100;">
+            <span class="material-icons">casino</span> Aleatorio
+          </button>
+          <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
+            <span class="material-icons">description</span> Exportar Word
+          </button>
+          <button class="btn-export btn-print btn-sm" onclick="imprimirCalificaciones()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
+        </div>
+      </div>
+
+      <!-- Selector / creador de cursos -->
+      <div class="cal-cursos-bar">
+        <div class="cal-cursos-label">
+          <span class="material-icons">class</span> Curso:
+        </div>
+        <div id="cal-tabs" class="cal-tabs"></div>
+        <button class="btn-cal-add-curso" id="btn-add-curso" onclick="abrirModalNuevoCurso()">
+          <span class="material-icons">add</span> Nuevo curso
+        </button>
+      </div>
+
+      <!-- Añadir estudiantes -->
+      <div class="cal-add-estudiantes" id="cal-add-estudiantes-area">
+        <div class="cal-field-group">
+          <span class="material-icons" style="color:#1565C0;">person_add</span>
+          <textarea id="input-estudiantes" rows="3"
+            placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
+          <button class="btn-siguiente" style="align-self:flex-end;white-space:nowrap;"
+            onclick="agregarEstudiantes()">
+            <span class="material-icons">group_add</span> Agregar
+          </button>
+          <label class="btn-export btn-sm" style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;align-self:flex-end;white-space:nowrap;" title="Importar desde archivo CSV o Excel guardado como CSV">
+            <span class="material-icons">upload_file</span> Importar CSV
+            <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none" onchange="importarAlumnosCSV(this)">
+          </label>
+          <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()" style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;align-self:flex-end;white-space:nowrap;" title="Exportar lista de alumnos a CSV">
+            <span class="material-icons">download</span> Exportar CSV
+          </button>
+        </div>
+        <p class="subsection-hint" style="margin-top:4px;">
+          También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
+          <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
+          Para importar desde Excel: guarda como <strong>CSV (.csv)</strong> y usa el botón Importar CSV.
+        </p>
+      </div>
+
+      <!-- Planificaciones del curso activo -->
+      <div id="cal-planes-bar" style="margin-bottom:12px;"></div>
+
+      <!-- Panel de asistencia (toggle) -->
+      <div id="cal-asist-panel" class="hidden">
+        <div class="asist-panel-wrap" id="cal-asist-wrap"></div>
+        <div style="margin-top:8px;border-top:1px solid #E0E0E0;padding-top:12px;"></div>
+      </div>
+
+      <!-- Panel de participación (toggle) -->
+      <div id="cal-particip-panel" class="hidden">
+        <div class="asist-panel-wrap" id="cal-particip-wrap"></div>
+        <div style="margin-top:8px;border-top:1px solid #E8D5F5;padding-top:12px;"></div>
+      </div>
+
+      <!-- Info si no hay actividades cargadas -->
+      <div id="cal-sin-actividades" class="info-tip hidden" style="margin-bottom:16px;">
+        <span class="material-icons">info</span>
+        <p>Asigna una planificación a este curso para comenzar a registrar calificaciones.</p>
+      </div>
+
+      <!-- Tabla de calificaciones -->
+      <div class="tabla-responsiva" id="cal-tabla-wrap">
+        <table id="tabla-calificaciones" class="tabla-cal">
+          <thead id="cal-thead"></thead>
+          <tbody id="cal-tbody"></tbody>
+          <tfoot id="cal-tfoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- Leyenda -->
+      <div class="cal-leyenda">
+        <span class="cal-badge cal-aprobado">≥ 70 Aprobado</span>
+        <span class="cal-badge cal-regular">60–69 Regular</span>
+        <span class="cal-badge cal-reprobado">
+          < 60 Reprobado</span>
+            <span style="margin-left:auto;font-size:0.78rem;color:#757575;">Las notas se guardan automáticamente en el
+              navegador.</span>
+      </div>
+    </div>
+
+    <!-- Botón para volver a la planificación -->
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarCalificaciones()">
+        <span class="material-icons">arrow_back</span> Volver a la planificación
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL HORARIO ===== -->
+  <div id="panel-horario" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E3F2FD;color:#0D47A1;">calendar_view_week</span>
+        <h2>Mi Horario de Clases</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-export btn-print btn-sm" onclick="window.print()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
+        </div>
+      </div>
+      <p style="font-size:0.82rem;color:#78909C;margin:0 0 12px;">
+        <span class="material-icons" style="font-size:14px;vertical-align:middle;">info</span>
+        Haz clic en cualquier celda para agregar o editar una clase.
+      </p>
+      <div id="horario-leyenda" style="margin-bottom:14px;"></div>
+      <div class="tabla-responsiva" id="horario-tabla"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarHorario()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL TAREAS ===== -->
+  <div id="panel-tareas" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#FFF3E0;color:#E65100;">assignment</span>
+        <h2>Tareas</h2>
+        <div style="margin-left:auto;">
+          <button class="btn-siguiente" onclick="abrirNuevaTarea()" style="font-size:0.82rem;padding:8px 16px;">
+            <span class="material-icons">add</span> Nueva tarea
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="tareas-filtros-bar">
+        <button class="tarea-filtro-btn activo" data-filtro="todas" onclick="filtrarTareas('todas')">
+          Todas <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="pendiente" onclick="filtrarTareas('pendiente')">
+          <span
+            style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F57F17;margin-right:4px;"></span>
+          Pendientes <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="entregada" onclick="filtrarTareas('entregada')">
+          <span
+            style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E7D32;margin-right:4px;"></span>
+          Entregadas <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="vencida" onclick="filtrarTareas('vencida')">
+          <span
+            style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C62828;margin-right:4px;"></span>
+          Vencidas <span class="tarea-count">0</span>
+        </button>
+        <button class="tarea-filtro-btn" data-filtro="no_entregada" onclick="filtrarTareas('no_entregada')">
+          <span
+            style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#546E7A;margin-right:4px;"></span>
+          No entregadas <span class="tarea-count">0</span>
+        </button>
+        <select id="tarea-filtro-seccion" onchange="renderizarTareas()"
+          style="margin-left:auto;padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:20px;font-size:0.8rem;background:#fff;color:#424242;cursor:pointer;">
+          <option value="">Todas las secciones</option>
+        </select>
+      </div>
+
+      <!-- Lista de tareas -->
+      <div id="tareas-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarTareas()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL BLOG ===== -->
+  <div id="panel-blog" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E0F7FA;color:#006064;">article</span>
+        <h2>Blog del Docente</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="blog-filtro-curso" onchange="renderizarBlog()"
+            style="font-size:0.82rem;padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:8px;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);">
+            <option value="">Todos los cursos</option>
+          </select>
+          <button class="btn-siguiente" onclick="abrirModalPost()" style="font-size:0.82rem;padding:8px 16px;">
+            <span class="material-icons">add</span> Nuevo post
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra con link público -->
+      <div id="blog-link-bar" class="hidden"
+        style="background:#E0F7FA;border:1px solid #80DEEA;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="material-icons" style="color:#006064;font-size:18px;">link</span>
+        <span style="font-size:0.82rem;color:#006064;white-space:nowrap;">Enlace para estudiantes:</span>
+        <code id="blog-link-url" style="font-size:0.78rem;flex:1;word-break:break-all;color:#004D40;"></code>
+        <button onclick="copiarLinkBlog()"
+          style="background:#006064;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+          <span class="material-icons" style="font-size:14px;">content_copy</span> Copiar
+        </button>
+      </div>
+
+      <div id="blog-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarBlog()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL AUDITORÍA ===== -->
+  <div id="panel-auditoria" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2><span class="material-icons" style="vertical-align:middle;margin-right:6px;">security</span>Auditoría de Actividad</h2>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#546E7A;">
+          <label>Desde:</label>
+          <input type="date" id="audit-fecha-desde" onchange="renderizarAuditoria()"
+            style="padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;color:#212121;background:#fff;" />
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#546E7A;">
+          <label>Hasta:</label>
+          <input type="date" id="audit-fecha-hasta" onchange="renderizarAuditoria()"
+            style="padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;color:#212121;background:#fff;" />
+        </div>
+        <input type="text" id="audit-buscar" placeholder="Buscar en actividad..." oninput="renderizarAuditoria()"
+          style="flex:1;min-width:160px;padding:7px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;" />
+        <button onclick="exportarBitacora()"
+          style="background:#1565C0;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <span class="material-icons" style="font-size:16px;">download</span> Exportar
+        </button>
+        <button onclick="limpiarAuditoria()"
+          style="background:#FBE9E7;color:#BF360C;border:1.5px solid #FFAB91;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <span class="material-icons" style="font-size:16px;">delete_sweep</span> Limpiar
+        </button>
+      </div>
+      <div id="audit-stats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+      <div id="audit-lista" style="max-height:60vh;overflow-y:auto;"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="_ocultarPaneles()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL CALENDARIO ESCOLAR ===== -->
+  <div id="panel-calendario-escolar" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">event_note</span>
+          Calendario Escolar
+          <span id="cal-escolar-admin-badge" style="display:none;margin-left:8px;background:#1565C0;color:#fff;
+            font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:12px;vertical-align:middle;">ADMIN</span>
+        </h2>
+      </div>
+
+      <!-- Banner modo (admin/personal) -->
+      <div id="cal-escolar-banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+           padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:0.85rem;font-weight:600;
+           background:#E3F2FD;color:#0D47A1;border:1.5px solid #90CAF9;">
+        <span class="material-icons" style="font-size:18px;" id="cal-escolar-banner-icon">info</span>
+        <span id="cal-escolar-banner-txt"></span>
+        <div style="margin-left:auto;display:flex;gap:8px;" id="cal-escolar-banner-btns"></div>
+      </div>
+
+      <!-- Tabs de meses -->
+      <div id="cal-escolar-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;"></div>
+
+      <!-- Contenido del mes -->
+      <div id="cal-escolar-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MODO PRESENTACIÓN ===== -->
+  <div id="pres-overlay" class="hidden"
+    style="position:fixed;inset:0;z-index:9000;
+           background:linear-gradient(160deg,#070B18 0%,#0D1635 60%,#111827 100%);
+           overflow-y:auto;display:flex;flex-direction:column;min-height:100vh;">
+
+    <!-- HEADER -->
+    <div id="pres-header" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+         padding:14px 24px;background:rgba(255,255,255,0.04);
+         border-bottom:1px solid rgba(255,255,255,0.08);position:sticky;top:0;z-index:10;">
+      <div>
+        <div id="pres-curso-nombre" style="font-size:1.4rem;font-weight:800;color:#fff;"></div>
+        <div id="pres-periodo-info" style="font-size:0.88rem;color:#90CAF9;margin-top:1px;"></div>
+      </div>
+      <div id="pres-clock" style="font-size:1.3rem;font-weight:700;color:#64B5F6;
+           font-variant-numeric:tabular-nums;margin-left:auto;padding-right:8px;"></div>
+      <button class="pres-header-btn" onclick="abrirPresPicker()" title="Cambiar curso">
+        <span class="material-icons" style="font-size:16px;">swap_horiz</span> Cambiar
+      </button>
+      <button class="pres-header-btn" onclick="_presFullscreen()" title="Pantalla completa">
+        <span class="material-icons" style="font-size:16px;">fullscreen</span>
+      </button>
+      <button class="pres-header-btn" onclick="cerrarModoPresent()"
+        style="background:rgba(220,50,50,0.18);color:#EF9A9A;" title="Salir presentación">
+        <span class="material-icons" style="font-size:16px;">close</span> Salir
+      </button>
+    </div>
+
+    <!-- GRID PRINCIPAL -->
+    <div id="pres-grid" style="display:grid;grid-template-columns:1fr 320px;flex:1;">
+      <!-- Columna izquierda: objetivo + secuencia -->
+      <div id="pres-col-left" style="padding:28px 28px 80px;border-right:1px solid rgba(255,255,255,0.07);">
+        <div id="pres-objetivo-wrap"></div>
+        <div id="pres-secuencia-wrap"></div>
+      </div>
+      <!-- Columna derecha: timer + actividades -->
+      <div id="pres-col-right" style="padding:24px 20px 80px;display:flex;flex-direction:column;gap:20px;">
+        <div id="pres-timer-box"></div>
+        <div id="pres-actividades-wrap"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PICKER DE CURSO para Modo Presentación -->
+  <div id="pres-picker-overlay" class="modal-overlay hidden"
+    onclick="this.id==='pres-picker-overlay'&&cerrarPresPicker()">
+    <div class="modal-box" style="max-width:420px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">cast_for_education</span>Seleccionar clase</h3>
+        <button class="modal-close" onclick="cerrarPresPicker()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" id="pres-picker-body" style="padding:16px 20px;max-height:400px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ===== PANTALLA DE BLOQUEO ===== -->
+  <div id="lock-overlay" class="hidden"
+    style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0D1B4B 0%,#1A237E 60%,#283593 100%);
+           display:flex;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="text-align:center;color:#fff;width:min(340px,calc(100vw - 32px));padding:0 16px;">
+      <div id="lock-avatar"
+        style="width:80px;height:80px;border-radius:50%;background:#1E3A8A;display:flex;align-items:center;
+               justify-content:center;font-size:2.2rem;font-weight:800;margin:0 auto 14px;
+               border:3px solid #5C6BC0;box-shadow:0 0 0 8px rgba(92,107,192,0.15);">U</div>
+      <div style="font-size:1.15rem;font-weight:800;margin-bottom:4px;letter-spacing:0.01em;">Pantalla bloqueada</div>
+      <div id="lock-username" style="font-size:0.82rem;color:#90CAF9;margin-bottom:6px;"></div>
+      <div id="lock-time" style="font-size:0.73rem;color:#5C6BC0;margin-bottom:28px;"></div>
+      <!-- Sección email/contraseña -->
+      <div id="lock-pass-section">
+        <input type="password" id="lock-pass-input" placeholder="Ingresa tu contraseña para continuar"
+          style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #3949AB;
+                 background:rgba(255,255,255,0.08);color:#fff;font-size:0.9rem;box-sizing:border-box;
+                 outline:none;margin-bottom:10px;text-align:center;"
+          onkeydown="if(event.key==='Enter')desbloquearPantalla()" />
+        <button onclick="desbloquearPantalla()" id="lock-btn-unlock"
+          style="width:100%;background:#3F51B5;color:#fff;border:none;border-radius:10px;padding:12px;
+                 font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px;
+                 display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:18px;">lock_open</span> Desbloquear
+        </button>
+      </div>
+      <!-- Sección Google -->
+      <div id="lock-google-section" style="display:none;">
+        <button onclick="_desbloquearConGoogle()"
+          style="width:100%;background:#fff;color:#333;border:none;border-radius:10px;padding:12px;
+                 font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px;
+                 display:flex;align-items:center;justify-content:center;gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Verificar con Google
+        </button>
+      </div>
+      <div id="lock-error" style="font-size:0.8rem;color:#EF9A9A;margin-bottom:14px;min-height:20px;"></div>
+      <button onclick="authCerrarSesion()"
+        style="background:none;border:none;color:#5C6BC0;font-size:0.75rem;cursor:pointer;
+               text-decoration:underline;padding:4px;">
+        Cerrar sesión
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL CONFIGURACIÓN ===== -->
+  <div id="config-overlay" class="modal-overlay hidden" onclick="this.id==='config-overlay'&&cerrarConfiguracion()">
+    <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">tune</span>Configuración</h3>
+        <button class="modal-close" onclick="cerrarConfiguracion()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <!-- Apariencia -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">palette</span>Apariencia</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Modo oscuro
+              <small>Cambia el tema de la aplicación</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-dark-mode" onchange="toggleDarkMode(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Fuente grande
+              <small>Aumenta el tamaño del texto</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-fuente-grande" onchange="toggleFuenteGrande(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;color:#00838F;">touch_app</span>
+              Modo Pantalla Táctil
+              <small>Botones grandes, teclado numérico en pantalla, swipe en wizard</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-touch-mode" onchange="toggleModoTactil(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Asistencia -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">how_to_reg</span>Asistencia</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Módulo de asistencia activo
+              <small>Desactiva si llevas la asistencia en un registro manual externo</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-asistencia-activa" checked
+                onchange="localStorage.setItem('cfg_asistencia_activa',this.checked);_aplicarAsistenciaActiva()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row" id="cfg-asistencia-umbral-row">
+            <div class="toggle-label">
+              Umbral de alerta (%)
+              <small>Alerta cuando un estudiante baja de este porcentaje</small>
+            </div>
+            <input type="number" id="cfg-umbral-asist" min="1" max="100" value="80"
+              onchange="localStorage.setItem('asist_umbral',this.value);mostrarToast('Umbral guardado','success')"
+              style="width:64px;padding:6px 8px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
+          </div>
+        </div>
+
+        <!-- Rendimiento y Riesgo -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">insights</span>Rendimiento y Riesgo</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Umbral de riesgo (%)
+              <small>Alerta cuando el promedio de un estudiante baja de este valor</small>
+            </div>
+            <input type="number" id="cfg-umbral-riesgo" min="1" max="100" value="70"
+              onchange="localStorage.setItem('cfg_umbral_riesgo', this.value); mostrarToast('Umbral de riesgo guardado', 'success')"
+              style="width:64px;padding:6px 8px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Actividades sin nota para alertar
+              <small>Alerta cuando un estudiante tiene este número o más actividades sin calificar</small>
+            </div>
+            <input type="number" id="cfg-umbral-acts" min="1" max="20" value="3"
+              onchange="localStorage.setItem('cfg_umbral_acts', this.value); mostrarToast('Umbral de actividades guardado', 'success')"
+              style="width:64px;padding:6px 8px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
+          </div>
+        </div>
+
+        <!-- Tour -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">tour</span>Tour de bienvenida</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Ver el tour introductorio
+              <small>Repasa los módulos de la aplicación paso a paso</small>
+            </div>
+            <button onclick="cerrarConfiguracion();iniciarTour()" style="background:#6A1B9A;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <span class="material-icons" style="font-size:16px;">play_circle</span>Iniciar tour
+            </button>
+          </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">dashboard</span>Dashboard</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Mostrar alertas inteligentes
+              <small>Avisos de tareas vencidas, cursos sin plan, etc.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-alertas" checked
+                onchange="localStorage.setItem('cfg_alertas',this.checked);renderizarDashboard()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Mostrar columna "Mañana"
+              <small>Clases del día siguiente en el dashboard</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-manana" checked
+                onchange="localStorage.setItem('cfg_manana',this.checked);renderizarDashboard()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Seguridad -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">vpn_key</span>Código de invitación</div>
+          <div class="toggle-row" style="align-items:flex-start;flex-direction:column;gap:8px;">
+            <div class="toggle-label">
+              Código requerido para registrarse
+              <small>Solo quien conozca este código puede crear una cuenta nueva</small>
+            </div>
+            <div style="display:flex;gap:8px;width:100%;align-items:center;">
+              <input type="text" id="cfg-invite-code-input" placeholder="Nuevo código (mín. 4 caracteres)"
+                style="flex:1;padding:8px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.88rem;letter-spacing:0.08em;" />
+              <button onclick="guardarCodigoInvitacion()"
+                style="background:#6A1B9A;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;">
+                <span class="material-icons" style="font-size:15px;">save</span> Guardar
+              </button>
+            </div>
+            <div id="cfg-invite-code-actual" style="font-size:0.75rem;color:#9E9E9E;"></div>
+          </div>
+        </div>
+
+        <!-- Datos -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">storage</span>Datos</div>
+          <button onclick="if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.'))limpiarTodosDatos()"
+            style="width:100%;background:#FFF5F5;border:1.5px solid #FFCDD2;color:#C62828;border-radius:8px;padding:10px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">delete_forever</span>
+            Borrar todos los datos locales
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-siguiente" onclick="cerrarConfiguracion()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL ACERCA DE ===== -->
+  <div id="acercade-overlay" class="modal-overlay hidden" onclick="this.id==='acercade-overlay'&&cerrarAcercaDe()">
+    <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="position:sticky;top:0;z-index:1;">
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">info_outline</span>Acerca de</h3>
+        <button class="modal-close" onclick="cerrarAcercaDe()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <div class="about-header">
+          <img src="Metabotlogo.svg" alt="Logo" class="about-logo" onerror="this.style.display='none'">
+          <div>
+            <div class="about-app-nombre">Metabot</div>
+            <div class="about-app-desc">Sistema de Planificación para Docentes · Educación Técnico Profesional ·
+              República Dominicana</div>
+            <div style="margin-top:6px;font-size:0.72rem;color:#9E9E9E;">Desarrollado por Marcos J. Simé Bremont</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div
+            style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
+            Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v12.6<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección de seguridad: bloqueo por inactividad resistente a refresco</div>
+              <ul class="about-ver-items">
+                <li><strong>Bloqueo persistente al refrescar:</strong> al recargar la página con la sesión bloqueada ya no es posible saltarse el bloqueo; el sistema verifica dos capas al arrancar</li>
+                <li><strong>Capa 1 — Flag explícito:</strong> al bloquearse la pantalla se guarda una marca en <code>sessionStorage</code>; si el usuario refresca, la marca sigue ahí y fuerza el bloqueo de inmediato</li>
+                <li><strong>Capa 2 — Timestamp de actividad:</strong> mientras el usuario interactúa se registra cada 5 s el momento de última actividad; al recargar, si el tiempo transcurrido supera los 3 minutos la sesión se bloquea aunque la capa 1 no exista (compatible con versiones anteriores)</li>
+                <li>Al desbloquear, el timestamp se reinicia para evitar bloqueos inmediatos sin motivo</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v12.5<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Calendario Escolar compartido</div>
+              <ul class="about-ver-items">
+                <li><strong>Calendario Escolar:</strong> nuevo módulo accesible desde el Dashboard; organizado por meses (agosto–junio) con dos secciones por mes: <em>Actividades</em> y <em>Efemérides</em></li>
+                <li><strong>Calendario oficial del centro:</strong> el administrador publica un calendario que todos los docentes registrados pueden consultar automáticamente al abrir la sección</li>
+                <li><strong>Calendario personal:</strong> cada docente puede crear su propio calendario (se copia el oficial como base) y editarlo de forma independiente sin afectar al resto</li>
+                <li><strong>Restaurar calendario oficial:</strong> en cualquier momento el docente puede descartar su versión personal y volver al calendario publicado por el administrador</li>
+                <li>Efemérides ordenadas por día del mes; las actividades se gestionan con agregar, editar y eliminar en línea</li>
+                <li>El calendario personal se sincroniza con la nube (Firebase) igual que el resto de los datos del docente</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4A148C;">v12.4<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Historial de sesiones</div>
+              <ul class="about-ver-items">
+                <li><strong>Historial de sesiones:</strong> registro privado de cada acceso a la app con navegador, sistema operativo, tipo de dispositivo, resolución e idioma; accesible desde Mi cuenta → "Ver historial de sesiones"; almacenado en Firestore bajo la cuenta del docente (nadie más puede verlo)</li>
+                <li>Se conservan automáticamente las últimas 50 sesiones; opción de limpiar el historial completo desde el panel</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#004D40;">v12.3<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Correcciones de sincronización Firebase, opción de deshabilitar asistencia y revisión general</div>
+              <ul class="about-ver-items">
+                <li><strong>Opción para deshabilitar asistencia:</strong> nuevo toggle en Configuración para desactivar el módulo de asistencia para docentes que llevan el registro de forma manual; oculta el botón del libro de calificaciones</li>
+                <li><strong>Corrección Firebase — Notas del docente:</strong> al borrar las notas del docente ahora se sincroniza correctamente con Firebase; antes el borrado era solo local y las notas reaparecían al iniciar sesión de nuevo</li>
+                <li><strong>Análisis y revisión general:</strong> verificación de consistencia entre Firebase stores, funciones HTML y módulos; todos los stores críticos confirmados sincronizando correctamente con Firestore</li>
+                <li>Corrección de estado inicial de toggles en Configuración (alertas y columna Mañana aparecían desmarcados en el primer uso)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v12.2<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Auditoría de actividad y bloqueo automático por inactividad</div>
+              <ul class="about-ver-items">
+                <li><strong>Panel de Auditoría:</strong> historial completo de toda la actividad de la sesión (notas registradas, planificaciones guardadas, bloqueos, inicio/cierre de sesión, etc.) con filtros por fecha y búsqueda de texto; exportable a .txt</li>
+                <li><strong>Bloqueo automático:</strong> la pantalla se bloquea después de 3 minutos de inactividad; desbloqueo con contraseña (email/contraseña) o Google; se registra en la auditoría</li>
+                <li><strong>Mensajes de auditoría mejorados:</strong> los eventos de calificaciones incluyen el nombre del estudiante, actividad y valor exacto en lugar de mensajes genéricos</li>
+                <li>Corrección de duplicados en la auditoría mediante deduplicación automática de eventos idénticos en menos de 600 ms</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4A148C;">v12.1<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Verificación de correo por código OTP al registrarse</div>
+              <ul class="about-ver-items">
+                <li><strong>Registro seguro con OTP:</strong> al crear una cuenta se envía un código de 6 dígitos al correo del docente; el registro solo se completa al ingresar el código correcto, garantizando que el email existe y es válido</li>
+                <li><strong>Código expira en 10 minutos</strong> con cuenta regresiva visible; botón "Reenviar código" genera uno nuevo si no llegó el primero</li>
+                <li>Se elimina el campo de código de invitación del formulario de registro (reemplazado por la verificación OTP)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#006064;">v12.0<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Blog del Docente, Temporizador de Clase, Participación y mejoras generales</div>
+              <ul class="about-ver-items">
+                <li><strong>Blog del Docente:</strong> publicación de tareas e información por curso y RA con enlace público para estudiantes; soporte para tareas en PC (entrega de archivos desde el navegador) y tareas en cuaderno; gestión de borradores y publicación</li>
+                <li><strong>Temporizador de Clase:</strong> botón flotante accesible desde cualquier pantalla con presets (5–60 min), tiempo personalizado, anillo de progreso SVG y alerta sonora al finalizar</li>
+                <li><strong>Participación en Clase:</strong> registro diario de participación por estudiante (Destacado / Participó / No participó) dentro del libro de calificaciones, sin afectar las notas</li>
+                <li><strong>Tour de Bienvenida:</strong> guía interactiva de 10 pasos que se inicia automáticamente al primer acceso; reiniciable desde Configuración</li>
+                <li><strong>Código de invitación:</strong> protección del registro con código secreto configurable para evitar accesos no autorizados</li>
+                <li><strong>Dashboard mejorado:</strong> accesos rápidos reubicados al inicio, estadísticas de rendimiento navegables (clic en RA abre el libro directamente), modal de clase con navegación directa al RA correspondiente</li>
+                <li><strong>Tareas:</strong> nuevo estado "No entregada", corrección de color en modo oscuro</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v11.5<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Horario: deduplicación inteligente de planes del mismo módulo</div>
+              <ul class="about-ver-items">
+                <li><strong>Horario hoy/mañana:</strong> si un curso tiene dos planificaciones del mismo módulo (ej: dos unidades de FOL), se muestra solo el plan marcado como activo en Calificaciones; si el plan activo es de otra materia, se muestra el primer plan encontrado en lugar de ambos</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#BF360C;">v11.0<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Recuperaciones, Vista del Estudiante, Modo Táctil y mejoras al Libro de Calificaciones</div>
+              <ul class="about-ver-items">
+                <li><strong>Modo Recuperación / 2da Oportunidad:</strong> registra notas de recuperación por actividad (independientes de la nota final). Botón ↺ por estudiante, punto de color en cada celda (naranja = pendiente, verde = completada), columnas Recuper. y Total RA + Recup. en la tabla</li>
+                <li><strong>Control de límite en recuperaciones:</strong> la nota de recuperación no puede hacer que el total supere el valorTotal del RA; el formulario muestra el máximo disponible</li>
+                <li><strong>Control de valores de actividades:</strong> la suma de los valores de las actividades no puede exceder el Total del RA; indicador verde/naranja/rojo en el encabezado de la tabla</li>
+                <li><strong>Vista del Estudiante (QR):</strong> genera un enlace y código QR para que el estudiante vea sus calificaciones en modo solo lectura (viewer.html)</li>
+                <li><strong>Modo Pantalla Táctil:</strong> botones y celdas de notas más grandes, teclado numérico en pantalla tipo calculadora, swipe izquierda/derecha en el wizard, sin efectos hover. Se activa en Configuración</li>
+                <li><strong>Tabla de calificaciones simplificada:</strong> se eliminaron las columnas "Otros RAs", "FINAL" y "Asistencia"; se agregaron "Recuper." y "Total RA + Recup."</li>
+                <li><strong>Columna # de estudiante</strong> en la tabla de calificaciones</li>
+                <li>Backup completo: incluye recuperaciones, incidencias, geminiKey y groqKey</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v10.0<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Diaria integrada en el stepper y correcciones de modo oscuro</div>
+              <ul class="about-ver-items">
+                <li>Planificación Diaria añadida como paso 5 del wizard de planificación (antes de Vista Previa, que pasa al paso 6)</li>
+                <li>Modo oscuro: chips EC (pd-ec-chip) ahora muestran texto en blanco para mejor legibilidad</li>
+                <li>Modo oscuro: caja RA en Vista Previa (vp-ra-box) con fondo azul oscuro y texto celeste legible</li>
+                <li>Selector de planificaciones diarias ahora muestra módulo, curso asignado y descripción del RA (truncada) para identificar fácilmente cada planificación</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v9.0<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cuentas de usuario y sincronización en la nube (Firebase)</div>
+              <ul class="about-ver-items">
+                <li>Sistema de autenticación completo: login con email/contraseña y con Google</li>
+                <li>Los datos se guardan en la nube (Firebase Firestore) y se sincronizan entre dispositivos y navegadores</li>
+                <li>Migración automática de datos locales al iniciar sesión por primera vez</li>
+                <li>Menú de usuario en el header con avatar, nombre e indicador de cuenta activa</li>
+                <li>Cierre de sesión seguro con limpieza de caché local</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v8.0<span class="about-ver-fecha">Feb 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Paneles ampliados, modo oscuro completo y correcciones de UI</div>
+              <ul class="about-ver-items">
+                <li>Paneles (Calificaciones, Planificaciones, Diarias, Notas) movidos fuera del contenedor principal para aprovechar todo el ancho de pantalla</li>
+                <li>Tarjetas de planificaciones más anchas (380px mín.) para evitar texto cortado</li>
+                <li>Modo oscuro completo en "Importar desde Word": labels, placeholders, inputs, días de clase, tabs y tarjetas de resumen</li>
+                <li>Modo oscuro completo en "Acerca de": nombre de app, descripción y bullets de versión</li>
+                <li>Encabezado de tabla en Libro de Calificaciones alineado a la izquierda</li>
+                <li>Corrección: "Nueva Planificación" ya no redirige al dashboard al recargar</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v7.0<span class="about-ver-fecha">Feb 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Edición completa de planificaciones duplicadas</div>
+              <ul class="about-ver-items">
+                <li>Biblioteca agrupada por curso con indicador de plan activa</li>
+                <li>Permite múltiples planificaciones por módulo (distintos RA)</li>
+                <li>Editar nivel Bloom del EC con dropdown directo en la card</li>
+                <li>Editar código EC (E.C.1.1.1, E.C.1.1.2, etc.) desde la card</li>
+                <li>Agregar nuevos EC manualmente con código, nivel, enunciado y horas</li>
+                <li>Agregar nuevas actividades desde el paso 4 con selección de EC</li>
+                <li>Editar enunciado, fecha, EC e instrumento de cada actividad</li>
+                <li>Cambiar instrumento (cotejo/rúbrica) directamente en la tabla</li>
+                <li>Editar valor en puntos de cada actividad inline en la tabla</li>
+                <li>Eliminar actividades con confirmación</li>
+                <li>Alerta visual de ECs sin actividades al entrar al paso 4</li>
+                <li>Vista previa con colores correctos en modo oscuro</li>
+                <li>Auto-regeneración de instrumentos al abrir "Ver"</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v6.0<span class="about-ver-fecha">Feb 2026</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Asistencia, Horario, Tareas y Dashboard inteligente</div>
+              <ul class="about-ver-items">
+                <li>Módulo completo de asistencia (P/T/A/E) con historial, reporte y umbral configurable</li>
+                <li>Módulo de horario semanal editable con colores por materia</li>
+                <li>Módulo de tareas agrupadas por curso con estados y alertas</li>
+                <li>Dashboard rediseñado: clases de hoy y mañana, tareas próximas, resumen de cursos</li>
+                <li>Modal de detalle por clase: actividad, asistencia rápida, forma de evaluación y notas</li>
+                <li>Notas rápidas de clase con guardado automático</li>
+                <li>Configuración general y pantalla Acerca de</li>
+                <li>Modo oscuro completo</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v5.0<span class="about-ver-fecha">Ene 2026</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Libro de Calificaciones y Edición de Planificaciones</div>
+              <ul class="about-ver-items">
+                <li>Libro de calificaciones por Resultado de Aprendizaje (RA)</li>
+                <li>Múltiples cursos y planificaciones por curso</li>
+                <li>Edición completa de planificaciones cargadas desde biblioteca</li>
+                <li>Edición inline de EC, secuencia didáctica y actividades</li>
+                <li>Regeneración automática de instrumentos al editar</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v4.0<span class="about-ver-fecha">Dic 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Biblioteca, Exportación Word y Planificaciones Diarias</div>
+              <ul class="about-ver-items">
+                <li>Biblioteca de planificaciones guardadas</li>
+                <li>Exportación a Word con formato institucional</li>
+                <li>Módulo de planificaciones diarias por sesión</li>
+                <li>Wizard de importación desde documentos Word</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v3.0<span class="about-ver-fecha">Nov 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Instrumentos de Evaluación con IA</div>
+              <ul class="about-ver-items">
+                <li>Generación automática de rúbricas y listas de cotejo con Groq IA</li>
+                <li>Instrumentos personalizados por nivel de Bloom y EC</li>
+                <li>Vista y exportación de instrumentos por actividad</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v2.0<span class="about-ver-fecha">Oct 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación por Elementos de Capacidad</div>
+              <ul class="about-ver-items">
+                <li>Wizard de 3 pasos: Datos Generales → EC → Actividades</li>
+                <li>Secuencia didáctica (Anticipación, Construcción, Consolidación)</li>
+                <li>Generación de actividades por EC con IA</li>
+                <li>Stepper visual con progreso</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge">v1.0<span class="about-ver-fecha">Sep 2025</span></div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Lanzamiento inicial</div>
+              <ul class="about-ver-items">
+                <li>Planificación educativa básica por RA</li>
+                <li>Datos generales del módulo formativo</li>
+                <li>Primeras funciones de guardado en navegador</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer" style="position:sticky;bottom:0;">
+        <button class="btn-siguiente" onclick="cerrarAcercaDe()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL NOTIFICACIONES ===== -->
+  <div id="notif-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarNotificaciones()">
+    <div class="modal-box" style="max-width:520px;max-height:88vh;display:flex;flex-direction:column;"
+      onclick="event.stopPropagation()">
+      <div class="modal-header" style="flex-shrink:0;">
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">notifications</span>
+          Avisos y recordatorios
+          <span id="notif-count-header" style="font-size:0.75rem;font-weight:400;color:#9E9E9E;margin-left:6px;"></span>
+        </h3>
+        <button class="modal-close" onclick="cerrarNotificaciones()"><span class="material-icons">close</span></button>
+      </div>
+      <div id="notif-modal-body" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+      <div class="modal-footer" style="flex-shrink:0;">
+        <button class="btn-secundario" onclick="cerrarNotificaciones()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL EXPORTAR ASISTENCIA ===== -->
+  <div id="exp-asist-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarExpAsistencia()">
+    <div class="modal-box" style="max-width:500px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">table_chart</span>Exportar asistencia</h3>
+        <button class="modal-close" onclick="cerrarExpAsistencia()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">class</span>Curso</div>
+          <select id="exp-asist-curso"
+            style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+          </select>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">date_range</span>Período</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <label style="font-size:0.82rem;color:#546E7A;flex-shrink:0;">Desde</label>
+            <input type="date" id="exp-asist-desde"
+              style="flex:1;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+            <label style="font-size:0.82rem;color:#546E7A;flex-shrink:0;">Hasta</label>
+            <input type="date" id="exp-asist-hasta"
+              style="flex:1;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button onclick="setExpAsistPeriodo('mes')" class="exp-asist-periodo-btn">Este mes</button>
+            <button onclick="setExpAsistPeriodo('trimestre')" class="exp-asist-periodo-btn">Últimos 3 meses</button>
+            <button onclick="setExpAsistPeriodo('todo')" class="exp-asist-periodo-btn">Todo el registro</button>
+          </div>
+        </div>
+
+        <div class="config-section" style="border:none;margin-bottom:0;">
+          <div class="config-section-title"><span class="material-icons">download</span>Formato</div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="generarReporteAsistenciaWord()" class="exp-asist-format-btn"
+              style="flex:1;background:#E3F2FD;border-color:#90CAF9;color:#1565C0;">
+              <span class="material-icons">description</span>
+              Exportar a Word (.docx)
+            </button>
+            <button onclick="generarReporteAsistenciaPDF()" class="exp-asist-format-btn"
+              style="flex:1;background:#FFEBEE;border-color:#FFCDD2;color:#C62828;">
+              <span class="material-icons">picture_as_pdf</span>
+              Exportar a PDF
+            </button>
+          </div>
+        </div>
+
+        <div id="exp-asist-preview" style="margin-top:12px;font-size:0.78rem;color:#78909C;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DUPLICAR PLANIFICACIÓN ===== -->
+  <div id="dup-plan-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarDuplicarPlan()">
+    <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">content_copy</span>Duplicar planificación
+        </h3>
+        <button class="modal-close" onclick="cerrarDuplicarPlan()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <!-- Info de la original -->
+        <div id="dup-plan-origen"
+          style="background:#F5F7FA;border-radius:8px;padding:10px 14px;border:1px solid #E0E0E0;margin-bottom:16px;font-size:0.82rem;color:#546E7A;">
+        </div>
+
+        <!-- Nombre de la copia -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">label</span>Nombre de la copia</div>
+          <input type="text" id="dup-plan-nombre"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;font-family:inherit;box-sizing:border-box;">
+        </div>
+
+        <!-- Curso destino -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">class</span>Asignar a un curso <span
+              style="font-weight:400;color:#9E9E9E;">(opcional)</span></div>
+          <select id="dup-plan-curso"
+            style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;font-family:inherit;">
+            <option value="">Sin asignar (puedo hacerlo después)</option>
+          </select>
+        </div>
+
+        <!-- Ajuste de fechas de actividades -->
+        <div class="config-section" style="border:none;margin-bottom:0;">
+          <div class="config-section-title"><span class="material-icons">date_range</span>Recorrer fechas de actividades
+          </div>
+          <p style="font-size:0.78rem;color:#78909C;margin:0 0 10px;">Si las actividades tienen fechas asignadas, puedes
+            correrlas todas hacia adelante o atrás desde una fecha nueva de inicio.</p>
+          <div class="toggle-row" style="padding:0 0 10px;">
+            <div class="toggle-label">Ajustar fechas automáticamente<small>Desactiva para copiar las fechas
+                exactas</small></div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="dup-plan-ajustar-fechas" checked onchange="toggleDupFechas(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div id="dup-plan-fechas-wrap">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <label style="font-size:0.82rem;color:#546E7A;flex-shrink:0;">Nueva fecha de inicio:</label>
+              <input type="date" id="dup-plan-fecha-inicio"
+                style="flex:1;padding:7px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+            </div>
+            <div id="dup-plan-fechas-preview" style="margin-top:8px;font-size:0.75rem;color:#78909C;"></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" onclick="cerrarDuplicarPlan()">Cancelar</button>
+        <button class="btn-siguiente" onclick="confirmarDuplicarPlan()">
+          <span class="material-icons" style="font-size:16px;">content_copy</span> Duplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL BUSCADOR DE ESTUDIANTES ===== -->
+  <div id="buscar-overlay" class="modal-overlay hidden" onclick="event.target===this&&cerrarBuscadorEstudiante()">
+    <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;"
+      onclick="event.stopPropagation()">
+      <div class="modal-header" style="flex-shrink:0;">
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">search</span>Buscar estudiante</h3>
+        <button class="modal-close" onclick="cerrarBuscadorEstudiante()"><span
+            class="material-icons">close</span></button>
+      </div>
+      <!-- Barra de búsqueda sticky -->
+      <div style="padding:14px 20px 10px;border-bottom:1px solid #E0E0E0;flex-shrink:0;" id="buscar-search-bar">
+        <div style="position:relative;">
+          <span class="material-icons"
+            style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#90A4AE;font-size:20px;">search</span>
+          <input type="text" id="buscar-input" placeholder="Escribe el nombre del estudiante…"
+            oninput="buscarEstudiante(this.value)" autocomplete="off"
+            style="width:100%;padding:10px 12px 10px 40px;border:1.5px solid #90CAF9;border-radius:10px;font-size:0.95rem;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div id="buscar-resultados-count" style="font-size:0.75rem;color:#9E9E9E;margin-top:6px;padding-left:4px;">
+        </div>
+      </div>
+      <!-- Resultados + Perfil -->
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
+        <!-- Lista de resultados -->
+        <div id="buscar-lista"
+          style="width:260px;flex-shrink:0;overflow-y:auto;border-right:1px solid #E0E0E0;padding:8px 0;"></div>
+        <!-- Perfil del estudiante seleccionado -->
+        <div id="buscar-perfil" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DE INSTRUMENTO ===== -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="cerrarModal(event)">
+    <div class="modal-box" id="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">Instrumento de Evaluación</h3>
+        <button class="modal-close" onclick="cerrarModalBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Contenido del instrumento -->
+      </div>
+      <!-- Footer unificado: cambia contenido según contexto -->
+      <div class="modal-footer" id="modal-footer">
+        <button class="btn-export btn-print btn-sm" onclick="imprimirModal()">
+          <span class="material-icons">print</span>
+          Imprimir instrumento
+        </button>
+        <button class="btn-export btn-copy btn-sm" onclick="copiarModal()">
+          <span class="material-icons">content_copy</span>
+          Copiar
+        </button>
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast hidden">
+    <span class="material-icons" id="toast-icon">check_circle</span>
+    <span id="toast-mensaje"></span>
+  </div>
+
+
+  <!-- ===== MODAL IMPORTAR PLANIFICACIÓN ===== -->
+  <div id="imp-overlay" class="modal-overlay hidden">
+    <div class="modal-box" style="max-width:720px;max-height:90vh;display:flex;flex-direction:column;"
+      onclick="event.stopPropagation()">
+      <div class="modal-header" style="flex-shrink:0;">
+        <h3 id="imp-titulo">Importar Planificación desde Word</h3>
+        <button class="modal-close" onclick="imp_cerrar()"><span class="material-icons">close</span></button>
+      </div>
+      <div id="imp-steps-bar" style="display:flex;gap:0;border-bottom:1px solid #E0E0E0;flex-shrink:0;overflow-x:auto;">
+      </div>
+      <div id="imp-body" class="modal-body" style="flex:1;overflow-y:auto;padding:20px 24px;"></div>
+      <div class="modal-footer"
+        style="flex-shrink:0;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #E0E0E0;padding:12px 24px;">
+        <button class="btn-secundario" id="imp-btn-prev" onclick="imp_anterior()" style="display:none;">
+          <span class="material-icons">arrow_back</span> Anterior
+        </button>
+        <button class="btn-secundario" onclick="imp_cerrar()">Cancelar</button>
+        <button class="btn-siguiente" id="imp-btn-next" onclick="imp_siguiente()">
+          Siguiente <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== MODAL BACKUP / RESTAURAR DATOS ===== -->
+  <div id="backup-overlay" class="modal-overlay hidden">
+    <div class="modal-box" style="max-width:560px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Mis Datos &mdash; Exportar / Importar</h3>
+        <button class="modal-close" onclick="cerrarBackup()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+
+        <!-- Exportar -->
+        <div class="backup-section">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#2E7D32;">cloud_download</span>
+            Exportar mis datos
+          </div>
+          <p class="backup-desc">Descarga un archivo <strong>.json</strong> con todas tus planificaciones,
+            calificaciones y sesiones diarias. Úsalo como respaldo o para cambiar de navegador/dispositivo.</p>
+          <div id="backup-resumen" style="margin:10px 0;font-size:0.82rem;color:#616161;"></div>
+          <button class="btn-siguiente" onclick="exportarDatos()" style="width:100%;justify-content:center;">
+            <span class="material-icons">download</span> Descargar backup completo
+          </button>
+        </div>
+
+        <div class="backup-divider"></div>
+
+        <!-- Importar -->
+        <div class="backup-section">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#1565C0;">cloud_upload</span>
+            Importar / Restaurar datos
+          </div>
+          <p class="backup-desc">Selecciona un archivo de backup generado anteriormente. <strong>Los datos actuales
+              serán reemplazados</strong> por los del archivo.</p>
+          <label class="backup-file-label" id="backup-file-label-btn">
+            <span class="material-icons">attach_file</span>
+            <span id="backup-file-name">Seleccionar archivo .json</span>
+            <input type="file" id="backup-file-input" accept=".json" onchange="onBackupFileSelected(this)"
+              style="display:none;">
+          </label>
+          <div id="backup-preview" class="hidden"
+            style="margin:10px 0;background:#E3F2FD;border-radius:8px;padding:12px;font-size:0.82rem;"></div>
+          <button class="btn-siguiente" id="backup-btn-importar" onclick="importarDatos()"
+            style="width:100%;justify-content:center;display:none;background:linear-gradient(135deg,#1565C0,#1976D2);">
+            <span class="material-icons">restore</span> Restaurar este backup
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn-secundario" onclick="cerrarBackup()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- EmailJS — envío de códigos OTP por correo -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- Configuración Firebase (editar con tus datos) -->
+  <script src="firebase-config.js"></script>
+  <!-- Script principal -->
+  <script src="docx.js"></script>
+  <script src="app.js"></script>
+  <!-- Autenticación -->
+  <script src="auth.js"></script>
+
+  <!-- ===== MODAL MI CUENTA ===== -->
+  <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
+    <div class="modal-box" style="max-width:480px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">manage_accounts</span>Mi cuenta</h3>
+        <button class="modal-close" onclick="cerrarMiCuenta()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:24px;">
+
+        <!-- Cambiar correo -->
+        <div class="cuenta-seccion">
+          <div class="cuenta-seccion-titulo">
+            <span class="material-icons">email</span> Cambiar correo electrónico
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-email-nuevo">Nuevo correo</label>
+            <input type="email" id="cuenta-email-nuevo" placeholder="nuevo@ejemplo.com" autocomplete="email" />
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-para-email">Contraseña actual (para confirmar)</label>
+            <input type="password" id="cuenta-pass-para-email" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <div class="auth-error" id="cuenta-msg-email"></div>
+          <button class="auth-btn-primary" id="cuenta-btn-email" onclick="authCambiarEmail()">
+            <div class="auth-spinner" id="cuenta-spin-email"></div>
+            <span class="material-icons">save</span> Guardar correo
+          </button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--color-borde,#E0E0E0);">
+
+        <!-- Cambiar contraseña -->
+        <div class="cuenta-seccion">
+          <div class="cuenta-seccion-titulo">
+            <span class="material-icons">lock_reset</span> Cambiar contraseña
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-actual">Contraseña actual</label>
+            <input type="password" id="cuenta-pass-actual" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-nueva">Nueva contraseña</label>
+            <input type="password" id="cuenta-pass-nueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+          </div>
+          <div class="auth-field">
+            <label for="cuenta-pass-nueva2">Confirmar nueva contraseña</label>
+            <input type="password" id="cuenta-pass-nueva2" placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+          </div>
+          <div class="auth-error" id="cuenta-msg-pass"></div>
+          <button class="auth-btn-primary" id="cuenta-btn-pass" onclick="authCambiarPassword()">
+            <div class="auth-spinner" id="cuenta-spin-pass"></div>
+            <span class="material-icons">lock</span> Cambiar contraseña
+          </button>
+        </div>
+
+      </div>
+      <!-- Historial de sesiones -->
+      <div class="cuenta-seccion" style="margin:0 0 4px;">
+        <hr style="border:none;border-top:1px solid var(--color-borde,#E0E0E0);margin-bottom:16px;">
+        <div class="cuenta-seccion-titulo">
+          <span class="material-icons">history</span> Historial de sesiones
+        </div>
+        <p style="font-size:0.83rem;color:var(--color-texto-sec,#757575);margin:0 0 10px;">
+          Muestra los últimos accesos a la app: dispositivo, navegador y fecha/hora.
+        </p>
+        <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;" onclick="cerrarMiCuenta();abrirHistorialSesiones()">
+          <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+        </button>
+      </div>
+
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn-secundario" onclick="cerrarMiCuenta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
+  <div id="sesiones-overlay" class="modal-overlay hidden" onclick="this.id==='sesiones-overlay'&&cerrarHistorialSesiones()">
+    <div class="modal-box" style="max-width:560px;max-height:88vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">devices</span>Historial de sesiones</h3>
+        <button class="modal-close" onclick="cerrarHistorialSesiones()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:16px 20px;overflow-y:auto;flex:1;">
+        <div id="sesiones-loading" style="text-align:center;padding:32px;color:var(--color-texto-sec,#757575);">
+          <span class="material-icons" style="font-size:36px;display:block;margin-bottom:8px;">hourglass_empty</span>
+          Cargando sesiones…
+        </div>
+        <div id="sesiones-lista" class="hidden"></div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button class="btn-secundario" style="color:#C62828;" onclick="limpiarHistorialSesiones()">
+          <span class="material-icons" style="font-size:16px;">delete_sweep</span> Limpiar historial
+        </button>
+        <button class="btn-secundario" onclick="cerrarHistorialSesiones()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay: Recuperaciones / segunda oportunidad -->
+  <div id="recuperaciones-overlay" class="modal-overlay hidden" onclick="cerrarRecuperaciones(event)">
+    <div class="modal-box" style="max-width:580px;max-height:88vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3 id="recup-titulo">Recuperaciones</h3>
+        <button class="modal-close" onclick="cerrarRecuperacionesBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="recup-body" style="padding:0;"></div>
+    </div>
+  </div>
+
+  <!-- Overlay: Registro de incidencias/eventos por estudiante -->
+  <div id="incidencias-overlay" class="modal-overlay hidden" onclick="cerrarIncidencias(event)">
+    <div class="modal-box" style="max-width:620px;max-height:88vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3 id="inc-titulo">Eventos del estudiante</h3>
+        <button class="modal-close" onclick="cerrarIncidenciasBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="inc-body" style="padding:0;"></div>
+    </div>
+  </div>
+
+  <!-- Overlay: Reportes académicos/disciplinarios por estudiante -->
+  <div id="reportes-overlay" class="modal-overlay hidden" onclick="cerrarReportes(event)">
+    <div class="modal-box" style="max-width:640px;max-height:92vh;overflow-y:auto;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">description</span>
+          Reportes — <span id="rep-est-nombre"></span>
+        </h3>
+        <button class="modal-close" onclick="cerrarReportesBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="rep-body" style="padding:0;"></div>
+    </div>
+  </div>
+
+  <!-- Teclado numérico táctil para notas -->
+  <div id="teclado-notas-overlay" class="hidden"
+    style="position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#16162a;border-top:2px solid #1565C0;box-shadow:0 -8px 32px rgba(0,0,0,0.65);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #2a2a3a;">
+      <div style="display:flex;align-items:baseline;gap:10px;">
+        <span id="teclado-display" style="font-size:2.4rem;font-weight:700;color:#90CAF9;min-width:110px;display:inline-block;letter-spacing:1px;">—</span>
+        <span id="teclado-max-label" style="font-size:0.8rem;color:#546E7A;">Máx: 100</span>
+      </div>
+      <button onclick="cerrarTecladoNotas()"
+        style="background:none;border:1px solid #37474F;color:#78909C;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:0.88rem;touch-action:manipulation;display:flex;align-items:center;gap:4px;">
+        <span class="material-icons" style="font-size:16px;">close</span>Cancelar
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;max-width:440px;margin:0 auto;">
+      <button onclick="tecladoPresionar('7')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">7</button>
+      <button onclick="tecladoPresionar('8')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">8</button>
+      <button onclick="tecladoPresionar('9')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">9</button>
+      <button onclick="tecladoPresionar('DEL')" style="background:#2a1a1a;border:1px solid #3a2020;color:#EF5350;font-size:1.5rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;"><span class="material-icons">backspace</span></button>
+
+      <button onclick="tecladoPresionar('4')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">4</button>
+      <button onclick="tecladoPresionar('5')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">5</button>
+      <button onclick="tecladoPresionar('6')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">6</button>
+      <button onclick="tecladoConfirmar()" style="background:#1B5E20;border:1px solid #2E7D32;color:#69F0AE;font-size:2.2rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;grid-row:span 2;display:flex;align-items:center;justify-content:center;"><span class="material-icons" style="font-size:2.4rem;">check</span></button>
+
+      <button onclick="tecladoPresionar('1')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">1</button>
+      <button onclick="tecladoPresionar('2')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">2</button>
+      <button onclick="tecladoPresionar('3')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">3</button>
+
+      <button onclick="tecladoPresionar('0')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">0</button>
+      <button onclick="tecladoPresionar('.')" style="background:#252535;border:1px solid #2a2a3a;color:#90CAF9;font-size:1.7rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">.</button>
+      <button onclick="tecladoPresionar('AC')" style="background:#1a0a0a;border:1px solid #3a1a1a;color:#EF5350;font-size:1rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">AC</button>
+    </div>
+  </div>
+
+  <!-- Vista del estudiante (QR + enlace) -->
+  <div id="vista-est-overlay" class="modal-overlay hidden" onclick="cerrarVistaEstudiante(event)">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 id="vista-est-titulo">Vista del estudiante</h3>
+        <button class="modal-close" onclick="cerrarVistaEstudianteBtn()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body" style="padding:20px;text-align:center;">
+        <p style="color:#9E9E9E;font-size:0.82rem;margin-bottom:16px;">
+          El estudiante escanea el QR o abre el enlace para ver sus calificaciones en modo solo lectura.
+        </p>
+        <div id="vista-est-qr" style="display:flex;justify-content:center;align-items:center;min-height:224px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input id="vista-est-url" readonly
+            style="flex:1;padding:7px 10px;background:#0e0e1a;border:1px solid #333;border-radius:6px;color:#90CAF9;font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" />
+          <button onclick="copiarLinkEstudiante()"
+            style="padding:7px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:0.82rem;white-space:nowrap;">
+            <span class="material-icons" style="font-size:15px;">content_copy</span>Copiar
+          </button>
+        </div>
+        <button onclick="abrirVistaEstudianteTab()"
+          style="width:100%;padding:10px;background:#1B5E20;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;">
+          <span class="material-icons">open_in_new</span>Abrir vista completa
+        </button>
+        <p style="color:#455A64;font-size:0.72rem;display:flex;align-items:center;justify-content:center;gap:4px;">
+          <span class="material-icons" style="font-size:13px;">wifi</span>
+          El QR funciona si el estudiante está en la misma red WiFi que este equipo.
+        </p>
+      </div>
+    </div>
+  </div>
+  <!-- ===== TEMPORIZADOR FLOTANTE ===== -->
+  <div id="timer-fab-wrap">
+    <!-- Panel -->
+    <div id="timer-panel" class="timer-panel hidden">
+      <div class="timer-panel-header">
+        <span class="material-icons" style="color:#7B1FA2;font-size:18px;">timer</span>
+        <span style="font-weight:700;font-size:0.9rem;">Temporizador de Clase</span>
+        <button class="timer-close-btn" onclick="toggleTimerPanel()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Anillo de progreso + tiempo -->
+      <div class="timer-display-wrap">
+        <svg class="timer-ring" viewBox="0 0 120 120">
+          <circle class="timer-ring-bg" cx="60" cy="60" r="52"/>
+          <circle id="timer-ring-prog" class="timer-ring-prog" cx="60" cy="60" r="52"/>
+        </svg>
+        <div id="timer-display" class="timer-time-text">00:00</div>
+      </div>
+
+      <!-- Presets -->
+      <div class="timer-presets">
+        <button class="timer-preset-btn" onclick="_timerPreset(5)">5'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(10)">10'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(15)">15'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(20)">20'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(25)">25'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(30)">30'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(45)">45'</button>
+        <button class="timer-preset-btn" onclick="_timerPreset(60)">60'</button>
+      </div>
+
+      <!-- Input personalizado -->
+      <div class="timer-custom-row">
+        <div class="timer-custom-field">
+          <input type="number" id="timer-input-min" min="0" max="99" value="0"
+            onkeydown="if(event.key==='Enter')_timerIniciar()" />
+          <span>min</span>
+        </div>
+        <span class="timer-custom-sep">:</span>
+        <div class="timer-custom-field">
+          <input type="number" id="timer-input-seg" min="0" max="59" value="0"
+            onkeydown="if(event.key==='Enter')_timerIniciar()" />
+          <span>seg</span>
+        </div>
+      </div>
+
+      <!-- Controles -->
+      <div class="timer-controls">
+        <button id="timer-btn-play" class="timer-btn-play" onclick="_timerToggle()">
+          <span class="material-icons">play_arrow</span>
+        </button>
+        <button class="timer-btn-reset" onclick="_timerReset()" title="Reiniciar">
+          <span class="material-icons">replay</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Botón flotante -->
+    <button id="timer-fab" class="timer-fab" onclick="toggleTimerPanel()" title="Temporizador de clase">
+      <span class="material-icons" id="timer-fab-icon">timer</span>
+      <span id="timer-fab-time" class="hidden"></span>
+    </button>
+  </div>
+
+  <!-- ===== TOUR DE BIENVENIDA ===== -->
+  <div id="tour-overlay" class="tour-overlay hidden" aria-modal="true" role="dialog">
+    <div id="tour-spotlight" class="tour-spotlight"></div>
+    <div id="tour-caja" class="tour-caja">
+      <div class="tour-caja-top">
+        <span id="tour-icono" class="material-icons tour-icono-grande">waving_hand</span>
+        <span id="tour-paso-label" class="tour-paso-label">Paso 1 de 10</span>
+      </div>
+      <div id="tour-titulo" class="tour-titulo"></div>
+      <div id="tour-desc" class="tour-desc"></div>
+      <div class="tour-dots" id="tour-dots"></div>
+      <div class="tour-nav">
+        <button class="tour-btn-saltar" onclick="_tourSaltar()">Saltar tour</button>
+        <div class="tour-nav-right">
+          <button id="tour-btn-ant" class="tour-btn-sec" onclick="_tourAnterior()">← Anterior</button>
+          <button id="tour-btn-sig" class="tour-btn-prim" onclick="_tourSiguiente()">Siguiente →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REGISTRO SERVICE WORKER (PWA) ===== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[SW] Registrado:', reg.scope))
+          .catch(err => console.warn('[SW] Error al registrar:', err));
+      });
+    }
+  </script>
+
+</body>
+
+</html>
