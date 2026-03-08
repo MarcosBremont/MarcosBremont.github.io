@@ -12712,7 +12712,7 @@ function guardarTodasDiarias() {
 
       recursos: readSec(`pd-recursos-${act.id}`),
 
-
+      recursoUrl: readSec(`pd-recurso-url-${act.id}`),
 
       tiempos: { ini: readT('ini'), des: readT('des'), cie: readT('cie') }
 
@@ -14192,6 +14192,25 @@ function renderizarDiarias() {
 
 
 
+
+        <!-- ENLACE DE RECURSO -->
+        <div class="pd-recurso-url-sect">
+          <div class="pd-sec-header" style="background:linear-gradient(135deg,#0277BD,#0288D1);color:#fff;border-radius:8px 8px 0 0;padding:10px 14px;">
+            <span class="material-icons">link</span> ENLACE DE RECURSO
+          </div>
+          <div class="pd-sec-body" style="padding:12px 14px;display:flex;gap:8px;align-items:center;">
+            <input type="url" id="pd-recurso-url-${act.id}"
+              placeholder="https://drive.google.com/... (presentación, documento, carpeta...)"
+              value="${s.recursoUrl || ''}"
+              style="flex:1;padding:8px 12px;border:1.5px solid #B3E5FC;border-radius:8px;font-size:0.85rem;font-family:inherit;color:var(--color-texto-primario);background:var(--color-superficie);"
+              oninput="guardarTodasDiarias()" />
+            <a id="pd-recurso-abrir-${act.id}" href="${s.recursoUrl || '#'}" target="_blank" rel="noopener"
+              style="display:${s.recursoUrl ? 'flex' : 'none'};align-items:center;gap:4px;background:#0277BD;color:#fff;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:700;text-decoration:none;white-space:nowrap;"
+              onclick="event.preventDefault();const u=document.getElementById('pd-recurso-url-${act.id}').value;if(u)window.open(u,'_blank');">
+              <span class="material-icons" style="font-size:16px;">open_in_new</span> Abrir
+            </a>
+          </div>
+        </div>
 
         <!-- INSTRUMENTO DE EVALUACION -->
         <div class="pd-instrumento-sect">
@@ -16788,7 +16807,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v12.6</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v12.7</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -17192,6 +17211,9 @@ function abrirModalClase(encodedData) {
         <button onclick="cerrarModalBtn();abrirDiariasConPlan('${sesionInfo.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
           <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
         </button>
+        ${s.recursoUrl ? `<a href="${s.recursoUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
+          <span class="material-icons" style="font-size:14px;">link</span> Abrir recurso de la clase
+        </a>` : ''}
       </div>` : `
       <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
         <span class="material-icons" style="font-size:1.8rem;display:block;margin-bottom:4px;opacity:0.4;">event_note</span>
