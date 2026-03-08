@@ -8476,7 +8476,7 @@ function abrirBoletin(estId) {
     + '</tr></thead><tbody>' + filasActs + '</tbody></table>'
     + '<div class="resumen">'
     + '<div class="resumen-card"><div class="resumen-val" style="color:' + raColor + ';">' + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</div><div class="resumen-label">Total RA / ' + raInfo.valorTotal + ' pts</div></div>'
-    + '<div class="resumen-card"><div class="resumen-val" style="color:' + asistColor + ';">' + (asist.pct !== null ? asist.pct + '%' : '—') + '</div><div class="resumen-label">Asistencia</div></div>'
+    + (localStorage.getItem('cfg_asistencia_activa') !== 'false' ? '<div class="resumen-card"><div class="resumen-val" style="color:' + asistColor + ';">' + (asist.pct !== null ? asist.pct + '%' : '—') + '</div><div class="resumen-label">Asistencia</div></div>' : '')
     + '<div class="resumen-card" style="background:#E8F5E9;"><div class="resumen-val" style="color:' + notaFinalColor + ';">' + (notaFinal !== null ? notaFinal.toFixed(1) : '—') + '</div><div class="resumen-label">NOTA FINAL</div></div>'
     + '</div>'
     + secComent + secIncid
@@ -17201,6 +17201,7 @@ function abrirModalClase(encodedData) {
       </div>`}
 
       <!-- Asistencia rápida -->
+      ${localStorage.getItem('cfg_asistencia_activa') !== 'false' ? `
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">how_to_reg</span>Asistencia
           ${asistRegistrada ? `<span style="font-size:0.7rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;">Registrada</span>` : ''}
@@ -17217,7 +17218,7 @@ function abrirModalClase(encodedData) {
           <span class="material-icons" style="font-size:14px;">how_to_reg</span>
           ${asistRegistrada ? 'Ver / editar asistencia' : 'Pasar lista ahora'}
         </button>
-      </div>
+      </div>` : ''}
 
       <!-- Formas de evaluación -->
       <div class="mcl-seccion">
