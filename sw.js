@@ -49,8 +49,9 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Solo interceptar GET
+  // Solo interceptar GET sobre http/https
   if (request.method !== 'GET') return;
+  if (!request.url.startsWith('http')) return;
 
   // Recursos externos (Firebase, EmailJS, etc.) → solo red
   if (NETWORK_ONLY_ORIGINS.some(origin => url.hostname.includes(origin))) {

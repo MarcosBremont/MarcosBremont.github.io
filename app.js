@@ -17130,6 +17130,7 @@ function abrirModalClase(encodedData) {
   const sesionInfo = d.sesiones && d.sesiones[0];
   const sesion = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : {};
   const tiempos = sesion.tiempos || { ini: 20, des: 55, cie: 15 };
+  const recursoUrl = sesion.recursoUrl || '';
 
   document.getElementById('modal-title').innerHTML =
     `<span style="color:${color};">●</span> ${escapeHTML(d.materia)}
@@ -17211,7 +17212,7 @@ function abrirModalClase(encodedData) {
         <button onclick="cerrarModalBtn();abrirDiariasConPlan('${sesionInfo.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
           <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
         </button>
-        ${s.recursoUrl ? `<a href="${s.recursoUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
+        ${recursoUrl ? `<a href="${recursoUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
           <span class="material-icons" style="font-size:14px;">link</span> Abrir recurso de la clase
         </a>` : ''}
       </div>` : `
