@@ -12,6 +12,7 @@ function eliminarCurso(id) {
   }
   guardarCalificaciones();
   renderizarCalificaciones();
+  registrarCambio(`Curso eliminado: "${curso.nombre}"`);
   mostrarToast(`Curso eliminado`, 'success');
 }
 
@@ -30,7 +31,8 @@ function agregarEstudiantes() {
   if (document.getElementById('input-estudiantes'))
     document.getElementById('input-estudiantes').value = '';
   renderizarTablaCalificaciones();
-  mostrarToast(`${nombres.length} estudiante(s) agregado(s)`, 'success');
+  registrarCambio(`${nombres.length} estudiante(s) agregado(s) al curso "${curso.nombre}": ${nombres.slice(0, 3).join(', ')}${nombres.length > 3 ? '...' : ''}`);
+  mostrarToast(`${nombres.length} estudiante(s) agregado(s)`, 'info');
 }
 
 function importarAlumnosCSV(input) {
@@ -5478,6 +5480,7 @@ function generarPlanificacion() {
 
 
 
+      registrarCambio(`Planificación generada: "${planificacion.dg?.moduloFormativo || 'Sin módulo'}" — ${planificacion.elementosCapacidad?.length || 0} EC(s), ${planificacion.actividades?.length || 0} actividades`);
       mostrarToast('¡Planificación generada exitosamente!', 'success');
 
 
@@ -5868,18 +5871,33 @@ function renderizarAuditoria() {
 }
 
 function _auditIcono(accion) {
-  if (accion.includes('bloqueada'))      return { icon: 'lock',          color: '#7B1FA2' };
-  if (accion.includes('desbloqueada'))   return { icon: 'lock_open',     color: '#2E7D32' };
-  if (accion.includes('Sesión iniciada'))return { icon: 'login',         color: '#1565C0' };
-  if (accion.includes('Sesión cerrada')) return { icon: 'logout',        color: '#BF360C' };
-  if (accion.includes('Planificación'))  return { icon: 'description',   color: '#E65100' };
-  if (accion.includes('calificaci'))     return { icon: 'grade',         color: '#F57F17' };
-  if (accion.includes('asistencia'))     return { icon: 'how_to_reg',    color: '#00695C' };
-  if (accion.includes('tarea'))          return { icon: 'task',          color: '#1565C0' };
-  if (accion.includes('blog') || accion.includes('Blog')) return { icon: 'article', color: '#006064' };
-  if (accion.includes('nota'))           return { icon: 'sticky_note_2', color: '#F9A825' };
-  if (accion.includes('config'))         return { icon: 'settings',      color: '#546E7A' };
+  if (accion.includes('bloqueada'))        return { icon: 'lock',             color: '#7B1FA2' };
+  if (accion.includes('desbloqueada'))     return { icon: 'lock_open',        color: '#2E7D32' };
+  if (accion.includes('Sesión iniciada'))  return { icon: 'login',            color: '#1565C0' };
+  if (accion.includes('Sesión cerrada'))   return { icon: 'logout',           color: '#BF360C' };
+  if (accion.includes('Sesión diaria'))    return { icon: 'today',            color: '#00695C' };
+  if (accion.includes('Planificación generada')) return { icon: 'auto_awesome', color: '#AD1457' };
+  if (accion.includes('Planificación eliminada')) return { icon: 'delete',    color: '#C62828' };
+  if (accion.includes('Planificación'))    return { icon: 'description',      color: '#E65100' };
+  if (accion.includes('Curso creado'))     return { icon: 'add_circle',       color: '#1565C0' };
+  if (accion.includes('Curso eliminado'))  return { icon: 'delete',           color: '#C62828' };
+  if (accion.includes('Tarea creada'))     return { icon: 'add_task',         color: '#2E7D32' };
+  if (accion.includes('Tarea eliminada'))  return { icon: 'delete',           color: '#C62828' };
+  if (accion.includes('Tarea entregada'))  return { icon: 'task_alt',         color: '#2E7D32' };
+  if (accion.includes('Tarea no entregada')) return { icon: 'cancel',         color: '#C62828' };
+  if (accion.includes('Tarea'))            return { icon: 'task',             color: '#1565C0' };
+  if (accion.includes('estudiante'))       return { icon: 'person_add',       color: '#0277BD' };
+  if (accion.includes('Estudiante'))       return { icon: 'person_remove',    color: '#C62828' };
+  if (accion.includes('calificaci') || accion.includes('Nota registrada')) return { icon: 'grade', color: '#F57F17' };
+  if (accion.includes('asistencia') || accion.includes('Asistencia')) return { icon: 'how_to_reg', color: '#00695C' };
+  if (accion.includes('blog') || accion.includes('Blog') || accion.includes('Post')) return { icon: 'article', color: '#006064' };
+  if (accion.includes('Backup') || accion.includes('backup') || accion.includes('restaurad')) return { icon: 'backup', color: '#E65100' };
+  if (accion.includes('nota') || accion.includes('Nota')) return { icon: 'sticky_note_2', color: '#F9A825' };
+  if (accion.includes('Reporte'))          return { icon: 'assessment',       color: '#6A1B9A' };
+  if (accion.includes('presentación') || accion.includes('Presentación')) return { icon: 'cast_for_education', color: '#E65100' };
+  if (accion.includes('config') || accion.includes('Modo'))  return { icon: 'settings', color: '#546E7A' };
   if (accion.includes('export') || accion.includes('descarg')) return { icon: 'download', color: '#1565C0' };
+  if (accion.includes('Enlace') || accion.includes('enlace')) return { icon: 'link',      color: '#0277BD' };
   return { icon: 'radio_button_checked', color: '#9E9E9E' };
 }
 
@@ -11192,7 +11210,8 @@ function _guardarTarea(id) {
   guardarTareas(tareas);
   cerrarModalBtn();
   renderizarTareas();
-  mostrarToast(id ? 'Tarea actualizada' : 'Tarea creada', 'success');
+  registrarCambio(id ? `Tarea actualizada: "${desc.substring(0, 60)}"` : `Tarea creada: "${desc.substring(0, 60)}"${seccion ? ' — ' + seccion : ''}`);
+  mostrarToast(id ? 'Tarea actualizada' : 'Tarea creada', 'info');
 }
 
 function marcarTareaEntregada(id) {
@@ -11201,7 +11220,8 @@ function marcarTareaEntregada(id) {
   if (t) { t.estado = 'entregada'; t.entregadaEn = new Date().toISOString(); }
   guardarTareas(tareas);
   renderizarTareas();
-  mostrarToast('Tarea marcada como entregada ✓', 'success');
+  registrarCambio(`Tarea entregada: "${t?.descripcion?.substring(0, 60) || id}"`);
+  mostrarToast('Tarea marcada como entregada ✓', 'info');
 }
 
 function marcarTareaNoEntregada(id) {
@@ -11210,6 +11230,7 @@ function marcarTareaNoEntregada(id) {
   if (t) { t.estado = 'no_entregada'; delete t.entregadaEn; }
   guardarTareas(tareas);
   renderizarTareas();
+  registrarCambio(`Tarea no entregada: "${t?.descripcion?.substring(0, 60) || id}"`);
   mostrarToast('Tarea marcada como no entregada', 'error');
 }
 
@@ -11219,14 +11240,17 @@ function marcarTareaPendiente(id) {
   if (t) { t.estado = 'pendiente'; delete t.entregadaEn; }
   guardarTareas(tareas);
   renderizarTareas();
-  registrarCambio('Tarea marcada como pendiente');
+  registrarCambio(`Tarea marcada como pendiente: "${t?.descripcion?.substring(0, 60) || id}"`);
 }
 
 function eliminarTarea(id) {
   if (!confirm('¿Eliminar esta tarea?')) return;
-  guardarTareas(cargarTareas().filter(t => t.id !== id));
+  const tareas = cargarTareas();
+  const t = tareas.find(t => t.id === id);
+  guardarTareas(tareas.filter(t => t.id !== id));
   renderizarTareas();
-  mostrarToast('Tarea eliminada', 'success');
+  registrarCambio(`Tarea eliminada: "${t?.descripcion?.substring(0, 60) || id}"`);
+  mostrarToast('Tarea eliminada', 'info');
 }
 
 function filtrarTareas(filtro) {
@@ -12061,6 +12085,7 @@ function eliminarPlanificacionGuardada(id) {
 
 
 
+  registrarCambio(`Planificación eliminada: "${reg.nombre}"`);
   mostrarToast('Planificación eliminada', 'info');
 
 
@@ -12730,7 +12755,7 @@ function guardarTodasDiarias() {
 
 
 
-  mostrarToast('Planificaciones diarias guardadas', 'success');
+  mostrarToast('Planificaciones diarias guardadas', 'info');
 
 
 
@@ -13381,7 +13406,8 @@ function generarSesion(actId) {
 
 
 
-  mostrarToast('Sesión generada automáticamente', 'success');
+  registrarCambio(`Sesión diaria generada: "${act.enunciado?.substring(0, 60) || actId}"`);
+  mostrarToast('Sesión generada automáticamente', 'info');
 
 
 
