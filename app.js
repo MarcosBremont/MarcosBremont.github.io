@@ -17098,6 +17098,7 @@ function abrirModalClase(encodedData) {
   try { savedEval = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch { }
   try { savedNota = localStorage.getItem(notaKey) || ''; } catch { }
 
+  const asistModuloActivo = localStorage.getItem('cfg_asistencia_activa') !== 'false';
   const asistData = cargarAsistencia();
   const cursoConSeccion = Object.values(calState.cursos).find(c => c.nombre === d.seccion);
   const asistDia = cursoConSeccion ? ((asistData[cursoConSeccion.id] || {})[d.fecha] || {}) : {};
@@ -17201,7 +17202,7 @@ function abrirModalClase(encodedData) {
       </div>`}
 
       <!-- Asistencia rápida -->
-      ${localStorage.getItem('cfg_asistencia_activa') !== 'false' ? `
+      ${asistModuloActivo ? `
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">how_to_reg</span>Asistencia
           ${asistRegistrada ? `<span style="font-size:0.7rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;">Registrada</span>` : ''}
