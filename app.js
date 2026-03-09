@@ -7573,13 +7573,15 @@ function _getRaKey() {
 
 function _ensureRA(curso, raKey) {
   if (!curso.ras) curso.ras = {};
+
+  let plan = _getPlanActivaDeCurso();
+  if (!plan) plan = planificacion;
+  const acts = plan.actividades || [];
+
   if (!curso.ras[raKey]) {
-    // Intentar obtener la planificación activa del curso
-    let plan = _getPlanActivaDeCurso();
-    if (!plan) plan = planificacion; // fallback
+    // Primera vez: crear raInfo con las actividades actuales
     const dg = plan.datosGenerales || {};
     const ra = plan.ra || {};
-    const acts = plan.actividades || [];
     const valorTotal = parseFloat(dg.valorRA) || 10;
     const valores = {};
     let sumaCustom = 0;
@@ -7606,7 +7608,25 @@ function _ensureRA(curso, raKey) {
         ecCodigo: a.ecCodigo, fechaStr: a.fechaStr
       }))
     };
+  } else {
+    // RA ya existe: detectar actividades nuevas y añadirlas sin borrar ninguna nota
+    const raInfo = curso.ras[raKey];
+    const idsExistentes = new Set(raInfo.actividades);
+    const nuevas = acts.filter(a => !idsExistentes.has(a.id));
+    if (nuevas.length > 0) {
+      nuevas.forEach(a => {
+        raInfo.actividades.push(a.id);
+        raInfo.valores[a.id] = a.valor || 0;
+        if (!raInfo._actividadesSnapshot) raInfo._actividadesSnapshot = [];
+        raInfo._actividadesSnapshot.push({
+          id: a.id, enunciado: a.enunciado,
+          ecCodigo: a.ecCodigo, fechaStr: a.fechaStr
+        });
+      });
+      guardarCalificaciones();
+    }
   }
+
   return curso.ras[raKey];
 }
 
