@@ -14696,8 +14696,8 @@ function _proximaFechaHorario(fechaISO, seccion) {
   return _isoDate(fb);
 }
 
-function abrirMoverDia() {
-  const hoy = _isoDate(new Date());
+function abrirMoverDia(fechaInicial) {
+  const hoy = fechaInicial || _isoDate(new Date());
   const overlay = document.createElement('div');
   overlay.id = 'mover-dia-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;';
