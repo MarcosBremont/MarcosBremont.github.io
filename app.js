@@ -14729,38 +14729,54 @@ function abrirMoverDia(fechaInicial) {
   _renderMoverDiaLista();
 }
 
+// Recolecta actividades de TODA la biblioteca para una fecha dada
+function _actsDeTodasLasPlanesEnFecha(fecha) {
+  const resultado = []; // { act, planId, seccion }
+  const biblio = cargarBiblioteca();
+  (biblio.items || []).forEach(reg => {
+    (reg.planificacion?.actividades || []).forEach(act => {
+      if (_actFechaISO(act) !== fecha) return;
+      const cursosConPlan = Object.values(calState.cursos)
+        .filter(c => (c.planIds || []).includes(reg.id));
+      const seccion = cursosConPlan.length > 0 ? cursosConPlan[0].nombre : null;
+      resultado.push({ act, planId: reg.id, seccion });
+    });
+  });
+  return resultado;
+}
+
 function _renderMoverDiaLista() {
   const fecha = document.getElementById('mover-dia-fecha')?.value;
   const lista = document.getElementById('mover-dia-lista');
   const btn = document.getElementById('mover-dia-btn');
   if (!fecha || !lista) return;
 
-  const acts = (planificacion.actividades || []).filter(a => _actFechaISO(a) === fecha);
+  const entries = _actsDeTodasLasPlanesEnFecha(fecha);
 
-  if (acts.length === 0) {
+  if (entries.length === 0) {
     const dn = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'short' });
     lista.innerHTML = `<p style="font-size:0.83rem;color:#E65100;text-align:center;padding:12px 0;">⚠ No hay actividades el ${dn}.</p>`;
     if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
     return;
   }
 
-  // Buscar sección por curso activo; si no, intentar por cada actividad individualmente
-  const cursoActivo = calState.cursos[calState.cursoActivoId];
-  const seccionBase = cursoActivo?.nombre || null;
-  const tieneHorario = _diasHorarioDeSeccion(seccionBase).length > 0;
+  let html = `<div style="font-size:0.8rem;font-weight:700;color:#546E7A;margin-bottom:10px;">${entries.length} actividad(es) encontradas — ajusta la fecha destino de cada una:</div>`;
 
-  let html = `<div style="font-size:0.8rem;font-weight:700;color:#546E7A;margin-bottom:10px;">${acts.length} actividad(es) encontradas — ajusta la fecha destino de cada una:</div>`;
-
-  acts.forEach((act, i) => {
+  entries.forEach(({ act, seccion }, i) => {
     const enunciado = (act.enunciado || 'Sin descripción').substring(0, 72);
-    const sugerida = _proximaFechaHorario(fecha, seccionBase);
+    const sugerida = _proximaFechaHorario(fecha, seccion);
+    const tieneHorario = _diasHorarioDeSeccion(seccion).length > 0;
     const fuenteTag = tieneHorario
       ? `<span style="font-size:0.7rem;background:#E3F2FD;color:#1565C0;border-radius:6px;padding:1px 6px;white-space:nowrap;">📅 horario</span>`
       : `<span style="font-size:0.7rem;background:#FFF3E0;color:#E65100;border-radius:6px;padding:1px 6px;white-space:nowrap;">+7 días</span>`;
+    const seccionTag = seccion
+      ? `<span style="font-size:0.72rem;background:#E8F5E9;color:#2E7D32;border-radius:6px;padding:1px 6px;">${escapeHTML(seccion)}</span>`
+      : '';
     html += `
     <div style="border:1.5px solid #E3F2FD;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
-      <div style="font-size:0.82rem;font-weight:600;color:var(--color-texto-primario,#212121);margin-bottom:8px;line-height:1.4;">
-        ${i + 1}. ${enunciado}${(act.enunciado?.length || 0) > 72 ? '…' : ''}
+      <div style="font-size:0.82rem;font-weight:600;color:var(--color-texto-primario,#212121);margin-bottom:6px;line-height:1.4;display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;">
+        <span>${i + 1}. ${enunciado}${(act.enunciado?.length || 0) > 72 ? '…' : ''}</span>
+        ${seccionTag}
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-size:0.75rem;color:#C62828;text-decoration:line-through;white-space:nowrap;">${act.fechaStr || fecha}</span>
@@ -14783,20 +14799,28 @@ function cerrarMoverDia() {
 function _ejecutarMoverDia() {
   const fecha = document.getElementById('mover-dia-fecha')?.value;
   if (!fecha) return;
-  const acts = (planificacion.actividades || []).filter(a => _actFechaISO(a) === fecha);
+  const biblio = cargarBiblioteca();
   let movidas = 0;
-  acts.forEach(act => {
-    const input = document.getElementById(`mover-dest-${act.id}`);
-    const nuevaFecha = input?.value;
-    if (!nuevaFecha || nuevaFecha === fecha) return;
-    act.fecha = nuevaFecha;
-    act.fechaStr = _fecStr(nuevaFecha);
-    movidas++;
+
+  (biblio.items || []).forEach(reg => {
+    (reg.planificacion?.actividades || []).forEach(act => {
+      if (_actFechaISO(act) !== fecha) return;
+      const input = document.getElementById(`mover-dest-${act.id}`);
+      const nuevaFecha = input?.value;
+      if (!nuevaFecha || nuevaFecha === fecha) return;
+      act.fecha = nuevaFecha;
+      act.fechaStr = _fecStr(nuevaFecha);
+      movidas++;
+    });
   });
+
   if (movidas > 0) {
+    persistirBiblioteca(biblio);
+    // Sincronizar con planificacion activa en editor si aplica
     guardarBorrador();
     guardarTodasDiarias();
     renderizarDiarias();
+    renderizarDashboard();
     registrarCambio(`${movidas} actividad(es) reagendadas desde ${fecha}`);
     mostrarToast(`${movidas} actividad(es) movidas correctamente`, 'success');
   }
