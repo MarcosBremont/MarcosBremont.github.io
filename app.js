@@ -14652,94 +14652,152 @@ function cerrarDiarias() {
 
 // ── Mover actividades de un día al siguiente ─────────────────────
 
+function _isoDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function _fecStr(fechaISO) {
+  const d = new Date(fechaISO + 'T12:00:00');
+  return d.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function _actFechaISO(act) {
+  return act.fecha instanceof Date ? _isoDate(act.fecha) : String(act.fecha || '').split('T')[0];
+}
+
+// Devuelve los días del horario (0=Lun…4=Vie) donde aparece la sección del curso activo
+function _diasHorarioDeSeccion(seccion) {
+  if (!seccion) return [];
+  const horario = cargarHorario().filter(e => e.materia);
+  const dias = horario
+    .filter(e => e.seccion === seccion || e.materia === seccion)
+    .map(e => e.dia);
+  return [...new Set(dias)];
+}
+
+// Próxima fecha después de fechaISO donde la sección tiene clase según el horario
+// Si no hay datos de horario, usa mismo día de semana +7 días
+function _proximaFechaHorario(fechaISO, seccion) {
+  const diasSec = _diasHorarioDeSeccion(seccion);
+  const base = new Date(fechaISO + 'T12:00:00');
+  const next = new Date(base);
+  next.setDate(next.getDate() + 1);
+  for (let i = 0; i < 60; i++) {
+    const horIdx = next.getDay() - 1; // 0=Lun … 4=Vie
+    if (diasSec.length > 0) {
+      if (horIdx >= 0 && horIdx <= 4 && diasSec.includes(horIdx)) return _isoDate(next);
+    } else {
+      if (next.getDay() === base.getDay()) return _isoDate(next);
+    }
+    next.setDate(next.getDate() + 1);
+  }
+  const fb = new Date(base);
+  fb.setDate(fb.getDate() + 7);
+  return _isoDate(fb);
+}
+
 function abrirMoverDia() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = _isoDate(new Date());
   const overlay = document.createElement('div');
   overlay.id = 'mover-dia-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;';
   overlay.innerHTML = `
-    <div style="background:var(--color-superficie,#fff);border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2);" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <div style="background:var(--color-superficie,#fff);border-radius:16px;padding:24px;max-width:500px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.22);margin:auto;" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <span class="material-icons" style="color:#0277BD;font-size:24px;">swap_horiz</span>
         <h3 style="margin:0;font-size:1rem;font-weight:800;color:var(--color-texto-primario,#212121);">Mover actividades de un día</h3>
       </div>
-      <p style="font-size:0.83rem;color:var(--color-texto-secundario,#757575);margin:0 0 14px;">
-        Selecciona el día que no habrá clases. Todas las actividades de esa fecha se moverán al siguiente día equivalente de cada semana.
+      <p style="font-size:0.82rem;color:var(--color-texto-secundario,#757575);margin:0 0 14px;">
+        Selecciona el día sin clases. El sistema sugerirá el próximo día que toca cada sección según el horario. Puedes ajustar la fecha de cada actividad individualmente.
       </p>
-      <label style="font-size:0.82rem;font-weight:700;color:var(--color-texto-primario,#212121);display:block;margin-bottom:6px;">Día a mover</label>
-      <input type="date" id="mover-dia-fecha" value="${hoy}"
-        style="width:100%;padding:9px 12px;border:1.5px solid #B3E5FC;border-radius:8px;font-size:0.9rem;font-family:inherit;box-sizing:border-box;margin-bottom:12px;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);"
-        oninput="_actualizarConteoMoverDia()" />
-      <div id="mover-dia-info" style="font-size:0.82rem;color:#546E7A;min-height:20px;margin-bottom:16px;"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button onclick="cerrarMoverDia()" style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;">Cancelar</button>
-        <button id="mover-dia-btn" onclick="_ejecutarMoverDia()" style="background:#0277BD;color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
-          <span class="material-icons" style="font-size:16px;">swap_horiz</span> Mover actividades
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <label style="font-size:0.82rem;font-weight:700;color:var(--color-texto-primario,#212121);white-space:nowrap;">Día a omitir:</label>
+        <input type="date" id="mover-dia-fecha" value="${hoy}"
+          style="flex:1;min-width:140px;padding:8px 12px;border:1.5px solid #B3E5FC;border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);"
+          oninput="_renderMoverDiaLista()" />
+      </div>
+      <div id="mover-dia-lista"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button onclick="cerrarMoverDia()" style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button id="mover-dia-btn" onclick="_ejecutarMoverDia()" disabled
+          style="background:#0277BD;color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;opacity:0.5;">
+          <span class="material-icons" style="font-size:16px;">check</span> Confirmar y mover
         </button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  _actualizarConteoMoverDia();
+  _renderMoverDiaLista();
+}
+
+function _renderMoverDiaLista() {
+  const fecha = document.getElementById('mover-dia-fecha')?.value;
+  const lista = document.getElementById('mover-dia-lista');
+  const btn = document.getElementById('mover-dia-btn');
+  if (!fecha || !lista) return;
+
+  const acts = (planificacion.actividades || []).filter(a => _actFechaISO(a) === fecha);
+
+  if (acts.length === 0) {
+    const dn = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'short' });
+    lista.innerHTML = `<p style="font-size:0.83rem;color:#E65100;text-align:center;padding:12px 0;">⚠ No hay actividades el ${dn}.</p>`;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+    return;
+  }
+
+  // Buscar sección por curso activo; si no, intentar por cada actividad individualmente
+  const cursoActivo = calState.cursos[calState.cursoActivoId];
+  const seccionBase = cursoActivo?.nombre || null;
+  const tieneHorario = _diasHorarioDeSeccion(seccionBase).length > 0;
+
+  let html = `<div style="font-size:0.8rem;font-weight:700;color:#546E7A;margin-bottom:10px;">${acts.length} actividad(es) encontradas — ajusta la fecha destino de cada una:</div>`;
+
+  acts.forEach((act, i) => {
+    const enunciado = (act.enunciado || 'Sin descripción').substring(0, 72);
+    const sugerida = _proximaFechaHorario(fecha, seccionBase);
+    const fuenteTag = tieneHorario
+      ? `<span style="font-size:0.7rem;background:#E3F2FD;color:#1565C0;border-radius:6px;padding:1px 6px;white-space:nowrap;">📅 horario</span>`
+      : `<span style="font-size:0.7rem;background:#FFF3E0;color:#E65100;border-radius:6px;padding:1px 6px;white-space:nowrap;">+7 días</span>`;
+    html += `
+    <div style="border:1.5px solid #E3F2FD;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:0.82rem;font-weight:600;color:var(--color-texto-primario,#212121);margin-bottom:8px;line-height:1.4;">
+        ${i + 1}. ${enunciado}${(act.enunciado?.length || 0) > 72 ? '…' : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:0.75rem;color:#C62828;text-decoration:line-through;white-space:nowrap;">${act.fechaStr || fecha}</span>
+        <span class="material-icons" style="font-size:14px;color:#9E9E9E;">arrow_forward</span>
+        <input type="date" id="mover-dest-${act.id}" value="${sugerida}"
+          style="padding:5px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.82rem;font-family:inherit;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);" />
+        ${fuenteTag}
+      </div>
+    </div>`;
+  });
+
+  lista.innerHTML = html;
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 }
 
 function cerrarMoverDia() {
   document.getElementById('mover-dia-overlay')?.remove();
 }
 
-function _actualizarConteoMoverDia() {
-  const fecha = document.getElementById('mover-dia-fecha')?.value;
-  const info = document.getElementById('mover-dia-info');
-  const btn = document.getElementById('mover-dia-btn');
-  if (!fecha || !info) return;
-  const actsEnFecha = (planificacion.actividades || []).filter(a => {
-    const f = a.fecha instanceof Date ? a.fecha.toISOString().split('T')[0] : String(a.fecha || '').split('T')[0];
-    return f === fecha;
-  });
-  const d = new Date(fecha + 'T12:00:00');
-  const DIAS_ES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  const diaNombre = DIAS_ES[d.getDay()];
-  if (actsEnFecha.length === 0) {
-    info.innerHTML = `<span style="color:#E65100;">⚠ No hay actividades el ${fecha} (${diaNombre}).</span>`;
-    if (btn) btn.disabled = true;
-  } else {
-    const proxFecha = _proximaFechaMismoDia(fecha);
-    const dp = new Date(proxFecha + 'T12:00:00');
-    const proxDia = dp.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'short' });
-    info.innerHTML = `<span style="color:#2E7D32;">✓ ${actsEnFecha.length} actividad(es) el ${diaNombre} → se moverán al <strong>${proxDia}</strong>.</span>`;
-    if (btn) btn.disabled = false;
-  }
-}
-
-function _proximaFechaMismoDia(fechaISO) {
-  const [y, m, d] = fechaISO.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  date.setDate(date.getDate() + 7);
-  const yy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
-
 function _ejecutarMoverDia() {
   const fecha = document.getElementById('mover-dia-fecha')?.value;
   if (!fecha) return;
-  const actividades = planificacion.actividades || [];
+  const acts = (planificacion.actividades || []).filter(a => _actFechaISO(a) === fecha);
   let movidas = 0;
-  actividades.forEach(act => {
-    const f = act.fecha instanceof Date ? act.fecha.toISOString().split('T')[0] : String(act.fecha || '').split('T')[0];
-    if (f === fecha) {
-      const nuevaFecha = _proximaFechaMismoDia(fecha);
-      act.fecha = nuevaFecha;
-      const d = new Date(nuevaFecha + 'T12:00:00');
-      act.fechaStr = d.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-      movidas++;
-    }
+  acts.forEach(act => {
+    const input = document.getElementById(`mover-dest-${act.id}`);
+    const nuevaFecha = input?.value;
+    if (!nuevaFecha || nuevaFecha === fecha) return;
+    act.fecha = nuevaFecha;
+    act.fechaStr = _fecStr(nuevaFecha);
+    movidas++;
   });
   if (movidas > 0) {
     guardarBorrador();
     guardarTodasDiarias();
     renderizarDiarias();
-    registrarCambio(`${movidas} actividad(es) movidas del ${fecha} al siguiente día equivalente`);
+    registrarCambio(`${movidas} actividad(es) reagendadas desde ${fecha}`);
     mostrarToast(`${movidas} actividad(es) movidas correctamente`, 'success');
   }
   cerrarMoverDia();
