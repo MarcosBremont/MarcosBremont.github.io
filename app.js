@@ -7578,11 +7578,12 @@ function _ensureRA(curso, raKey) {
   if (!plan) plan = planificacion;
   const acts = plan.actividades || [];
 
+  const dg = plan.datosGenerales || {};
+  const ra = plan.ra || {};
+  const valorTotal = parseFloat(dg.valorRA) || 10;
+
   if (!curso.ras[raKey]) {
     // Primera vez: crear raInfo con las actividades actuales
-    const dg = plan.datosGenerales || {};
-    const ra = plan.ra || {};
-    const valorTotal = parseFloat(dg.valorRA) || 10;
     const valores = {};
     let sumaCustom = 0;
     acts.forEach(a => { if (a.valor) { valores[a.id] = a.valor; sumaCustom += a.valor; } });
