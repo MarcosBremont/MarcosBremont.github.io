@@ -7611,6 +7611,13 @@ function _ensureRA(curso, raKey) {
   } else {
     // RA ya existe: detectar actividades nuevas y añadirlas sin borrar ninguna nota
     const raInfo = curso.ras[raKey];
+
+    // Sincronizar valor total con la planificación (puede cambiar si el docente ajusta el RA)
+    if (raInfo.valorTotal !== valorTotal) {
+      raInfo.valorTotal = valorTotal;
+      guardarCalificaciones();
+    }
+
     const idsExistentes = new Set(raInfo.actividades);
     const nuevas = acts.filter(a => !idsExistentes.has(a.id));
     if (nuevas.length > 0) {
