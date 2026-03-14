@@ -300,8 +300,8 @@
         </button>
       </div>
 
-      <!-- ── Grid principal: Hoy | Mañana | Tareas ── -->
-      <div class="dash-grid-3col">
+      <!-- ── Grid principal: Hoy | Mañana | Pasado mañana | Tareas ── -->
+      <div class="dash-grid-4col">
         <!-- Columna 1: clases de hoy -->
         <div>
           <div class="dash-section-label">
@@ -327,7 +327,20 @@
           </div>
           <div id="dash-manana"></div>
         </div>
-        <!-- Columna 3: tareas próximas -->
+        <!-- Columna 3: clases de pasado mañana -->
+        <div>
+          <div class="dash-section-label">
+            <span class="material-icons">date_range</span>Pasado mañana
+            <span id="dash-pasado-fecha"
+              style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
+            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+172800000)))" title="Mover actividades de pasado mañana al siguiente día que toca"
+              style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
+              <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
+            </button>
+          </div>
+          <div id="dash-pasado"></div>
+        </div>
+        <!-- Columna 4: tareas próximas -->
         <div>
           <div class="dash-section-label">
             <span class="material-icons">assignment</span>Tareas próximas

@@ -17001,6 +17001,7 @@ function renderizarDashboard() {
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
+  _renderizarClasesPasado();
   _renderizarTareasProximas();
   _renderizarResumenCursos();
   _renderizarEstadisticasDashboard();
@@ -17187,6 +17188,9 @@ function _renderizarClasesHoy() {
 function _renderizarClasesManana() {
   _renderizarClasesDia('dash-manana', 'dash-manana-fecha', 1);
 }
+function _renderizarClasesPasado() {
+  _renderizarClasesDia('dash-pasado', 'dash-pasado-fecha', 2);
+}
 
 function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   const cont = document.getElementById(contId);
@@ -17203,7 +17207,8 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   if (fechaEl) fechaEl.textContent = DIAS[diaJS] + ' ' + target.getDate() + ' de ' + MESES[target.getMonth()];
 
   if (diaIdx < 0) {
-    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">weekend</span><p>${offsetDias === 0 ? '¡Es fin de semana!' : 'Mañana es fin de semana 😄'}</p></div>`;
+    const msgFinde = offsetDias === 0 ? '¡Es fin de semana!' : offsetDias === 1 ? 'Mañana es fin de semana 😄' : 'Es fin de semana 😄';
+    cont.innerHTML = `<div class="dash-empty-card"><span class="material-icons">weekend</span><p>${msgFinde}</p></div>`;
     return;
   }
 

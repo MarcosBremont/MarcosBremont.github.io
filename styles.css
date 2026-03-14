@@ -5575,33 +5575,25 @@ body.dark-mode .asist-num {
 
 
 /* ═══════════════════════════════════════════════════════════════════
-   DASHBOARD: GRID 3 COLUMNAS + MODAL CLASE
+   DASHBOARD: GRID 4 COLUMNAS + MODAL CLASE
    ═══════════════════════════════════════════════════════════════════ */
 
-.dash-grid-3col {
+.dash-grid-4col {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 18px;
   margin-bottom: 8px;
 }
 
-@media (max-width: 1024px) {
-  .dash-grid-3col {
+@media (max-width: 1200px) {
+  .dash-grid-4col {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .dash-grid-3col>div:last-child {
-    grid-column: 1 / -1;
   }
 }
 
 @media (max-width: 640px) {
-  .dash-grid-3col {
+  .dash-grid-4col {
     grid-template-columns: 1fr;
-  }
-
-  .dash-grid-3col>div:last-child {
-    grid-column: auto;
   }
 }
 
