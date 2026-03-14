@@ -2070,11 +2070,10 @@ function renderizarEC(listaEC) {
 
 
 
+  const _ecList = planificacion.elementosCapacidad || [];
+  const _ecHorasSum = _ecList.reduce((s, e) => s + (e.horasAsignadas || 0), 0);
   document.getElementById('horas-por-ec-display').textContent =
-
-
-
-    Math.round(planificacion.horasTotal / 4) + ' hrs';
+    (_ecList.length > 0 ? Math.round(_ecHorasSum / _ecList.length) : 0) + ' hrs';
 
 
 
@@ -5412,17 +5411,7 @@ function generarPlanificacion() {
 
 
 
-      // 5. Distribuir horas entre EC
-
-
-
-      ec = distribuirHoras(planificacion.horasTotal, ec);
-
-
-
       planificacion.elementosCapacidad = ec;
-
-
 
 
 
@@ -5434,8 +5423,15 @@ function generarPlanificacion() {
 
       planificacion.actividades = generarActividades(ec, planificacion.fechasClase);
 
-
-
+      // 5b. Distribuir horas por EC según actividades × horas por sesión
+      const _diasAct = Object.values(dg.diasClase || {}).filter(d => d.activo);
+      const _hPS = _diasAct.length > 0
+        ? _diasAct.reduce((s, d) => s + d.horas, 0) / _diasAct.length
+        : 2;
+      ec.forEach(e => {
+        const numActs = planificacion.actividades.filter(a => a.ecCodigo === e.codigo).length;
+        e.horasAsignadas = Math.round(numActs * _hPS);
+      });
 
 
 
@@ -15422,18 +15418,16 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
     if (el) el.textContent = aiData.nivelBloomRA.charAt(0).toUpperCase() + aiData.nivelBloomRA.slice(1);
   }
 
-  // 2. Elementos de Capacidad
+  // 2. Elementos de Capacidad (horas se calculan después de asignar actividades)
   const totalHoras = planificacion.horasTotal || (parseFloat(dg.horasSemana || 2) * 2);
-  const horasPorEC = Math.floor(totalHoras / 4);
-  const horasResto = totalHoras - (horasPorEC * 4);
 
-  planificacion.elementosCapacidad = aiData.elementosCapacidad.map((ec, i) => ({
+  planificacion.elementosCapacidad = aiData.elementosCapacidad.map((ec) => ({
     id: ec.codigo,
     codigo: ec.codigo,
     nivel: ec.nivel,
     nivelBloom: ec.nivelBloom || ec.nivel,
     enunciado: ec.enunciado,
-    horasAsignadas: horasPorEC + (i === 0 ? horasResto : 0),
+    horasAsignadas: 0,
     descripcion: ec.enunciado,
     secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion,
     instrumento: undefined
@@ -15518,7 +15512,22 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
     };
   });
 
-  // 4. Actualizar resumen de horas en pantalla
+  // 4. Calcular horas por EC según cantidad de actividades × horas por sesión
+  // Horas promedio por sesión de clase (de los días activos configurados)
+  const diasActivos = Object.values(dg.diasClase || {}).filter(d => d.activo);
+  const horasPorSesion = diasActivos.length > 0
+    ? diasActivos.reduce((s, d) => s + d.horas, 0) / diasActivos.length
+    : 2;
+
+  planificacion.elementosCapacidad.forEach(ec => {
+    const numActs = planificacion.actividades.filter(a => a.ecCodigo === ec.codigo).length;
+    ec.horasAsignadas = Math.round(numActs * horasPorSesion);
+  });
+
+  // Recalcular horasTotal como suma real de horas de todos los EC
+  const horasSumaEC = planificacion.elementosCapacidad.reduce((s, e) => s + e.horasAsignadas, 0);
+
+  // 5. Actualizar resumen de horas en pantalla
   const resEl = document.getElementById('resumen-distribucion');
   if (resEl) {
     resEl.classList.remove('hidden');
@@ -15527,7 +15536,7 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
     const displayXEC = document.getElementById('horas-por-ec-display');
     if (displayHoras) displayHoras.textContent = totalHoras + ' hrs';
     if (displaySemanas) displaySemanas.textContent = Math.ceil(totalHoras / parseFloat(dg.horasSemana || 2)) + ' sem';
-    if (displayXEC) displayXEC.textContent = horasPorEC + ' hrs';
+    if (displayXEC) displayXEC.textContent = (planificacion.elementosCapacidad.length > 0 ? Math.round(horasSumaEC / planificacion.elementosCapacidad.length) : 0) + ' hrs';
   }
 }
 
@@ -15564,6 +15573,7 @@ generarPlanificacion = async function () {
     planificacion.datosGenerales.fechaTermino
   );
   planificacion.fechasClase = fechasClase;
+  planificacion.horasTotal = fechasClase.reduce((s, f) => s + f.horas, 0);
 
   const groqKey = getGroqKey();
 
