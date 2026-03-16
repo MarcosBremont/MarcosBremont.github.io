@@ -23,6 +23,7 @@ const FIREBASE_STORES = [
   { store: 'blog',                  key: 'planificadorRA_blog_v1' },
   { store: 'reportes',              key: 'planificadorRA_reportes_v1' },
   { store: 'calendario_escolar',    key: 'planificadorRA_calendario_escolar_v1' },
+  { store: 'cuentas_estudiantes',  key: 'planificadorRA_cuentas_estudiantes_v1' },
 ];
 
 const MIGRATION_FLAG = 'planificadorRA_migrated_v1';

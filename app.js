@@ -6651,7 +6651,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -6667,7 +6667,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -16874,7 +16874,8 @@ function exportarDatos() {
     groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || '',
     geminiKey: localStorage.getItem('planificadorRA_geminiKey') || '',
     notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
-    libreta: localStorage.getItem(LIBRETA_KEY) || '{"entries":[]}'
+    libreta: localStorage.getItem(LIBRETA_KEY) || '{"entries":[]}',
+    cuentasEstudiantes: localStorage.getItem(CUENTAS_EST_KEY) || '{"cuentas":[]}'
   };
 
   const json = JSON.stringify(backup, null, 2);
@@ -16985,6 +16986,7 @@ function importarDatos() {
     }
     if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
     if (d.geminiKey) localStorage.setItem('planificadorRA_geminiKey', d.geminiKey);
+    if (d.cuentasEstudiantes) localStorage.setItem(CUENTAS_EST_KEY, d.cuentasEstudiantes);
 
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
     cerrarBackup();
@@ -19482,6 +19484,331 @@ function _calEscRestaurarAdmin() {
   _calEsc.modo = 'admin';
   _calEscRenderizar();
   mostrarToast('Calendario oficial restaurado', 'success');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: REPORTES DE COMPORTAMIENTO (ESTUDIANTES)
+// ════════════════════════════════════════════════════════════════════
+const CUENTAS_EST_KEY = 'planificadorRA_cuentas_estudiantes_v1';
+
+function _cargarCuentasEst() {
+  try { return JSON.parse(localStorage.getItem(CUENTAS_EST_KEY)) || { cuentas: [] }; } catch(e) { return { cuentas: [] }; }
+}
+function _guardarCuentasEst(data) {
+  localStorage.setItem(CUENTAS_EST_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('cuentas_estudiantes', data);
+}
+
+let _repCompTab = 'reportes';
+
+function abrirReportesComportamiento() {
+  _mostrarPanel('panel-reportes-comp');
+  _repCompTab = 'reportes';
+  switchTabReportes('reportes');
+}
+
+function switchTabReportes(tab) {
+  _repCompTab = tab;
+  const tabs = { reportes: 'tab-rep-reportes', cuentas: 'tab-rep-cuentas', enlace: 'tab-rep-enlace' };
+  Object.entries(tabs).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (k === tab) {
+      el.style.background = '#1565C0'; el.style.color = '#fff'; el.style.borderColor = '#1565C0';
+    } else {
+      el.style.background = '#F5F5F5'; el.style.color = '#616161'; el.style.borderColor = '#E0E0E0';
+    }
+  });
+  if (tab === 'reportes') _renderReportesRecibidos();
+  else if (tab === 'cuentas') _renderCuentasEstudiantes();
+  else if (tab === 'enlace') _renderEnlaceReportes();
+}
+
+// ── Tab: Reportes recibidos ─────────────────────────────────────
+async function _renderReportesRecibidos() {
+  const cont = document.getElementById('rep-comp-contenido');
+  if (!cont) return;
+
+  const user = window.currentUser;
+  if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
+
+  cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando reportes...</div>';
+
+  try {
+    const snap = await db.collection('public_blogs').doc(user.uid)
+      .collection('reportes_comportamiento').get();
+
+    const reportes = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+
+    if (reportes.length === 0) {
+      cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+        '<span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span>' +
+        '<p>No se han recibido reportes de comportamiento.</p>' +
+        '<p style="font-size:0.78rem;margin-top:6px;">Comparte el enlace con tus estudiantes desde la pestaña "Enlace".</p></div>';
+      return;
+    }
+
+    // Filtro por curso
+    const cursosSet = [...new Set(reportes.map(r => r.cursoNombre || r.cursoId))];
+    let filtroHTML = '';
+    if (cursosSet.length > 1) {
+      filtroHTML = '<div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button onclick="_filtrarRepComp(\'\')" class="rep-filtro-btn rep-filtro-activo" style="padding:4px 12px;border-radius:16px;border:1px solid #90CAF9;background:#E3F2FD;color:#1565C0;font-size:0.75rem;font-weight:600;cursor:pointer;">Todos</button>' +
+        cursosSet.map(c =>
+          '<button onclick="_filtrarRepComp(\'' + escapeHTML(c) + '\')" class="rep-filtro-btn" style="padding:4px 12px;border-radius:16px;border:1px solid #E0E0E0;background:#fff;color:#616161;font-size:0.75rem;font-weight:600;cursor:pointer;">' + escapeHTML(c) + '</button>'
+        ).join('') + '</div>';
+    }
+
+    cont.innerHTML = filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes) + '</div>';
+    window._repCompTodos = reportes;
+
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:30px;color:#C62828;">Error al cargar reportes: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
+function _filtrarRepComp(curso) {
+  const reportes = window._repCompTodos || [];
+  const filtered = curso ? reportes.filter(r => (r.cursoNombre || r.cursoId) === curso) : reportes;
+  const lista = document.getElementById('rep-comp-lista');
+  if (lista) lista.innerHTML = _buildReportesHTML(filtered);
+
+  // Actualizar estilos de filtros
+  document.querySelectorAll('.rep-filtro-btn').forEach(b => {
+    const esFiltro = curso ? b.textContent.trim() === curso : b.textContent.trim() === 'Todos';
+    b.style.background = esFiltro ? '#E3F2FD' : '#fff';
+    b.style.borderColor = esFiltro ? '#90CAF9' : '#E0E0E0';
+    b.style.color = esFiltro ? '#1565C0' : '#616161';
+  });
+}
+
+function _buildReportesHTML(reportes) {
+  if (!reportes.length) return '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin reportes para este filtro.</div>';
+
+  const tipoLabel = { positivo: 'Positivo', negativo: 'Negativo', neutral: 'Observación' };
+  const tipoCls   = { positivo: '#E8F5E9;color:#2E7D32', negativo: '#FFEBEE;color:#C62828', neutral: '#FFF3E0;color:#E65100' };
+  const tipoIcon  = { positivo: 'thumb_up', negativo: 'thumb_down', neutral: 'info' };
+
+  return reportes.map(r => {
+    const fechaStr = r.fecha
+      ? new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+      : '—';
+    const tStyle = tipoCls[r.tipo] || tipoCls.neutral;
+    const tIcon  = tipoIcon[r.tipo] || 'info';
+    const tLabel = tipoLabel[r.tipo] || 'Observación';
+
+    return '<div style="background:var(--color-fondo-card,#fff);border:1px solid var(--color-borde,#E0E0E0);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+        '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:' + tStyle + ';">' +
+          '<span class="material-icons" style="font-size:12px;">' + tIcon + '</span> ' + tLabel +
+        '</span>' +
+        '<span style="font-size:0.75rem;color:#9E9E9E;display:flex;align-items:center;gap:3px;">' +
+          '<span class="material-icons" style="font-size:13px;">schedule</span> ' + escapeHTML(fechaStr) +
+        '</span>' +
+        '<span style="font-size:0.75rem;color:#78909C;margin-left:auto;">' + escapeHTML(r.cursoNombre || '') + '</span>' +
+      '</div>' +
+      '<div style="font-size:0.78rem;color:#616161;display:flex;align-items:center;gap:4px;margin-bottom:6px;">' +
+        '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(r.involucrados || '') +
+      '</div>' +
+      '<div style="font-size:0.86rem;color:var(--color-texto,#424242);line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(r.descripcion || '') + '</div>' +
+      '<div style="font-size:0.72rem;color:#BDBDBD;margin-top:8px;display:flex;align-items:center;gap:4px;">' +
+        '<span class="material-icons" style="font-size:12px;">person</span> Reportado por: ' + escapeHTML(r.reportadoPor || r.usuario || '') +
+      '</div>' +
+      '<div style="margin-top:8px;text-align:right;">' +
+        '<button onclick="_eliminarReporteComp(\'' + escapeHTML(r.id) + '\')" style="background:none;border:1px solid #FFCDD2;color:#C62828;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
+          '<span class="material-icons" style="font-size:14px;">delete</span> Eliminar</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function _eliminarReporteComp(id) {
+  if (!confirm('¿Eliminar este reporte? No se puede deshacer.')) return;
+  const user = window.currentUser;
+  if (!user) return;
+  try {
+    await db.collection('public_blogs').doc(user.uid)
+      .collection('reportes_comportamiento').doc(id).delete();
+    mostrarToast('Reporte eliminado', 'success');
+    _renderReportesRecibidos();
+  } catch (e) {
+    mostrarToast('Error al eliminar: ' + e.message, 'error');
+  }
+}
+
+// ── Tab: Cuentas de estudiantes ─────────────────────────────────
+function _renderCuentasEstudiantes() {
+  const cont = document.getElementById('rep-comp-contenido');
+  if (!cont) return;
+
+  const data = _cargarCuentasEst();
+  const cuentas = data.cuentas || [];
+
+  // Obtener cursos disponibles
+  const cursos = Object.values(calState?.cursos || {});
+
+  let html = '<div style="background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;color:#0D47A1;display:flex;align-items:center;gap:8px;">' +
+    '<span class="material-icons" style="font-size:18px;">info</span>' +
+    'Crea cuentas para que los estudiantes puedan iniciar sesión en la página de reportes y enviar reportes de comportamiento.' +
+    '</div>';
+
+  // Formulario nueva cuenta
+  html += '<div style="background:var(--color-fondo-card,#fff);border:1.5px solid #E3F2FD;border-radius:10px;padding:16px;margin-bottom:16px;">' +
+    '<div style="font-size:0.85rem;font-weight:700;color:#1565C0;margin-bottom:12px;display:flex;align-items:center;gap:6px;">' +
+      '<span class="material-icons" style="font-size:18px;">person_add</span> Nueva cuenta' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Nombre del estudiante *</label>' +
+        '<input id="ce-nombre" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: Juan Pérez"></div>' +
+      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Curso asignado *</label>' +
+        '<select id="ce-curso" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;">' +
+          (cursos.length === 0 ? '<option value="">— Sin cursos —</option>' :
+           cursos.map(c => '<option value="' + escapeHTML(c.id) + '" data-nombre="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>').join('')) +
+        '</select></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">' +
+      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Usuario *</label>' +
+        '<input id="ce-usuario" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: juan.perez"></div>' +
+      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Contraseña *</label>' +
+        '<input id="ce-pass" type="text" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: 1234"></div>' +
+    '</div>' +
+    '<div id="ce-error" style="color:#C62828;font-size:0.8rem;min-height:18px;margin-top:6px;"></div>' +
+    '<button onclick="_crearCuentaEstudiante()" style="margin-top:8px;background:#1565C0;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">' +
+      '<span class="material-icons" style="font-size:16px;">add</span> Crear cuenta</button>' +
+  '</div>';
+
+  // Lista de cuentas existentes
+  if (cuentas.length > 0) {
+    html += '<div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#546E7A;margin-bottom:10px;">Cuentas creadas (' + cuentas.length + ')</div>';
+    cuentas.forEach((c, i) => {
+      const activo = c.activo !== false;
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid var(--color-borde,#E0E0E0);margin-bottom:8px;background:var(--color-fondo-card,#FAFAFA);' + (!activo ? 'opacity:0.5;' : '') + '">' +
+        '<span class="material-icons" style="font-size:22px;color:' + (activo ? '#1565C0' : '#BDBDBD') + ';">account_circle</span>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto,#212121);">' + escapeHTML(c.nombre) + '</div>' +
+          '<div style="font-size:0.75rem;color:#757575;">Usuario: <strong>' + escapeHTML(c.usuario) + '</strong> · Contraseña: <strong>' + escapeHTML(c.password) + '</strong></div>' +
+          '<div style="font-size:0.72rem;color:#9E9E9E;">' + escapeHTML(c.cursoNombre || c.cursoId) + '</div>' +
+        '</div>' +
+        '<button onclick="_toggleCuentaEst(' + i + ')" title="' + (activo ? 'Desactivar' : 'Activar') + '" style="background:none;border:1px solid ' + (activo ? '#FFCDD2' : '#C8E6C9') + ';color:' + (activo ? '#C62828' : '#2E7D32') + ';border-radius:6px;padding:4px 8px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
+          '<span class="material-icons" style="font-size:14px;">' + (activo ? 'block' : 'check_circle') + '</span>' + (activo ? 'Desactivar' : 'Activar') +
+        '</button>' +
+        '<button onclick="_eliminarCuentaEst(' + i + ')" title="Eliminar" style="background:none;border:1px solid #FFCDD2;color:#C62828;border-radius:6px;padding:4px 8px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
+          '<span class="material-icons" style="font-size:14px;">delete</span>' +
+        '</button>' +
+      '</div>';
+    });
+  } else {
+    html += '<div style="text-align:center;padding:20px;color:#9E9E9E;font-size:0.85rem;">' +
+      '<span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">person_off</span>' +
+      'No hay cuentas de estudiantes creadas.</div>';
+  }
+
+  cont.innerHTML = html;
+}
+
+function _crearCuentaEstudiante() {
+  const nombre  = (document.getElementById('ce-nombre')?.value || '').trim();
+  const usuario = (document.getElementById('ce-usuario')?.value || '').trim().toLowerCase();
+  const pass    = (document.getElementById('ce-pass')?.value || '').trim();
+  const cursoSel = document.getElementById('ce-curso');
+  const cursoId = cursoSel?.value || '';
+  const cursoNombre = cursoSel?.selectedOptions[0]?.dataset?.nombre || cursoId;
+  const errEl   = document.getElementById('ce-error');
+
+  if (!nombre || !usuario || !pass || !cursoId) {
+    if (errEl) errEl.textContent = 'Completa todos los campos.';
+    return;
+  }
+  if (usuario.length < 3) {
+    if (errEl) errEl.textContent = 'El usuario debe tener al menos 3 caracteres.';
+    return;
+  }
+
+  const data = _cargarCuentasEst();
+  // Verificar unicidad de usuario
+  if (data.cuentas.some(c => c.usuario.toLowerCase() === usuario)) {
+    if (errEl) errEl.textContent = 'Ya existe una cuenta con ese usuario.';
+    return;
+  }
+
+  data.cuentas.push({
+    id: uid(),
+    nombre,
+    usuario,
+    password: pass,
+    cursoId,
+    cursoNombre,
+    activo: true,
+    creadoEn: new Date().toISOString()
+  });
+  _guardarCuentasEst(data);
+  registrarCambio('Cuenta de estudiante creada: ' + nombre);
+  mostrarToast('Cuenta creada para ' + nombre, 'success');
+  _renderCuentasEstudiantes();
+}
+
+function _toggleCuentaEst(index) {
+  const data = _cargarCuentasEst();
+  if (!data.cuentas[index]) return;
+  data.cuentas[index].activo = !data.cuentas[index].activo;
+  _guardarCuentasEst(data);
+  mostrarToast(data.cuentas[index].activo ? 'Cuenta activada' : 'Cuenta desactivada', 'success');
+  _renderCuentasEstudiantes();
+}
+
+function _eliminarCuentaEst(index) {
+  const data = _cargarCuentasEst();
+  if (!data.cuentas[index]) return;
+  if (!confirm('¿Eliminar la cuenta de ' + data.cuentas[index].nombre + '?')) return;
+  const nombre = data.cuentas[index].nombre;
+  data.cuentas.splice(index, 1);
+  _guardarCuentasEst(data);
+  registrarCambio('Cuenta de estudiante eliminada: ' + nombre);
+  mostrarToast('Cuenta eliminada', 'success');
+  _renderCuentasEstudiantes();
+}
+
+// ── Tab: Enlace ─────────────────────────────────────────────────
+function _renderEnlaceReportes() {
+  const cont = document.getElementById('rep-comp-contenido');
+  if (!cont) return;
+  const user = window.currentUser;
+  if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
+
+  const baseUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'reporte.html';
+  const url = baseUrl + '?uid=' + encodeURIComponent(user.uid);
+
+  cont.innerHTML =
+    '<div style="text-align:center;padding:20px;">' +
+      '<div style="font-size:0.85rem;color:#546E7A;margin-bottom:16px;">Comparte este enlace con tus estudiantes para que puedan acceder a la página de reportes de comportamiento.</div>' +
+      '<div style="display:flex;gap:8px;max-width:500px;margin:0 auto;">' +
+        '<input id="rep-comp-url" readonly value="' + escapeHTML(url) + '" style="flex:1;padding:10px 12px;background:#F5F5F5;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;color:#424242;font-family:monospace;">' +
+        '<button onclick="_copiarEnlaceReportes()" style="background:#1565C0;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;white-space:nowrap;">' +
+          '<span class="material-icons" style="font-size:16px;">content_copy</span> Copiar' +
+        '</button>' +
+      '</div>' +
+      '<div style="margin-top:20px;background:#FFF3E0;border:1.5px solid #FFE0B2;border-radius:10px;padding:14px 18px;text-align:left;font-size:0.82rem;color:#E65100;">' +
+        '<div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px;">' +
+          '<span class="material-icons" style="font-size:16px;">warning</span> Importante</div>' +
+        '<ul style="margin:0;padding-left:20px;line-height:1.8;">' +
+          '<li>Primero crea las cuentas de los estudiantes en la pestaña "Cuentas de estudiantes".</li>' +
+          '<li>El estudiante necesita el enlace + su usuario y contraseña para acceder.</li>' +
+          '<li>Los reportes enviados aparecerán en la pestaña "Reportes recibidos".</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>';
+}
+
+function _copiarEnlaceReportes() {
+  const input = document.getElementById('rep-comp-url');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    mostrarToast('Enlace copiado al portapapeles', 'success');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    mostrarToast('Enlace copiado', 'success');
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════

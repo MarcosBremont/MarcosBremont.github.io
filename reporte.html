@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes de Comportamiento — Metabot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #F4F6F8;
+      color: #212121;
+      min-height: 100vh;
+    }
+    .rep-header {
+      background: linear-gradient(135deg, #1565C0 0%, #1976D2 100%);
+      color: #fff;
+      padding: 20px 20px 16px;
+      text-align: center;
+    }
+    .rep-header h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .rep-header .sub { font-size: 0.82rem; opacity: 0.85; }
+    .rep-header .curso-chip {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+    .rep-header .logout-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+      font-weight: 600;
+    }
+    .rep-header .logout-btn:hover { background: rgba(255,255,255,0.25); }
+    .rep-main { max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
+
+    /* Login */
+    .login-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 32px 28px;
+      max-width: 400px;
+      margin: 40px auto;
+    }
+    .login-card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1565C0;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .login-card .login-sub { font-size: 0.82rem; color: #757575; margin-bottom: 20px; }
+    .login-card .form-group { margin-bottom: 14px; }
+    .login-card label { font-size: 0.78rem; font-weight: 600; color: #546E7A; display: block; margin-bottom: 4px; }
+    .login-card input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: #212121;
+      background: #FAFAFA;
+    }
+    .login-card input:focus { outline: none; border-color: #1565C0; background: #fff; }
+    .login-btn {
+      width: 100%;
+      background: #1565C0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 18px;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .login-btn:hover { background: #1976D2; }
+    .login-error { color: #C62828; font-size: 0.82rem; margin-top: 8px; min-height: 18px; }
+
+    /* Report card */
+    .report-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .report-card .report-date {
+      font-size: 0.75rem;
+      color: #9E9E9E;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .report-card .report-tipo {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .tipo-positivo { background: #E8F5E9; color: #2E7D32; }
+    .tipo-negativo { background: #FFEBEE; color: #C62828; }
+    .tipo-neutral  { background: #FFF3E0; color: #E65100; }
+    .report-card .report-desc {
+      font-size: 0.88rem;
+      color: #424242;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .report-card .report-involucrados {
+      font-size: 0.78rem;
+      color: #616161;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* New report form */
+    .new-report-form {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid #E3F2FD;
+    }
+    .new-report-form h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1565C0;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .new-report-form .form-group { margin-bottom: 12px; }
+    .new-report-form label { font-size: 0.78rem; font-weight: 600; color: #546E7A; display: block; margin-bottom: 4px; }
+    .new-report-form input,
+    .new-report-form textarea,
+    .new-report-form select {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: #212121;
+      background: #fff;
+    }
+    .new-report-form textarea { resize: vertical; min-height: 80px; }
+    .new-report-form input:focus,
+    .new-report-form textarea:focus,
+    .new-report-form select:focus { outline: none; border-color: #1565C0; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .submit-report-btn {
+      width: 100%;
+      background: #1565C0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .submit-report-btn:hover:not(:disabled) { background: #1976D2; }
+    .submit-report-btn:disabled { background: #BDBDBD; cursor: not-allowed; }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #546E7A;
+      margin: 20px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: #9E9E9E;
+      font-size: 0.88rem;
+    }
+    .rep-footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.72rem;
+      color: #BDBDBD;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 480px) {
+      .login-card { padding: 24px 20px; margin: 20px 16px; }
+      .rep-main { padding: 14px 12px 50px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+
+  <div class="rep-header" style="position:relative;">
+    <h1><span class="material-icons">assignment</span> Reportes de Comportamiento</h1>
+    <div class="sub" id="rep-sub">Inicia sesión para continuar</div>
+    <div id="rep-curso-chip"></div>
+    <button class="logout-btn hidden" id="btn-logout" onclick="cerrarSesion()">
+      <span class="material-icons" style="font-size:16px;">logout</span> Salir
+    </button>
+  </div>
+
+  <div class="rep-main">
+    <!-- Login -->
+    <div id="login-section">
+      <div class="login-card">
+        <h2><span class="material-icons">lock</span> Acceso Estudiante</h2>
+        <p class="login-sub">Ingresa las credenciales que te proporcionó tu docente.</p>
+        <div class="form-group">
+          <label>Usuario</label>
+          <input type="text" id="login-user" placeholder="Tu usuario..." autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="login-pass" placeholder="Tu contraseña..." autocomplete="current-password">
+        </div>
+        <div class="login-error" id="login-error"></div>
+        <button class="login-btn" onclick="iniciarSesion()">
+          <span class="material-icons">login</span> Iniciar Sesión
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel principal (después del login) -->
+    <div id="main-section" class="hidden">
+      <!-- Formulario nuevo reporte -->
+      <div class="new-report-form">
+        <h3><span class="material-icons">add_circle</span> Nuevo Reporte</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha *</label>
+            <input type="date" id="rep-fecha">
+          </div>
+          <div class="form-group">
+            <label>Tipo *</label>
+            <select id="rep-tipo">
+              <option value="negativo">Negativo</option>
+              <option value="positivo">Positivo</option>
+              <option value="neutral">Observación</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Involucrado(s) *</label>
+          <input type="text" id="rep-involucrados" placeholder="Nombres de los involucrados separados por coma...">
+        </div>
+        <div class="form-group">
+          <label>Descripción del comportamiento *</label>
+          <textarea id="rep-descripcion" rows="4" placeholder="Describe lo que sucedió con el mayor detalle posible..."></textarea>
+        </div>
+        <div id="rep-form-error" style="color:#C62828;font-size:0.82rem;min-height:18px;"></div>
+        <button class="submit-report-btn" id="btn-enviar" onclick="enviarReporte()">
+          <span class="material-icons">send</span> Enviar Reporte
+        </button>
+      </div>
+
+      <!-- Reportes anteriores -->
+      <div class="section-title">
+        <span class="material-icons" style="font-size:16px;">history</span> Mis reportes anteriores
+      </div>
+      <div id="reportes-lista"></div>
+    </div>
+  </div>
+
+  <div class="rep-footer">Metabot — Plataforma de Docentes</div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ── Config Firebase ─────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
+      authDomain:        "metabot-7af4d.firebaseapp.com",
+      projectId:         "metabot-7af4d",
+      storageBucket:     "metabot-7af4d.firebasestorage.app",
+      messagingSenderId: "872698787040",
+      appId:             "1:872698787040:web:9f8914b0601996d1f68c85"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ── Parámetros de URL ───────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const teacherUid = params.get('uid');
+
+    // ── Estado ──────────────────────────────────────────────────
+    let _sesion = null; // { usuario, cursoId, cursoNombre, docenteUid }
+
+    // ── Helpers ─────────────────────────────────────────────────
+    function esc(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Login ───────────────────────────────────────────────────
+    async function iniciarSesion() {
+      const usuario = (document.getElementById('login-user')?.value || '').trim().toLowerCase();
+      const pass = (document.getElementById('login-pass')?.value || '').trim();
+      const errEl = document.getElementById('login-error');
+
+      if (!usuario || !pass) {
+        errEl.textContent = 'Ingresa usuario y contraseña.';
+        return;
+      }
+      if (!teacherUid) {
+        errEl.textContent = 'URL inválida: falta el parámetro uid del docente.';
+        return;
+      }
+
+      errEl.textContent = 'Verificando...';
+
+      try {
+        // Buscar credenciales del estudiante en Firestore
+        const doc = await db.collection('users').doc(teacherUid)
+          .collection('data').doc('cuentas_estudiantes').get();
+
+        if (!doc.exists) {
+          errEl.textContent = 'No hay cuentas de estudiantes registradas.';
+          return;
+        }
+
+        const data = JSON.parse(doc.data().payload || '{}');
+        const cuentas = data.cuentas || [];
+        const cuenta = cuentas.find(c =>
+          c.usuario.toLowerCase() === usuario && c.password === pass && c.activo !== false
+        );
+
+        if (!cuenta) {
+          errEl.textContent = 'Usuario o contraseña incorrectos.';
+          return;
+        }
+
+        // Login exitoso
+        _sesion = {
+          usuario: cuenta.usuario,
+          nombre: cuenta.nombre,
+          cursoId: cuenta.cursoId,
+          cursoNombre: cuenta.cursoNombre || cuenta.cursoId,
+          docenteUid: teacherUid
+        };
+
+        sessionStorage.setItem('rep_sesion', JSON.stringify(_sesion));
+        mostrarPanelPrincipal();
+
+      } catch (e) {
+        errEl.textContent = 'Error de conexión: ' + e.message;
+      }
+    }
+
+    // ── Mostrar panel principal ─────────────────────────────────
+    function mostrarPanelPrincipal() {
+      if (!_sesion) return;
+
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('main-section').classList.remove('hidden');
+      document.getElementById('btn-logout').classList.remove('hidden');
+
+      document.getElementById('rep-sub').textContent = 'Bienvenido(a), ' + _sesion.nombre;
+      document.getElementById('rep-curso-chip').innerHTML =
+        '<span class="curso-chip" style="display:inline-block;background:rgba(255,255,255,0.18);border-radius:20px;padding:4px 14px;font-size:0.82rem;margin-top:8px;">' +
+        '<span class="material-icons" style="font-size:13px;vertical-align:middle;">school</span> ' +
+        esc(_sesion.cursoNombre) + '</span>';
+
+      // Fecha de hoy por defecto
+      document.getElementById('rep-fecha').value = new Date().toISOString().split('T')[0];
+
+      cargarReportes();
+    }
+
+    // ── Cerrar sesión ───────────────────────────────────────────
+    function cerrarSesion() {
+      _sesion = null;
+      sessionStorage.removeItem('rep_sesion');
+      document.getElementById('login-section').classList.remove('hidden');
+      document.getElementById('main-section').classList.add('hidden');
+      document.getElementById('btn-logout').classList.add('hidden');
+      document.getElementById('rep-sub').textContent = 'Inicia sesión para continuar';
+      document.getElementById('rep-curso-chip').innerHTML = '';
+      document.getElementById('login-user').value = '';
+      document.getElementById('login-pass').value = '';
+      document.getElementById('login-error').textContent = '';
+    }
+
+    // ── Enviar reporte ──────────────────────────────────────────
+    async function enviarReporte() {
+      const fecha = document.getElementById('rep-fecha')?.value;
+      const tipo = document.getElementById('rep-tipo')?.value;
+      const involucrados = (document.getElementById('rep-involucrados')?.value || '').trim();
+      const descripcion = (document.getElementById('rep-descripcion')?.value || '').trim();
+      const errEl = document.getElementById('rep-form-error');
+      const btn = document.getElementById('btn-enviar');
+
+      if (!fecha || !involucrados || !descripcion) {
+        errEl.textContent = 'Completa todos los campos obligatorios (*).';
+        return;
+      }
+      errEl.textContent = '';
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-icons" style="animation:spin 1s linear infinite;display:inline-block;">hourglass_empty</span> Enviando...';
+
+      const reporte = {
+        id: 'rcomp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        fecha,
+        tipo,
+        involucrados,
+        descripcion,
+        reportadoPor: _sesion.nombre,
+        usuario: _sesion.usuario,
+        cursoId: _sesion.cursoId,
+        cursoNombre: _sesion.cursoNombre,
+        creadoEn: new Date().toISOString()
+      };
+
+      try {
+        await db.collection('public_blogs').doc(_sesion.docenteUid)
+          .collection('reportes_comportamiento').doc(reporte.id).set(reporte);
+
+        // Limpiar formulario
+        document.getElementById('rep-involucrados').value = '';
+        document.getElementById('rep-descripcion').value = '';
+        document.getElementById('rep-fecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('rep-tipo').value = 'negativo';
+
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">send</span> Enviar Reporte';
+
+        // Recargar lista
+        cargarReportes();
+
+        // Feedback
+        mostrarFeedback('Reporte enviado exitosamente.');
+
+      } catch (e) {
+        errEl.textContent = 'Error al enviar: ' + e.message;
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">send</span> Enviar Reporte';
+      }
+    }
+
+    // ── Cargar reportes del estudiante ───────────────────────────
+    async function cargarReportes() {
+      const lista = document.getElementById('reportes-lista');
+      if (!lista || !_sesion) return;
+
+      lista.innerHTML = '<div class="empty-state"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando...</div>';
+
+      try {
+        const snap = await db.collection('public_blogs').doc(_sesion.docenteUid)
+          .collection('reportes_comportamiento')
+          .where('usuario', '==', _sesion.usuario)
+          .get();
+
+        const reportes = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+
+        if (reportes.length === 0) {
+          lista.innerHTML = '<div class="empty-state"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">inbox</span>Aún no has enviado reportes.</div>';
+          return;
+        }
+
+        lista.innerHTML = reportes.map(r => {
+          const tipoLabel = { positivo: 'Positivo', negativo: 'Negativo', neutral: 'Observación' };
+          const tipoCls = { positivo: 'tipo-positivo', negativo: 'tipo-negativo', neutral: 'tipo-neutral' };
+          const tipoIcon = { positivo: 'thumb_up', negativo: 'thumb_down', neutral: 'info' };
+          const fechaStr = r.fecha
+            ? new Date(r.fecha + 'T12:00:00').toLocaleDateString('es', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+            : '—';
+
+          return '<div class="report-card">' +
+            '<div class="report-date"><span class="material-icons" style="font-size:14px;">schedule</span> ' + esc(fechaStr) + '</div>' +
+            '<span class="report-tipo ' + (tipoCls[r.tipo] || 'tipo-neutral') + '">' +
+              '<span class="material-icons" style="font-size:12px;">' + (tipoIcon[r.tipo] || 'info') + '</span> ' +
+              (tipoLabel[r.tipo] || 'Observación') +
+            '</span>' +
+            '<div class="report-involucrados"><span class="material-icons" style="font-size:14px;">people</span> ' + esc(r.involucrados) + '</div>' +
+            '<div class="report-desc">' + esc(r.descripcion) + '</div>' +
+          '</div>';
+        }).join('');
+
+      } catch (e) {
+        lista.innerHTML = '<div class="empty-state" style="color:#C62828;">Error al cargar reportes: ' + esc(e.message) + '</div>';
+      }
+    }
+
+    // ── Feedback toast ──────────────────────────────────────────
+    function mostrarFeedback(msg) {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2E7D32;color:#fff;padding:10px 20px;border-radius:8px;font-size:0.88rem;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:flex;align-items:center;gap:6px;';
+      div.innerHTML = '<span class="material-icons" style="font-size:18px;">check_circle</span>' + esc(msg);
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    // ── Restaurar sesión ────────────────────────────────────────
+    function init() {
+      if (!teacherUid) {
+        document.getElementById('rep-sub').textContent = 'URL inválida';
+        document.getElementById('login-section').innerHTML =
+          '<div class="empty-state" style="color:#C62828;padding:40px;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:10px;">error_outline</span>URL inválida. Pide a tu docente el enlace correcto.</div>';
+        return;
+      }
+
+      // Intentar restaurar sesión
+      try {
+        const saved = sessionStorage.getItem('rep_sesion');
+        if (saved) {
+          _sesion = JSON.parse(saved);
+          if (_sesion && _sesion.docenteUid === teacherUid) {
+            mostrarPanelPrincipal();
+            return;
+          }
+        }
+      } catch(e) {}
+
+      // Enter en campos de login
+      document.getElementById('login-user')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass')?.focus(); });
+      document.getElementById('login-pass')?.addEventListener('keydown', e => { if (e.key === 'Enter') iniciarSesion(); });
+    }
+
+    init();
+  </script>
+</body>
+</html>

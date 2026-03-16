@@ -20,6 +20,11 @@
 //          allow read, write: if request.auth != null
 //                             && request.auth.uid == userId;
 //        }
+//        // Cuentas estudiantes — lectura pública para login en reporte.html
+//        match /users/{userId}/data/cuentas_estudiantes {
+//          allow read: if true;
+//          allow write: if request.auth != null && request.auth.uid == userId;
+//        }
 //        // Calendario escolar del admin (todos los autenticados leen, solo admin escribe)
 //        match /public_calendar/{doc} {
 //          allow read: if request.auth != null;
@@ -33,6 +38,11 @@
 //        }
 //        // Blog público — entregas de estudiantes
 //        match /public_blogs/{userId}/submissions/{subId} {
+//          allow create: if true;
+//          allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+//        }
+//        // Reportes de comportamiento — estudiantes crean, docente lee/borra
+//        match /public_blogs/{userId}/reportes_comportamiento/{repId} {
 //          allow create: if true;
 //          allow read, update, delete: if request.auth != null && request.auth.uid == userId;
 //        }

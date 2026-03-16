@@ -10,7 +10,8 @@ const STATIC_ASSETS = [
   '/docx.js',
   '/firebase-config.js',
   '/LogoMetabot.png',
-  '/manifest.json'
+  '/manifest.json',
+  '/reporte.html'
 ];
 
 // Dominios externos que se manejan solo con red (sin cache)

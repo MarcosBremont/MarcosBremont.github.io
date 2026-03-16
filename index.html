@@ -290,6 +290,10 @@
           <span class="material-icons">event_note</span>
           <span>Calendario Escolar</span>
         </button>
+        <button class="dash-nav-btn" onclick="abrirReportesComportamiento()" style="--accent:#C62828;">
+          <span class="material-icons">assignment_late</span>
+          <span>Reportes Estudiantes</span>
+        </button>
         <button class="dash-nav-btn" onclick="abrirAuditoria()" style="--accent:#4A148C;">
           <span class="material-icons">security</span>
           <span>Auditoría</span>
@@ -1352,6 +1356,42 @@
 
       <!-- Contenido del mes -->
       <div id="cal-escolar-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: REPORTES DE COMPORTAMIENTO (ESTUDIANTES) ===== -->
+  <div id="panel-reportes-comp" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">assignment_late</span>
+          Reportes de Comportamiento
+        </h2>
+      </div>
+
+      <!-- Tabs: Reportes | Cuentas -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="ra-tab activo" id="tab-rep-reportes" onclick="switchTabReportes('reportes')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#1565C0;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">description</span> Reportes recibidos
+        </button>
+        <button class="ra-tab" id="tab-rep-cuentas" onclick="switchTabReportes('cuentas')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">manage_accounts</span> Cuentas de estudiantes
+        </button>
+        <button class="ra-tab" id="tab-rep-enlace" onclick="switchTabReportes('enlace')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">link</span> Enlace
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="rep-comp-contenido"></div>
     </div>
     <div class="nav-buttons">
       <button class="btn-anterior" onclick="abrirDashboard()">
