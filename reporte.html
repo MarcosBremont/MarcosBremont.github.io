@@ -498,10 +498,11 @@
       try {
         const snap = await db.collection('public_blogs').doc(_sesion.docenteUid)
           .collection('reportes_comportamiento')
-          .where('usuario', '==', _sesion.usuario)
           .get();
 
-        const reportes = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+        const reportes = snap.docs.map(d => d.data())
+          .filter(r => r.usuario === _sesion.usuario)
+          .sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
         if (reportes.length === 0) {
           lista.innerHTML = '<div class="empty-state"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">inbox</span>Aún no has enviado reportes.</div>';
