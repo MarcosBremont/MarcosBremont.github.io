@@ -2585,6 +2585,7 @@ function renderizarActividades(listaActividades) {
         const actLabel = (act.enunciado || act.tipo || 'Actividad').substring(0, 35);
         const valLabel = act.valor != null ? act.valor + ' pts' : 'borrado';
         mostrarToast(`Valor de "${actLabel}" → ${valLabel} ✓`, 'success');
+        _actualizarResumenValores(planificacion.actividades);
       });
     }
     if (fechaInput) {
@@ -2604,6 +2605,56 @@ function renderizarActividades(listaActividades) {
       });
     }
   });
+
+  // Resumen de valores al final de la tabla
+  _actualizarResumenValores(listaActividades);
+}
+
+function _actualizarResumenValores(listaActividades) {
+  // Eliminar resumen anterior si existe
+  const existente = document.getElementById('resumen-valores-act');
+  if (existente) existente.remove();
+
+  const tbody = document.getElementById('tabla-actividades-body');
+  if (!tbody || !listaActividades || listaActividades.length === 0) return;
+
+  const valorRA = parseFloat(planificacion?.datosGenerales?.valorRA) || 0;
+  const sumaTotal = listaActividades.reduce((s, a) => s + (parseFloat(a.valor) || 0), 0);
+  const sumRedondeada = Math.round(sumaTotal * 100) / 100;
+  const diff = Math.round((sumRedondeada - valorRA) * 100) / 100;
+  const excede = diff > 0;
+  const falta = diff < 0;
+
+  let color = '#2E7D32';
+  let bgColor = '#E8F5E9';
+  let borderColor = '#A5D6A7';
+  let icon = 'check_circle';
+  let mensaje = `Total asignado: ${sumRedondeada} / ${valorRA} pts — ✓ Correcto`;
+
+  if (excede) {
+    color = '#C62828';
+    bgColor = '#FFEBEE';
+    borderColor = '#EF9A9A';
+    icon = 'error';
+    mensaje = `Total asignado: ${sumRedondeada} / ${valorRA} pts — ¡Excede por ${Math.abs(diff)} pts!`;
+  } else if (falta) {
+    color = '#E65100';
+    bgColor = '#FFF3E0';
+    borderColor = '#FFE0B2';
+    icon = 'warning';
+    mensaje = `Total asignado: ${sumRedondeada} / ${valorRA} pts — Faltan ${Math.abs(diff)} pts`;
+  }
+
+  const divResumen = document.createElement('div');
+  divResumen.id = 'resumen-valores-act';
+  divResumen.style.cssText = `display:flex;align-items:center;gap:8px;padding:12px 16px;margin-top:12px;border-radius:10px;font-size:0.88rem;font-weight:600;background:${bgColor};color:${color};border:1.5px solid ${borderColor};`;
+  divResumen.innerHTML = `<span class="material-icons" style="font-size:20px;">${icon}</span> ${mensaje}`;
+
+  // Insertar después de la tabla
+  const tabla = tbody.closest('table');
+  if (tabla && tabla.parentNode) {
+    tabla.parentNode.insertBefore(divResumen, tabla.nextSibling);
+  }
 }
 
 // ================================================================
