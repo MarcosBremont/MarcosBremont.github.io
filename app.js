@@ -6239,7 +6239,7 @@ function _cargarPlanDesdeSelector(selectorId, callback) {
   var biblio = cargarBiblioteca();
   var item = (biblio.items || []).find(function (it) { return it.id === sel.value; });
   if (!item || !item.planificacion) { mostrarToast('No se encontró la planificación', 'error'); return; }
-  planificacion = item.planificacion;
+  planificacion = JSON.parse(JSON.stringify(item.planificacion));
   (planificacion.actividades || []).forEach(function (a) { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
   (planificacion.fechasClase || []).forEach(function (f) { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
   mostrarToast('Planificación cargada correctamente.', 'success');
@@ -11831,7 +11831,7 @@ function cargarPlanificacionGuardada(id) {
 
 
 
-  planificacion = registro.planificacion;
+  planificacion = JSON.parse(JSON.stringify(registro.planificacion));
   planificacion._id = registro.id;
 
 
@@ -14756,7 +14756,7 @@ function abrirDiariasConPlan(planId, actId) {
     console.log('[abrirDiariasConPlan] no encontrado → fallback abrirDiarias()');
     abrirDiarias(); return;
   }
-  planificacion = item.planificacion;
+  planificacion = JSON.parse(JSON.stringify(item.planificacion));
   (planificacion.actividades || []).forEach(a => { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
   (planificacion.fechasClase || []).forEach(f => { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
   console.log('[abrirDiariasConPlan] planificacion cargada | actividades:', planificacion.actividades?.length);
