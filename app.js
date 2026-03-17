@@ -4458,10 +4458,11 @@ function poblarFormularioDesdeEstado() {
 
 
       const checkbox = document.getElementById('dia-' + dia);
+      if (!checkbox) return;
 
 
 
-      if (checkbox && cfg.activo) {
+      if (cfg.activo) {
 
 
 
@@ -4488,6 +4489,15 @@ function poblarFormularioDesdeEstado() {
         document.getElementById('dia-card-' + dia)?.classList.add('seleccionado');
 
 
+
+      } else {
+
+        checkbox.checked = false;
+
+        const wrap = document.getElementById('horas-' + dia + '-wrap');
+        if (wrap) wrap.classList.add('hidden');
+
+        document.getElementById('dia-card-' + dia)?.classList.remove('seleccionado');
 
       }
 
