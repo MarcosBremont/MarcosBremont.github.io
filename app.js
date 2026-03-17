@@ -85,6 +85,16 @@ function eliminarEstudiante(estudianteId) {
   renderizarTablaCalificaciones();
 }
 
+function _toggleNombreMobile(span) {
+  if (window.innerWidth > 600) return; // Solo en móvil
+  const td = span.closest('.td-nombre');
+  if (!td) return;
+  const wasExpanded = td.classList.contains('mobile-expanded');
+  // Cerrar todos los demás expandidos
+  document.querySelectorAll('.td-nombre.mobile-expanded').forEach(el => el.classList.remove('mobile-expanded'));
+  if (!wasExpanded) td.classList.add('mobile-expanded');
+}
+
 function editarNombreEstudiante(estudianteId) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
@@ -7931,7 +7941,7 @@ function renderizarTablaCalificaciones() {
     let cells = '<td style="text-align:center;font-size:0.8rem;color:#90CAF9;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
       + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
-      + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
+      + '<span onclick="_toggleNombreMobile(this)" ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Toca para ver opciones · Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
       + '<button class="btn-coment-est" onclick="abrirComentariosEstudiante(\'' + est.id + '\',\'' + est.id + '\')" title="Comentarios" data-nombre="' + escapeHTML(est.nombre) + '">'
       + '<span class="material-icons" style="font-size:14px;">comment</span>'
       + (_getComentariosEst(est.id).length ? '<span class="coment-count-badge">' + _getComentariosEst(est.id).length + '</span>' : '')

@@ -2254,6 +2254,71 @@ body {
   }
 }
 
+/* ── Calificaciones: vista móvil ── */
+@media (max-width: 600px) {
+  .tabla-cal thead tr th.th-nombre {
+    min-width: 110px;
+    max-width: 110px;
+    width: 110px;
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+  .tabla-cal tbody td.td-nombre {
+    min-width: 110px;
+    max-width: 110px;
+    width: 110px;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+  }
+  .td-nombre-inner {
+    flex-wrap: wrap;
+  }
+  .td-nombre-inner > span:first-child {
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+  .td-nombre-inner .btn-coment-est,
+  .td-nombre-inner .btn-del-estudiante {
+    display: none;
+  }
+  .td-nombre.mobile-expanded .btn-coment-est,
+  .td-nombre.mobile-expanded .btn-del-estudiante {
+    display: inline-flex;
+  }
+  .td-nombre.mobile-expanded {
+    min-width: 200px;
+    max-width: 200px;
+    width: 200px;
+  }
+  .tabla-cal thead tr th {
+    font-size: 0.68rem;
+    padding: 4px 5px;
+  }
+  .tabla-cal tbody td {
+    padding: 4px 5px;
+  }
+  .input-nota {
+    width: 44px;
+    font-size: 0.82rem;
+    padding: 3px 2px;
+  }
+  .td-total-ra {
+    font-size: 0.8rem;
+    min-width: 42px;
+  }
+  /* Número de fila más compacto */
+  .tabla-cal tbody td:first-child {
+    min-width: 24px;
+    width: 24px;
+    padding: 2px;
+    font-size: 0.7rem;
+  }
+}
+
 @media print {
   .cal-panel {
     max-width: 100%;
