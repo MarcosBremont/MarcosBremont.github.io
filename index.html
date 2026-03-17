@@ -294,6 +294,10 @@
           <span class="material-icons">assignment_late</span>
           <span>Reportes Estudiantes</span>
         </button>
+        <button class="dash-nav-btn" onclick="abrirDenuncias()" style="--accent:#6A1B9A;">
+          <span class="material-icons">campaign</span>
+          <span>Buzón Denuncias</span>
+        </button>
         <button class="dash-nav-btn" onclick="abrirAuditoria()" style="--accent:#4A148C;">
           <span class="material-icons">security</span>
           <span>Auditoría</span>
@@ -1365,6 +1369,37 @@
   </div>
 
   <!-- ===== PANEL: REPORTES DE COMPORTAMIENTO (ESTUDIANTES) ===== -->
+  <div id="panel-denuncias" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">campaign</span>
+          Buzón de Denuncias
+        </h2>
+      </div>
+
+      <!-- Tabs: Denuncias | Enlace -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="ra-tab activo" id="tab-den-recibidas" onclick="switchTabDenuncias('recibidas')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#6A1B9A;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">inbox</span> Denuncias recibidas
+        </button>
+        <button class="ra-tab" id="tab-den-enlace" onclick="switchTabDenuncias('enlace')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">link</span> Enlace
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="den-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
   <div id="panel-reportes-comp" class="cal-panel hidden">
     <div class="section-card">
       <div class="section-header">

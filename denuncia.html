@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buzón de Denuncias — Metabot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #F4F6F8;
+      color: #212121;
+      min-height: 100vh;
+    }
+    .den-header {
+      background: linear-gradient(135deg, #6A1B9A 0%, #8E24AA 100%);
+      color: #fff;
+      padding: 20px 20px 16px;
+      text-align: center;
+    }
+    .den-header h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .den-header .sub { font-size: 0.82rem; opacity: 0.85; }
+    .den-main { max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
+
+    .info-card {
+      background: #EDE7F6;
+      border: 1.5px solid #CE93D8;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 0.82rem;
+      color: #4A148C;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .info-card .material-icons { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+
+    .new-report-form {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid #E1BEE7;
+    }
+    .new-report-form h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #6A1B9A;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .new-report-form .form-group { margin-bottom: 12px; }
+    .new-report-form label { font-size: 0.78rem; font-weight: 600; color: #546E7A; display: block; margin-bottom: 4px; }
+    .new-report-form input,
+    .new-report-form textarea,
+    .new-report-form select {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: #212121;
+      background: #fff;
+    }
+    .new-report-form textarea { resize: vertical; min-height: 80px; }
+    .new-report-form input:focus,
+    .new-report-form textarea:focus,
+    .new-report-form select:focus { outline: none; border-color: #6A1B9A; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .submit-btn {
+      width: 100%;
+      background: #6A1B9A;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .submit-btn:hover:not(:disabled) { background: #8E24AA; }
+    .submit-btn:disabled { background: #BDBDBD; cursor: not-allowed; }
+
+    .success-card {
+      background: #E8F5E9;
+      border: 1.5px solid #A5D6A7;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .success-card .material-icons { font-size: 48px; color: #2E7D32; display: block; margin-bottom: 10px; }
+    .success-card h3 { color: #2E7D32; font-size: 1rem; margin-bottom: 6px; }
+    .success-card p { color: #4CAF50; font-size: 0.85rem; }
+    .success-card button {
+      margin-top: 14px;
+      background: #2E7D32;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .den-footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.72rem;
+      color: #BDBDBD;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 480px) {
+      .den-main { padding: 14px 12px 50px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+
+  <div class="den-header">
+    <h1><span class="material-icons">campaign</span> Buzón de Denuncias</h1>
+    <div class="sub">Espacio seguro para reportar situaciones importantes</div>
+  </div>
+
+  <div class="den-main">
+    <!-- Formulario de denuncia -->
+    <div id="form-section">
+      <div class="info-card">
+        <span class="material-icons">info</span>
+        <div>
+          Este buzón es para reportar situaciones que consideres importantes.
+          Tu denuncia será revisada únicamente por el docente responsable.
+          Puedes incluir tu nombre o enviarla de forma anónima.
+        </div>
+      </div>
+
+      <div class="new-report-form">
+        <h3><span class="material-icons">edit_note</span> Nueva Denuncia</h3>
+
+        <div class="form-group">
+          <label>Tu nombre (opcional — puedes dejarlo vacío para denunciar anónimamente)</label>
+          <input type="text" id="den-nombre" placeholder="Tu nombre completo o dejarlo vacío...">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha del incidente *</label>
+            <input type="date" id="den-fecha">
+          </div>
+          <div class="form-group">
+            <label>Curso / Salón *</label>
+            <input type="text" id="den-curso" placeholder="Ej: 5to A, 4to B...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de situación *</label>
+          <select id="den-tipo">
+            <option value="acoso">Acoso / Bullying</option>
+            <option value="pelea">Pelea / Agresión física</option>
+            <option value="robo">Robo / Hurto</option>
+            <option value="discriminacion">Discriminación</option>
+            <option value="sustancias">Sustancias prohibidas</option>
+            <option value="vandalismo">Vandalismo / Daño a propiedad</option>
+            <option value="amenaza">Amenaza / Intimidación</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Persona(s) involucrada(s) *</label>
+          <input type="text" id="den-involucrados" placeholder="Nombres de las personas involucradas...">
+        </div>
+
+        <div class="form-group">
+          <label>Descripción detallada del incidente *</label>
+          <textarea id="den-descripcion" rows="5" placeholder="Describe lo que sucedió con el mayor detalle posible: qué pasó, dónde, cuándo, quiénes estaban presentes..."></textarea>
+        </div>
+
+        <div id="den-form-error" style="color:#C62828;font-size:0.82rem;min-height:18px;"></div>
+        <button class="submit-btn" id="btn-enviar" onclick="enviarDenuncia()">
+          <span class="material-icons">send</span> Enviar Denuncia
+        </button>
+      </div>
+    </div>
+
+    <!-- Confirmación de envío -->
+    <div id="success-section" class="hidden">
+      <div class="success-card">
+        <span class="material-icons">check_circle</span>
+        <h3>Denuncia enviada correctamente</h3>
+        <p>Tu reporte ha sido recibido y será revisado por el docente. Gracias por reportar.</p>
+        <button onclick="nuevaDenuncia()">
+          <span class="material-icons" style="font-size:16px;vertical-align:middle;">add</span> Enviar otra denuncia
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="den-footer">Metabot — Plataforma de Docentes</div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ── Config Firebase ─────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
+      authDomain:        "metabot-7af4d.firebaseapp.com",
+      projectId:         "metabot-7af4d",
+      storageBucket:     "metabot-7af4d.firebasestorage.app",
+      messagingSenderId: "872698787040",
+      appId:             "1:872698787040:web:9f8914b0601996d1f68c85"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ── Parámetros de URL ───────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const teacherUid = params.get('uid');
+
+    // ── Helpers ─────────────────────────────────────────────────
+    function esc(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Init ────────────────────────────────────────────────────
+    function init() {
+      if (!teacherUid) {
+        document.getElementById('form-section').innerHTML =
+          '<div style="text-align:center;padding:40px;color:#C62828;">' +
+            '<span class="material-icons" style="font-size:40px;display:block;margin-bottom:10px;">error_outline</span>' +
+            'URL inválida. Pide a tu docente el enlace correcto del buzón de denuncias.' +
+          '</div>';
+        return;
+      }
+      // Fecha de hoy por defecto
+      document.getElementById('den-fecha').value = new Date().toISOString().split('T')[0];
+    }
+
+    // ── Enviar denuncia ──────────────────────────────────────────
+    async function enviarDenuncia() {
+      const nombre = (document.getElementById('den-nombre')?.value || '').trim();
+      const fecha = document.getElementById('den-fecha')?.value;
+      const curso = (document.getElementById('den-curso')?.value || '').trim();
+      const tipo = document.getElementById('den-tipo')?.value;
+      const involucrados = (document.getElementById('den-involucrados')?.value || '').trim();
+      const descripcion = (document.getElementById('den-descripcion')?.value || '').trim();
+      const errEl = document.getElementById('den-form-error');
+      const btn = document.getElementById('btn-enviar');
+
+      if (!fecha || !curso || !involucrados || !descripcion) {
+        errEl.textContent = 'Completa todos los campos obligatorios (*).';
+        return;
+      }
+      errEl.textContent = '';
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-icons" style="animation:spin 1s linear infinite;display:inline-block;">hourglass_empty</span> Enviando...';
+
+      const denuncia = {
+        id: 'den-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        nombre: nombre || 'Anónimo',
+        fecha,
+        curso,
+        tipo,
+        involucrados,
+        descripcion,
+        creadoEn: new Date().toISOString(),
+        leido: false
+      };
+
+      try {
+        await db.collection('public_blogs').doc(teacherUid)
+          .collection('denuncias').doc(denuncia.id).set(denuncia);
+
+        // Mostrar confirmación
+        document.getElementById('form-section').classList.add('hidden');
+        document.getElementById('success-section').classList.remove('hidden');
+
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">send</span> Enviar Denuncia';
+
+      } catch (e) {
+        errEl.textContent = 'Error al enviar: ' + e.message;
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">send</span> Enviar Denuncia';
+      }
+    }
+
+    // ── Nueva denuncia ───────────────────────────────────────────
+    function nuevaDenuncia() {
+      document.getElementById('success-section').classList.add('hidden');
+      document.getElementById('form-section').classList.remove('hidden');
+      document.getElementById('den-nombre').value = '';
+      document.getElementById('den-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('den-curso').value = '';
+      document.getElementById('den-tipo').value = 'acoso';
+      document.getElementById('den-involucrados').value = '';
+      document.getElementById('den-descripcion').value = '';
+      document.getElementById('den-form-error').textContent = '';
+    }
+
+    init();
+  </script>
+</body>
+</html>

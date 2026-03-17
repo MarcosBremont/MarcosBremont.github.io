@@ -6736,7 +6736,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -6752,7 +6752,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -19965,6 +19965,177 @@ function _renderEnlaceReportes() {
 
 function _copiarEnlaceReportes() {
   const input = document.getElementById('rep-comp-url');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    mostrarToast('Enlace copiado al portapapeles', 'success');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    mostrarToast('Enlace copiado', 'success');
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  MÓDULO: BUZÓN DE DENUNCIAS (anónimas, sin login)
+// ════════════════════════════════════════════════════════════════════
+
+function abrirDenuncias() {
+  _mostrarPanel('panel-denuncias');
+  switchTabDenuncias('recibidas');
+}
+
+function switchTabDenuncias(tab) {
+  const tabs = { recibidas: 'tab-den-recibidas', enlace: 'tab-den-enlace' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (key === tab) {
+      btn.style.background = '#6A1B9A'; btn.style.color = '#fff'; btn.style.borderColor = '#6A1B9A';
+    } else {
+      btn.style.background = '#F5F5F5'; btn.style.color = '#616161'; btn.style.borderColor = '#E0E0E0';
+    }
+  });
+
+  if (tab === 'recibidas') _renderDenunciasRecibidas();
+  else if (tab === 'enlace') _renderEnlaceDenuncias();
+}
+
+async function _renderDenunciasRecibidas() {
+  const cont = document.getElementById('den-contenido');
+  if (!cont) return;
+  const user = window.currentUser;
+  if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
+
+  cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;">hourglass_empty</span>Cargando denuncias...</div>';
+
+  try {
+    const snap = await db.collection('public_blogs').doc(user.uid)
+      .collection('denuncias').get();
+
+    let denuncias = snap.docs.map(d => d.data());
+    denuncias.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+
+    if (denuncias.length === 0) {
+      cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+        '<span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;opacity:0.4;">campaign</span>' +
+        'No hay denuncias recibidas.</div>';
+      return;
+    }
+
+    // Filtro por curso
+    const cursos = [...new Set(denuncias.map(d => d.curso))].sort();
+    let html = '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">' +
+      '<button onclick="_filtrarDenuncias(\'\')" class="ra-tab" style="padding:4px 12px;border-radius:16px;border:1px solid #CE93D8;background:#EDE7F6;color:#6A1B9A;font-size:0.75rem;font-weight:600;cursor:pointer;">Todos (' + denuncias.length + ')</button>';
+    cursos.forEach(c => {
+      const n = denuncias.filter(d => d.curso === c).length;
+      html += '<button onclick="_filtrarDenuncias(\'' + escapeHTML(c) + '\')" class="ra-tab" style="padding:4px 12px;border-radius:16px;border:1px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.75rem;font-weight:600;cursor:pointer;">' + escapeHTML(c) + ' (' + n + ')</button>';
+    });
+    html += '</div>';
+    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias) + '</div>';
+
+    cont.innerHTML = html;
+    window._denunciasCache = denuncias;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error al cargar: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
+function _filtrarDenuncias(curso) {
+  const items = document.getElementById('den-lista-items');
+  if (!items || !window._denunciasCache) return;
+  const filtered = curso ? window._denunciasCache.filter(d => d.curso === curso) : window._denunciasCache;
+  items.innerHTML = _buildDenunciasHTML(filtered);
+}
+
+function _buildDenunciasHTML(denuncias) {
+  if (!denuncias.length) return '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin denuncias en este filtro.</div>';
+
+  const tipoLabels = {
+    acoso: 'Acoso / Bullying', pelea: 'Pelea / Agresión', robo: 'Robo / Hurto',
+    discriminacion: 'Discriminación', sustancias: 'Sustancias prohibidas',
+    vandalismo: 'Vandalismo', amenaza: 'Amenaza', otro: 'Otro'
+  };
+  const tipoColors = {
+    acoso: '#C62828', pelea: '#D84315', robo: '#E65100', discriminacion: '#AD1457',
+    sustancias: '#6A1B9A', vandalismo: '#4527A0', amenaza: '#B71C1C', otro: '#546E7A'
+  };
+
+  return denuncias.map(d => {
+    const color = tipoColors[d.tipo] || '#546E7A';
+    const fechaStr = d.fecha
+      ? new Date(d.fecha + 'T12:00:00').toLocaleDateString('es', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+      : '—';
+    const esAnonimo = !d.nombre || d.nombre === 'Anónimo';
+    return '<div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07);padding:16px;margin-bottom:12px;border-left:4px solid ' + color + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<span style="background:' + color + '18;color:' + color + ';padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">' +
+            (tipoLabels[d.tipo] || d.tipo) + '</span>' +
+          '<span style="font-size:0.72rem;color:#9E9E9E;display:flex;align-items:center;gap:3px;">' +
+            '<span class="material-icons" style="font-size:13px;">schedule</span>' + escapeHTML(fechaStr) + '</span>' +
+        '</div>' +
+        '<button onclick="_eliminarDenuncia(\'' + d.id + '\')" title="Eliminar" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:4px;">' +
+          '<span class="material-icons" style="font-size:18px;">delete_outline</span></button>' +
+      '</div>' +
+      '<div style="font-size:0.78rem;color:#78909C;margin-bottom:4px;display:flex;align-items:center;gap:4px;">' +
+        '<span class="material-icons" style="font-size:14px;">school</span> ' + escapeHTML(d.curso) +
+        ' &nbsp;·&nbsp; <span class="material-icons" style="font-size:14px;">person</span> ' +
+        (esAnonimo ? '<em style="color:#BDBDBD;">Anónimo</em>' : escapeHTML(d.nombre)) +
+      '</div>' +
+      '<div style="font-size:0.78rem;color:#616161;margin-bottom:6px;display:flex;align-items:center;gap:4px;">' +
+        '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(d.involucrados) +
+      '</div>' +
+      '<div style="font-size:0.85rem;color:#424242;line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(d.descripcion) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function _eliminarDenuncia(id) {
+  if (!confirm('¿Eliminar esta denuncia?')) return;
+  const user = window.currentUser;
+  if (!user) return;
+  try {
+    await db.collection('public_blogs').doc(user.uid)
+      .collection('denuncias').doc(id).delete();
+    mostrarToast('Denuncia eliminada', 'success');
+    _renderDenunciasRecibidas();
+  } catch (e) {
+    mostrarToast('Error: ' + e.message, 'error');
+  }
+}
+
+function _renderEnlaceDenuncias() {
+  const cont = document.getElementById('den-contenido');
+  if (!cont) return;
+  const user = window.currentUser;
+  if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
+
+  const baseUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'denuncia.html';
+  const url = baseUrl + '?uid=' + encodeURIComponent(user.uid);
+
+  cont.innerHTML =
+    '<div style="text-align:center;padding:20px;">' +
+      '<div style="font-size:0.85rem;color:#546E7A;margin-bottom:16px;">Comparte este enlace con tus estudiantes para que puedan enviar denuncias de forma anónima.</div>' +
+      '<div style="display:flex;gap:8px;max-width:500px;margin:0 auto;">' +
+        '<input id="den-comp-url" readonly value="' + escapeHTML(url) + '" style="flex:1;padding:10px 12px;background:#F5F5F5;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;color:#424242;font-family:monospace;">' +
+        '<button onclick="_copiarEnlaceDenuncias()" style="background:#6A1B9A;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;white-space:nowrap;">' +
+          '<span class="material-icons" style="font-size:16px;">content_copy</span> Copiar' +
+        '</button>' +
+      '</div>' +
+      '<div style="margin-top:20px;background:#EDE7F6;border:1.5px solid #CE93D8;border-radius:10px;padding:14px 18px;text-align:left;font-size:0.82rem;color:#6A1B9A;">' +
+        '<div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px;">' +
+          '<span class="material-icons" style="font-size:16px;">info</span> Información</div>' +
+        '<ul style="margin:0;padding-left:18px;line-height:1.8;">' +
+          '<li>Los estudiantes <strong>no necesitan cuenta</strong> para enviar denuncias.</li>' +
+          '<li>Pueden incluir su nombre o enviar de forma <strong>anónima</strong>.</li>' +
+          '<li>Solo tú puedes ver las denuncias recibidas.</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>';
+}
+
+function _copiarEnlaceDenuncias() {
+  const input = document.getElementById('den-comp-url');
   if (!input) return;
   navigator.clipboard.writeText(input.value).then(() => {
     mostrarToast('Enlace copiado al portapapeles', 'success');

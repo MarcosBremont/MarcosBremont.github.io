@@ -46,6 +46,11 @@
 //          allow create: if true;
 //          allow read, update, delete: if request.auth != null && request.auth.uid == userId;
 //        }
+//        // Denuncias anónimas — cualquiera crea, solo el docente lee/borra
+//        match /public_blogs/{userId}/denuncias/{denId} {
+//          allow create: if true;
+//          allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+//        }
 //        // Historial de sesiones (privado — solo el propio docente)
 //        match /users/{userId}/sessions/{sessionId} {
 //          allow read, write: if request.auth != null && request.auth.uid == userId;
