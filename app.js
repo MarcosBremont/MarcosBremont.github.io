@@ -17502,7 +17502,8 @@ function abrirModalClase(encodedData) {
   const asistRegistrada = nPres + nAus + nTard > 0;
 
   const sesionInfo = d.sesiones && d.sesiones[0];
-  const sesion = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : {};
+  const recursoActId = sesionInfo ? sesionInfo.actId : `recurso_${d.fecha}_${d.seccion}_${d.periodo}`;
+  const sesion = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : (estadoDiarias.sesiones[recursoActId] || {});
   const tiempos = sesion.tiempos || { ini: 20, des: 55, cie: 15 };
   const recursoUrl = sesion.recursoUrl || '';
 
@@ -17586,9 +17587,6 @@ function abrirModalClase(encodedData) {
         <button onclick="cerrarModalBtn();abrirDiariasConPlan('${sesionInfo.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
           <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
         </button>
-        ${recursoUrl ? `<a href="${recursoUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
-          <span class="material-icons" style="font-size:14px;">link</span> Abrir recurso de la clase
-        </a>` : ''}
       </div>` : `
       <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
         <span class="material-icons" style="font-size:1.8rem;display:block;margin-bottom:4px;opacity:0.4;">event_note</span>
@@ -17597,6 +17595,24 @@ function abrirModalClase(encodedData) {
           Crear planificación diaria
         </button>
       </div>`}
+
+      <!-- Enlace de recurso (siempre visible) -->
+      <div class="mcl-seccion">
+        <div style="margin-top:2px;">
+          <label style="font-size:0.72rem;color:#78909C;font-weight:600;display:block;margin-bottom:3px;">
+            <span class="material-icons" style="font-size:14px;vertical-align:middle;">link</span> Enlace de recurso
+          </label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input id="mcl-recurso-url" type="url" value="${(recursoUrl||'').replace(/"/g,'&quot;')}" placeholder="https://ejemplo.com/recurso"
+              style="flex:1;padding:6px 10px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.82rem;outline:none;"
+              onchange="_guardarRecursoDesdeModal('${recursoActId}',this.value)">
+            ${recursoUrl ? `<a href="${recursoUrl}" target="_blank" rel="noopener" title="Abrir recurso"
+              style="color:#0277BD;font-size:1.2rem;display:flex;align-items:center;">
+              <span class="material-icons">open_in_new</span>
+            </a>` : ''}
+          </div>
+        </div>
+      </div>
 
       <!-- Asistencia rápida -->
       ${asistModuloActivo ? `
@@ -17695,6 +17711,28 @@ function borrarNotaClase(key) {
   const ta = document.getElementById('mcl-nota-textarea');
   if (ta) ta.value = '';
   mostrarToast('Nota borrada', 'success');
+}
+
+function _guardarRecursoDesdeModal(actId, url) {
+  if (!estadoDiarias.sesiones[actId]) estadoDiarias.sesiones[actId] = {};
+  estadoDiarias.sesiones[actId].recursoUrl = url.trim();
+  persistirDiarias();
+  // Actualizar el icono de abrir enlace junto al input
+  const inp = document.getElementById('mcl-recurso-url');
+  if (inp) {
+    const wrapper = inp.parentElement;
+    const oldLink = wrapper.querySelector('a');
+    if (url.trim()) {
+      if (oldLink) { oldLink.href = url.trim(); }
+      else {
+        const a = document.createElement('a');
+        a.href = url.trim(); a.target = '_blank'; a.rel = 'noopener'; a.title = 'Abrir recurso';
+        a.style.cssText = 'color:#0277BD;font-size:1.2rem;display:flex;align-items:center;';
+        a.innerHTML = '<span class="material-icons">open_in_new</span>';
+        wrapper.appendChild(a);
+      }
+    } else if (oldLink) { oldLink.remove(); }
+  }
 }
 
 function toggleFormaEval(evalKey, formaId, color, btn) {
