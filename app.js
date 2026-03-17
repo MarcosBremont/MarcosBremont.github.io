@@ -1824,6 +1824,7 @@ function renderizarEC(listaEC) {
 
 
   const contenedor = document.getElementById('ec-container');
+  if (!contenedor) return;
 
 
 
@@ -2057,14 +2058,12 @@ function renderizarEC(listaEC) {
 
 
   const resumen = document.getElementById('resumen-distribucion');
+  if (resumen) resumen.classList.remove('hidden');
 
 
 
-  resumen.classList.remove('hidden');
-
-
-
-  document.getElementById('total-horas-display').textContent = planificacion.horasTotal + ' hrs';
+  const _thd = document.getElementById('total-horas-display');
+  if (_thd) _thd.textContent = planificacion.horasTotal + ' hrs';
 
 
 
@@ -2076,14 +2075,15 @@ function renderizarEC(listaEC) {
     }
     return planificacion.semanas && !isNaN(planificacion.semanas) ? planificacion.semanas : '?';
   })();
-  document.getElementById('total-semanas-display').textContent = _semCalc + ' sem';
+  const _tsd = document.getElementById('total-semanas-display');
+  if (_tsd) _tsd.textContent = _semCalc + ' sem';
 
 
 
   const _ecList = planificacion.elementosCapacidad || [];
   const _ecHorasSum = _ecList.reduce((s, e) => s + (e.horasAsignadas || 0), 0);
-  document.getElementById('horas-por-ec-display').textContent =
-    (_ecList.length > 0 ? Math.round(_ecHorasSum / _ecList.length) : 0) + ' hrs';
+  const _hpec = document.getElementById('horas-por-ec-display');
+  if (_hpec) _hpec.textContent = (_ecList.length > 0 ? Math.round(_ecHorasSum / _ecList.length) : 0) + ' hrs';
 
 
 
@@ -2433,8 +2433,7 @@ function renderizarActividades(listaActividades) {
 
 
   const tbody = document.getElementById('tabla-actividades-body');
-
-
+  if (!tbody) return;
 
   tbody.innerHTML = '';
 
@@ -2818,7 +2817,7 @@ function guardarEdicionActividad(idx) {
   }
 
   // Regenerar instrumento
-  const ec = planificacion.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
+  const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
   const nivelEC = ec ? ec.nivel : (act.ecNivel || 'aplicacion');
   act.instrumento = generarInstrumento(act, nivelEC, nuevoInst);
 
@@ -5324,9 +5323,10 @@ function obtenerDiasClase() {
 
 
 
+let _generandoPlanificacion = false;
 function generarPlanificacion() {
-
-
+  if (_generandoPlanificacion) { mostrarToast('Ya hay una generación en curso, espera...', 'warning'); return; }
+  _generandoPlanificacion = true;
 
   // Validar paso 2
 
@@ -5600,7 +5600,7 @@ function generarPlanificacion() {
 
       txt.textContent = 'Generar Planificación';
 
-
+      _generandoPlanificacion = false;
 
     }
 
@@ -9159,6 +9159,7 @@ function _renderizarVistaAsistencia() {
 // ── Vista: Pasar lista ───────────────────────────────────────────
 function _renderPasarLista(body) {
   const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.estudiantes) { body.innerHTML = '<p style="text-align:center;color:#9E9E9E;padding:20px;">No hay curso o estudiantes activos.</p>'; return; }
   const data = cargarAsistencia();
   const hoy = _asistFecha();
   const hoyFmt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long' });
@@ -15577,8 +15578,8 @@ function aplicarRespuestaGemini(aiData, fechasClase) {
   let fechaIdx = 0;
 
   planificacion.actividades = actividadesAI.map((act, i) => {
-    const ecObj = planificacion.elementosCapacidad.find(e => e.codigo === act.ecCodigo)
-      || planificacion.elementosCapacidad[0];
+    const ecObj = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo)
+      || (planificacion.elementosCapacidad || [])[0] || {};
 
     // Proteger contra fechasClase vacio o undefined
     const fechaObj = fechasValidas
