@@ -2582,6 +2582,7 @@ function renderizarActividades(listaActividades) {
         const val = this.value.trim();
         act.valor = val !== '' && !isNaN(parseFloat(val)) ? parseFloat(val) : null;
         guardarBorrador();
+        _sincronizarValorActEnCalificaciones(act);
         const actLabel = (act.enunciado || act.tipo || 'Actividad').substring(0, 35);
         const valLabel = act.valor != null ? act.valor + ' pts' : 'borrado';
         mostrarToast(`Valor de "${actLabel}" → ${valLabel} ✓`, 'success');
@@ -2654,6 +2655,29 @@ function _actualizarResumenValores(listaActividades) {
   const tabla = tbody.closest('table');
   if (tabla && tabla.parentNode) {
     tabla.parentNode.insertBefore(divResumen, tabla.nextSibling);
+  }
+}
+
+// Sincronizar valor de actividad desde la tabla de planificación → calificaciones
+function _sincronizarValorActEnCalificaciones(act) {
+  if (!act || !act.id) return;
+  const nuevoValor = act.valor != null ? parseFloat(act.valor) : 0;
+  let cambio = false;
+
+  // Buscar en todos los cursos qué RA tienen esta actividad
+  Object.values(calState?.cursos || {}).forEach(curso => {
+    Object.values(curso.ras || {}).forEach(raInfo => {
+      if (raInfo.valores && raInfo.actividades && raInfo.actividades.includes(act.id)) {
+        if (raInfo.valores[act.id] !== nuevoValor) {
+          raInfo.valores[act.id] = nuevoValor;
+          cambio = true;
+        }
+      }
+    });
+  });
+
+  if (cambio) {
+    guardarCalificaciones();
   }
 }
 
