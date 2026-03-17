@@ -4353,6 +4353,32 @@ function restaurarBorrador() {
 
 
 
+/** Muestra el curso asignado a la planificación actual en Datos Generales */
+function _mostrarCursoAsignado() {
+  const grupo = document.getElementById('grupo-curso-asignado');
+  const display = document.getElementById('curso-asignado-display');
+  if (!grupo || !display) return;
+
+  const planId = planificacion._id;
+  if (!planId) { grupo.style.display = 'none'; return; }
+
+  // Buscar cursos que tienen esta planificación asignada
+  const cursosAsignados = Object.values(calState.cursos || {})
+    .filter(c => (c.planIds || []).includes(planId))
+    .map(c => c.nombre);
+
+  if (cursosAsignados.length > 0) {
+    display.value = cursosAsignados.join(', ');
+    grupo.style.display = '';
+  } else {
+    display.value = 'Sin curso asignado';
+    display.style.background = '#FFF3E0';
+    display.style.borderColor = '#FFE0B2';
+    display.style.color = '#E65100';
+    grupo.style.display = '';
+  }
+}
+
 /** Llena los campos del formulario desde el estado restaurado */
 
 
@@ -4407,7 +4433,8 @@ function poblarFormularioDesdeEstado() {
 
   setVal('nombre-docente', dg.nombreDocente);
 
-
+  // Mostrar curso asignado si la planificación tiene _id
+  _mostrarCursoAsignado();
 
   setVal('cantidad-ra', dg.cantidadRA);
 
@@ -6250,8 +6277,10 @@ function _cargarPlanDesdeSelector(selectorId, callback) {
   var item = (biblio.items || []).find(function (it) { return it.id === sel.value; });
   if (!item || !item.planificacion) { mostrarToast('No se encontró la planificación', 'error'); return; }
   planificacion = JSON.parse(JSON.stringify(item.planificacion));
+  planificacion._id = item.id;
   (planificacion.actividades || []).forEach(function (a) { if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha); });
   (planificacion.fechasClase || []).forEach(function (f) { if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha); });
+  _mostrarCursoAsignado();
   mostrarToast('Planificación cargada correctamente.', 'success');
   if (callback) callback();
 }
