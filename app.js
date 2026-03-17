@@ -14741,8 +14741,8 @@ function abrirDiarias() {
 }
 
 /** Abre diarias precargando directamente la planificación indicada por su ID */
-function abrirDiariasConPlan(planId) {
-  console.log('[abrirDiariasConPlan] planId recibido:', JSON.stringify(planId));
+function abrirDiariasConPlan(planId, actId) {
+  console.log('[abrirDiariasConPlan] planId recibido:', JSON.stringify(planId), 'actId:', actId);
   if (!planId) {
     console.log('[abrirDiariasConPlan] planId vacío → fallback abrirDiarias()');
     abrirDiarias(); return;
@@ -14764,6 +14764,18 @@ function abrirDiariasConPlan(planId) {
   _mostrarPanel('panel-diarias');
   _actualizarSelectorPlanDiarias(true);
   renderizarDiarias();
+
+  // Expandir y hacer scroll a la actividad seleccionada
+  if (actId) {
+    setTimeout(() => {
+      const body = document.getElementById(`pd-body-${actId}`);
+      if (body) {
+        body.classList.add('open');
+        const card = body.closest('.pd-sesion-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 150);
+  }
   console.log('[abrirDiariasConPlan] ✓ completado');
 }
 // __old_abrirDiarias__
@@ -17584,7 +17596,7 @@ function abrirModalClase(encodedData) {
             </div>
           </div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <button onclick="cerrarModalBtn();abrirDiariasConPlan('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+          <button onclick="cerrarModalBtn();abrirDiariasConPlan('${si.planId}','${si.actId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
             <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
           </button>
           ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
