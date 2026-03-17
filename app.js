@@ -17501,7 +17501,8 @@ function abrirModalClase(encodedData) {
   const nTard = Object.values(asistDia).filter(v => v === 'T').length;
   const asistRegistrada = nPres + nAus + nTard > 0;
 
-  const sesionInfo = d.sesiones && d.sesiones[0];
+  const allSesiones = (d.sesiones && d.sesiones.length) ? d.sesiones : [];
+  const sesionInfo = allSesiones[0] || null;
   const recursoActId = sesionInfo ? sesionInfo.actId : `recurso_${d.fecha}_${d.seccion}_${d.periodo}`;
   const sesion = sesionInfo ? (estadoDiarias.sesiones[sesionInfo.actId] || {}) : (estadoDiarias.sesiones[recursoActId] || {});
   const tiempos = sesion.tiempos || { ini: 20, des: 55, cie: 15 };
@@ -17509,7 +17510,7 @@ function abrirModalClase(encodedData) {
 
   document.getElementById('modal-title').innerHTML =
     `<span style="color:${color};">●</span> ${escapeHTML(d.materia)}
-     <span style="font-size:0.78rem;font-weight:400;color:#78909C;margin-left:8px;">P${d.periodo} · ${d.hora}</span>`;
+     <span style="font-size:0.78rem;font-weight:400;color:#fff;margin-left:8px;">P${d.periodo} · ${d.hora}</span>`;
 
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:14px;">
@@ -17521,73 +17522,77 @@ function abrirModalClase(encodedData) {
         ${d.notas ? `<div class="mcl-row"><span class="material-icons">info</span>${escapeHTML(d.notas)}</div>` : ''}
       </div>
 
-      <!-- Actividad / Planificación -->
-      ${sesionInfo ? `
+      <!-- Actividades / Planificación -->
+      ${allSesiones.length > 0 ? allSesiones.map((si, idx) => {
+        const ses = estadoDiarias.sesiones[si.actId] || {};
+        const t = ses.tiempos || { ini: 20, des: 55, cie: 15 };
+        const rUrl = ses.recursoUrl || '';
+        const sIni = ses.inicio || {};
+        const sDev = ses.desarrollo || {};
+        const sCie = ses.cierre || {};
+        const hasDiaria = sIni.apertura || sDev.procedimental || sCie.sintesis;
+        return `
       <div class="mcl-seccion">
-        <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada</div>
-        ${(sesionInfo.ra?.descripcion || sesionInfo.dg?.moduloFormativo) ? `
+        <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada${allSesiones.length > 1 ? ' (' + (idx+1) + '/' + allSesiones.length + ')' : ''}</div>
+        ${(si.ra?.descripcion || si.dg?.moduloFormativo) ? `
         <div style="background:#E8F5E9;border-left:3px solid #2E7D32;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;">
           <div style="font-weight:700;color:#1B5E20;display:flex;align-items:center;gap:5px;margin-bottom:2px;">
             <span class="material-icons" style="font-size:14px;">school</span>
-            RA${sesionInfo.dg?.moduloFormativo ? ' — ' + escapeHTML(sesionInfo.dg.moduloFormativo) : ''}
+            RA${si.dg?.moduloFormativo ? ' — ' + escapeHTML(si.dg.moduloFormativo) : ''}
           </div>
-          ${sesionInfo.ra?.descripcion ? `<div style="color:#2E7D32;line-height:1.45;font-weight:600;">${escapeHTML(sesionInfo.ra.descripcion)}</div>` : ''}
+          ${si.ra?.descripcion ? `<div style="color:#2E7D32;line-height:1.45;font-weight:600;">${escapeHTML(si.ra.descripcion)}</div>` : ''}
         </div>` : ''}
-        <div class="mcl-actividad-txt">${escapeHTML(sesionInfo.enunciado)}</div>
-        ${sesionInfo.instrumento ? `
+        <div class="mcl-actividad-txt">${escapeHTML(si.enunciado)}</div>
+        ${si.instrumento ? `
         <div class="mcl-instrumento" style="background:${color}18;border-color:${color}44;">
-          <span class="material-icons" style="color:${color};">${sesionInfo.instrumento.tipo === 'rubrica' ? 'table_chart' : 'checklist'}</span>
-          <span><strong>${escapeHTML(sesionInfo.instrumento.tipoLabel || '')}</strong>: ${escapeHTML(sesionInfo.instrumento.titulo || '')}</span>
+          <span class="material-icons" style="color:${color};">${si.instrumento.tipo === 'rubrica' ? 'table_chart' : 'checklist'}</span>
+          <span><strong>${escapeHTML(si.instrumento.tipoLabel || '')}</strong>: ${escapeHTML(si.instrumento.titulo || '')}</span>
         </div>` : ''}
         <div class="mcl-tiempos">
-          <span class="mcl-tiempo ini">Inicio&nbsp;${tiempos.ini}min</span>
-          <span class="mcl-tiempo des">Desarrollo&nbsp;${tiempos.des}min</span>
-          <span class="mcl-tiempo cie">Cierre&nbsp;${tiempos.cie}min</span>
+          <span class="mcl-tiempo ini">Inicio&nbsp;${t.ini}min</span>
+          <span class="mcl-tiempo des">Desarrollo&nbsp;${t.des}min</span>
+          <span class="mcl-tiempo cie">Cierre&nbsp;${t.cie}min</span>
         </div>
-        <!-- Planificación diaria expandida -->
-        ${(() => {
-        const s = sesion;
-        const ini = s.inicio || {};
-        const dev = s.desarrollo || {};
-        const cie = s.cierre || {};
-        if (!ini.apertura && !dev.procedimental && !cie.sintesis) return '';
-        return `
+        ${hasDiaria ? `
           <div class="mcl-sesion-diaria">
-            <!-- Toggle header -->
             <button class="mcl-sesion-toggle" onclick="this.parentElement.classList.toggle('mcl-sesion-open')" style="color:${color};border-color:${color}44;">
               <span class="material-icons" style="font-size:15px;">calendar_today</span>
               <strong>Planificación diaria</strong>
               <span class="material-icons mcl-sesion-chevron" style="margin-left:auto;font-size:18px;transition:transform 0.2s;">expand_more</span>
             </button>
-            <!-- Contenido colapsable -->
             <div class="mcl-sesion-contenido">
-              ${ini.apertura ? `
+              ${sIni.apertura ? `
               <div class="mcl-momento" style="border-left:3px solid #4CAF50;">
-                <div class="mcl-momento-hdr" style="color:#2E7D32;"><span class="material-icons">play_circle_filled</span>1er Momento — Inicio (${tiempos.ini} min)</div>
-                <div class="mcl-momento-txt">${ini.apertura.replace(/\n/g, '<br>')}</div>
+                <div class="mcl-momento-hdr" style="color:#2E7D32;"><span class="material-icons">play_circle_filled</span>1er Momento — Inicio (${t.ini} min)</div>
+                <div class="mcl-momento-txt">${sIni.apertura.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
-              ${dev.procedimental ? `
+              ${sDev.procedimental ? `
               <div class="mcl-momento" style="border-left:3px solid #2196F3;">
-                <div class="mcl-momento-hdr" style="color:#1565C0;"><span class="material-icons">play_circle_filled</span>2do Momento — Desarrollo (${tiempos.des} min)</div>
-                <div class="mcl-momento-txt">${dev.procedimental.replace(/\n/g, '<br>')}</div>
+                <div class="mcl-momento-hdr" style="color:#1565C0;"><span class="material-icons">play_circle_filled</span>2do Momento — Desarrollo (${t.des} min)</div>
+                <div class="mcl-momento-txt">${sDev.procedimental.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
-              ${cie.sintesis ? `
+              ${sCie.sintesis ? `
               <div class="mcl-momento" style="border-left:3px solid #FF9800;">
-                <div class="mcl-momento-hdr" style="color:#E65100;"><span class="material-icons">play_circle_filled</span>3er Momento — Cierre (${tiempos.cie} min)</div>
-                <div class="mcl-momento-txt">${cie.sintesis.replace(/\n/g, '<br>')}</div>
+                <div class="mcl-momento-hdr" style="color:#E65100;"><span class="material-icons">play_circle_filled</span>3er Momento — Cierre (${t.cie} min)</div>
+                <div class="mcl-momento-txt">${sCie.sintesis.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
-              ${s.estrategias ? `
+              ${ses.estrategias ? `
               <div class="mcl-momento" style="border-left:3px solid #9C27B0;margin-top:4px;">
                 <div class="mcl-momento-hdr" style="color:#6A1B9A;"><span class="material-icons">lightbulb</span>Estrategias</div>
-                <div class="mcl-momento-txt">${s.estrategias.replace(/\n/g, '<br>')}</div>
+                <div class="mcl-momento-txt">${ses.estrategias.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
             </div>
-          </div>`;
-      })()} 
-        <button onclick="cerrarModalBtn();abrirDiariasConPlan('${sesionInfo.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
-          <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
-        </button>
-      </div>` : `
+          </div>` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button onclick="cerrarModalBtn();abrirDiariasConPlan('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+            <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
+          </button>
+          ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
+            <span class="material-icons" style="font-size:14px;">link</span> Recurso
+          </a>` : ''}
+        </div>
+      </div>`;
+      }).join('') : `
       <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
         <span class="material-icons" style="font-size:1.8rem;display:block;margin-bottom:4px;opacity:0.4;">event_note</span>
         Sin actividad planificada para esta fecha.<br>
@@ -17596,7 +17601,8 @@ function abrirModalClase(encodedData) {
         </button>
       </div>`}
 
-      <!-- Enlace de recurso (siempre visible) -->
+      <!-- Enlace de recurso (cuando no hay actividades planificadas) -->
+      ${allSesiones.length === 0 ? `
       <div class="mcl-seccion">
         <div style="margin-top:2px;">
           <label style="font-size:0.72rem;color:#78909C;font-weight:600;display:block;margin-bottom:3px;">
@@ -17612,7 +17618,7 @@ function abrirModalClase(encodedData) {
             </a>` : ''}
           </div>
         </div>
-      </div>
+      </div>` : ''}
 
       <!-- Asistencia rápida -->
       ${asistModuloActivo ? `
