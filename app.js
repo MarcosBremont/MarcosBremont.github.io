@@ -13582,25 +13582,37 @@ function _editarTituloDiaria(el, idx) {
   const actual = act.enunciado || '';
   const nuevo = prompt('Editar nombre de la actividad:', actual);
   if (nuevo === null || nuevo.trim() === '' || nuevo.trim() === actual) return;
-  act.enunciado = nuevo.trim();
+  const nuevoTrimmed = nuevo.trim();
+  act.enunciado = nuevoTrimmed;
   guardarBorrador();
 
-  // También actualizar en la biblioteca si esta planificación está guardada ahí
+  // Actualizar en TODAS las planificaciones de la biblioteca que contengan esta actividad
   const biblio = cargarBiblioteca();
-  const item = (biblio.items || []).find(it => {
-    const acts = it.planificacion?.actividades || [];
-    return acts.some(a => a.id === act.id);
-  });
-  if (item && item.planificacion) {
-    const biblioAct = item.planificacion.actividades.find(a => a.id === act.id);
-    if (biblioAct) {
-      biblioAct.enunciado = act.enunciado;
-      persistirBiblioteca(biblio);
+  let guardado = false;
+  (biblio.items || []).forEach(item => {
+    if (!item.planificacion?.actividades) return;
+    // Buscar por ID si existe, o por índice + enunciado anterior como fallback
+    let biblioAct = act.id
+      ? item.planificacion.actividades.find(a => a.id === act.id)
+      : null;
+    if (!biblioAct) {
+      // Fallback: buscar por enunciado anterior exacto en la misma posición
+      const candidato = item.planificacion.actividades[idx];
+      if (candidato && candidato.enunciado === actual) {
+        biblioAct = candidato;
+      }
     }
+    if (biblioAct) {
+      biblioAct.enunciado = nuevoTrimmed;
+      guardado = true;
+    }
+  });
+  if (guardado) {
+    persistirBiblioteca(biblio);
   }
 
   // Actualizar el texto visible sin re-renderizar todo
-  const corto = act.enunciado.substring(0, 80) + (act.enunciado.length > 80 ? '…' : '');
+  const corto = nuevoTrimmed.substring(0, 80) + (nuevoTrimmed.length > 80 ? '…' : '');
   el.textContent = corto;
   mostrarToast('Nombre de actividad actualizado', 'success');
 }
