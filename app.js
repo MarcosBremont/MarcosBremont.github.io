@@ -13576,6 +13576,35 @@ function filtrarSesionesEC(btn, ecCodigo) {
 
 
 
+function _editarTituloDiaria(el, idx) {
+  const act = (planificacion.actividades || [])[idx];
+  if (!act) return;
+  const actual = act.enunciado || '';
+  const nuevo = prompt('Editar nombre de la actividad:', actual);
+  if (nuevo === null || nuevo.trim() === '' || nuevo.trim() === actual) return;
+  act.enunciado = nuevo.trim();
+  guardarBorrador();
+
+  // También actualizar en la biblioteca si esta planificación está guardada ahí
+  const biblio = cargarBiblioteca();
+  const item = (biblio.items || []).find(it => {
+    const acts = it.planificacion?.actividades || [];
+    return acts.some(a => a.id === act.id);
+  });
+  if (item && item.planificacion) {
+    const biblioAct = item.planificacion.actividades.find(a => a.id === act.id);
+    if (biblioAct) {
+      biblioAct.enunciado = act.enunciado;
+      persistirBiblioteca(biblio);
+    }
+  }
+
+  // Actualizar el texto visible sin re-renderizar todo
+  const corto = act.enunciado.substring(0, 80) + (act.enunciado.length > 80 ? '…' : '');
+  el.textContent = corto;
+  mostrarToast('Nombre de actividad actualizado', 'success');
+}
+
 function toggleSesion(actId) {
 
 
@@ -13820,7 +13849,7 @@ function renderizarDiarias() {
 
 
 
-          <div class="pd-sesion-titulo">${enunciadoCorto}</div>
+          <div class="pd-sesion-titulo" ondblclick="event.stopPropagation();_editarTituloDiaria(this,${idx})" title="Doble clic para editar el nombre">${enunciadoCorto}</div>
 
 
 
