@@ -12660,10 +12660,17 @@ function irAlHome() {
 }
 
 function irAlHomeBase() {
-  if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  sessionStorage.setItem('planificador_goto', 'step1');
-  location.reload();
+  const hayDatos = planificacion && (planificacion._id || (planificacion.datosGenerales && planificacion.datosGenerales.familiaProfesional));
+  if (hayDatos) {
+    if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.setItem('planificador_goto', 'step1');
+    location.reload();
+  } else {
+    _ocultarPaneles();
+    irAlPaso(1, false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 
 
