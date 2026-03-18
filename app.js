@@ -12660,9 +12660,10 @@ function irAlHome() {
 }
 
 function irAlHomeBase() {
-  _ocultarPaneles();
-  irAlPaso(1, false);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.setItem('planificador_goto', 'step1');
+  location.reload();
 }
 
 
