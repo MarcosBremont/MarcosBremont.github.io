@@ -16116,14 +16116,22 @@ generarPlanificacion = async function () {
 
   try {
     let aiData = null;
+    let proveedorUsado = 'local';
+
+    console.log('[IA] Claves disponibles — Groq:', !!groqKey, '| Gemini:', !!geminiKey);
 
     // 1. Intentar con Groq primero
     if (groqKey) {
       try {
+        console.log('[IA] Intentando generar con GROQ...');
         mostrarToast('🟢 Consultando Groq...', 'info');
         aiData = await generarConGroq(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        if (aiData) {
+          proveedorUsado = 'Groq';
+          console.log('[IA] ✅ Generado exitosamente con GROQ — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+        }
       } catch (errGroq) {
-        console.warn('Groq falló:', errGroq.message);
+        console.warn('[IA] ❌ Groq falló:', errGroq.message);
         const msg = errGroq.message || '';
         if (msg.includes('rate_limit') || msg.includes('429') || msg.includes('todos los modelos')) {
           if (geminiKey) {
@@ -16140,18 +16148,26 @@ generarPlanificacion = async function () {
     // 2. Si Groq no devolvió datos, intentar con Gemini
     if (!aiData && geminiKey) {
       try {
+        console.log('[IA] Intentando generar con GEMINI...');
         mostrarToast('🔵 Consultando Google Gemini...', 'info');
         if (btnTexto) btnTexto.textContent = 'Generando con Gemini...';
         aiData = await generarConGeminiCompleto(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        if (aiData) {
+          proveedorUsado = 'Gemini';
+          console.log('[IA] ✅ Generado exitosamente con GEMINI — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+        }
       } catch (errGemini) {
-        console.warn('Gemini falló:', errGemini.message);
+        console.warn('[IA] ❌ Gemini falló:', errGemini.message);
         throw errGemini;
       }
     }
 
     if (!aiData || !aiData.elementosCapacidad) {
+      console.log('[IA] ⚠️ Ningún proveedor devolvió datos. Usando generación LOCAL.');
       throw new Error('Ningún proveedor de IA devolvió datos válidos');
     }
+
+    console.log(`[IA] 🎯 Planificación generada con ${proveedorUsado} — ${aiData.elementosCapacidad.length} ECs, ${aiData.actividades.length} actividades`);
 
     // Aplicar resultados
     aplicarRespuestaGemini(aiData, fechasClase);
@@ -16202,6 +16218,7 @@ generarPlanificacion = async function () {
       mostrarToast('Error IA: ' + msg.substring(0, 120), 'error');
     }
     // Siempre usar generacion local como fallback
+    console.log('[IA] 🔄 Fallback: usando generación LOCAL');
     _generarPlanificacionLocal();
   } finally {
     // Restaurar botón
