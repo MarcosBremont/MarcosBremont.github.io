@@ -9725,19 +9725,15 @@ function _resaltarTexto(texto, query) {
     + texto.substring(idx + query.length);
 }
 
+let _buscarReentrante = false;
 function seleccionarEstudianteBuscar(cursoId, estId) {
+  if (_buscarReentrante) return;
   _buscarSeleccionado = { cursoId, estId };
 
-  // Actualizar estado activo en la lista
-  document.querySelectorAll('.buscar-item').forEach(el => el.classList.remove('activo'));
-  const items = document.querySelectorAll('.buscar-item');
-  items.forEach(el => {
-    if (el.onclick?.toString().includes(cursoId) && el.onclick?.toString().includes(estId)) {
-      el.classList.add('activo');
-    }
-  });
-  // Re-renderizar lista para reflejar selección
+  // Re-renderizar lista para reflejar selección (sin auto-select)
+  _buscarReentrante = true;
   buscarEstudiante(document.getElementById('buscar-input')?.value || '');
+  _buscarReentrante = false;
 
   _renderizarPerfilEstudiante(cursoId, estId);
 }
