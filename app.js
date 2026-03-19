@@ -6775,7 +6775,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-superadmin'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -6791,7 +6791,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-superadmin'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -20211,6 +20211,361 @@ function _copiarEnlaceDenuncias() {
     mostrarToast('Enlace copiado', 'success');
   });
 }
+
+// ════════════════════════════════════════════════════════════════════
+// ── MÓDULO: SUPERADMIN — GESTIÓN DE CENTROS EDUCATIVOS ───────────
+// ════════════════════════════════════════════════════════════════════
+
+const SUPERADMIN_EMAILS_KEY = 'metabot_superadmin_emails';
+const CENTROS_COLLECTION = 'centros';
+
+/** Emails de superadmin por defecto — se complementan con los de Firestore */
+const SUPERADMIN_DEFAULT = ['soymarcosbremont@gmail.com'];
+
+/** Verifica si el usuario actual es superadmin */
+function _esSuperadmin() {
+  const email = window.currentUser?.email?.toLowerCase();
+  if (!email) return false;
+  if (SUPERADMIN_DEFAULT.includes(email)) return true;
+  try {
+    const extra = JSON.parse(localStorage.getItem(SUPERADMIN_EMAILS_KEY) || '[]');
+    return extra.map(e => e.toLowerCase()).includes(email);
+  } catch { return false; }
+}
+
+/** Carga lista de emails superadmin desde Firestore */
+async function _cargarEmailsSuperadmin() {
+  try {
+    const doc = await db.collection('config').doc('superadmin').get();
+    if (doc.exists) {
+      const emails = doc.data().emails || [];
+      localStorage.setItem(SUPERADMIN_EMAILS_KEY, JSON.stringify(emails));
+      return emails;
+    }
+  } catch (e) { console.warn('Error cargando superadmin emails:', e); }
+  return SUPERADMIN_DEFAULT;
+}
+
+/** Guarda lista de emails superadmin en Firestore */
+async function _guardarEmailsSuperadmin(emails) {
+  try {
+    await db.collection('config').doc('superadmin').set({ emails });
+    localStorage.setItem(SUPERADMIN_EMAILS_KEY, JSON.stringify(emails));
+  } catch (e) { mostrarToast('Error guardando emails superadmin', 'error'); }
+}
+
+/** Muestra/oculta botón superadmin en dashboard */
+function _verificarAccesoSuperadmin() {
+  const btn = document.getElementById('btn-dash-superadmin');
+  if (btn) btn.style.display = _esSuperadmin() ? '' : 'none';
+}
+
+/** Abre el panel de superadmin */
+function abrirSuperadmin() {
+  if (!_esSuperadmin()) { mostrarToast('Acceso denegado', 'error'); return; }
+  _mostrarPanel('panel-superadmin');
+  switchTabSuperadmin('centros');
+}
+
+/** Tabs del superadmin */
+function switchTabSuperadmin(tab) {
+  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) { el.classList.add('activo'); el.style.background = '#B71C1C'; el.style.color = '#fff'; }
+    else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
+  });
+  if (tab === 'centros') _renderCentrosEducativos();
+  else if (tab === 'admins') _renderEmailsSuperadmin();
+}
+
+// ── CRUD CENTROS EDUCATIVOS ──────────────────────────────────────
+
+/** Carga todos los centros de Firestore */
+async function _cargarCentros() {
+  try {
+    const snap = await db.collection(CENTROS_COLLECTION).orderBy('nombre').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.error('Error cargando centros:', e);
+    return [];
+  }
+}
+
+/** Renderiza lista de centros */
+async function _renderCentrosEducativos() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando centros...</div>';
+
+  const centros = await _cargarCentros();
+
+  let html = '<div style="margin-bottom:16px;">'
+    + '<button onclick="_mostrarFormCentro()" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
+    + '<span class="material-icons" style="font-size:18px;">add</span> Crear Centro Educativo</button></div>';
+
+  if (centros.length === 0) {
+    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">business</span>No hay centros educativos registrados</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:12px;">';
+    centros.forEach(c => {
+      const admins = (c.admins || []).join(', ') || 'Sin admins';
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">'
+        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">';
+      if (c.logoUrl) {
+        html += '<img src="' + c.logoUrl + '" style="width:48px;height:48px;border-radius:8px;object-fit:contain;border:1px solid #eee;" alt="logo">';
+      } else {
+        html += '<div style="width:48px;height:48px;border-radius:8px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;"><span class="material-icons" style="color:#1565C0;font-size:28px;">business</span></div>';
+      }
+      html += '<div style="flex:1;min-width:0;">'
+        + '<div style="font-weight:700;font-size:1.05rem;color:#1A237E;">' + (c.nombre || 'Sin nombre') + '</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + (c.direccion || '') + '</div>'
+        + '</div></div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">'
+        + '<span style="background:#E8EAF6;color:#3949AB;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">Regional: ' + (c.regional || '-') + '</span>'
+        + '<span style="background:#E0F2F1;color:#00695C;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">Distrito: ' + (c.distrito || '-') + '</span>'
+        + '<span style="background:#FFF3E0;color:#E65100;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">Código: ' + (c.codigo || '-') + '</span>'
+        + '</div>'
+        + '<div style="font-size:0.8rem;color:#546E7A;margin-bottom:10px;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">shield</span> Admins: ' + admins + '</div>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<button onclick="_mostrarFormCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">edit</span> Editar</button>'
+        + '<button onclick="_gestionarAdminsCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#00695C;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">person_add</span> Admins</button>'
+        + '<button onclick="_eliminarCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">delete</span> Eliminar</button>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  }
+  cont.innerHTML = html;
+}
+
+/** Muestra formulario para crear/editar centro */
+async function _mostrarFormCentro(centroId) {
+  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [] };
+
+  if (centroId) {
+    try {
+      const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+      if (doc.exists) centro = { id: centroId, ...doc.data() };
+    } catch (e) { mostrarToast('Error cargando centro', 'error'); return; }
+  }
+
+  const cont = document.getElementById('sa-contenido');
+  cont.innerHTML = '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:20px;">'
+    + '<h3 style="margin:0 0 16px;color:#1A237E;">' + (centroId ? 'Editar Centro Educativo' : 'Nuevo Centro Educativo') + '</h3>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">'
+    + _inputCentro('sa-centro-nombre', 'Nombre del Centro *', centro.nombre, 'Ej: Liceo Técnico Juan Pablo Duarte')
+    + _inputCentro('sa-centro-codigo', 'Código del Centro', centro.codigo, 'Ej: 0401')
+    + _inputCentro('sa-centro-direccion', 'Dirección', centro.direccion, 'Ej: Calle Principal #10, Santiago')
+    + _inputCentro('sa-centro-regional', 'Regional', centro.regional, 'Ej: Regional 08')
+    + _inputCentro('sa-centro-distrito', 'Distrito Educativo', centro.distrito, 'Ej: 08-05')
+    + _inputCentro('sa-centro-telefono', 'Teléfono', centro.telefono, 'Ej: 809-555-1234')
+    + _inputCentro('sa-centro-email', 'Email del Centro', centro.email, 'Ej: info@liceo.edu.do')
+    + _inputCentro('sa-centro-logo', 'URL del Logo', centro.logoUrl, 'https://ejemplo.com/logo.png')
+    + '</div>'
+    + '<div style="display:flex;gap:10px;margin-top:18px;">'
+    + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
+    + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
+    + '<button onclick="_renderCentrosEducativos()" style="padding:10px 24px;background:#F5F5F5;color:#616161;border:1.5px solid #E0E0E0;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">Cancelar</button>'
+    + '</div></div>';
+}
+
+function _inputCentro(id, label, val, ph) {
+  return '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">' + label + '</label>'
+    + '<input type="text" id="' + id + '" value="' + (val || '').replace(/"/g, '&quot;') + '" placeholder="' + ph + '" '
+    + 'style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>';
+}
+
+/** Guarda centro en Firestore */
+async function _guardarCentro(centroId) {
+  const nombre = document.getElementById('sa-centro-nombre')?.value?.trim();
+  if (!nombre) { mostrarToast('El nombre del centro es obligatorio', 'error'); return; }
+
+  const data = {
+    nombre: nombre,
+    codigo: document.getElementById('sa-centro-codigo')?.value?.trim() || '',
+    direccion: document.getElementById('sa-centro-direccion')?.value?.trim() || '',
+    regional: document.getElementById('sa-centro-regional')?.value?.trim() || '',
+    distrito: document.getElementById('sa-centro-distrito')?.value?.trim() || '',
+    telefono: document.getElementById('sa-centro-telefono')?.value?.trim() || '',
+    email: document.getElementById('sa-centro-email')?.value?.trim() || '',
+    logoUrl: document.getElementById('sa-centro-logo')?.value?.trim() || '',
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    if (centroId) {
+      await db.collection(CENTROS_COLLECTION).doc(centroId).update(data);
+      mostrarToast('Centro actualizado correctamente', 'success');
+    } else {
+      data.createdAt = new Date().toISOString();
+      data.createdBy = window.currentUser?.uid || '';
+      data.admins = [];
+      await db.collection(CENTROS_COLLECTION).add(data);
+      mostrarToast('Centro creado correctamente', 'success');
+    }
+    _renderCentrosEducativos();
+  } catch (e) {
+    console.error('Error guardando centro:', e);
+    mostrarToast('Error guardando centro: ' + e.message, 'error');
+  }
+}
+
+/** Elimina centro */
+async function _eliminarCentro(centroId) {
+  if (!confirm('¿Estás seguro de eliminar este centro educativo? Esta acción no se puede deshacer.')) return;
+  try {
+    await db.collection(CENTROS_COLLECTION).doc(centroId).delete();
+    mostrarToast('Centro eliminado', 'success');
+    _renderCentrosEducativos();
+  } catch (e) {
+    mostrarToast('Error eliminando centro: ' + e.message, 'error');
+  }
+}
+
+// ── GESTIÓN DE ADMINS POR CENTRO ──────────────────────────────────
+
+async function _gestionarAdminsCentro(centroId) {
+  const cont = document.getElementById('sa-contenido');
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  try {
+    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (!doc.exists) { mostrarToast('Centro no encontrado', 'error'); _renderCentrosEducativos(); return; }
+    const centro = doc.data();
+    const admins = centro.admins || [];
+
+    let html = '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:20px;">'
+      + '<h3 style="margin:0 0 6px;color:#1A237E;">Administradores de: ' + centro.nombre + '</h3>'
+      + '<p style="color:#78909C;font-size:0.85rem;margin:0 0 16px;">Agrega los emails de los usuarios que serán administradores de este centro.</p>';
+
+    // Formulario agregar
+    html += '<div style="display:flex;gap:8px;margin-bottom:16px;">'
+      + '<input type="email" id="sa-nuevo-admin-email" placeholder="email@ejemplo.com" style="flex:1;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;">'
+      + '<button onclick="_agregarAdminCentro(\'' + centroId + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:10px 16px;background:#00695C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_add</span> Agregar</button>'
+      + '</div>';
+
+    // Lista actual
+    if (admins.length === 0) {
+      html += '<p style="color:#999;text-align:center;">No hay administradores asignados</p>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      admins.forEach((email, i) => {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#F5F5F5;border-radius:8px;">'
+          + '<span class="material-icons" style="font-size:18px;color:#00695C;">shield</span>'
+          + '<span style="flex:1;font-size:0.9rem;">' + email + '</span>'
+          + '<button onclick="_quitarAdminCentro(\'' + centroId + '\',' + i + ')" style="background:none;border:none;cursor:pointer;color:#C62828;"><span class="material-icons" style="font-size:18px;">close</span></button>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div style="margin-top:16px;">'
+      + '<button onclick="_renderCentrosEducativos()" style="padding:10px 24px;background:#F5F5F5;color:#616161;border:1.5px solid #E0E0E0;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;"><span class="material-icons" style="font-size:16px;vertical-align:middle;">arrow_back</span> Volver a centros</button>'
+      + '</div></div>';
+
+    cont.innerHTML = html;
+  } catch (e) {
+    mostrarToast('Error: ' + e.message, 'error');
+    _renderCentrosEducativos();
+  }
+}
+
+async function _agregarAdminCentro(centroId) {
+  const input = document.getElementById('sa-nuevo-admin-email');
+  const email = input?.value?.trim()?.toLowerCase();
+  if (!email || !email.includes('@')) { mostrarToast('Ingresa un email válido', 'error'); return; }
+
+  try {
+    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    const admins = doc.data()?.admins || [];
+    if (admins.includes(email)) { mostrarToast('Este email ya es administrador', 'error'); return; }
+    admins.push(email);
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({ admins });
+    mostrarToast('Administrador agregado', 'success');
+    _gestionarAdminsCentro(centroId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _quitarAdminCentro(centroId, index) {
+  if (!confirm('¿Quitar este administrador?')) return;
+  try {
+    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    const admins = doc.data()?.admins || [];
+    admins.splice(index, 1);
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({ admins });
+    mostrarToast('Administrador removido', 'success');
+    _gestionarAdminsCentro(centroId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── GESTIÓN DE CORREOS SUPERADMIN ──────────────────────────────────
+
+async function _renderEmailsSuperadmin() {
+  const cont = document.getElementById('sa-contenido');
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const emails = await _cargarEmailsSuperadmin();
+  const todos = [...new Set([...SUPERADMIN_DEFAULT, ...emails])];
+
+  let html = '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:20px;">'
+    + '<h3 style="margin:0 0 6px;color:#1A237E;">Correos con acceso Superadmin</h3>'
+    + '<p style="color:#78909C;font-size:0.85rem;margin:0 0 16px;">Estos correos pueden acceder al panel de superadmin y gestionar todos los centros educativos.</p>';
+
+  // Agregar nuevo
+  html += '<div style="display:flex;gap:8px;margin-bottom:16px;">'
+    + '<input type="email" id="sa-nuevo-superadmin" placeholder="email@ejemplo.com" style="flex:1;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;">'
+    + '<button onclick="_agregarSuperadmin()" style="display:inline-flex;align-items:center;gap:4px;padding:10px 16px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">add</span> Agregar</button>'
+    + '</div>';
+
+  // Lista
+  html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+  todos.forEach(email => {
+    const isDefault = SUPERADMIN_DEFAULT.includes(email);
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:' + (isDefault ? '#FFEBEE' : '#F5F5F5') + ';border-radius:8px;">'
+      + '<span class="material-icons" style="font-size:18px;color:#B71C1C;">admin_panel_settings</span>'
+      + '<span style="flex:1;font-size:0.9rem;">' + email + (isDefault ? ' <span style="font-size:0.7rem;color:#B71C1C;font-weight:600;">(principal)</span>' : '') + '</span>';
+    if (!isDefault) {
+      html += '<button onclick="_quitarSuperadmin(\'' + email + '\')" style="background:none;border:none;cursor:pointer;color:#C62828;"><span class="material-icons" style="font-size:18px;">close</span></button>';
+    }
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  cont.innerHTML = html;
+}
+
+async function _agregarSuperadmin() {
+  const input = document.getElementById('sa-nuevo-superadmin');
+  const email = input?.value?.trim()?.toLowerCase();
+  if (!email || !email.includes('@')) { mostrarToast('Ingresa un email válido', 'error'); return; }
+
+  const emails = await _cargarEmailsSuperadmin();
+  const todos = [...new Set([...SUPERADMIN_DEFAULT, ...emails])];
+  if (todos.includes(email)) { mostrarToast('Este email ya tiene acceso superadmin', 'error'); return; }
+
+  emails.push(email);
+  await _guardarEmailsSuperadmin(emails);
+  mostrarToast('Superadmin agregado', 'success');
+  _renderEmailsSuperadmin();
+}
+
+async function _quitarSuperadmin(email) {
+  if (!confirm('¿Quitar acceso superadmin a ' + email + '?')) return;
+  let emails = await _cargarEmailsSuperadmin();
+  emails = emails.filter(e => e.toLowerCase() !== email.toLowerCase());
+  await _guardarEmailsSuperadmin(emails);
+  mostrarToast('Superadmin removido', 'success');
+  _renderEmailsSuperadmin();
+}
+
+// Verificar acceso superadmin al cargar dashboard
+const _origRenderDashboard = renderizarDashboard;
+renderizarDashboard = function() {
+  _origRenderDashboard();
+  _verificarAccesoSuperadmin();
+  _cargarEmailsSuperadmin(); // pre-cargar lista en background
+};
 
 // ════════════════════════════════════════════════════════════════════
 const _mf2 = document.getElementById('modal-footer');
