@@ -1312,7 +1312,7 @@ function generarActividades(listaEC, fechasClase, actsPorEC) {
 
 
 
-        enunciado: plantillasActs[i],
+        enunciado: plantillasActs[i % plantillasActs.length],
 
 
 
@@ -5439,13 +5439,8 @@ function generarPlanificacion() {
 
 
     document.getElementById('descripcion-ra').classList.add('error');
-
-
-
     mostrarToast('Escribe una descripción más completa del RA', 'error');
-
-
-
+    _generandoPlanificacion = false;
     return;
 
 
@@ -5586,8 +5581,8 @@ function generarPlanificacion() {
 
 
 
-      const _cantEC = parseInt(document.getElementById('cantidad-ec')?.value) || 4;
-      const _cantActPorEC = parseInt(document.getElementById('cantidad-act-por-ec')?.value) || 1;
+      const _cantEC = parseInt(dg.cantidadEC) || 4;
+      const _cantActPorEC = parseInt(dg.cantidadActPorEC) || 1;
       let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg, _cantEC);
 
 
@@ -20906,7 +20901,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins' };
+  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -20915,6 +20910,7 @@ function switchTabSuperadmin(tab) {
   });
   if (tab === 'centros') _renderCentrosEducativos();
   else if (tab === 'admins') _renderEmailsSuperadmin();
+  else if (tab === 'opciones') _renderOpcionesDocentes();
 }
 
 // ── CRUD CENTROS EDUCATIVOS ──────────────────────────────────────
@@ -21196,6 +21192,113 @@ async function _quitarSuperadmin(email) {
   _renderEmailsSuperadmin();
 }
 
+// ── OPCIONES DE VISIBILIDAD PARA DOCENTES ───────────────────────
+
+const OPCIONES_DOCENTES = [
+  { id: 'blog', label: 'Blog Educativo', icono: 'rss_feed', desc: 'Publicar contenido para estudiantes' },
+  { id: 'reportes', label: 'Reportes Estudiantes', icono: 'flag', desc: 'Reportes de comportamiento' },
+  { id: 'denuncias', label: 'Buzón de Denuncias', icono: 'report', desc: 'Denuncias anónimas' },
+  { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas y entregas' },
+  { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas del docente' },
+  { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación' },
+  { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento' },
+  { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios' },
+  { id: 'calendario', label: 'Calendario Escolar', icono: 'event', desc: 'Calendario de actividades' },
+  { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global de estudiantes' },
+  { id: 'ia', label: 'Generación con IA', icono: 'auto_awesome', desc: 'Generar contenido con inteligencia artificial' },
+];
+
+async function _cargarOpcionesDocentes() {
+  try {
+    const doc = await db.collection('config').doc('opciones_docentes').get();
+    return doc.exists ? doc.data() : {};
+  } catch { return {}; }
+}
+
+async function _guardarOpcionesDocentes(opciones) {
+  try {
+    await db.collection('config').doc('opciones_docentes').set(opciones);
+  } catch (e) { mostrarToast('Error guardando opciones: ' + e.message, 'error'); }
+}
+
+async function _renderOpcionesDocentes() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const opciones = await _cargarOpcionesDocentes();
+
+  let html = '<div style="margin-bottom:16px;">'
+    + '<div style="background:#FFF3E0;border-left:4px solid #E65100;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:0.85rem;color:#E65100;">'
+    + '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;">info</span>'
+    + 'Activa o desactiva las opciones que los docentes pueden ver en su dashboard. Los cambios se aplican inmediatamente para todos los docentes.'
+    + '</div>';
+
+  html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+  OPCIONES_DOCENTES.forEach(opt => {
+    const activo = opciones[opt.id] !== false; // por defecto activo
+    html += `<div style="background:#fff;border:1.5px solid ${activo ? '#A5D6A7' : '#FFCDD2'};border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;transition:all 0.2s;">
+      <span class="material-icons" style="font-size:28px;color:${activo ? '#2E7D32' : '#C62828'};">${opt.icono}</span>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.92rem;color:#212121;">${opt.label}</div>
+        <div style="font-size:0.78rem;color:#78909C;">${opt.desc}</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:50px;height:28px;cursor:pointer;">
+        <input type="checkbox" ${activo ? 'checked' : ''} onchange="_toggleOpcionDocente('${opt.id}', this.checked)"
+          style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:${activo ? '#4CAF50' : '#E0E0E0'};border-radius:14px;transition:0.3s;"></span>
+        <span style="position:absolute;top:2px;left:${activo ? '24px' : '2px'};width:24px;height:24px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+      </label>
+    </div>`;
+  });
+  html += '</div></div>';
+  cont.innerHTML = html;
+}
+
+async function _toggleOpcionDocente(id, activo) {
+  const opciones = await _cargarOpcionesDocentes();
+  opciones[id] = activo;
+  await _guardarOpcionesDocentes(opciones);
+  _renderOpcionesDocentes();
+  mostrarToast(`${activo ? 'Activado' : 'Desactivado'}: ${OPCIONES_DOCENTES.find(o => o.id === id)?.label || id}`, 'success');
+}
+
+/** Aplica las restricciones de opciones al dashboard del docente */
+async function _aplicarOpcionesDocente() {
+  if (typeof _esSuperadmin === 'function' && _esSuperadmin()) return; // superadmin ve todo
+  const esAdmin = await _esAdminDeCentro();
+  if (esAdmin.length > 0) return; // admin centro ve todo
+  const esDir = await _esDirector();
+  if (esDir) return; // director ve todo
+
+  try {
+    const opciones = await _cargarOpcionesDocentes();
+    const mapBotones = {
+      blog: 'btn-dash-blog',
+      reportes: 'btn-dash-reportes',
+      denuncias: 'btn-dash-denuncias',
+      tareas: 'btn-dash-tareas',
+      notas: 'btn-dash-notas',
+      libreta: 'btn-dash-libreta',
+      rendimiento: 'btn-dash-rendimiento',
+      auditoria: 'btn-dash-auditoria',
+      calendario: 'btn-dash-calendario',
+      buscar: 'btn-buscar-est',
+    };
+    Object.entries(mapBotones).forEach(([key, btnId]) => {
+      const btn = document.getElementById(btnId);
+      if (btn && opciones[key] === false) {
+        btn.style.display = 'none';
+      }
+    });
+    // IA toggle
+    if (opciones.ia === false) {
+      const btnIA = document.getElementById('btn-dash-ia');
+      if (btnIA) btnIA.style.display = 'none';
+    }
+  } catch {}
+}
+
 // Verificar acceso superadmin y admin centro al cargar dashboard
 const _origRenderDashboard = renderizarDashboard;
 renderizarDashboard = function() {
@@ -21205,6 +21308,7 @@ renderizarDashboard = function() {
   _verificarAccesoDirector();
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
   _cargarAvisosDocente(); // mostrar avisos al docente en dashboard
+  _aplicarOpcionesDocente(); // ocultar opciones desactivadas por superadmin
 };
 
 // ── AVISOS PARA DOCENTES EN DASHBOARD ─────────────────────────────

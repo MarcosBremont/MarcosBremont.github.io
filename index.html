@@ -284,23 +284,23 @@
           <span class="material-icons">calendar_view_week</span>
           <span>Mi Horario</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirTareas()" style="--accent:#E65100;">
+        <button class="dash-nav-btn" id="btn-dash-tareas" onclick="abrirTareas()" style="--accent:#E65100;">
           <span class="material-icons">assignment</span>
           <span>Tareas</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirNotas()" style="--accent:#5D4037;">
+        <button class="dash-nav-btn" id="btn-dash-notas" onclick="abrirNotas()" style="--accent:#5D4037;">
           <span class="material-icons">sticky_note_2</span>
           <span>Mis Notas</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirLibreta()" style="--accent:#00695C;">
+        <button class="dash-nav-btn" id="btn-dash-libreta" onclick="abrirLibreta()" style="--accent:#00695C;">
           <span class="material-icons">menu_book</span>
           <span>Mi Libreta</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirRendimiento()" style="--accent:#6A1B9A;">
+        <button class="dash-nav-btn" id="btn-dash-rendimiento" onclick="abrirRendimiento()" style="--accent:#6A1B9A;">
           <span class="material-icons">insights</span>
           <span>Rendimiento</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirConfigIA()" style="--accent:#AD1457;">
+        <button class="dash-nav-btn" id="btn-dash-ia" onclick="abrirConfigIA()" style="--accent:#AD1457;">
           <span class="material-icons">auto_awesome</span>
           <span>Configurar IA</span>
         </button>
@@ -312,23 +312,23 @@
           <span class="material-icons">backup</span>
           <span>Mis Datos</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirBlog()" style="--accent:#006064;">
+        <button class="dash-nav-btn" id="btn-dash-blog" onclick="abrirBlog()" style="--accent:#006064;">
           <span class="material-icons">article</span>
           <span>Blog</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirCalendarioEscolar()" style="--accent:#1565C0;">
+        <button class="dash-nav-btn" id="btn-dash-calendario" onclick="abrirCalendarioEscolar()" style="--accent:#1565C0;">
           <span class="material-icons">event_note</span>
           <span>Calendario Escolar</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirReportesComportamiento()" style="--accent:#C62828;">
+        <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()" style="--accent:#C62828;">
           <span class="material-icons">assignment_late</span>
           <span>Reportes Estudiantes</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirDenuncias()" style="--accent:#6A1B9A;">
+        <button class="dash-nav-btn" id="btn-dash-denuncias" onclick="abrirDenuncias()" style="--accent:#6A1B9A;">
           <span class="material-icons">campaign</span>
           <span>Buzón Denuncias</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirAuditoria()" style="--accent:#4A148C;">
+        <button class="dash-nav-btn" id="btn-dash-auditoria" onclick="abrirAuditoria()" style="--accent:#4A148C;">
           <span class="material-icons">security</span>
           <span>Auditoría</span>
         </button>
@@ -1593,6 +1593,10 @@
         <button class="ra-tab" id="tab-sa-admins" onclick="switchTabSuperadmin('admins')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">shield</span> Correos Superadmin
+        </button>
+        <button class="ra-tab" id="tab-sa-opciones" onclick="switchTabSuperadmin('opciones')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">toggle_on</span> Opciones Docentes
         </button>
       </div>
 
