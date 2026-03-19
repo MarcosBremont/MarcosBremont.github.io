@@ -15553,9 +15553,9 @@ const MODELOS_GEMINI = [
 /** Modelos de Groq a intentar en orden */
 const MODELOS_GROQ = [
   'llama-3.3-70b-versatile',
-  'meta-llama/llama-4-maverick-17b-128e-instruct',
-  'qwen/qwen-3-32b',
-  'llama-3.1-8b-instant'
+  'llama-3.1-8b-instant',
+  'gemma2-9b-it',
+  'mixtral-8x7b-32768'
 ];
 
 /** Llama a la API de Groq con un modelo especifico */
@@ -15609,21 +15609,23 @@ async function _llamarModeloGroq(modelo, groqKey, prompt) {
 async function _llamarGroqConFallback(prompt, mensajeToast) {
   const groqKey = getGroqKey();
   let ultimoError = '';
+  let todosRateLimit = true;
   for (let m = 0; m < MODELOS_GROQ.length; m++) {
     const modelo = MODELOS_GROQ[m];
     mostrarToast(`🟢 ${mensajeToast} (${modelo})…`, 'info');
-    for (let intento = 0; intento < 2; intento++) {
-      const resultado = await _llamarModeloGroq(modelo, groqKey, prompt);
-      if (resultado.ok) return resultado.data;
-      if (!resultado.esRateLimit) { ultimoError = resultado.error; break; }
-      ultimoError = resultado.error;
-      if (intento === 0 && m < MODELOS_GROQ.length - 1) {
-        mostrarToast(`⏳ ${modelo} sin cuota, probando siguiente...`, 'info');
-        break;
-      } else if (intento === 0) {
-        await _esperarConCountdown(20000, '⏳ Reintentando en');
-      }
+    const resultado = await _llamarModeloGroq(modelo, groqKey, prompt);
+    if (resultado.ok) return resultado.data;
+    ultimoError = resultado.error;
+    if (resultado.esRateLimit) {
+      mostrarToast(`⏳ ${modelo} sin cuota, probando siguiente...`, 'info');
+    } else if (resultado.error && resultado.error.includes('model_not_found')) {
+      // Modelo no existe, saltar sin marcar como rate limit
+    } else {
+      todosRateLimit = false;
     }
+  }
+  if (todosRateLimit) {
+    throw new Error('rate_limit: Todos los modelos de Groq agotaron su cuota. Usando generación local.');
   }
   throw new Error(ultimoError || 'Groq: todos los modelos fallaron');
 }
