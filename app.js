@@ -1273,6 +1273,7 @@ function generarActividades(listaEC, fechasClase, actsPorEC) {
 
     // Número de actividades para este EC
     const numActs = actsPorEC || 1;
+    if (idxEC === 0) console.log('[DEBUG] actsPorEC param:', actsPorEC, 'numActs:', numActs);
 
 
 
@@ -5583,6 +5584,7 @@ function generarPlanificacion() {
 
       const _cantEC = parseInt(dg.cantidadEC) || 4;
       const _cantActPorEC = parseInt(dg.cantidadActPorEC) || 1;
+      console.log('[DEBUG] cantEC:', _cantEC, 'cantActPorEC:', _cantActPorEC, 'raw:', dg.cantidadEC, dg.cantidadActPorEC);
       let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg, _cantEC);
 
 
