@@ -15554,8 +15554,8 @@ const MODELOS_GEMINI = [
 const MODELOS_GROQ = [
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
-  'gemma2-9b-it',
-  'mixtral-8x7b-32768'
+  'llama3-70b-8192',
+  'llama3-8b-8192'
 ];
 
 /** Llama a la API de Groq con un modelo especifico */
@@ -15609,25 +15609,28 @@ async function _llamarModeloGroq(modelo, groqKey, prompt) {
 async function _llamarGroqConFallback(prompt, mensajeToast) {
   const groqKey = getGroqKey();
   let ultimoError = '';
-  let todosRateLimit = true;
+  let algunoDisponible = false;
   for (let m = 0; m < MODELOS_GROQ.length; m++) {
     const modelo = MODELOS_GROQ[m];
     mostrarToast(`🟢 ${mensajeToast} (${modelo})…`, 'info');
     const resultado = await _llamarModeloGroq(modelo, groqKey, prompt);
     if (resultado.ok) return resultado.data;
     ultimoError = resultado.error;
-    if (resultado.esRateLimit) {
-      mostrarToast(`⏳ ${modelo} sin cuota, probando siguiente...`, 'info');
-    } else if (resultado.error && resultado.error.includes('model_not_found')) {
-      // Modelo no existe, saltar sin marcar como rate limit
-    } else {
-      todosRateLimit = false;
+    const errMsg = resultado.error || '';
+    if (errMsg.includes('model_not_found') || errMsg.includes('decommissioned')) {
+      // Modelo no existe o descontinuado, saltar silenciosamente
+      continue;
     }
+    if (resultado.esRateLimit) {
+      algunoDisponible = true; // el modelo existe pero sin cuota
+      continue;
+    }
+    algunoDisponible = true;
   }
-  if (todosRateLimit) {
-    throw new Error('rate_limit: Todos los modelos de Groq agotaron su cuota. Usando generación local.');
+  if (!algunoDisponible) {
+    throw new Error('Groq: todos los modelos no están disponibles. Verifica tu cuenta en console.groq.com');
   }
-  throw new Error(ultimoError || 'Groq: todos los modelos fallaron');
+  throw new Error('rate_limit: Todos los modelos de Groq agotaron su cuota. Usando generación local.');
 }
 
 /** Genera detalle (instrumento + sesión) para UNA sola actividad */
@@ -15726,7 +15729,9 @@ async function generarConGroq(dg, ra, fechasClase) {
   }
 
   // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
+  let _groqAbortado = false;
   for (let i = 0; i < datosBase.actividades.length; i++) {
+    if (_groqAbortado) break;
     const act = datosBase.actividades[i];
     const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
     mostrarToast(`🟢 Generando instrumento ${i + 1}/${datosBase.actividades.length}…`, 'info');
@@ -15739,6 +15744,10 @@ async function generarConGroq(dg, ra, fechasClase) {
       }
     } catch (e) {
       console.warn(`Instrumento ${i + 1} no generado con IA, usará generación local:`, e.message);
+      if (e.message && (e.message.includes('rate_limit') || e.message.includes('todos los modelos'))) {
+        mostrarToast('⏳ Cuota de Groq agotada. Los instrumentos restantes se generarán localmente.', 'warning');
+        _groqAbortado = true;
+      }
     }
   }
 
