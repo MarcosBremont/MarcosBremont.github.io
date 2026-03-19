@@ -930,7 +930,7 @@ function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
       nivel: base.nivel,
       nivelBloom: base.nivel,
       verbo,
-      enunciado: `${verbo} ${base.prefijo}${objetoRA}, ${base.condicion}, en correspondencia con ${getCE(i)}.`,
+      enunciado: `${verbo} ${base.prefijo}${objetoRA}, ${base.condicion}.`,
       horasAsignadas: 0,
       secuencia: plantillasSecuencia[base.nivel]
     });
