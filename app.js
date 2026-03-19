@@ -15585,9 +15585,7 @@ const MODELOS_GEMINI = [
 /** Modelos de Groq a intentar en orden */
 const MODELOS_GROQ = [
   'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'llama3-70b-8192',
-  'llama3-8b-8192'
+  'llama-3.1-8b-instant'
 ];
 
 /** Llama a la API de Groq con un modelo especifico */
@@ -15761,24 +15759,51 @@ async function generarConGroq(dg, ra, fechasClase) {
   }
 
   // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
-  let _groqAbortado = false;
+  // Intentar con Groq, si falla por rate limit pasar a Gemini para el resto
+  let _usarGeminiParaInstrumentos = false;
+  const geminiKey = getGeminiKey();
+
   for (let i = 0; i < datosBase.actividades.length; i++) {
-    if (_groqAbortado) break;
     const act = datosBase.actividades[i];
     const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
-    mostrarToast(`🟢 Generando instrumento ${i + 1}/${datosBase.actividades.length}…`, 'info');
-    try {
-      const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
-      const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
-      if (det) {
-        act.instrumentoDetalle = det.instrumentoDetalle || null;
-        act.sesionDiaria = det.sesionDiaria || null;
+    const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
+
+    // Intentar con Groq o Gemini según el estado
+    if (!_usarGeminiParaInstrumentos) {
+      try {
+        mostrarToast(`🟢 Instrumento ${i + 1}/${datosBase.actividades.length} (Groq)…`, 'info');
+        const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
+        if (det) {
+          act.instrumentoDetalle = det.instrumentoDetalle || null;
+          act.sesionDiaria = det.sesionDiaria || null;
+        }
+        continue;
+      } catch (e) {
+        console.warn(`[IA] Instrumento ${i + 1} falló en Groq:`, e.message);
+        if (geminiKey) {
+          console.log('[IA] Cambiando a Gemini para instrumentos restantes...');
+          mostrarToast('⏳ Groq sin cuota. Cambiando a Gemini para instrumentos...', 'warning');
+          _usarGeminiParaInstrumentos = true;
+        } else {
+          console.warn(`[IA] Sin Gemini, instrumento ${i + 1} se generará localmente`);
+          break; // sin Gemini, salir del loop
+        }
       }
-    } catch (e) {
-      console.warn(`Instrumento ${i + 1} no generado con IA, usará generación local:`, e.message);
-      if (e.message && (e.message.includes('rate_limit') || e.message.includes('todos los modelos'))) {
-        mostrarToast('⏳ Cuota de Groq agotada. Los instrumentos restantes se generarán localmente.', 'warning');
-        _groqAbortado = true;
+    }
+
+    // Intentar con Gemini
+    if (_usarGeminiParaInstrumentos) {
+      try {
+        mostrarToast(`🔵 Instrumento ${i + 1}/${datosBase.actividades.length} (Gemini)…`, 'info');
+        const det = await _llamarGeminiConFallback(promptDet, geminiKey, `Instrumento ${i + 1}`);
+        if (det) {
+          act.instrumentoDetalle = det.instrumentoDetalle || null;
+          act.sesionDiaria = det.sesionDiaria || null;
+        }
+      } catch (e) {
+        console.warn(`[IA] Instrumento ${i + 1} también falló en Gemini:`, e.message);
+        mostrarToast('⏳ Gemini también sin cuota. Instrumentos restantes se generarán localmente.', 'warning');
+        break;
       }
     }
   }
