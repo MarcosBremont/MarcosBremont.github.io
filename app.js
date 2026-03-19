@@ -6775,7 +6775,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-director', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -6791,7 +6791,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-director', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -20332,9 +20332,14 @@ async function _renderDocentesCentro() {
       const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
       html += '<div style="width:44px;height:44px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.1rem;">' + inicial + '</div>';
 
-      // Info
+      // Info + badge de rol
+      const rolBadge = d.rol === 'director'
+        ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>'
+        : d.rol === 'admin_centro'
+        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>'
+        : '';
       html += '<div style="flex:1;min-width:150px;">'
-        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + (d.nombre || 'Sin nombre') + '</div>'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + (d.nombre || 'Sin nombre') + rolBadge + '</div>'
         + '<div style="font-size:0.82rem;color:#78909C;">' + (d.email || '') + '</div>'
         + '<div style="font-size:0.75rem;color:#B0BEC5;margin-top:2px;">Registro: ' + fecha + '</div>'
         + '</div>';
@@ -20345,6 +20350,11 @@ async function _renderDocentesCentro() {
         html += '<button onclick="_aprobarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>';
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">close</span> Rechazar</button>';
       } else if (tab === 'aprobados') {
+        if (d.rol !== 'director') {
+          html += '<button onclick="_promoverDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#4A148C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star</span> Hacer Director</button>';
+        } else {
+          html += '<button onclick="_quitarDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star_border</span> Quitar Director</button>';
+        }
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">block</span> Revocar</button>';
       } else {
         html += '<button onclick="_aprobarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>';
@@ -20376,6 +20386,255 @@ async function _rechazarDocente(uid) {
     mostrarToast('Docente rechazado', 'success');
     _renderDocentesCentro();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Promover a director */
+async function _promoverDirector(uid) {
+  if (!confirm('¿Promover este usuario a Director del centro?')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'director' });
+    mostrarToast('Usuario promovido a Director', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Quitar rol de director */
+async function _quitarDirector(uid) {
+  if (!confirm('¿Quitar el rol de Director a este usuario?')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
+    mostrarToast('Rol de Director removido', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ── MÓDULO: DIRECTOR — AVISOS Y MONITOREO ────────────────────────
+// ════════════════════════════════════════════════════════════════════
+
+/** Verifica si el usuario actual es director */
+async function _esDirector() {
+  if (!window.currentUser) return false;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    return doc.exists && doc.data().rol === 'director';
+  } catch { return false; }
+}
+
+/** Muestra/oculta botón director en dashboard */
+async function _verificarAccesoDirector() {
+  const btn = document.getElementById('btn-dash-director');
+  if (!btn) return;
+  const esDir = await _esDirector();
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  btn.style.display = (esDir || esSA) ? '' : 'none';
+}
+
+/** Abre panel de director */
+async function abrirDirector() {
+  _mostrarPanel('panel-director');
+  switchTabDirector('avisos');
+}
+
+/** Tabs del director */
+function switchTabDirector(tab) {
+  const tabs = { avisos: 'tab-dir-avisos', docentes: 'tab-dir-docentes' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) { el.classList.add('activo'); el.style.background = '#4A148C'; el.style.color = '#fff'; }
+    else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
+  });
+  window._dirTabActual = tab;
+  if (tab === 'avisos') _renderAvisosDirector();
+  else _renderMonitoreoDocentes();
+}
+
+// ── AVISOS ──────────────────────────────────────────────────────
+
+/** Obtener centroId del director actual */
+async function _getCentroDirector() {
+  if (!window.currentUser) return null;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (doc.exists) return doc.data().centroId || null;
+  } catch {}
+  return null;
+}
+
+/** Renderiza la sección de avisos */
+async function _renderAvisosDirector() {
+  const cont = document.getElementById('dir-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const centroId = await _getCentroDirector();
+  // Superadmin sin centro: mostrar selector
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  let centroFinal = centroId;
+
+  if (!centroFinal && esSA) {
+    // Usar primer centro disponible
+    try {
+      const snap = await db.collection('centros').limit(1).get();
+      if (!snap.empty) centroFinal = snap.docs[0].id;
+    } catch {}
+  }
+
+  if (!centroFinal) {
+    cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No estás asignado a ningún centro.</div>';
+    return;
+  }
+
+  // Cargar avisos existentes
+  let avisos = [];
+  try {
+    const snap = await db.collection('centros').doc(centroFinal).collection('avisos').orderBy('fecha', 'desc').get();
+    avisos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('Error cargando avisos:', e); }
+
+  let html = '';
+
+  // Formulario nuevo aviso
+  html += '<div style="background:#F3E5F5;border:1.5px solid #CE93D8;border-radius:12px;padding:16px;margin-bottom:20px;">'
+    + '<h4 style="margin:0 0 10px;color:#4A148C;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">campaign</span> Enviar nuevo aviso</h4>'
+    + '<input type="text" id="dir-aviso-titulo" placeholder="Título del aviso" style="width:100%;padding:10px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;">'
+    + '<textarea id="dir-aviso-mensaje" placeholder="Escribe el mensaje para todos los docentes y administradores del centro..." rows="3" style="width:100%;padding:10px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">'
+    + '<select id="dir-aviso-prioridad" style="padding:8px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.85rem;background:#fff;">'
+    + '<option value="normal">Normal</option><option value="importante">Importante</option><option value="urgente">Urgente</option>'
+    + '</select>'
+    + '<button onclick="_enviarAvisoDirector(\'' + centroFinal + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#4A148C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-left:auto;">'
+    + '<span class="material-icons" style="font-size:18px;">send</span> Enviar aviso</button>'
+    + '</div></div>';
+
+  // Lista de avisos
+  if (avisos.length === 0) {
+    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">notifications_none</span>No hay avisos enviados</div>';
+  } else {
+    html += '<h4 style="color:#4A148C;margin:0 0 12px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">history</span> Avisos enviados</h4>';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    avisos.forEach(a => {
+      const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const prioColors = { urgente: '#C62828', importante: '#E65100', normal: '#4A148C' };
+      const prioLabels = { urgente: 'URGENTE', importante: 'IMPORTANTE', normal: 'Normal' };
+      const color = prioColors[a.prioridad] || prioColors.normal;
+      html += '<div style="background:#fff;border-left:4px solid ' + color + ';border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<span style="background:' + color + ';color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:700;">' + (prioLabels[a.prioridad] || 'Normal') + '</span>'
+        + '<span style="font-size:0.78rem;color:#90A4AE;">' + fecha + '</span>'
+        + '<button onclick="_eliminarAviso(\'' + centroFinal + '\',\'' + a.id + '\')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#C62828;"><span class="material-icons" style="font-size:18px;">delete</span></button>'
+        + '</div>'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;margin-bottom:4px;">' + (a.titulo || 'Sin título') + '</div>'
+        + '<div style="font-size:0.88rem;color:#546E7A;white-space:pre-wrap;">' + (a.mensaje || '') + '</div>'
+        + '<div style="font-size:0.72rem;color:#B0BEC5;margin-top:6px;">Enviado por: ' + (a.enviadoPor || '') + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+
+  cont.innerHTML = html;
+}
+
+/** Enviar aviso */
+async function _enviarAvisoDirector(centroId) {
+  const titulo = document.getElementById('dir-aviso-titulo')?.value?.trim();
+  const mensaje = document.getElementById('dir-aviso-mensaje')?.value?.trim();
+  const prioridad = document.getElementById('dir-aviso-prioridad')?.value || 'normal';
+
+  if (!titulo && !mensaje) { mostrarToast('Escribe un título o mensaje', 'error'); return; }
+
+  try {
+    await db.collection('centros').doc(centroId).collection('avisos').add({
+      titulo: titulo || '',
+      mensaje: mensaje || '',
+      prioridad,
+      fecha: new Date().toISOString(),
+      enviadoPor: window.currentUser?.displayName || window.currentUser?.email || '',
+      enviadoPorUid: window.currentUser?.uid || ''
+    });
+    mostrarToast('Aviso enviado correctamente', 'success');
+    _renderAvisosDirector();
+  } catch (e) { mostrarToast('Error enviando aviso: ' + e.message, 'error'); }
+}
+
+/** Eliminar aviso */
+async function _eliminarAviso(centroId, avisoId) {
+  if (!confirm('¿Eliminar este aviso?')) return;
+  try {
+    await db.collection('centros').doc(centroId).collection('avisos').doc(avisoId).delete();
+    mostrarToast('Aviso eliminado', 'success');
+    _renderAvisosDirector();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── MONITOREO DE DOCENTES ──────────────────────────────────────
+
+/** Renderiza monitoreo: lista de docentes con su última actividad */
+async function _renderMonitoreoDocentes() {
+  const cont = document.getElementById('dir-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando docentes...</div>';
+
+  let centroId = await _getCentroDirector();
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  if (!centroId && esSA) {
+    try { const s = await db.collection('centros').limit(1).get(); if (!s.empty) centroId = s.docs[0].id; } catch {}
+  }
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+
+  try {
+    const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
+    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+    if (docentes.length === 0) {
+      cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">person_off</span>No hay docentes aprobados en este centro</div>';
+      return;
+    }
+
+    // Cargar última sesión de cada docente
+    const docentesConSesion = await Promise.all(docentes.map(async d => {
+      try {
+        const sesSnap = await db.collection('users').doc(d.uid).collection('sessions').orderBy('timestamp', 'desc').limit(1).get();
+        d.ultimaSesion = sesSnap.empty ? null : sesSnap.docs[0].data();
+      } catch { d.ultimaSesion = null; }
+      return d;
+    }));
+
+    let html = '<h4 style="color:#4A148C;margin:0 0 12px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">monitoring</span> Actividad de docentes</h4>';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    docentesConSesion.forEach(d => {
+      const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
+      const rolBadge = d.rol === 'director'
+        ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>' : '';
+
+      let ultimaInfo = 'Sin actividad registrada';
+      let statusColor = '#E0E0E0';
+      if (d.ultimaSesion) {
+        const ts = d.ultimaSesion.timestamp?.toDate ? d.ultimaSesion.timestamp.toDate() : new Date(d.ultimaSesion.timestamp);
+        const ahora = new Date();
+        const diffHoras = (ahora - ts) / (1000 * 60 * 60);
+        if (diffHoras < 1) { statusColor = '#4CAF50'; ultimaInfo = 'Activo hace menos de 1 hora'; }
+        else if (diffHoras < 24) { statusColor = '#FF9800'; ultimaInfo = 'Último acceso: hoy ' + ts.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }); }
+        else if (diffHoras < 48) { statusColor = '#FF9800'; ultimaInfo = 'Último acceso: ayer'; }
+        else { statusColor = '#F44336'; ultimaInfo = 'Último acceso: ' + ts.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' }); }
+        ultimaInfo += ' · ' + (d.ultimaSesion.device || '') + ' · ' + (d.ultimaSesion.browser || '');
+      }
+
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+        + '<div style="position:relative;"><div style="width:44px;height:44px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.1rem;">' + inicial + '</div>'
+        + '<div style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:' + statusColor + ';border:2px solid #fff;"></div></div>'
+        + '<div style="flex:1;min-width:150px;">'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + (d.nombre || 'Sin nombre') + rolBadge + '</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + (d.email || '') + '</div>'
+        + '<div style="font-size:0.75rem;color:#90A4AE;margin-top:2px;">' + ultimaInfo + '</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -20731,8 +20990,53 @@ renderizarDashboard = function() {
   _origRenderDashboard();
   _verificarAccesoSuperadmin();
   _verificarAccesoAdminCentro();
+  _verificarAccesoDirector();
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
+  _cargarAvisosDocente(); // mostrar avisos al docente en dashboard
 };
+
+// ── AVISOS PARA DOCENTES EN DASHBOARD ─────────────────────────────
+async function _cargarAvisosDocente() {
+  if (!window.currentUser) return;
+  try {
+    const perfil = await _obtenerPerfilUsuario(window.currentUser.uid);
+    const centroId = perfil?.centroId;
+    if (!centroId) return;
+
+    const snap = await db.collection('centros').doc(centroId).collection('avisos').orderBy('fecha', 'desc').limit(5).get();
+    if (snap.empty) return;
+
+    const avisos = snap.docs.map(d => d.data());
+    let container = document.getElementById('dash-avisos-centro');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'dash-avisos-centro';
+      // Insertar después del saludo
+      const greeting = document.getElementById('dash-greeting');
+      if (greeting) greeting.after(container);
+      else return;
+    }
+
+    let html = '<div style="margin-bottom:16px;">';
+    avisos.forEach(a => {
+      const prioColors = { urgente: '#C62828', importante: '#E65100', normal: '#4A148C' };
+      const color = prioColors[a.prioridad] || prioColors.normal;
+      const bgColors = { urgente: '#FFEBEE', importante: '#FFF3E0', normal: '#F3E5F5' };
+      const bg = bgColors[a.prioridad] || bgColors.normal;
+      const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      html += '<div style="background:' + bg + ';border-left:4px solid ' + color + ';border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+        + '<span class="material-icons" style="font-size:18px;color:' + color + ';">campaign</span>'
+        + '<strong style="font-size:0.9rem;color:' + color + ';">' + (a.titulo || 'Aviso') + '</strong>'
+        + '<span style="font-size:0.72rem;color:#90A4AE;margin-left:auto;">' + fecha + '</span>'
+        + '</div>'
+        + '<div style="font-size:0.85rem;color:#37474F;white-space:pre-wrap;">' + (a.mensaje || '') + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (e) { console.warn('Error cargando avisos docente:', e); }
+}
 
 // ════════════════════════════════════════════════════════════════════
 const _mf2 = document.getElementById('modal-footer');
