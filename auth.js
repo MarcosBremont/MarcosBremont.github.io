@@ -40,6 +40,21 @@ auth.onAuthStateChanged(async (user) => {
     window.currentUser = user;
     // Verificar perfil y estado de aprobación
     const perfil = await _obtenerPerfilUsuario(user.uid);
+
+    // Superadmins, admins de centro y directores NUNCA se bloquean
+    const esSA = _esSuperadminAuth(user.email);
+    const esAdmin = !esSA && await _esAdminCentro(user.email);
+    const esDirector = !esSA && !esAdmin && perfil && perfil.rol === 'director';
+    if (esSA || esAdmin || esDirector) {
+      // Si tienen perfil pendiente/rechazado, auto-aprobar
+      if (perfil && (perfil.estado === 'pendiente' || perfil.estado === 'rechazado')) {
+        const nuevoRol = esSA ? 'superadmin' : esAdmin ? 'admin_centro' : 'director';
+        await _crearPerfilUsuario(user.uid, { rol: nuevoRol, estado: 'aprobado' });
+      }
+      await _onLogin(user);
+      return;
+    }
+
     if (perfil && perfil.estado === 'pendiente') {
       _mostrarPantallaPendiente(perfil);
       return;
