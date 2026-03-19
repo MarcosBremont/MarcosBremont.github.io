@@ -15429,7 +15429,7 @@ function construirPromptBase(dg, ra) {
   const ecEjemplos = [];
   for (let i = 0; i < cantEC; i++) {
     const nivel = nivelesBloom[i % nivelesBloom.length];
-    ecEjemplos.push(`    {"codigo":"E.C.${i + 1}.1.1","nivel":"${nivel}","nivelBloom":"${nivel}","enunciado":"[${verbosNivel[nivel]}] [objeto específico y original del módulo] [condición concreta], en correspondencia con CE${i + 1}."}`);
+    ecEjemplos.push(`    {"codigo":"E.C.${i + 1}.1.1","nivel":"${nivel}","nivelBloom":"${nivel}","enunciado":"[${verbosNivel[nivel]}] [objeto específico y original del módulo] [condición concreta]."}`);
   }
 
   // Generar ejemplo de actividades dinámicamente
@@ -15460,7 +15460,7 @@ REGLAS IMPORTANTES para los Elementos de Capacidad (EC):
 - El EC de comprensión usa verbo de comprensión (Explicar, Describir, Comparar, Interpretar...)
 - El EC de aplicación usa verbo de acción práctica (Aplicar, Implementar, Ejecutar, Demostrar...)
 - El EC actitudinal usa verbo de valor/actitud (Valorar, Asumir, Demostrar compromiso con, Integrar...)
-- NO uses "CE3.X" literalmente; usa el número de CE más relevante según el tema (CE1, CE2, CE3...)
+- NUNCA menciones criterios de evaluación (CE) en los enunciados. NO escribas "en correspondencia con CE1", "según CE2", "relacionado con CE3" ni nada similar. Los enunciados deben ser independientes y autosuficientes.
 - Los ${cantEC} EC deben cubrir ASPECTOS DISTINTOS del módulo, no repetir el mismo concepto con diferente verbo
 
 IMPORTANTE: Genera EXACTAMENTE ${cantEC} elementos de capacidad y ${actsPorEC} actividad(es) POR CADA EC (${totalActs} actividades en total).
