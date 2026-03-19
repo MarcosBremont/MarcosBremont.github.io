@@ -31,9 +31,11 @@ const MIGRATION_FLAG = 'planificadorRA_migrated_v1';
 // ── Estado del flujo OTP de registro ────────────────────────────
 let _pendingOtp = null;
 // { code, email, pass, nombre, expiresAt, timerInterval }
+let _registrando = false; // flag para evitar que onAuthStateChanged interfiera durante registro
 
 // ── Observer de estado de autenticación ─────────────────────────
 auth.onAuthStateChanged(async (user) => {
+  if (_registrando) return; // Registro en curso, se manejará manualmente
   if (user) {
     window.currentUser = user;
     // Verificar perfil y estado de aprobación
@@ -183,7 +185,20 @@ async function _onLogin(user) {
         createdAt: new Date().toISOString()
       });
     }
-    // Si no es ni superadmin ni admin, es un usuario viejo sin perfil — dejarlo pasar
+    // Si no es ni superadmin ni admin, es docente sin perfil — crear como pendiente
+    else {
+      await _crearPerfilUsuario(user.uid, {
+        nombre: user.displayName || '',
+        email: user.email,
+        rol: 'docente',
+        centroId: '',
+        centroNombre: '',
+        estado: 'pendiente',
+        createdAt: new Date().toISOString()
+      });
+      _mostrarPantallaPendiente({ estado: 'pendiente', centroNombre: '' });
+      return;
+    }
   }
 
   // ¿Primer login con datos locales sin migrar?
@@ -484,10 +499,11 @@ async function authVerificarOTPRegistro() {
   _pendingOtp = null;
 
   try {
+    _registrando = true; // Evitar que onAuthStateChanged procese antes de crear perfil
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     if (nombre) await cred.user.updateProfile({ displayName: nombre });
     // Crear perfil en Firestore con estado pendiente
-    await _crearPerfilUsuario(cred.user.uid, {
+    const perfilData = {
       nombre: nombre || '',
       email: email,
       rol: 'docente',
@@ -495,9 +511,14 @@ async function authVerificarOTPRegistro() {
       centroNombre: centroNombre || '',
       estado: 'pendiente',
       createdAt: new Date().toISOString()
-    });
-    // onAuthStateChanged verificará el estado y mostrará pantalla de espera
+    };
+    await _crearPerfilUsuario(cred.user.uid, perfilData);
+    _registrando = false;
+    // Mostrar pantalla de espera directamente
+    window.currentUser = cred.user;
+    _mostrarPantallaPendiente(perfilData);
   } catch (e) {
+    _registrando = false;
     if (btn) btn.disabled = false;
     if (msg) { msg.style.color = '#C62828'; msg.textContent = _tradError(e.code); }
   }
@@ -591,10 +612,11 @@ async function _confirmarCodigoGoogle() {
   document.getElementById('auth-google-code-overlay')?.classList.add('hidden');
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
+    _registrando = true;
     const result = await auth.signInWithPopup(provider);
     // Si es usuario nuevo, crear perfil pendiente
     if (result.additionalUserInfo?.isNewUser && window._pendingGoogleCentro) {
-      await _crearPerfilUsuario(result.user.uid, {
+      const perfilData = {
         nombre: result.user.displayName || '',
         email: result.user.email,
         rol: 'docente',
@@ -602,10 +624,23 @@ async function _confirmarCodigoGoogle() {
         centroNombre: window._pendingGoogleCentro.centroNombre,
         estado: 'pendiente',
         createdAt: new Date().toISOString()
-      });
+      };
+      await _crearPerfilUsuario(result.user.uid, perfilData);
       window._pendingGoogleCentro = null;
+      _registrando = false;
+      window.currentUser = result.user;
+      _mostrarPantallaPendiente(perfilData);
+      return;
     }
+    _registrando = false;
+    // Usuario existente — onAuthStateChanged no se disparó, re-evaluar
+    window.currentUser = result.user;
+    const perfil = await _obtenerPerfilUsuario(result.user.uid);
+    if (perfil && perfil.estado === 'pendiente') { _mostrarPantallaPendiente(perfil); return; }
+    if (perfil && perfil.estado === 'rechazado') { _mostrarPantallaRechazado(perfil); return; }
+    await _onLogin(result.user);
   } catch (e) {
+    _registrando = false;
     if (e.code !== 'auth/popup-closed-by-user') {
       _authError(_tradError(e.code));
     }
