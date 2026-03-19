@@ -15457,21 +15457,20 @@ function construirPromptBase(dg, ra) {
     actitudinal: 'Verbo actitudinal (Valorar, Asumir, Demostrar compromiso...)'
   };
 
-  // Generar ejemplo de ECs dinámicamente
-  const ecEjemplos = [];
+  // Generar lista de ECs esperados
+  const ecCodigos = [];
   for (let i = 0; i < cantEC; i++) {
     const nivel = nivelesBloom[i % nivelesBloom.length];
-    ecEjemplos.push(`    {"codigo":"E.C.${i + 1}.1.1","nivel":"${nivel}","nivelBloom":"${nivel}","enunciado":"[${verbosNivel[nivel]}] [objeto específico y original del módulo] [condición concreta]."}`);
+    ecCodigos.push({ codigo: `E.C.${i + 1}.1.1`, nivel });
   }
 
-  // Generar ejemplo de actividades dinámicamente
-  const actEjemplos = [];
+  // Generar lista de actividades esperadas
   const instrumentos = ['cotejo', 'rubrica', 'valoracion', 'estimativa', 'rango', 'diario'];
+  const actEsperadas = [];
   let actIdx = 0;
   for (let i = 0; i < cantEC; i++) {
     for (let j = 0; j < actsPorEC; j++) {
-      const inst = instrumentos[actIdx % instrumentos.length];
-      actEjemplos.push(`    {"ecCodigo":"E.C.${i + 1}.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"${inst}"}`);
+      actEsperadas.push({ ecCodigo: `E.C.${i + 1}.1.1`, inst: instrumentos[actIdx % instrumentos.length] });
       actIdx++;
     }
   }
@@ -15481,31 +15480,35 @@ Responde SOLO con JSON válido, sin markdown, sin texto extra.
 
 MÓDULO: ${dg.moduloFormativo || ''} | Familia: ${dg.familiaProfesional || ''} | Horario: ${diasStr}
 RA: ${ra.descripcion || ''}
-TEMAS DE REFERENCIA (NO copiar, usar como inspiración temática): ${ra.criterios || 'No especificados'}
+TEMAS DE REFERENCIA (solo como contexto, NO copiar): ${ra.criterios || 'No especificados'}
 RECURSOS: ${ra.recursosDid || 'Pizarrón, guías'}
 
-REGLAS IMPORTANTES para los Elementos de Capacidad (EC):
-- NUNCA copies textualmente frases de los criterios dados
-- Usa los temas de referencia solo para entender el contexto del módulo
-- Redacta enunciados ORIGINALES con estructura: VERBO + QUÉ aprende + CÓMO o PARA QUÉ
-- El EC de conocimiento usa verbo de conocimiento (Identificar, Reconocer, Clasificar, Enumerar...)
-- El EC de comprensión usa verbo de comprensión (Explicar, Describir, Comparar, Interpretar...)
-- El EC de aplicación usa verbo de acción práctica (Aplicar, Implementar, Ejecutar, Demostrar...)
-- El EC actitudinal usa verbo de valor/actitud (Valorar, Asumir, Demostrar compromiso con, Integrar...)
-- NUNCA menciones criterios de evaluación (CE) en los enunciados. NO escribas "en correspondencia con CE1", "según CE2", "relacionado con CE3" ni nada similar. Los enunciados deben ser independientes y autosuficientes.
-- Los ${cantEC} EC deben cubrir ASPECTOS DISTINTOS del módulo, no repetir el mismo concepto con diferente verbo
+INSTRUCCIONES:
+1. Genera EXACTAMENTE ${cantEC} Elementos de Capacidad (EC) con estos códigos y niveles:
+${ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n')}
 
-IMPORTANTE: Genera EXACTAMENTE ${cantEC} elementos de capacidad y ${actsPorEC} actividad(es) POR CADA EC (${totalActs} actividades en total).
-Cada EC debe tener exactamente ${actsPorEC} actividad(es) asociada(s) con su ecCodigo correspondiente.
+2. Para CADA EC genera ${actsPorEC} actividad(es) = ${totalActs} actividades en total.
 
-Genera EXACTAMENTE este JSON (con ${cantEC} ECs y ${totalActs} actividades):
+3. Cada actividad debe tener un enunciado REAL y ESPECÍFICO al módulo. Ejemplos de buen formato:
+   - "Investigación: Buscar y documentar los tipos de variables en programación"
+   - "Práctica guiada: Crear un formulario web con validaciones HTML5"
+   - "Debate: Analizar las ventajas de metodologías ágiles vs tradicionales"
+   NO uses placeholders como "descripción específica al tema" ni texto genérico.
+
+4. Para cada EC, el enunciado debe ser ORIGINAL (no copiar los criterios dados):
+   - Estructura: VERBO + QUÉ aprende + CÓMO o PARA QUÉ
+   - NUNCA menciones "CE1", "CE2", "criterios de evaluación" ni "en correspondencia con"
+
+5. Los ${cantEC} EC deben cubrir ASPECTOS DISTINTOS del módulo
+
+JSON requerido:
 {
-  "nivelBloomRA": "comprension",
+  "nivelBloomRA": "(detectar del RA: conocimiento|comprension|aplicacion|sintesis|evaluacion)",
   "elementosCapacidad": [
-${ecEjemplos.join(',\n')}
+${ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"(redactar enunciado original aquí)"}`).join(',\n')}
   ],
   "actividades": [
-${actEjemplos.join(',\n')}
+${actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"(redactar actividad real y específica aquí)","instrumento":"${a.inst}"}`).join(',\n')}
   ]
 }`;
 }
