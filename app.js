@@ -9889,6 +9889,25 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
   }).join('')}
     </div>` : ''}
 
+    <!-- Historial de asistencia detallado -->
+    <div class="perfil-seccion">
+      <div class="perfil-seccion-titulo">
+        <span class="material-icons">event_available</span>Historial de Asistencia
+        <span style="margin-left:auto;font-size:0.7rem;font-weight:400;color:#9E9E9E;">
+          ${asistStats.total > 0 ? asistStats.total + ' registro(s)' : ''}
+        </span>
+      </div>
+      <div id="perfil-asistencia-detalle"></div>
+    </div>
+
+    <!-- Reportes de comportamiento y denuncias -->
+    <div class="perfil-seccion">
+      <div class="perfil-seccion-titulo">
+        <span class="material-icons">flag</span>Reportes y Denuncias
+      </div>
+      <div id="perfil-reportes-comp"></div>
+    </div>
+
     <!-- Comentarios del estudiante -->
     <div class="perfil-seccion">
       <div class="perfil-seccion-titulo">
@@ -9916,6 +9935,140 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
 
   // Renderizar comentarios
   renderizarComentariosEnPerfil(estId);
+
+  // Renderizar historial de asistencia detallado
+  _renderAsistenciaPerfilEst(cursoId, estId);
+
+  // Renderizar reportes de comportamiento
+  _renderReportesPerfilEst(estId, est.nombre);
+}
+
+/** Renderiza historial de asistencia detallado en el perfil del estudiante */
+function _renderAsistenciaPerfilEst(cursoId, estId) {
+  const cont = document.getElementById('perfil-asistencia-detalle');
+  if (!cont) return;
+
+  // Buscar registros de asistencia del estudiante
+  const asistKey = `planificadorRA_asistencia_${cursoId}`;
+  const data = JSON.parse(localStorage.getItem(asistKey) || '{}');
+  const registros = [];
+
+  Object.entries(data).forEach(([fecha, info]) => {
+    const estado = info?.[estId];
+    if (estado) {
+      registros.push({ fecha, estado });
+    }
+  });
+
+  // También buscar en el formato alternativo
+  const asistKey2 = `planificadorRA_asistencias_v1`;
+  const data2 = JSON.parse(localStorage.getItem(asistKey2) || '{}');
+  if (data2[cursoId]) {
+    Object.entries(data2[cursoId]).forEach(([fecha, info]) => {
+      const estado = info?.[estId];
+      if (estado && !registros.find(r => r.fecha === fecha)) {
+        registros.push({ fecha, estado });
+      }
+    });
+  }
+
+  registros.sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  if (registros.length === 0) {
+    cont.innerHTML = '<div style="text-align:center;padding:12px;color:#9E9E9E;font-size:0.8rem;">Sin registros de asistencia.</div>';
+    return;
+  }
+
+  const iconos = { P: 'check_circle', T: 'schedule', A: 'cancel', E: 'event_busy' };
+  const colores = { P: '#2E7D32', T: '#E65100', A: '#C62828', E: '#616161' };
+  const labels = { P: 'Presente', T: 'Tarde', A: 'Ausente', E: 'Excusa' };
+
+  // Mostrar últimos 15
+  const mostrar = registros.slice(0, 15);
+  cont.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${mostrar.map(r => {
+        const f = new Date(r.fecha + 'T12:00:00');
+        const fStr = f.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' });
+        return `<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;font-size:0.75rem;font-weight:600;background:${colores[r.estado]}15;color:${colores[r.estado]};border:1px solid ${colores[r.estado]}33;">
+          <span class="material-icons" style="font-size:14px;">${iconos[r.estado] || 'help'}</span>
+          ${fStr} · ${labels[r.estado] || r.estado}
+        </div>`;
+      }).join('')}
+    </div>
+    ${registros.length > 15 ? `<div style="font-size:0.72rem;color:#9E9E9E;margin-top:6px;text-align:center;">+${registros.length - 15} registros más</div>` : ''}`;
+}
+
+/** Renderiza reportes de comportamiento del estudiante en su perfil */
+async function _renderReportesPerfilEst(estId, nombreEst) {
+  const cont = document.getElementById('perfil-reportes-comp');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:8px;color:#9E9E9E;font-size:0.78rem;"><span class="material-icons" style="font-size:14px;vertical-align:middle;animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  try {
+    const uid = window.currentUser?.uid;
+    if (!uid) { cont.innerHTML = '<div style="text-align:center;padding:12px;color:#9E9E9E;font-size:0.8rem;">Sin reportes.</div>'; return; }
+
+    const snap = await db.collection('public_blogs').doc(uid).collection('reportes_comportamiento').orderBy('fecha', 'desc').get();
+    const nombre = (nombreEst || '').trim().toLowerCase();
+    const reportes = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(r => {
+        const inv = (r.involucrados || '').toLowerCase();
+        const usr = (r.usuario || '').toLowerCase();
+        const rep = (r.reportadoPor || r.nombre || '').toLowerCase();
+        return inv.includes(nombre) || usr.includes(nombre) || rep.includes(nombre);
+      });
+
+    if (reportes.length === 0) {
+      cont.innerHTML = '<div style="text-align:center;padding:12px;color:#9E9E9E;font-size:0.8rem;">Sin reportes de comportamiento.</div>';
+      return;
+    }
+
+    const tipoColores = { acoso: '#C62828', pelea: '#E65100', indisciplina: '#F57F17', robo: '#4A148C', otro: '#616161' };
+    cont.innerHTML = reportes.slice(0, 10).map(r => {
+      const fecha = r.fecha ? new Date(r.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      const color = tipoColores[r.tipo] || tipoColores.otro;
+      return `<div style="background:#fff;border-left:3px solid ${color};border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:0.82rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="background:${color};color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:700;">${escapeHTML(r.tipo || 'otro')}</span>
+          <span style="font-size:0.72rem;color:#90A4AE;">${fecha}</span>
+        </div>
+        <div style="color:#37474F;line-height:1.4;">${escapeHTML((r.descripcion || '').substring(0, 200))}${(r.descripcion || '').length > 200 ? '...' : ''}</div>
+        ${r.involucrados ? `<div style="font-size:0.72rem;color:#78909C;margin-top:4px;"><strong>Involucrados:</strong> ${escapeHTML(r.involucrados)}</div>` : ''}
+        ${r.reportadoPor || r.nombre ? `<div style="font-size:0.72rem;color:#78909C;"><strong>Reportado por:</strong> ${escapeHTML(r.reportadoPor || r.nombre)}</div>` : ''}
+      </div>`;
+    }).join('') + (reportes.length > 10 ? `<div style="font-size:0.72rem;color:#9E9E9E;text-align:center;">+${reportes.length - 10} reportes más</div>` : '');
+    // También buscar en denuncias
+    try {
+      const snapDen = await db.collection('public_blogs').doc(uid).collection('denuncias').orderBy('fecha', 'desc').get();
+      const denuncias = snapDen.docs
+        .map(d => ({ id: d.id, ...d.data(), _tipo: 'denuncia' }))
+        .filter(r => {
+          const inv = (r.involucrados || '').toLowerCase();
+          const den = (r.denunciante || '').toLowerCase();
+          return inv.includes(nombre) || den.includes(nombre);
+        });
+
+      if (denuncias.length > 0) {
+        cont.innerHTML += `<div style="margin-top:10px;font-weight:700;font-size:0.82rem;color:#B71C1C;display:flex;align-items:center;gap:4px;margin-bottom:6px;"><span class="material-icons" style="font-size:16px;">report</span>Denuncias</div>`;
+        cont.innerHTML += denuncias.slice(0, 5).map(r => {
+          const fecha = r.fecha ? new Date(r.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+          return `<div style="background:#fff;border-left:3px solid #B71C1C;border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:0.82rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <span style="background:#B71C1C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:700;">Denuncia</span>
+              <span style="font-size:0.72rem;color:#90A4AE;">${fecha}</span>
+            </div>
+            <div style="color:#37474F;line-height:1.4;">${escapeHTML((r.descripcion || r.problema || '').substring(0, 200))}</div>
+            ${r.involucrados ? `<div style="font-size:0.72rem;color:#78909C;margin-top:4px;"><strong>Involucrados:</strong> ${escapeHTML(r.involucrados)}</div>` : ''}
+            ${r.denunciante ? `<div style="font-size:0.72rem;color:#78909C;"><strong>Denunciante:</strong> ${escapeHTML(r.denunciante)}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+    } catch {}
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:12px;color:#9E9E9E;font-size:0.8rem;">Sin reportes.</div>';
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
