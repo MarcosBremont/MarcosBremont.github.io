@@ -15768,8 +15768,14 @@ async function generarConGroq(dg, ra, fechasClase) {
 
   // --- LLAMADA 1: EC y Actividades ---
   const promptBase = construirPromptBase(dg, ra);
+  console.log('[IA] ========= PROMPT ENVIADO =========');
+  console.log(promptBase);
+  console.log('[IA] ===================================');
   const datosBase = await _llamarGroqConFallback(promptBase, 'Generando estructura');
 
+  console.log('[IA] ========= RESPUESTA IA =========');
+  console.log(JSON.stringify(datosBase, null, 2));
+  console.log('[IA] =================================');
   if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
     throw new Error('Groq no devolvió la estructura esperada de EC y actividades');
   }
@@ -15834,8 +15840,14 @@ async function generarConGeminiCompleto(dg, ra, fechasClase) {
 
   // --- LLAMADA 1: EC y Actividades ---
   const promptBase = construirPromptBase(dg, ra);
+  console.log('[IA-Gemini] ========= PROMPT ENVIADO =========');
+  console.log(promptBase);
+  console.log('[IA-Gemini] ===================================');
   const datosBase = await _llamarGeminiConFallback(promptBase, apiKey, 'Generando estructura');
 
+  console.log('[IA-Gemini] ========= RESPUESTA IA =========');
+  console.log(JSON.stringify(datosBase, null, 2));
+  console.log('[IA-Gemini] =================================');
   if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
     throw new Error('Gemini no devolvió la estructura esperada de EC y actividades');
   }
