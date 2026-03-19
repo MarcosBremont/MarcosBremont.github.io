@@ -17669,7 +17669,7 @@ function abrirModalClase(encodedData) {
         ${si.instrumento ? `
         <div class="mcl-instrumento" style="background:${color}18;border-color:${color}44;">
           <span class="material-icons" style="color:${color};">${si.instrumento.tipo === 'rubrica' ? 'table_chart' : 'checklist'}</span>
-          <span><strong>${escapeHTML(si.instrumento.tipoLabel || '')}</strong>: ${escapeHTML(si.instrumento.titulo || '')}</span>
+          <span><strong>${escapeHTML(si.instrumento.tipoLabel || '')}</strong>: ${escapeHTML((si.enunciado || '').split(':')[0])}</span>
         </div>` : ''}
         <div class="mcl-tiempos">
           <span class="mcl-tiempo ini">Inicio&nbsp;${t.ini}min</span>
