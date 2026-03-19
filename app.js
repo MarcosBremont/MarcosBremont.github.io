@@ -860,7 +860,7 @@ function extraerPalabrasClave(ra) {
 
 
 
-function generarElementosCapacidad(ra, criterios, datos) {
+function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
   // Extraer núcleo temático del RA (frase más importante)
   // Tomar la primera oración completa, limpiar y recortar
   const raLimpio = (ra || '').trim().replace(/\s+/g, ' ');
@@ -897,44 +897,44 @@ function generarElementosCapacidad(ra, criterios, datos) {
     actitudinal: 'asumiendo una actitud reflexiva, comprometida y ética ante su práctica profesional'
   };
 
-  const ec = [
-    {
-      codigo: 'E.C.1.1.1',
-      nivel: 'conocimiento',
-      nivelBloom: 'conocimiento',
-      verbo: 'Identificar',
-      enunciado: `Identificar ${objetoRA}, ${condiciones.conocimiento}, en correspondencia con ${getCE(0)}.`,
-      horasAsignadas: 0,
-      secuencia: plantillasSecuencia.conocimiento
-    },
-    {
-      codigo: 'E.C.2.1.1',
-      nivel: 'comprension',
-      nivelBloom: 'comprension',
-      verbo: 'Explicar',
-      enunciado: `Explicar los elementos, relaciones y responsabilidades asociadas a ${objetoRA}, ${condiciones.comprension}, en correspondencia con ${getCE(1)}.`,
-      horasAsignadas: 0,
-      secuencia: plantillasSecuencia.comprension
-    },
-    {
-      codigo: 'E.C.3.1.1',
-      nivel: 'aplicacion',
-      nivelBloom: 'aplicacion',
-      verbo: 'Aplicar',
-      enunciado: `Aplicar los procedimientos y mecanismos de ${objetoRA}, ${condiciones.aplicacion}, en correspondencia con ${getCE(2)}.`,
-      horasAsignadas: 0,
-      secuencia: plantillasSecuencia.aplicacion
-    },
-    {
-      codigo: 'E.C.4.1.1',
-      nivel: 'actitudinal',
-      nivelBloom: 'actitudinal',
-      verbo: 'Valorar',
-      enunciado: `Valorar la importancia ética y profesional de ${objetoRA}, ${condiciones.actitudinal}, en correspondencia con ${getCE(3)}.`,
-      horasAsignadas: 0,
-      secuencia: plantillasSecuencia.actitudinal
-    }
+  // Plantillas base por nivel
+  const nivelesBase = [
+    { nivel: 'conocimiento', verbo: 'Identificar', prefijo: '', condicion: condiciones.conocimiento },
+    { nivel: 'comprension', verbo: 'Explicar', prefijo: 'los elementos, relaciones y responsabilidades asociadas a ', condicion: condiciones.comprension },
+    { nivel: 'aplicacion', verbo: 'Aplicar', prefijo: 'los procedimientos y mecanismos de ', condicion: condiciones.aplicacion },
+    { nivel: 'actitudinal', verbo: 'Valorar', prefijo: 'la importancia ética y profesional de ', condicion: condiciones.actitudinal }
   ];
+
+  // Verbos adicionales por nivel para ECs extras
+  const verbosExtra = {
+    conocimiento: ['Describir', 'Reconocer', 'Enumerar', 'Definir', 'Clasificar', 'Listar'],
+    comprension: ['Interpretar', 'Comparar', 'Analizar', 'Diferenciar', 'Resumir', 'Contrastar'],
+    aplicacion: ['Ejecutar', 'Implementar', 'Demostrar', 'Utilizar', 'Desarrollar', 'Resolver'],
+    actitudinal: ['Reflexionar sobre', 'Promover', 'Asumir', 'Comprometerse con', 'Evaluar', 'Apreciar']
+  };
+
+  const total = cantidadEC || 4;
+  const ec = [];
+
+  for (let i = 0; i < total; i++) {
+    const baseIdx = i % nivelesBase.length;
+    const base = nivelesBase[baseIdx];
+    const vuelta = Math.floor(i / nivelesBase.length); // cuántas vueltas llevamos
+    let verbo = base.verbo;
+    if (vuelta > 0) {
+      const extras = verbosExtra[base.nivel];
+      verbo = extras[(vuelta - 1) % extras.length];
+    }
+    ec.push({
+      codigo: `E.C.${i + 1}.1.1`,
+      nivel: base.nivel,
+      nivelBloom: base.nivel,
+      verbo,
+      enunciado: `${verbo} ${base.prefijo}${objetoRA}, ${base.condicion}, en correspondencia con ${getCE(i)}.`,
+      horasAsignadas: 0,
+      secuencia: plantillasSecuencia[base.nivel]
+    });
+  }
 
   return ec;
 }
@@ -1225,7 +1225,7 @@ function calcularSemanas(fechaInicio, fechaFin) {
 
 
 
-function generarActividades(listaEC, fechasClase) {
+function generarActividades(listaEC, fechasClase, actsPorEC) {
 
 
 
@@ -1253,7 +1253,9 @@ function generarActividades(listaEC, fechasClase) {
 
 
 
-  const porcentajes = [0.20, 0.25, 0.40, 0.15]; // mismo que horas
+  // Distribuir porcentajes dinámicamente según cantidad de ECs
+  const numECs = listaEC.length;
+  const porcentajes = listaEC.map(() => 1 / numECs);
 
 
 
@@ -1269,11 +1271,8 @@ function generarActividades(listaEC, fechasClase) {
 
 
 
-    // Número de actividades para este EC (1 o 2)
-
-
-
-    const numActs = ec.nivel === 'actitudinal' ? 1 : 2;
+    // Número de actividades para este EC
+    const numActs = actsPorEC || 1;
 
 
 
@@ -1397,18 +1396,31 @@ function obtenerPlantillasActividad(ec) {
   const mapActividades = {
     conocimiento: [
       `Cuestionario escrito: Identificación y definición de los conceptos clave relacionados con ${campo}`,
-      `Elaboración de mapa conceptual: Representación gráfica de los fundamentos y elementos de ${campo}`
+      `Elaboración de mapa conceptual: Representación gráfica de los fundamentos y elementos de ${campo}`,
+      `Investigación documental: Búsqueda y síntesis de información sobre ${campo}`,
+      `Glosario técnico: Recopilación de términos y definiciones clave de ${campo}`,
+      `Presentación digital: Resumen visual de los elementos fundamentales de ${campo}`
     ],
     comprension: [
       `Exposición oral breve: Explicación comparativa de los procesos y responsabilidades de ${campo}`,
-      `Análisis de caso: Interpretación de situaciones reales vinculadas a ${campo}`
+      `Análisis de caso: Interpretación de situaciones reales vinculadas a ${campo}`,
+      `Estudio de caso donde los estudiantes detectan barreras y explican cómo afectan ${campo}`,
+      `Debate dirigido: Discusión grupal sobre las implicaciones de ${campo}`,
+      `Infografía comparativa: Representación visual de diferencias y similitudes en ${campo}`
     ],
     aplicacion: [
       `Práctica supervisada: Aplicación de procedimientos de ${campo} en situaciones del entorno laboral`,
-      `Proyecto integrador: Diseño y presentación de solución técnica demostrando dominio de ${campo}`
+      `Proyecto integrador: Diseño y presentación de solución técnica demostrando dominio de ${campo}`,
+      `Simulación práctica donde un estudiante asume un rol profesional aplicando ${campo}`,
+      `Taller práctico: Ejercicio guiado de aplicación de técnicas de ${campo}`,
+      `Dinámica práctica donde el estudiante transmite instrucciones y procedimientos de ${campo}`
     ],
     actitudinal: [
-      `Reflexión y portafolio: Valoración crítica de la práctica profesional ética relacionada con ${campo}`
+      `Reflexión y portafolio: Valoración crítica de la práctica profesional ética relacionada con ${campo}`,
+      `Diario de doble entrada: Registro reflexivo sobre la importancia de ${campo}`,
+      `Mesa redonda: Discusión sobre valores y ética profesional en ${campo}`,
+      `Autoevaluación: Análisis personal del compromiso con ${campo}`,
+      `Ensayo reflexivo: Redacción sobre la responsabilidad profesional en ${campo}`
     ]
   };
 
@@ -4485,6 +4497,8 @@ function poblarFormularioDesdeEstado() {
   _mostrarCursoAsignado();
 
   setVal('cantidad-ra', dg.cantidadRA);
+  setVal('cantidad-ec', dg.cantidadEC || 4);
+  setVal('cantidad-act-por-ec', dg.cantidadActPorEC || 1);
 
 
 
@@ -5253,9 +5267,8 @@ function guardarDatosFormulario() {
 
 
     cantidadRA: getVal('cantidad-ra'),
-
-
-
+    cantidadEC: getVal('cantidad-ec'),
+    cantidadActPorEC: getVal('cantidad-act-por-ec'),
     valorRA: getVal('valor-ra'),
 
 
@@ -5573,7 +5586,9 @@ function generarPlanificacion() {
 
 
 
-      let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg);
+      const _cantEC = parseInt(document.getElementById('cantidad-ec')?.value) || 4;
+      const _cantActPorEC = parseInt(document.getElementById('cantidad-act-por-ec')?.value) || 1;
+      let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg, _cantEC);
 
 
 
@@ -5591,7 +5606,7 @@ function generarPlanificacion() {
 
 
 
-      planificacion.actividades = generarActividades(ec, planificacion.fechasClase);
+      planificacion.actividades = generarActividades(ec, planificacion.fechasClase, _cantActPorEC);
 
       // 5b. Distribuir horas por EC según actividades × horas por sesión
       const _diasAct = Object.values(dg.diasClase || {}).filter(d => d.activo);
