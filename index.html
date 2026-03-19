@@ -168,19 +168,25 @@
       <!-- Formulario Registro -->
       <div id="auth-form-registro" class="auth-form" style="display:none;">
         <div class="auth-field">
-          <label for="auth-nombre-reg">Nombre (opcional)</label>
+          <label for="auth-nombre-reg">Nombre completo *</label>
           <input type="text" id="auth-nombre-reg" placeholder="Lic. María García" autocomplete="name" />
         </div>
         <div class="auth-field">
-          <label for="auth-email-reg">Correo electrónico</label>
+          <label for="auth-email-reg">Correo electrónico *</label>
           <input type="email" id="auth-email-reg" placeholder="docente@ejemplo.com" autocomplete="email" />
         </div>
         <div class="auth-field">
-          <label for="auth-pass-reg">Contraseña</label>
+          <label for="auth-centro-reg">Centro Educativo *</label>
+          <select id="auth-centro-reg" style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;background:#fff;color:#212121;">
+            <option value="">Cargando centros...</option>
+          </select>
+        </div>
+        <div class="auth-field">
+          <label for="auth-pass-reg">Contraseña *</label>
           <input type="password" id="auth-pass-reg" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
         </div>
         <div class="auth-field">
-          <label for="auth-pass-reg2">Confirmar contraseña</label>
+          <label for="auth-pass-reg2">Confirmar contraseña *</label>
           <input type="password" id="auth-pass-reg2" placeholder="Repite la contraseña" autocomplete="new-password" />
         </div>
         <div class="auth-error" id="auth-error-reg"></div>
@@ -194,6 +200,24 @@
           Registrarme con Google
         </button>
       </div>
+
+      <!-- Pantalla de espera: pendiente de aprobación -->
+      <div id="auth-pending-panel" style="display:none;text-align:center;padding:16px 0;">
+        <span class="material-icons" style="font-size:64px;color:#FF9800;display:block;margin-bottom:12px;">hourglass_top</span>
+        <div style="font-weight:800;font-size:1.1rem;color:#212121;margin-bottom:8px;">Cuenta pendiente de aprobación</div>
+        <p style="font-size:0.88rem;color:#546E7A;margin:0 0 8px;line-height:1.5;">
+          Tu registro fue recibido correctamente.<br>
+          El administrador de tu centro educativo debe aprobar tu cuenta para que puedas acceder al sistema.
+        </p>
+        <div id="auth-pending-centro" style="font-weight:700;color:#1565C0;font-size:0.9rem;margin-bottom:16px;"></div>
+        <div style="background:#FFF3E0;border:1.5px solid #FFE0B2;border-radius:12px;padding:14px;margin-bottom:16px;">
+          <span class="material-icons" style="font-size:20px;color:#E65100;vertical-align:middle;">info</span>
+          <span style="font-size:0.82rem;color:#E65100;">Contacta al administrador de tu centro si necesitas acceso inmediato.</span>
+        </div>
+        <button onclick="authCerrarSesionPendiente()" style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">logout</span> Cerrar sesión
+        </button>
+      </div>
     </div>
   </div>
 
@@ -205,6 +229,12 @@
         <span style="font-size:1rem;font-weight:800;color:#212121;">Código de invitación</span>
       </div>
       <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Ingresa el código secreto para completar el registro con Google.</p>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo *</label>
+        <select id="auth-centro-google" style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
+          <option value="">Cargando centros...</option>
+        </select>
+      </div>
       <input type="text" id="auth-codigo-google" placeholder="Código secreto"
         style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;box-sizing:border-box;letter-spacing:0.1em;"
         onkeydown="if(event.key==='Enter') _confirmarCodigoGoogle()" />

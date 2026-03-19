@@ -36,16 +36,155 @@ let _pendingOtp = null;
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     window.currentUser = user;
+    // Verificar perfil y estado de aprobación
+    const perfil = await _obtenerPerfilUsuario(user.uid);
+    if (perfil && perfil.estado === 'pendiente') {
+      _mostrarPantallaPendiente(perfil);
+      return;
+    }
+    if (perfil && perfil.estado === 'rechazado') {
+      _mostrarPantallaRechazado(perfil);
+      return;
+    }
     await _onLogin(user);
   } else {
     window.currentUser = null;
     _mostrarAuthOverlay();
+    _cargarCentrosParaRegistro(); // pre-cargar selectores de centros
   }
 });
+
+// ── Perfil de usuario en Firestore ────────────────────────────────
+
+/** Obtiene el perfil del usuario desde Firestore */
+async function _obtenerPerfilUsuario(uid) {
+  try {
+    const doc = await db.collection('usuarios').doc(uid).get();
+    if (doc.exists) return doc.data();
+    return null;
+  } catch (e) {
+    console.warn('Error obteniendo perfil:', e);
+    return null;
+  }
+}
+
+/** Crea o actualiza el perfil del usuario en Firestore */
+async function _crearPerfilUsuario(uid, data) {
+  try {
+    await db.collection('usuarios').doc(uid).set(data, { merge: true });
+  } catch (e) {
+    console.error('Error creando perfil:', e);
+  }
+}
+
+/** Carga la lista de centros educativos en los selectores de registro */
+async function _cargarCentrosParaRegistro() {
+  try {
+    const snap = await db.collection('centros').orderBy('nombre').get();
+    const centros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const selectors = ['auth-centro-reg', 'auth-centro-google'];
+    selectors.forEach(selId => {
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Selecciona tu centro educativo —</option>';
+      centros.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nombre + (c.distrito ? ' (' + c.distrito + ')' : '');
+        sel.appendChild(opt);
+      });
+    });
+  } catch (e) {
+    console.warn('Error cargando centros para registro:', e);
+  }
+}
+
+/** Muestra la pantalla de espera para docentes pendientes */
+function _mostrarPantallaPendiente(perfil) {
+  _actualizarHeaderUsuario(window.currentUser);
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  // Ocultar tabs y formularios
+  document.querySelector('.auth-tabs')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-login')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-registro')?.style.setProperty('display', 'none');
+  document.getElementById('auth-verificacion-panel')?.style.setProperty('display', 'none');
+  // Mostrar panel pendiente
+  const panel = document.getElementById('auth-pending-panel');
+  if (panel) panel.style.display = 'block';
+  // Mostrar nombre del centro
+  const centroEl = document.getElementById('auth-pending-centro');
+  if (centroEl && perfil.centroNombre) {
+    centroEl.textContent = 'Centro: ' + perfil.centroNombre;
+  }
+}
+
+/** Muestra pantalla de rechazo */
+function _mostrarPantallaRechazado(perfil) {
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  document.querySelector('.auth-tabs')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-login')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-registro')?.style.setProperty('display', 'none');
+  document.getElementById('auth-verificacion-panel')?.style.setProperty('display', 'none');
+  const panel = document.getElementById('auth-pending-panel');
+  if (panel) {
+    panel.style.display = 'block';
+    panel.querySelector('.material-icons').textContent = 'block';
+    panel.querySelector('.material-icons').style.color = '#C62828';
+    panel.querySelector('div[style*="font-weight:800"]').textContent = 'Cuenta rechazada';
+    panel.querySelector('p').innerHTML = 'Tu solicitud de registro fue rechazada por el administrador del centro.<br>Contacta al administrador para más información.';
+  }
+}
+
+/** Cierre de sesión desde pantalla de pendiente */
+async function authCerrarSesionPendiente() {
+  await auth.signOut();
+  location.reload();
+}
+
+/** Verifica si el usuario es superadmin (no necesita centro) */
+function _esSuperadminAuth(email) {
+  if (!email) return false;
+  const defaults = ['soymarcosbremont@gmail.com'];
+  if (defaults.includes(email.toLowerCase())) return true;
+  try {
+    const extra = JSON.parse(localStorage.getItem('metabot_superadmin_emails') || '[]');
+    return extra.map(e => e.toLowerCase()).includes(email.toLowerCase());
+  } catch { return false; }
+}
+
+/** Verifica si el usuario es admin de algún centro */
+async function _esAdminCentro(email) {
+  try {
+    const snap = await db.collection('centros').get();
+    return snap.docs.some(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email.toLowerCase()));
+  } catch { return false; }
+}
 
 // ── Al iniciar sesión: carga datos de Firestore ──────────────────
 async function _onLogin(user) {
   _actualizarHeaderUsuario(user);
+
+  // Superadmins y admins de centro no necesitan aprobación — asegurar que tienen perfil
+  const perfil = await _obtenerPerfilUsuario(user.uid);
+  if (!perfil) {
+    // Usuario sin perfil (login viejo o superadmin) — crear perfil auto-aprobado
+    const esSA = _esSuperadminAuth(user.email);
+    const esAdmin = !esSA && await _esAdminCentro(user.email);
+    if (esSA || esAdmin) {
+      await _crearPerfilUsuario(user.uid, {
+        nombre: user.displayName || '',
+        email: user.email,
+        rol: esSA ? 'superadmin' : 'admin_centro',
+        centroId: '',
+        centroNombre: '',
+        estado: 'aprobado',
+        createdAt: new Date().toISOString()
+      });
+    }
+    // Si no es ni superadmin ni admin, es un usuario viejo sin perfil — dejarlo pasar
+  }
 
   // ¿Primer login con datos locales sin migrar?
   const yaMigrado = localStorage.getItem(MIGRATION_FLAG);
@@ -59,6 +198,10 @@ async function _onLogin(user) {
   }
 
   _ocultarAuthOverlay();
+  // Ocultar panel pendiente por si estaba visible
+  const pendPanel = document.getElementById('auth-pending-panel');
+  if (pendPanel) pendPanel.style.display = 'none';
+  document.querySelector('.auth-tabs')?.style.removeProperty('display');
 
   // Registrar sesión en Firestore (sin await para no bloquear)
   _registrarSesion(user);
@@ -207,8 +350,12 @@ async function authRegistrarse() {
   const pass   = document.getElementById('auth-pass-reg').value;
   const pass2  = document.getElementById('auth-pass-reg2').value;
   const nombre = document.getElementById('auth-nombre-reg').value.trim();
+  const centroId = document.getElementById('auth-centro-reg')?.value;
+  const centroNombre = document.getElementById('auth-centro-reg')?.selectedOptions[0]?.textContent || '';
 
+  if (!nombre) return _authError('Ingresa tu nombre completo.', 'reg');
   if (!email || !pass || !pass2) return _authError('Completa todos los campos.', 'reg');
+  if (!centroId) return _authError('Selecciona tu centro educativo.', 'reg');
   if (pass !== pass2) return _authError('Las contraseñas no coinciden.', 'reg');
   if (pass.length < 6) return _authError('La contraseña debe tener al menos 6 caracteres.', 'reg');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return _authError('El formato del correo no es válido.', 'reg');
@@ -225,6 +372,8 @@ async function authRegistrarse() {
     email,
     pass,
     nombre,
+    centroId,
+    centroNombre,
     expiresAt: Date.now() + 10 * 60 * 1000,
     timerInterval: null,
   };
@@ -330,14 +479,24 @@ async function authVerificarOTPRegistro() {
   const btn = document.getElementById('auth-btn-otp');
   if (btn) btn.disabled = true;
 
-  const { email, pass, nombre } = _pendingOtp;
+  const { email, pass, nombre, centroId, centroNombre } = _pendingOtp;
   if (_pendingOtp.timerInterval) clearInterval(_pendingOtp.timerInterval);
   _pendingOtp = null;
 
   try {
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     if (nombre) await cred.user.updateProfile({ displayName: nombre });
-    // onAuthStateChanged disparará _onLogin automáticamente
+    // Crear perfil en Firestore con estado pendiente
+    await _crearPerfilUsuario(cred.user.uid, {
+      nombre: nombre || '',
+      email: email,
+      rol: 'docente',
+      centroId: centroId || '',
+      centroNombre: centroNombre || '',
+      estado: 'pendiente',
+      createdAt: new Date().toISOString()
+    });
+    // onAuthStateChanged verificará el estado y mostrará pantalla de espera
   } catch (e) {
     if (btn) btn.disabled = false;
     if (msg) { msg.style.color = '#C62828'; msg.textContent = _tradError(e.code); }
@@ -407,7 +566,13 @@ async function _confirmarCodigoGoogle() {
   const input = document.getElementById('auth-codigo-google');
   const errEl = document.getElementById('auth-codigo-google-error');
   const codigo = (input?.value || '').trim();
+  const centroId = document.getElementById('auth-centro-google')?.value;
+  const centroNombre = document.getElementById('auth-centro-google')?.selectedOptions[0]?.textContent || '';
 
+  if (!centroId) {
+    if (errEl) { errEl.textContent = 'Selecciona tu centro educativo.'; errEl.classList.add('visible'); }
+    return;
+  }
   if (!codigo) {
     if (errEl) { errEl.textContent = 'Ingresa el código de invitación.'; errEl.classList.add('visible'); }
     return;
@@ -419,11 +584,27 @@ async function _confirmarCodigoGoogle() {
     return;
   }
 
+  // Guardar centro seleccionado para usarlo después del login
+  window._pendingGoogleCentro = { centroId, centroNombre };
+
   // Código correcto — cerrar modal y abrir Google sign-in
   document.getElementById('auth-google-code-overlay')?.classList.add('hidden');
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
-    await auth.signInWithPopup(provider);
+    const result = await auth.signInWithPopup(provider);
+    // Si es usuario nuevo, crear perfil pendiente
+    if (result.additionalUserInfo?.isNewUser && window._pendingGoogleCentro) {
+      await _crearPerfilUsuario(result.user.uid, {
+        nombre: result.user.displayName || '',
+        email: result.user.email,
+        rol: 'docente',
+        centroId: window._pendingGoogleCentro.centroId,
+        centroNombre: window._pendingGoogleCentro.centroNombre,
+        estado: 'pendiente',
+        createdAt: new Date().toISOString()
+      });
+      window._pendingGoogleCentro = null;
+    }
   } catch (e) {
     if (e.code !== 'auth/popup-closed-by-user') {
       _authError(_tradError(e.code));
