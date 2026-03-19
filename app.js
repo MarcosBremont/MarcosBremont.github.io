@@ -15321,48 +15321,69 @@ document.addEventListener('DOMContentLoaded', () => {
 // ================================================================
 
 const GROQ_KEY_STORAGE = 'planificadorRA_groqKey';
+const GEMINI_KEY_STORAGE = 'planificadorRA_geminiKey';
 
 /** Retorna la API key de Groq guardada o null */
 function getGroqKey() {
   return localStorage.getItem(GROQ_KEY_STORAGE) || null;
 }
 
+/** Retorna la API key de Gemini guardada o null */
+function getGeminiKey() {
+  return localStorage.getItem(GEMINI_KEY_STORAGE) || null;
+}
+
 /** Alias para compatibilidad interna */
-function getApiKey() { return null; }
+function getApiKey() { return getGeminiKey(); }
 
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
   const groqKeyActual = getGroqKey();
-  const estado = groqKeyActual
-    ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> Clave configurada</span>'
-    : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin clave configurada</span>';
+  const geminiKeyActual = getGeminiKey();
+  const tieneAlguna = groqKeyActual || geminiKeyActual;
+  const estado = tieneAlguna
+    ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> IA configurada</span>'
+    : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin claves configuradas</span>';
 
-  document.getElementById('modal-title').textContent = 'Configuración de IA (Groq)';
+  document.getElementById('modal-title').textContent = 'Configuración de IA';
   document.getElementById('modal-body').innerHTML = `
     <div class="config-ia-content">
       <div>${estado}</div>
-      <label for="input-groq-key">🟢 Clave API de Groq</label>
-      <input type="password" id="input-groq-key"
-             placeholder="gsk_..."
-             value="${groqKeyActual || ''}"
-             autocomplete="off" />
-      <div class="info-tip" style="margin:0;">
-        <span class="material-icons" style="color:#2E7D32;font-size:16px;">info</span>
-        <div>
-          <p style="margin:0;">Obtén tu clave gratuita en
-            <a href="https://console.groq.com/keys" target="_blank" style="color:#2E7D32;font-weight:600;">console.groq.com</a>
-            (sin tarjeta de crédito).</p>
-          <p style="margin:4px 0 0;font-size:0.8rem;color:#757575;">
-            La clave se guarda solo en tu navegador. No se envía a ningún servidor externo.
-          </p>
-        </div>
+
+      <div style="background:#E8F5E9;border-radius:8px;padding:12px;margin:8px 0;">
+        <label for="input-groq-key" style="margin:0;font-weight:600;">🟢 Groq (principal)</label>
+        <input type="password" id="input-groq-key"
+               placeholder="gsk_..."
+               value="${groqKeyActual || ''}"
+               autocomplete="off" style="margin-top:6px;" />
+        <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
+          Obtén tu clave en <a href="https://console.groq.com/keys" target="_blank" style="color:#2E7D32;font-weight:600;">console.groq.com</a> (gratis)
+        </p>
       </div>
-      ${groqKeyActual ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar clave</button>' : ''}
+
+      <div style="background:#E3F2FD;border-radius:8px;padding:12px;margin:8px 0;">
+        <label for="input-gemini-key" style="margin:0;font-weight:600;">🔵 Google Gemini (respaldo)</label>
+        <input type="password" id="input-gemini-key"
+               placeholder="AIza..."
+               value="${geminiKeyActual || ''}"
+               autocomplete="off" style="margin-top:6px;" />
+        <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
+          Obtén tu clave en <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1565C0;font-weight:600;">aistudio.google.com</a> (gratis, 1M tokens/día)
+        </p>
+      </div>
+
+      <div class="info-tip" style="margin:0;">
+        <span class="material-icons" style="color:#1565C0;font-size:16px;">info</span>
+        <p style="margin:0;font-size:0.8rem;color:#757575;">
+          Se intenta primero con Groq. Si la cuota se agota, se usa Gemini automáticamente. Las claves se guardan solo en tu navegador.
+        </p>
+      </div>
+      ${tieneAlguna ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar claves</button>' : ''}
     </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid #E0E0E0;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
         <button class="btn-siguiente" onclick="guardarApiKey()">
-          <span class="material-icons">save</span> Guardar clave
+          <span class="material-icons">save</span> Guardar claves
         </button>
       </div>
     </div>`;
@@ -15374,30 +15395,41 @@ function abrirConfigIA() {
 
 function guardarApiKey() {
   const groqKey = document.getElementById('input-groq-key')?.value?.trim();
-  if (!groqKey) { mostrarToast('Ingresa una clave válida', 'error'); return; }
-  if (!groqKey.startsWith('gsk_')) { mostrarToast('La clave debe comenzar con "gsk_..."', 'error'); return; }
-  localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
+  const geminiKey = document.getElementById('input-gemini-key')?.value?.trim();
+
+  if (!groqKey && !geminiKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
+  if (groqKey && !groqKey.startsWith('gsk_')) { mostrarToast('La clave de Groq debe comenzar con "gsk_..."', 'error'); return; }
+  if (geminiKey && !geminiKey.startsWith('AIza')) { mostrarToast('La clave de Gemini debe comenzar con "AIza..."', 'error'); return; }
+
+  if (groqKey) localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
+  else localStorage.removeItem(GROQ_KEY_STORAGE);
+
+  if (geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, geminiKey);
+  else localStorage.removeItem(GEMINI_KEY_STORAGE);
+
   actualizarBtnConfigIA();
   cerrarModalBtn();
-  mostrarToast('Clave guardada. La IA está lista para generar planificaciones.', 'success');
+  const proveedores = [groqKey && 'Groq', geminiKey && 'Gemini'].filter(Boolean).join(' + ');
+  mostrarToast(`Claves guardadas (${proveedores}). La IA está lista.`, 'success');
 }
 
 function borrarApiKey() {
   localStorage.removeItem(GROQ_KEY_STORAGE);
+  localStorage.removeItem(GEMINI_KEY_STORAGE);
   actualizarBtnConfigIA();
   cerrarModalBtn();
-  mostrarToast('Clave eliminada. Se usará generación local.', 'info');
+  mostrarToast('Claves eliminadas. Se usará generación local.', 'info');
 }
 
 function actualizarBtnConfigIA() {
   const btn = document.getElementById('btn-config-ia');
   if (!btn) return;
-  if (getGroqKey()) {
+  if (getGroqKey() || getGeminiKey()) {
     btn.classList.add('ia-activa');
-    btn.title = 'IA configurada ✓ — clic para cambiar la clave';
+    btn.title = 'IA configurada ✓ — clic para cambiar las claves';
   } else {
     btn.classList.remove('ia-activa');
-    btn.title = 'Configurar clave de IA (Groq)';
+    btn.title = 'Configurar claves de IA';
   }
 }
 
@@ -15754,6 +15786,62 @@ async function generarConGroq(dg, ra, fechasClase) {
   return datosBase;
 }
 
+/** Genera planificación completa con Gemini: misma lógica que Groq pero usando API de Google */
+async function generarConGeminiCompleto(dg, ra, fechasClase) {
+  const apiKey = getGeminiKey();
+  if (!apiKey) return null;
+
+  // --- LLAMADA 1: EC y Actividades ---
+  const promptBase = construirPromptBase(dg, ra);
+  const datosBase = await _llamarGeminiConFallback(promptBase, apiKey, 'Generando estructura');
+
+  if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
+    throw new Error('Gemini no devolvió la estructura esperada de EC y actividades');
+  }
+
+  // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
+  let _geminiAbortado = false;
+  for (let i = 0; i < datosBase.actividades.length; i++) {
+    if (_geminiAbortado) break;
+    const act = datosBase.actividades[i];
+    const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
+    mostrarToast(`🔵 Generando instrumento ${i + 1}/${datosBase.actividades.length} (Gemini)…`, 'info');
+    try {
+      const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
+      const det = await _llamarGeminiConFallback(promptDet, apiKey, `Instrumento ${i + 1}`);
+      if (det) {
+        act.instrumentoDetalle = det.instrumentoDetalle || null;
+        act.sesionDiaria = det.sesionDiaria || null;
+      }
+    } catch (e) {
+      console.warn(`Instrumento ${i + 1} no generado con Gemini:`, e.message);
+      if (e.message && (e.message.includes('rate_limit') || e.message.includes('QUOTA') || e.message.includes('todos los modelos'))) {
+        mostrarToast('⏳ Cuota de Gemini agotada. Los instrumentos restantes se generarán localmente.', 'warning');
+        _geminiAbortado = true;
+      }
+    }
+  }
+
+  return datosBase;
+}
+
+/** Llama a Gemini con fallback entre modelos. Devuelve datos parseados o lanza error. */
+async function _llamarGeminiConFallback(prompt, apiKey, mensajeToast) {
+  let ultimoError = '';
+  for (let m = 0; m < MODELOS_GEMINI.length; m++) {
+    const modelo = MODELOS_GEMINI[m];
+    mostrarToast(`🔵 ${mensajeToast} (${modelo})…`, 'info');
+    const resultado = await _llamarModelo(modelo, apiKey, prompt);
+    if (resultado.ok) return resultado.data;
+    ultimoError = resultado.error;
+    if (resultado.esRateLimit) {
+      continue; // probar siguiente modelo
+    }
+    // Error no-rate-limit, saltar modelo
+  }
+  throw new Error('rate_limit: Todos los modelos de Gemini agotaron su cuota.');
+}
+
 /** Intenta llamar a UN modelo específico. Devuelve {ok, data, esRateLimit, error} */
 async function _llamarModelo(modelo, apiKey, prompt) {
   const endpoint =
@@ -16009,10 +16097,10 @@ generarPlanificacion = async function () {
   planificacion.horasTotal = fechasClase.reduce((s, f) => s + f.horas, 0);
 
   const groqKey = getGroqKey();
+  const geminiKey = getGeminiKey();
 
-  if (!groqKey) {
-    // Sin IA: usar generación local y avisar
-    mostrarToast('💡 Sin clave Groq: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
+  if (!groqKey && !geminiKey) {
+    mostrarToast('💡 Sin claves de IA: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
     _generarPlanificacionLocal();
     return;
   }
@@ -16027,17 +16115,42 @@ generarPlanificacion = async function () {
   if (iconoGenerar) iconoGenerar.textContent = 'hourglass_top';
 
   try {
-    mostrarToast('Consultando IA... esto tarda unos segundos ⏳', 'info');
+    let aiData = null;
 
-    // Generar con Groq
-    const aiData = await generarConGroq(
-      planificacion.datosGenerales,
-      planificacion.ra,
-      fechasClase
-    );
+    // 1. Intentar con Groq primero
+    if (groqKey) {
+      try {
+        mostrarToast('🟢 Consultando Groq...', 'info');
+        aiData = await generarConGroq(planificacion.datosGenerales, planificacion.ra, fechasClase);
+      } catch (errGroq) {
+        console.warn('Groq falló:', errGroq.message);
+        const msg = errGroq.message || '';
+        if (msg.includes('rate_limit') || msg.includes('429') || msg.includes('todos los modelos')) {
+          if (geminiKey) {
+            mostrarToast('⏳ Groq sin cuota. Cambiando a Gemini...', 'warning');
+          } else {
+            mostrarToast('⏳ Groq sin cuota y no hay clave de Gemini. Usando generación local.', 'warning');
+          }
+        } else if (!geminiKey) {
+          throw errGroq; // sin Gemini, propagar el error
+        }
+      }
+    }
+
+    // 2. Si Groq no devolvió datos, intentar con Gemini
+    if (!aiData && geminiKey) {
+      try {
+        mostrarToast('🔵 Consultando Google Gemini...', 'info');
+        if (btnTexto) btnTexto.textContent = 'Generando con Gemini...';
+        aiData = await generarConGeminiCompleto(planificacion.datosGenerales, planificacion.ra, fechasClase);
+      } catch (errGemini) {
+        console.warn('Gemini falló:', errGemini.message);
+        throw errGemini;
+      }
+    }
 
     if (!aiData || !aiData.elementosCapacidad) {
-      throw new Error('Respuesta inesperada de la IA');
+      throw new Error('Ningún proveedor de IA devolvió datos válidos');
     }
 
     // Aplicar resultados
@@ -16078,17 +16191,14 @@ generarPlanificacion = async function () {
     setTimeout(() => irAlPaso(3, true), 600);
 
   } catch (err) {
-    console.error('Error Groq:', err);
+    console.error('Error IA:', err);
     const msg = err.message || String(err);
 
     if (msg.includes('401') || msg.includes('invalid_api_key') || msg.includes('API_KEY_INVALID')) {
-      mostrarToast('❌ Clave de Groq inválida. Ve a ⚙️ Config. IA y verifica que empiece con "gsk_".', 'error');
-    } else if (msg.includes('429') || msg.includes('Groq: todos') || msg.includes('rate_limit')) {
-      mostrarToast('⏳ Cuota de Groq agotada. Intenta en unos minutos o crea otra clave en console.groq.com.', 'error');
-    } else if (msg.includes('400') || msg.includes('bad_request')) {
-      mostrarToast('⚠️ Error en la solicitud a Groq. Verifica tu clave en ⚙️ Config. IA.', 'error');
+      mostrarToast('❌ Clave inválida. Ve a ⚙️ Config. IA y verifica tus claves.', 'error');
+    } else if (msg.includes('429') || msg.includes('rate_limit') || msg.includes('QUOTA')) {
+      mostrarToast('⏳ Cuota agotada en todos los proveedores. Usando generación local.', 'error');
     } else {
-      console.error('Error IA completo:', msg);
       mostrarToast('Error IA: ' + msg.substring(0, 120), 'error');
     }
     // Siempre usar generacion local como fallback
