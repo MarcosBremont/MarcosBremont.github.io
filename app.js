@@ -1273,7 +1273,6 @@ function generarActividades(listaEC, fechasClase, actsPorEC) {
 
     // Número de actividades para este EC
     const numActs = actsPorEC || 1;
-    if (idxEC === 0) console.log('[DEBUG] actsPorEC param:', actsPorEC, 'numActs:', numActs);
 
 
 
@@ -5584,7 +5583,6 @@ function generarPlanificacion() {
 
       const _cantEC = parseInt(dg.cantidadEC) || 4;
       const _cantActPorEC = parseInt(dg.cantidadActPorEC) || 1;
-      console.log('[DEBUG] cantEC:', _cantEC, 'cantActPorEC:', _cantActPorEC, 'raw:', dg.cantidadEC, dg.cantidadActPorEC);
       let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg, _cantEC);
 
 
@@ -15414,6 +15412,38 @@ function construirPromptBase(dg, ra) {
     .map(([dia, v]) => `${dia} (${v.horas}h)`);
   const diasStr = diasArr.length > 0 ? diasArr.join(', ') : (dg.horasSemana + ' hrs/semana');
 
+  const cantEC = parseInt(dg.cantidadEC) || 4;
+  const actsPorEC = parseInt(dg.cantidadActPorEC) || 1;
+  const totalActs = cantEC * actsPorEC;
+
+  // Niveles de Bloom cíclicos para los EC
+  const nivelesBloom = ['conocimiento', 'comprension', 'aplicacion', 'actitudinal'];
+  const verbosNivel = {
+    conocimiento: 'Verbo conocimiento (Identificar, Reconocer, Clasificar...)',
+    comprension: 'Verbo comprensión (Explicar, Describir, Comparar...)',
+    aplicacion: 'Verbo aplicación (Aplicar, Implementar, Ejecutar...)',
+    actitudinal: 'Verbo actitudinal (Valorar, Asumir, Demostrar compromiso...)'
+  };
+
+  // Generar ejemplo de ECs dinámicamente
+  const ecEjemplos = [];
+  for (let i = 0; i < cantEC; i++) {
+    const nivel = nivelesBloom[i % nivelesBloom.length];
+    ecEjemplos.push(`    {"codigo":"E.C.${i + 1}.1.1","nivel":"${nivel}","nivelBloom":"${nivel}","enunciado":"[${verbosNivel[nivel]}] [objeto específico y original del módulo] [condición concreta], en correspondencia con CE${i + 1}."}`);
+  }
+
+  // Generar ejemplo de actividades dinámicamente
+  const actEjemplos = [];
+  const instrumentos = ['cotejo', 'rubrica', 'valoracion', 'estimativa', 'rango', 'diario'];
+  let actIdx = 0;
+  for (let i = 0; i < cantEC; i++) {
+    for (let j = 0; j < actsPorEC; j++) {
+      const inst = instrumentos[actIdx % instrumentos.length];
+      actEjemplos.push(`    {"ecCodigo":"E.C.${i + 1}.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"${inst}"}`);
+      actIdx++;
+    }
+  }
+
   return `Eres docente experto en educación técnico profesional de República Dominicana.
 Responde SOLO con JSON válido, sin markdown, sin texto extra.
 
@@ -15431,22 +15461,19 @@ REGLAS IMPORTANTES para los Elementos de Capacidad (EC):
 - El EC de aplicación usa verbo de acción práctica (Aplicar, Implementar, Ejecutar, Demostrar...)
 - El EC actitudinal usa verbo de valor/actitud (Valorar, Asumir, Demostrar compromiso con, Integrar...)
 - NO uses "CE3.X" literalmente; usa el número de CE más relevante según el tema (CE1, CE2, CE3...)
-- Los 4 EC deben cubrir ASPECTOS DISTINTOS del módulo, no repetir el mismo concepto con diferente verbo
+- Los ${cantEC} EC deben cubrir ASPECTOS DISTINTOS del módulo, no repetir el mismo concepto con diferente verbo
 
-Genera EXACTAMENTE este JSON:
+IMPORTANTE: Genera EXACTAMENTE ${cantEC} elementos de capacidad y ${actsPorEC} actividad(es) POR CADA EC (${totalActs} actividades en total).
+Cada EC debe tener exactamente ${actsPorEC} actividad(es) asociada(s) con su ecCodigo correspondiente.
+
+Genera EXACTAMENTE este JSON (con ${cantEC} ECs y ${totalActs} actividades):
 {
   "nivelBloomRA": "comprension",
   "elementosCapacidad": [
-    {"codigo":"E.C.1.1.1","nivel":"conocimiento","nivelBloom":"conocimiento","enunciado":"[Verbo conocimiento] [objeto específico y original del módulo] [condición concreta], en correspondencia con CE1."},
-    {"codigo":"E.C.2.1.1","nivel":"comprension","nivelBloom":"comprension","enunciado":"[Verbo comprensión] [objeto específico y original diferente al EC1] [condición concreta], en correspondencia con CE2."},
-    {"codigo":"E.C.3.1.1","nivel":"aplicacion","nivelBloom":"aplicacion","enunciado":"[Verbo aplicación] [objeto específico y original diferente a EC1 y EC2] [condición práctica], en correspondencia con CE3."},
-    {"codigo":"E.C.4.1.1","nivel":"actitudinal","nivelBloom":"actitudinal","enunciado":"[Verbo actitudinal] [valor o actitud profesional específica diferente a los anteriores] [en qué contexto], en correspondencia con CE4."}
+${ecEjemplos.join(',\n')}
   ],
   "actividades": [
-    {"ecCodigo":"E.C.1.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"cotejo"},
-    {"ecCodigo":"E.C.2.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"cotejo"},
-    {"ecCodigo":"E.C.3.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"rubrica"},
-    {"ecCodigo":"E.C.4.1.1","enunciado":"Tipo: descripción específica al tema.","instrumento":"rubrica"}
+${actEjemplos.join(',\n')}
   ]
 }`;
 }
@@ -15944,11 +15971,11 @@ const _generarPlanificacionLocal = generarPlanificacion;
 
 // Nueva versión con IA
 generarPlanificacion = async function () {
+  // Leer datos del formulario ANTES de capturar dg
+  guardarDatosFormulario();
+
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
-
-  // Leer datos del formulario
-  guardarDatosFormulario();
 
   // Validación básica
   // Leer el RA desde el estado (guardado por guardarDatosFormulario arriba)
