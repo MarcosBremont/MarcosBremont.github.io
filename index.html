@@ -336,6 +336,10 @@
           <span class="material-icons">cast_for_education</span>
           <span>Presentación</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-admin-centro" onclick="abrirAdminCentro()" style="--accent:#00695C;display:none;">
+          <span class="material-icons">groups</span>
+          <span>Gestión Docentes</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-superadmin" onclick="abrirSuperadmin()" style="--accent:#B71C1C;display:none;">
           <span class="material-icons">admin_panel_settings</span>
           <span>Superadmin</span>
@@ -1469,6 +1473,51 @@
 
       <!-- Contenido dinámico -->
       <div id="rep-comp-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL ADMIN CENTRO ===== -->
+  <div id="panel-admin-centro" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">groups</span>
+          Gestión de Docentes
+        </h2>
+      </div>
+
+      <!-- Selector de centro (si administra varios) -->
+      <div id="ac-selector-centro" style="display:none;margin-bottom:16px;">
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro educativo:</label>
+        <select id="ac-centro-sel" onchange="_renderDocentesCentro()"
+          style="width:100%;max-width:400px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;background:#fff;">
+        </select>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="ra-tab activo" id="tab-ac-pendientes" onclick="switchTabAdminCentro('pendientes')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#00695C;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">hourglass_top</span> Pendientes
+          <span id="ac-badge-pendientes" style="background:#FF5722;color:#fff;border-radius:50%;padding:1px 6px;font-size:0.7rem;margin-left:4px;display:none;">0</span>
+        </button>
+        <button class="ra-tab" id="tab-ac-aprobados" onclick="switchTabAdminCentro('aprobados')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">check_circle</span> Aprobados
+        </button>
+        <button class="ra-tab" id="tab-ac-rechazados" onclick="switchTabAdminCentro('rechazados')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">block</span> Rechazados
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="ac-contenido"></div>
     </div>
     <div class="nav-buttons">
       <button class="btn-anterior" onclick="abrirDashboard()">

@@ -6775,7 +6775,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -6791,7 +6791,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -20213,6 +20213,172 @@ function _copiarEnlaceDenuncias() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// ── MÓDULO: ADMIN CENTRO — GESTIÓN DE DOCENTES ───────────────────
+// ════════════════════════════════════════════════════════════════════
+
+/** Verifica si el usuario actual es admin de algún centro */
+async function _esAdminDeCentro() {
+  const email = window.currentUser?.email?.toLowerCase();
+  if (!email) return [];
+  try {
+    const snap = await db.collection('centros').get();
+    return snap.docs
+      .filter(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email))
+      .map(d => ({ id: d.id, ...d.data() }));
+  } catch { return []; }
+}
+
+/** Muestra/oculta botón admin centro en dashboard */
+async function _verificarAccesoAdminCentro() {
+  const btn = document.getElementById('btn-dash-admin-centro');
+  if (!btn) return;
+  const centros = await _esAdminDeCentro();
+  // Superadmins también ven este botón (gestionan todos los centros)
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  btn.style.display = (centros.length > 0 || esSA) ? '' : 'none';
+}
+
+/** Abre el panel de admin centro */
+async function abrirAdminCentro() {
+  _mostrarPanel('panel-admin-centro');
+  const centros = await _esAdminDeCentro();
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+
+  // Si es superadmin, cargar todos los centros
+  let todosLosCentros = centros;
+  if (esSA) {
+    try {
+      const snap = await db.collection('centros').orderBy('nombre').get();
+      todosLosCentros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch { /* usar los del admin */ }
+  }
+
+  // Configurar selector de centro
+  const selWrap = document.getElementById('ac-selector-centro');
+  const sel = document.getElementById('ac-centro-sel');
+  if (todosLosCentros.length > 1) {
+    selWrap.style.display = '';
+    sel.innerHTML = '';
+    todosLosCentros.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      sel.appendChild(opt);
+    });
+  } else if (todosLosCentros.length === 1) {
+    selWrap.style.display = 'none';
+    sel.innerHTML = '<option value="' + todosLosCentros[0].id + '">' + todosLosCentros[0].nombre + '</option>';
+  } else {
+    selWrap.style.display = 'none';
+    document.getElementById('ac-contenido').innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No administras ningún centro educativo.</div>';
+    return;
+  }
+
+  window._acCentros = todosLosCentros;
+  switchTabAdminCentro('pendientes');
+}
+
+/** Tabs del admin centro */
+function switchTabAdminCentro(tab) {
+  const tabs = { pendientes: 'tab-ac-pendientes', aprobados: 'tab-ac-aprobados', rechazados: 'tab-ac-rechazados' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) { el.classList.add('activo'); el.style.background = '#00695C'; el.style.color = '#fff'; }
+    else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
+  });
+  window._acTabActual = tab;
+  _renderDocentesCentro();
+}
+
+/** Renderiza lista de docentes según tab activo */
+async function _renderDocentesCentro() {
+  const cont = document.getElementById('ac-contenido');
+  if (!cont) return;
+  const centroId = document.getElementById('ac-centro-sel')?.value;
+  if (!centroId) return;
+  const tab = window._acTabActual || 'pendientes';
+
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando docentes...</div>';
+
+  try {
+    const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', tab === 'pendientes' ? 'pendiente' : tab === 'aprobados' ? 'aprobado' : 'rechazado').get();
+    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+    // Actualizar badge de pendientes
+    if (tab === 'pendientes') {
+      const badge = document.getElementById('ac-badge-pendientes');
+      if (badge) {
+        badge.textContent = docentes.length;
+        badge.style.display = docentes.length > 0 ? '' : 'none';
+      }
+    }
+
+    if (docentes.length === 0) {
+      const msgs = { pendientes: 'No hay solicitudes pendientes', aprobados: 'No hay docentes aprobados', rechazados: 'No hay docentes rechazados' };
+      const icons = { pendientes: 'hourglass_empty', aprobados: 'check_circle_outline', rechazados: 'block' };
+      cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">'
+        + '<span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">' + icons[tab] + '</span>'
+        + msgs[tab] + '</div>';
+      return;
+    }
+
+    let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+    docentes.forEach(d => {
+      const fecha = d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
+
+      // Avatar
+      const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
+      html += '<div style="width:44px;height:44px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.1rem;">' + inicial + '</div>';
+
+      // Info
+      html += '<div style="flex:1;min-width:150px;">'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + (d.nombre || 'Sin nombre') + '</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + (d.email || '') + '</div>'
+        + '<div style="font-size:0.75rem;color:#B0BEC5;margin-top:2px;">Registro: ' + fecha + '</div>'
+        + '</div>';
+
+      // Acciones
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+      if (tab === 'pendientes') {
+        html += '<button onclick="_aprobarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>';
+        html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">close</span> Rechazar</button>';
+      } else if (tab === 'aprobados') {
+        html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">block</span> Revocar</button>';
+      } else {
+        html += '<button onclick="_aprobarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  } catch (e) {
+    console.error('Error cargando docentes:', e);
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error cargando docentes: ' + e.message + '</div>';
+  }
+}
+
+/** Aprobar docente */
+async function _aprobarDocente(uid) {
+  try {
+    await db.collection('usuarios').doc(uid).update({ estado: 'aprobado', approvedAt: new Date().toISOString(), approvedBy: window.currentUser?.email || '' });
+    mostrarToast('Docente aprobado correctamente', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Rechazar docente */
+async function _rechazarDocente(uid) {
+  if (!confirm('¿Rechazar este docente? No podrá acceder al sistema.')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ estado: 'rechazado', rejectedAt: new Date().toISOString(), rejectedBy: window.currentUser?.email || '' });
+    mostrarToast('Docente rechazado', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════════
 // ── MÓDULO: SUPERADMIN — GESTIÓN DE CENTROS EDUCATIVOS ───────────
 // ════════════════════════════════════════════════════════════════════
 
@@ -20559,11 +20725,12 @@ async function _quitarSuperadmin(email) {
   _renderEmailsSuperadmin();
 }
 
-// Verificar acceso superadmin al cargar dashboard
+// Verificar acceso superadmin y admin centro al cargar dashboard
 const _origRenderDashboard = renderizarDashboard;
 renderizarDashboard = function() {
   _origRenderDashboard();
   _verificarAccesoSuperadmin();
+  _verificarAccesoAdminCentro();
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
 };
 
