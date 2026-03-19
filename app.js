@@ -425,6 +425,20 @@ const plantillasSecuencia = {
 
 
 
+/** Mapa central de instrumentos de evaluación */
+const INSTRUMENTOS = {
+  cotejo:     { label: 'Lista de Cotejo',        icono: 'checklist',   color: '#1565C0', bg: '#E3F2FD', desc: 'Criterios Sí/No' },
+  rubrica:    { label: 'Rúbrica de Evaluación',   icono: 'table_chart', color: '#6A1B9A', bg: '#F3E5F5', desc: 'Niveles de desempeño' },
+  valoracion: { label: 'Escala de Valoración',    icono: 'star_half',   color: '#E65100', bg: '#FFF3E0', desc: 'Valoración numérica/cualitativa' },
+  estimativa: { label: 'Escala Estimativa',       icono: 'trending_up', color: '#00695C', bg: '#E0F2F1', desc: 'Estimación de frecuencia' },
+  rango:      { label: 'Escala de Rango',         icono: 'linear_scale',color: '#283593', bg: '#E8EAF6', desc: 'Rangos de puntuación' },
+  diario:     { label: 'Diario de Doble Entrada', icono: 'menu_book',   color: '#4E342E', bg: '#EFEBE9', desc: 'Reflexión y análisis' }
+};
+
+function _getInstrLabel(tipo) { return INSTRUMENTOS[tipo]?.label || tipo || 'Sin instrumento'; }
+function _getInstrIcono(tipo) { return INSTRUMENTOS[tipo]?.icono || 'assignment'; }
+function _getInstrColor(tipo) { return INSTRUMENTOS[tipo]?.color || '#616161'; }
+
 /** Criterios y descriptores para instrumentos según nivel */
 
 
@@ -1451,9 +1465,17 @@ function generarInstrumento(actividad, nivelEC, tipoForzado) {
   const tipo = tipoForzado
     || actividad?.instrumento?.tipo
     || ((nivelEC === 'conocimiento' || nivelEC === 'comprension') ? 'cotejo' : 'rubrica');
-  return tipo === 'cotejo'
-    ? generarListaCotejo(actividad, nivelEC)
-    : generarRubrica(actividad, nivelEC);
+  if (tipo === 'cotejo') return generarListaCotejo(actividad, nivelEC);
+  if (tipo === 'rubrica') return generarRubrica(actividad, nivelEC);
+  // Instrumentos sin generación automática — devolver estructura base
+  const codAct = (actividad.enunciado || '').split(':')[0];
+  return {
+    tipo,
+    tipoLabel: _getInstrLabel(tipo),
+    titulo: `${_getInstrLabel(tipo)} – ${codAct}`,
+    criterios: [],
+    niveles: []
+  };
 }
 
 
@@ -2241,25 +2263,22 @@ function _editarInstrumentoActividad(idx) {
   const tipoActual = act.instrumento?.tipo || 'cotejo';
 
   document.getElementById('modal-title').textContent = 'Cambiar instrumento';
+  let optsHtml = '';
+  Object.entries(INSTRUMENTOS).forEach(([key, inst]) => {
+    const sel = tipoActual === key;
+    optsHtml += `<label id="iopt-${key}" onclick="_selInstrOpt('${key}')"
+      style="cursor:pointer;border:2px solid ${sel ? inst.color : '#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;${sel ? 'background:' + inst.bg : ''}">
+      <span class="material-icons" style="font-size:28px;color:${inst.color};display:block;margin-bottom:6px;">${inst.icono}</span>
+      <strong style="font-size:0.85rem;">${inst.label}</strong>
+      <p style="font-size:0.72rem;color:#78909C;margin:4px 0 0;">${inst.desc}</p>
+    </label>`;
+  });
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:16px;">
       <p style="font-size:0.85rem;color:#546E7A;margin:0;">
         Selecciona el tipo de instrumento para: <strong>${escapeHTML((act.enunciado || '').substring(0, 60))}…</strong>
       </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <label class="inst-opt ${tipoActual === 'cotejo' ? 'inst-opt-sel' : ''}" id="iopt-cotejo"
-          onclick="_selInstrOpt('cotejo')" style="cursor:pointer;border:2px solid ${tipoActual === 'cotejo' ? '#1565C0' : '#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
-          <span class="material-icons" style="font-size:28px;color:#1565C0;display:block;margin-bottom:6px;">checklist</span>
-          <strong>Lista de Cotejo</strong>
-          <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Criterios Sí/No</p>
-        </label>
-        <label class="inst-opt ${tipoActual === 'rubrica' ? 'inst-opt-sel' : ''}" id="iopt-rubrica"
-          onclick="_selInstrOpt('rubrica')" style="cursor:pointer;border:2px solid ${tipoActual === 'rubrica' ? '#6A1B9A' : '#E0E0E0'};border-radius:10px;padding:14px;text-align:center;transition:all 0.15s;">
-          <span class="material-icons" style="font-size:28px;color:#6A1B9A;display:block;margin-bottom:6px;">table_chart</span>
-          <strong>Rúbrica</strong>
-          <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Niveles de desempeño</p>
-        </label>
-      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">${optsHtml}</div>
       <input type="hidden" id="edit-inst-tipo" value="${tipoActual}">
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
@@ -2275,12 +2294,11 @@ function _editarInstrumentoActividad(idx) {
 
 function _selInstrOpt(tipo) {
   document.getElementById('edit-inst-tipo').value = tipo;
-  ['cotejo', 'rubrica'].forEach(t => {
-    const el = document.getElementById('iopt-' + t);
+  Object.entries(INSTRUMENTOS).forEach(([key, inst]) => {
+    const el = document.getElementById('iopt-' + key);
     if (!el) return;
-    const color = t === 'cotejo' ? '#1565C0' : '#6A1B9A';
-    el.style.border = `2px solid ${t === tipo ? color : '#E0E0E0'}`;
-    el.style.background = t === tipo ? (t === 'cotejo' ? '#E3F2FD' : '#F3E5F5') : '';
+    el.style.border = `2px solid ${key === tipo ? inst.color : '#E0E0E0'}`;
+    el.style.background = key === tipo ? inst.bg : '';
   });
 }
 
@@ -2288,7 +2306,7 @@ function _guardarInstrumentoActividad(idx) {
   const tipo = document.getElementById('edit-inst-tipo')?.value || 'cotejo';
   const act = planificacion.actividades[idx];
   if (!act) return;
-  const tipoLabel = tipo === 'cotejo' ? 'Lista de Cotejo' : 'Rúbrica de Evaluación';
+  const tipoLabel = _getInstrLabel(tipo);
   act.instrumento = { ...(act.instrumento || {}), tipo, tipoLabel };
   guardarBorrador();
   cerrarModalBtn();
@@ -2354,8 +2372,7 @@ function _agregarNuevaActividad() {
         <div>
           <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Instrumento</label>
           <select id="nueva-act-instrumento" style="width:100%;padding:9px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
-            <option value="cotejo">Lista de Cotejo</option>
-            <option value="rubrica">Rúbrica de Evaluación</option>
+            ${Object.entries(INSTRUMENTOS).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -2388,7 +2405,7 @@ function _confirmarNuevaActividad() {
   const partes = ecCodigo.replace('E.C.', '').split('.');
   const codAct = `Act ${partes.join('.')}.${numAct}`;
 
-  const tipoLabel = tipoInst === 'cotejo' ? 'Lista de Cotejo' : 'Rúbrica de Evaluación';
+  const tipoLabel = _getInstrLabel(tipoInst);
   let fechaStr = '';
   if (fecha) {
     const d = new Date(fecha + 'T12:00:00');
@@ -2471,17 +2488,10 @@ function renderizarActividades(listaActividades) {
     if (act.instrumento && !act.instrumento.tipo && act.instrumento.tipoLabel) {
       act.instrumento.tipo = act.instrumento.tipoLabel.toLowerCase().includes('cotejo') ? 'cotejo' : 'rubrica';
     }
-    const tipoLabel = act.instrumento?.tipo === 'cotejo' ? 'Lista de Cotejo'
-      : act.instrumento?.tipo === 'rubrica' ? 'Rúbrica de Evaluación'
-        : (act.instrumento?.tipoLabel || 'Sin instrumento');
-
-
-
-    const badgeClass = act.instrumento?.tipo === 'cotejo' ? 'badge-cotejo' : 'badge-rubrica';
-
-
-
-    const icono = act.instrumento?.tipo === 'cotejo' ? 'checklist' : 'table_chart';
+    const instTipo = act.instrumento?.tipo || 'cotejo';
+    const tipoLabel = _getInstrLabel(instTipo);
+    const badgeClass = instTipo === 'cotejo' ? 'badge-cotejo' : instTipo === 'rubrica' ? 'badge-rubrica' : 'badge-cotejo';
+    const icono = _getInstrIcono(instTipo);
 
 
 
@@ -2905,9 +2915,11 @@ function abrirModalInstrumento(idxActividad) {
       </div>` : ''}
     </div>` : '';
 
-  body.innerHTML = raHTML + diariaHTML + ecHTML + (inst.tipo === 'cotejo'
-    ? renderizarListaCotejoHTML(inst)
-    : renderizarRubricaHTML(inst));
+  let instHTML;
+  if (inst.tipo === 'cotejo') instHTML = renderizarListaCotejoHTML(inst);
+  else if (inst.tipo === 'rubrica') instHTML = renderizarRubricaHTML(inst);
+  else instHTML = _renderInstrumentoGenerico(inst);
+  body.innerHTML = raHTML + diariaHTML + ecHTML + instHTML;
 
 
 
@@ -2974,6 +2986,42 @@ function cerrarModalBtn() {
  */
 
 
+
+/** Renderiza instrumento genérico (escalas, diario) */
+function _renderInstrumentoGenerico(inst) {
+  const info = INSTRUMENTOS[inst.tipo] || {};
+  const color = info.color || '#616161';
+  const criterios = inst.criterios || [];
+  let html = `<div style="border:2px solid ${color};border-radius:12px;overflow:hidden;">`;
+  html += `<div style="background:${info.bg || '#F5F5F5'};padding:14px 18px;border-bottom:2px solid ${color};">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="material-icons" style="color:${color};font-size:24px;">${info.icono || 'assignment'}</span>
+      <strong style="color:${color};font-size:1rem;">${inst.titulo || info.label || 'Instrumento'}</strong>
+    </div>
+  </div>`;
+  if (criterios.length > 0) {
+    html += '<table style="width:100%;border-collapse:collapse;">';
+    html += `<thead><tr style="background:#F5F5F5;">
+      <th style="padding:10px 14px;text-align:left;font-size:0.82rem;border-bottom:1px solid #E0E0E0;">#</th>
+      <th style="padding:10px 14px;text-align:left;font-size:0.82rem;border-bottom:1px solid #E0E0E0;">Criterio</th>
+    </tr></thead><tbody>`;
+    criterios.forEach((c, i) => {
+      html += `<tr style="border-bottom:1px solid #F0F0F0;">
+        <td style="padding:8px 14px;font-size:0.85rem;color:#78909C;">${i + 1}</td>
+        <td style="padding:8px 14px;font-size:0.85rem;">${typeof c === 'string' ? c : c.texto || c.criterio || ''}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  } else {
+    html += `<div style="padding:30px;text-align:center;color:#90A4AE;">
+      <span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">edit_note</span>
+      Este instrumento aún no tiene criterios definidos.<br>
+      <span style="font-size:0.82rem;">Puedes generarlos desde el botón "Generar" en planificaciones diarias.</span>
+    </div>`;
+  }
+  html += '</div>';
+  return html;
+}
 
 function renderizarListaCotejoHTML(inst) {
   if (!inst || !inst.criterios?.length) return '<p style="color:#9E9E9E;font-style:italic;padding:10px;">Sin criterios. Guarda y vuelve a abrir el instrumento para regenerar.</p>';
