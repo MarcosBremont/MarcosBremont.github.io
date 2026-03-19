@@ -15475,40 +15475,53 @@ function construirPromptBase(dg, ra) {
     }
   }
 
-  return `Eres docente experto en educación técnico profesional de República Dominicana.
+  return `Asume el rol de docente experto en educación técnico profesional de República Dominicana.
 Responde SOLO con JSON válido, sin markdown, sin texto extra.
 
-MÓDULO: ${dg.moduloFormativo || ''} | Familia: ${dg.familiaProfesional || ''} | Horario: ${diasStr}
-RA: ${ra.descripcion || ''}
-TEMAS DE REFERENCIA (solo como contexto, NO copiar): ${ra.criterios || 'No especificados'}
+Estoy elaborando una planificación por RA para el módulo "${dg.moduloFormativo || ''}" de la familia "${dg.familiaProfesional || ''}". Horario: ${diasStr}.
+
+RESULTADO DE APRENDIZAJE (RA): ${ra.descripcion || ''}
+
+CRITERIOS DE EVALUACIÓN (solo para guiarte temáticamente, NO los copies como EC):
+${ra.criterios || 'No especificados'}
+
 RECURSOS: ${ra.recursosDid || 'Pizarrón, guías'}
 
-INSTRUCCIONES:
-1. Genera EXACTAMENTE ${cantEC} Elementos de Capacidad (EC) con estos códigos y niveles:
+TAREA: Elabora ${cantEC} Elementos de Capacidad (EC) siguiendo la Taxonomía de Bloom.
+
+REGLAS PARA LOS EC:
+- Cada EC debe tener la estructura: VERBO + OBJETO + MODO DE HACER
+- Los EC NO son los criterios de evaluación. Los criterios son solo referencia temática.
+- NUNCA copies ni parafrasees los criterios de evaluación como EC.
+- NUNCA menciones "CE1", "CE2", "criterios de evaluación", "en correspondencia con" en los enunciados.
+- El VERBO debe corresponder al nivel de Bloom asignado:
+  * Conocimiento: Identificar, Reconocer, Clasificar, Enumerar, Definir
+  * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
+  * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
+  * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
+- El OBJETO es lo que el estudiante aprende (específico al módulo, pero redactado de forma original)
+- El MODO DE HACER es cómo o para qué lo aprende
+
+EJEMPLO de EC bien redactado (para un módulo de programación):
+  ❌ MAL: "Crear un formulario web con validaciones HTML5" (esto es copiar un criterio)
+  ✅ BIEN: "Aplicar técnicas de validación de datos de entrada en interfaces web, utilizando estándares y buenas prácticas del desarrollo front-end."
+
+Códigos y niveles de los ${cantEC} EC:
 ${ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n')}
 
-2. Para CADA EC genera ${actsPorEC} actividad(es) = ${totalActs} actividades en total.
+REGLAS PARA LAS ACTIVIDADES:
+- Genera ${actsPorEC} actividad(es) por cada EC = ${totalActs} actividades en total.
+- Cada actividad es una tarea concreta que el estudiante realiza.
+- Formato: "Tipo de actividad: descripción concreta" (ej: "Práctica de laboratorio: Diseñar una base de datos relacional para un sistema de inventario")
 
-3. Cada actividad debe tener un enunciado REAL y ESPECÍFICO al módulo. Ejemplos de buen formato:
-   - "Investigación: Buscar y documentar los tipos de variables en programación"
-   - "Práctica guiada: Crear un formulario web con validaciones HTML5"
-   - "Debate: Analizar las ventajas de metodologías ágiles vs tradicionales"
-   NO uses placeholders como "descripción específica al tema" ni texto genérico.
-
-4. Para cada EC, el enunciado debe ser ORIGINAL (no copiar los criterios dados):
-   - Estructura: VERBO + QUÉ aprende + CÓMO o PARA QUÉ
-   - NUNCA menciones "CE1", "CE2", "criterios de evaluación" ni "en correspondencia con"
-
-5. Los ${cantEC} EC deben cubrir ASPECTOS DISTINTOS del módulo
-
-JSON requerido:
+JSON requerido (respetar esta estructura exacta):
 {
-  "nivelBloomRA": "(detectar del RA: conocimiento|comprension|aplicacion|sintesis|evaluacion)",
+  "nivelBloomRA": "(conocimiento|comprension|aplicacion|sintesis|evaluacion)",
   "elementosCapacidad": [
-${ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"(redactar enunciado original aquí)"}`).join(',\n')}
+${ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"VERBO + OBJETO + MODO DE HACER"}`).join(',\n')}
   ],
   "actividades": [
-${actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"(redactar actividad real y específica aquí)","instrumento":"${a.inst}"}`).join(',\n')}
+${actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}"}`).join(',\n')}
   ]
 }`;
 }
