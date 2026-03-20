@@ -6268,7 +6268,7 @@ body.dark-mode .toggle-label small {
 
 .about-ver-badge {
   background: #E3F2FD;
-  color: #1565C0;
+  color: #fff;
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 0.75rem;
@@ -6281,12 +6281,12 @@ body.dark-mode .toggle-label small {
 
 body.dark-mode .about-ver-badge {
   background: #1A2A4A;
-  color: #90CAF9;
+  color: #fff;
 }
 
 .about-ver-fecha {
   font-size: 0.7rem;
-  color: #9E9E9E;
+  color: rgba(255,255,255,0.8);
   margin-top: 3px;
   display: block;
 }

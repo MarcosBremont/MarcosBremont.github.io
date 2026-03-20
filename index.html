@@ -1891,16 +1891,32 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#7B1FA2;">v13.4<span class="about-ver-fecha">Mar 2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Reordenar planificaciones y mejoras IA</div>
+              <ul class="about-ver-items">
+                <li><strong>Reordenar planificaciones:</strong> botones de flecha arriba/abajo en cada card para mover el orden de los RA dentro de un curso</li>
+                <li><strong>Badge RA visible:</strong> cada planificación muestra su número de RA (RA1, RA2...) según el orden del curso</li>
+                <li><strong>Sesión con IA mejorada:</strong> el botón Generar de sesión diaria ahora usa Groq → OpenRouter → local, con normalización inteligente de respuestas</li>
+                <li><strong>Prompt optimizado:</strong> prompt de sesión simplificado para mejor compatibilidad con modelos gratuitos</li>
+                <li><strong>Rate limit inteligente:</strong> si Groq agota cuota diaria (TPD), salta inmediatamente a OpenRouter sin reintentos</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v13.3<span class="about-ver-fecha">Mar 2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">OpenRouter como IA de respaldo</div>
               <ul class="about-ver-items">
-                <li><strong>OpenRouter reemplaza a Gemini:</strong> se integra OpenRouter como proveedor de IA de respaldo con modelos gratuitos (Nemotron 120B, Step 3.5 Flash, MiniMax M2.5)</li>
-                <li><strong>Flujo de IA:</strong> Groq (principal) → OpenRouter (respaldo) → generación local. Cambio automático si un proveedor agota su cuota</li>
-                <li><strong>Configuración actualizada:</strong> el modal de IA ahora permite ingresar claves de Groq y OpenRouter (sk-or-...)</li>
-                <li><strong>Compatibilidad mejorada:</strong> OpenRouter usa formato OpenAI, mayor estabilidad que la API de Gemini</li>
+                <li><strong>OpenRouter reemplaza a Gemini:</strong> se integra OpenRouter como proveedor de IA de respaldo con modelos gratuitos</li>
+                <li><strong>Flujo de IA:</strong> Groq (principal) → OpenRouter (respaldo) → generación local</li>
+                <li><strong>Configuración actualizada:</strong> el modal de IA permite ingresar claves de Groq y OpenRouter (sk-or-...)</li>
               </ul>
             </div>
           </div>
