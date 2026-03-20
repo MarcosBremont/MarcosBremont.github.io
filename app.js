@@ -15536,37 +15536,18 @@ function construirPromptInstrumentos(dg, ra, actividades, elementosCapacidad) {
     return `- [${a.ecCodigo}] "${a.enunciado}" | tipo: ${a.instrumento} | nivel: ${ec.nivel || ''}`;
   }).join('\n');
 
-  return `Eres docente experto en educación técnico profesional.
-Responde SOLO con JSON válido, sin markdown.
+  return `Docente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown. Sé BREVE y COMPACTO.
 
 MÓDULO: ${dg.moduloFormativo || ''} | RA: ${ra.descripcion || ''}
 
-Para cada actividad genera instrumento personalizado Y sesión diaria específica al tema.
+Para cada actividad genera SOLO el instrumento (sin sesión). Criterios cortos (máx 10 palabras c/u).
 ACTIVIDADES:
 ${acts}
 
-JSON requerido (un objeto por actividad en el mismo orden):
-{
-  "detalles": [
-    {
-      "ecCodigo": "E.C.1.1.1",
-      "instrumentoDetalle": {
-        "titulo": "Lista de Cotejo – [título específico]",
-        "instrucciones": "Marque con ✓ según lo observado.",
-        "criterios": ["Indicador 1 específico","Indicador 2 específico","Indicador 3 específico","Indicador 4 específico","Indicador 5 específico"]
-      },
-      "sesionDiaria": {
-        "apertura": "Cómo inicia la clase específicamente.",
-        "encuadre": "Propósito específico.",
-        "procedimental": "1. Paso 1.\n2. Paso 2.\n3. Paso 3.",
-        "conceptual": "Reflexión con la práctica profesional.",
-        "sintesis": "Cómo cierra la clase.",
-        "estrategias": "Metodologías con justificación."
-      }
-    }
-  ]
-}
-Para rúbrica usa criterios con: {"criterio":"...","descriptores":["Excelente: ...","Bueno: ...","En proceso: ...","Insuficiente: ..."]}`;
+JSON (exactamente este formato, SIN campos extra):
+{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título corto","instrucciones":"Instrucción breve.","criterios":["Criterio 1","Criterio 2","Criterio 3","Criterio 4","Criterio 5"]}}]}
+Para rúbrica: {"criterio":"...","descriptores":["Excelente: breve","Bueno: breve","En proceso: breve","Insuficiente: breve"]}
+IMPORTANTE: Responde COMPACTO. No incluyas sesionDiaria. Solo instrumentoDetalle.`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -15632,17 +15613,9 @@ async function _llamarModeloGroq(modelo, groqKey, prompt) {
     const rawText = data?.choices?.[0]?.message?.content;
     if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de Groq' };
     const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-    try {
-      return { ok: true, data: JSON.parse(cleaned) };
-    } catch (e) {
-      // Intentar extraer JSON aunque venga con texto extra
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
-      }
-      console.error('JSON inválido de Groq:', cleaned.substring(0, 300));
-      return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de Groq. Intenta de nuevo.' };
-    }
+    const parsed = _intentarParsearJSON(cleaned, 'Groq');
+    if (parsed !== null) return { ok: true, data: parsed };
+    return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de Groq. Intenta de nuevo.' };
   }
 
   const errJson = await resp.json().catch(() => ({}));
@@ -15931,6 +15904,43 @@ function _repararJsonTruncado(texto) {
   return t;
 }
 
+/** Intenta parsear JSON con múltiples estrategias. Maneja objetos, arrays, truncados. Devuelve parsed o null */
+function _intentarParsearJSON(cleaned, origen) {
+  // Intento 1: parsear directo
+  try { return JSON.parse(cleaned); } catch (_) { }
+
+  // Intento 2: si empieza con [ es un array, intentar wrapearlo
+  if (cleaned.startsWith('[')) {
+    try { const arr = JSON.parse(cleaned); return { detalles: arr }; } catch (_) { }
+    // Reparar array truncado
+    const rep = _repararJsonTruncado(cleaned);
+    try { const arr = JSON.parse(rep); return { detalles: arr }; } catch (_) { }
+  }
+
+  // Intento 3: extraer bloque JSON
+  const jsonObjMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonObjMatch) {
+    try { return JSON.parse(jsonObjMatch[0]); } catch (_) { }
+    const rep = _repararJsonTruncado(jsonObjMatch[0]);
+    try { return JSON.parse(rep); } catch (_) { }
+  }
+
+  // Intento 4: extraer array JSON
+  const jsonArrMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (jsonArrMatch) {
+    try { const arr = JSON.parse(jsonArrMatch[0]); return { detalles: arr }; } catch (_) { }
+    const rep = _repararJsonTruncado(jsonArrMatch[0]);
+    try { const arr = JSON.parse(rep); return { detalles: arr }; } catch (_) { }
+  }
+
+  // Intento 5: reparar todo el texto
+  const reparado = _repararJsonTruncado(cleaned);
+  try { return JSON.parse(reparado); } catch (_) { }
+
+  console.error(`JSON inválido de ${origen} (no se pudo reparar):`, cleaned.substring(0, 300));
+  return null;
+}
+
 /** Llama a UN modelo específico de OpenRouter. Devuelve {ok, data, esRateLimit, error} */
 async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
@@ -15978,37 +15988,8 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
     if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de OpenRouter' };
 
     const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-
-    // Intento 1: parsear directamente
-    try {
-      return { ok: true, data: JSON.parse(cleaned) };
-    } catch (_) { }
-
-    // Intento 2: extraer bloque JSON
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
-    }
-
-    // Intento 3: reparar JSON truncado
-    const reparado = _repararJsonTruncado(cleaned);
-    try {
-      const parsed = JSON.parse(reparado);
-      console.log('[IA-OpenRouter] JSON reparado exitosamente (estaba truncado)');
-      return { ok: true, data: parsed };
-    } catch (_) { }
-
-    // Intento 4: reparar dentro del bloque extraído
-    if (jsonMatch) {
-      const reparado2 = _repararJsonTruncado(jsonMatch[0]);
-      try {
-        const parsed = JSON.parse(reparado2);
-        console.log('[IA-OpenRouter] JSON reparado exitosamente (bloque extraído)');
-        return { ok: true, data: parsed };
-      } catch (_) { }
-    }
-
-    console.error('JSON inválido de OpenRouter (no se pudo reparar):', cleaned.substring(0, 300));
+    const parsed = _intentarParsearJSON(cleaned, 'OpenRouter');
+    if (parsed !== null) return { ok: true, data: parsed };
     return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de OpenRouter' };
   }
 
