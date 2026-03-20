@@ -15593,9 +15593,7 @@ function _esperarConCountdown(ms, mensajeBase) {
 /** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
 const MODELOS_OPENROUTER = [
   'nvidia/nemotron-3-super-120b-a12b:free',
-  'stepfun/step-3.5-flash:free',
-  'minimax/minimax-m2.5:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free'
+  'minimax/minimax-m2.5:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
