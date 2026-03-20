@@ -7658,6 +7658,36 @@ function activarPlanEnCurso(planId) {
   renderizarTabsPlanesDelCurso();
 }
 
+/** Recalcula planActivaId de cada curso según las fechas de las planificaciones.
+ *  La planificación cuyo rango fechaInicio–fechaTermino incluya HOY se marca como activa.
+ *  Si ninguna incluye hoy, se queda la que ya estaba. */
+function _actualizarPlanActivaPorFechas() {
+  const biblio = cargarBiblioteca();
+  const hoy = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  let cambio = false;
+  Object.values(calState.cursos || {}).forEach(curso => {
+    const planIds = curso.planIds || [];
+    if (planIds.length === 0) return;
+    let mejorPlan = null;
+    for (const pid of planIds) {
+      const reg = biblio.items.find(i => i.id === pid);
+      if (!reg) continue;
+      const dg = reg.planificacion?.datosGenerales || {};
+      if (dg.fechaInicio && dg.fechaTermino) {
+        if (hoy >= dg.fechaInicio && hoy <= dg.fechaTermino) {
+          mejorPlan = pid;
+          break; // La primera que coincide con hoy gana
+        }
+      }
+    }
+    if (mejorPlan && curso.planActivaId !== mejorPlan) {
+      curso.planActivaId = mejorPlan;
+      cambio = true;
+    }
+  });
+  if (cambio) guardarCalificaciones();
+}
+
 /** Asigna una planificación a un curso desde la biblioteca */
 function asignarPlanACurso(planId) {
   const cursos = Object.values(calState.cursos);
@@ -11990,15 +12020,6 @@ function guardarPlanificacionActual() {
   planificacion._id = registro.id;
   persistirBiblioteca(biblio);
 
-  // Actualizar planActivaId en cursos que tengan esta planificación
-  const finalIdActiva = registro.id;
-  Object.values(calState.cursos || {}).forEach(c => {
-    if ((c.planIds || []).includes(finalIdActiva)) {
-      c.planActivaId = finalIdActiva;
-    }
-  });
-  guardarCalificaciones();
-
   // Asignar al curso si hay cursos creados y no está ya asignada
   const cursosExist = Object.values(calState.cursos);
   if (cursosExist.length > 0) {
@@ -12191,15 +12212,6 @@ function cargarPlanificacionGuardada(id) {
 
 
 
-
-  // Marcar como planificación activa en todos los cursos que la tengan asignada
-  cargarCalificaciones();
-  Object.values(calState.cursos || {}).forEach(c => {
-    if ((c.planIds || []).includes(id)) {
-      c.planActivaId = id;
-    }
-  });
-  guardarCalificaciones();
 
   // Cerrar panel de biblioteca y abrir el wizard en paso 1 (Datos Generales)
   _ocultarPaneles();
@@ -12529,6 +12541,8 @@ function renderizarBiblioteca() {
   const grid = document.getElementById('pln-grid');
   const vacio = document.getElementById('pln-vacio');
   if (!grid || !vacio) return;
+  // Recalcular plan activa por fechas antes de renderizar
+  _actualizarPlanActivaPorFechas();
   const biblio = cargarBiblioteca();
   const items = biblio.items || [];
   const query = (document.getElementById('pln-buscar')?.value || '').toLowerCase();
@@ -17735,6 +17749,7 @@ function abrirDashboard() {
 }
 
 function renderizarDashboard() {
+  _actualizarPlanActivaPorFechas();
   _renderizarSaludo();
   _renderizarAlertas();
   _renderizarClasesHoy();
