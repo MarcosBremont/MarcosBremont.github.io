@@ -15317,30 +15317,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ================================================================
-// --- MÓDULO: INTEGRACIÓN GEMINI AI ---
+// --- MÓDULO: INTEGRACIÓN IA (Groq + OpenRouter) ---
 // ================================================================
 
 const GROQ_KEY_STORAGE = 'planificadorRA_groqKey';
-const GEMINI_KEY_STORAGE = 'planificadorRA_geminiKey';
+const OPENROUTER_KEY_STORAGE = 'planificadorRA_openrouterKey';
 
 /** Retorna la API key de Groq guardada o null */
 function getGroqKey() {
   return localStorage.getItem(GROQ_KEY_STORAGE) || null;
 }
 
-/** Retorna la API key de Gemini guardada o null */
-function getGeminiKey() {
-  return localStorage.getItem(GEMINI_KEY_STORAGE) || null;
+/** Retorna la API key de OpenRouter guardada o null */
+function getOpenRouterKey() {
+  return localStorage.getItem(OPENROUTER_KEY_STORAGE) || null;
 }
-
-/** Alias para compatibilidad interna */
-function getApiKey() { return getGeminiKey(); }
 
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
   const groqKeyActual = getGroqKey();
-  const geminiKeyActual = getGeminiKey();
-  const tieneAlguna = groqKeyActual || geminiKeyActual;
+  const openrouterKeyActual = getOpenRouterKey();
+  const tieneAlguna = groqKeyActual || openrouterKeyActual;
   const estado = tieneAlguna
     ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> IA configurada</span>'
     : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin claves configuradas</span>';
@@ -15362,20 +15359,20 @@ function abrirConfigIA() {
       </div>
 
       <div style="background:#E3F2FD;border-radius:8px;padding:12px;margin:8px 0;">
-        <label for="input-gemini-key" style="margin:0;font-weight:600;">🔵 Google Gemini (respaldo)</label>
-        <input type="password" id="input-gemini-key"
-               placeholder="AIza..."
-               value="${geminiKeyActual || ''}"
+        <label for="input-openrouter-key" style="margin:0;font-weight:600;">🔵 OpenRouter (respaldo)</label>
+        <input type="password" id="input-openrouter-key"
+               placeholder="sk-or-..."
+               value="${openrouterKeyActual || ''}"
                autocomplete="off" style="margin-top:6px;" />
         <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
-          Obtén tu clave en <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1565C0;font-weight:600;">aistudio.google.com</a> (gratis, 1M tokens/día)
+          Obtén tu clave en <a href="https://openrouter.ai/keys" target="_blank" style="color:#1565C0;font-weight:600;">openrouter.ai</a> (modelos gratuitos disponibles)
         </p>
       </div>
 
       <div class="info-tip" style="margin:0;">
         <span class="material-icons" style="color:#1565C0;font-size:16px;">info</span>
         <p style="margin:0;font-size:0.8rem;color:#757575;">
-          Se intenta primero con Groq. Si la cuota se agota, se usa Gemini automáticamente. Las claves se guardan solo en tu navegador.
+          Se intenta primero con Groq. Si la cuota se agota, se usa OpenRouter automáticamente. Las claves se guardan solo en tu navegador.
         </p>
       </div>
       ${tieneAlguna ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar claves</button>' : ''}
@@ -15395,27 +15392,27 @@ function abrirConfigIA() {
 
 function guardarApiKey() {
   const groqKey = document.getElementById('input-groq-key')?.value?.trim();
-  const geminiKey = document.getElementById('input-gemini-key')?.value?.trim();
+  const openrouterKey = document.getElementById('input-openrouter-key')?.value?.trim();
 
-  if (!groqKey && !geminiKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
+  if (!groqKey && !openrouterKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
   if (groqKey && !groqKey.startsWith('gsk_')) { mostrarToast('La clave de Groq debe comenzar con "gsk_..."', 'error'); return; }
-  if (geminiKey && !geminiKey.startsWith('AIza')) { mostrarToast('La clave de Gemini debe comenzar con "AIza..."', 'error'); return; }
+  if (openrouterKey && !openrouterKey.startsWith('sk-or-')) { mostrarToast('La clave de OpenRouter debe comenzar con "sk-or-..."', 'error'); return; }
 
   if (groqKey) localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
   else localStorage.removeItem(GROQ_KEY_STORAGE);
 
-  if (geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, geminiKey);
-  else localStorage.removeItem(GEMINI_KEY_STORAGE);
+  if (openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, openrouterKey);
+  else localStorage.removeItem(OPENROUTER_KEY_STORAGE);
 
   actualizarBtnConfigIA();
   cerrarModalBtn();
-  const proveedores = [groqKey && 'Groq', geminiKey && 'Gemini'].filter(Boolean).join(' + ');
+  const proveedores = [groqKey && 'Groq', openrouterKey && 'OpenRouter'].filter(Boolean).join(' + ');
   mostrarToast(`Claves guardadas (${proveedores}). La IA está lista.`, 'success');
 }
 
 function borrarApiKey() {
   localStorage.removeItem(GROQ_KEY_STORAGE);
-  localStorage.removeItem(GEMINI_KEY_STORAGE);
+  localStorage.removeItem(OPENROUTER_KEY_STORAGE);
   actualizarBtnConfigIA();
   cerrarModalBtn();
   mostrarToast('Claves eliminadas. Se usará generación local.', 'info');
@@ -15424,7 +15421,7 @@ function borrarApiKey() {
 function actualizarBtnConfigIA() {
   const btn = document.getElementById('btn-config-ia');
   if (!btn) return;
-  if (getGroqKey() || getGeminiKey()) {
+  if (getGroqKey() || getOpenRouterKey()) {
     btn.classList.add('ia-activa');
     btn.title = 'IA configurada ✓ — clic para cambiar las claves';
   } else {
@@ -15572,13 +15569,8 @@ JSON requerido (un objeto por actividad en el mismo orden):
 Para rúbrica usa criterios con: {"criterio":"...","descriptores":["Excelente: ...","Bueno: ...","En proceso: ...","Insuficiente: ..."]}`;
 }
 
-// Alias para compatibilidad con generarConGemini si quedara algún uso
-function construirPromptGemini(dg, ra, fechasClase) {
-  return construirPromptBase(dg, ra);
-}
-
 // ─────────────────────────────────────────────────────────────
-// LLAMADA A GEMINI API (con reintento automático por rate limit)
+// LLAMADA A OPENROUTER API (con reintento automático por rate limit)
 // ─────────────────────────────────────────────────────────────
 
 /** Espera `ms` milisegundos mostrando un countdown en el toast */
@@ -15598,11 +15590,11 @@ function _esperarConCountdown(ms, mensajeBase) {
   });
 }
 
-/** Modelos a intentar en orden (si uno da rate-limit, prueba el siguiente) */
-const MODELOS_GEMINI = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash-latest'
+/** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
+const MODELOS_OPENROUTER = [
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
+  'qwen/qwen-2.5-72b-instruct:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
@@ -15788,17 +15780,17 @@ async function generarConGroq(dg, ra, fechasClase) {
   }
 
   // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
-  // Intentar con Groq, si falla por rate limit pasar a Gemini para el resto
-  let _usarGeminiParaInstrumentos = false;
-  const geminiKey = getGeminiKey();
+  // Intentar con Groq, si falla por rate limit pasar a OpenRouter para el resto
+  let _usarOpenRouterParaInstrumentos = false;
+  const openrouterKey = getOpenRouterKey();
 
   for (let i = 0; i < datosBase.actividades.length; i++) {
     const act = datosBase.actividades[i];
     const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
     const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
 
-    // Intentar con Groq o Gemini según el estado
-    if (!_usarGeminiParaInstrumentos) {
+    // Intentar con Groq o OpenRouter según el estado
+    if (!_usarOpenRouterParaInstrumentos) {
       try {
         mostrarToast(`🟢 Instrumento ${i + 1}/${datosBase.actividades.length} (Groq)…`, 'info');
         const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
@@ -15809,29 +15801,29 @@ async function generarConGroq(dg, ra, fechasClase) {
         continue;
       } catch (e) {
         console.warn(`[IA] Instrumento ${i + 1} falló en Groq:`, e.message);
-        if (geminiKey) {
-          console.log('[IA] Cambiando a Gemini para instrumentos restantes...');
-          mostrarToast('⏳ Groq sin cuota. Cambiando a Gemini para instrumentos...', 'warning');
-          _usarGeminiParaInstrumentos = true;
+        if (openrouterKey) {
+          console.log('[IA] Cambiando a OpenRouter para instrumentos restantes...');
+          mostrarToast('⏳ Groq sin cuota. Cambiando a OpenRouter para instrumentos...', 'warning');
+          _usarOpenRouterParaInstrumentos = true;
         } else {
-          console.warn(`[IA] Sin Gemini, instrumento ${i + 1} se generará localmente`);
-          break; // sin Gemini, salir del loop
+          console.warn(`[IA] Sin OpenRouter, instrumento ${i + 1} se generará localmente`);
+          break;
         }
       }
     }
 
-    // Intentar con Gemini
-    if (_usarGeminiParaInstrumentos) {
+    // Intentar con OpenRouter
+    if (_usarOpenRouterParaInstrumentos) {
       try {
-        mostrarToast(`🔵 Instrumento ${i + 1}/${datosBase.actividades.length} (Gemini)…`, 'info');
-        const det = await _llamarGeminiConFallback(promptDet, geminiKey, `Instrumento ${i + 1}`);
+        mostrarToast(`🔵 Instrumento ${i + 1}/${datosBase.actividades.length} (OpenRouter)…`, 'info');
+        const det = await _llamarOpenRouterConFallback(promptDet, openrouterKey, `Instrumento ${i + 1}`);
         if (det) {
           act.instrumentoDetalle = det.instrumentoDetalle || null;
           act.sesionDiaria = det.sesionDiaria || null;
         }
       } catch (e) {
-        console.warn(`[IA] Instrumento ${i + 1} también falló en Gemini:`, e.message);
-        mostrarToast('⏳ Gemini también sin cuota. Instrumentos restantes se generarán localmente.', 'warning');
+        console.warn(`[IA] Instrumento ${i + 1} también falló en OpenRouter:`, e.message);
+        mostrarToast('⏳ OpenRouter también sin cuota. Instrumentos restantes se generarán localmente.', 'warning');
         break;
       }
     }
@@ -15840,44 +15832,44 @@ async function generarConGroq(dg, ra, fechasClase) {
   return datosBase;
 }
 
-/** Genera planificación completa con Gemini: misma lógica que Groq pero usando API de Google */
-async function generarConGeminiCompleto(dg, ra, fechasClase) {
-  const apiKey = getGeminiKey();
+/** Genera planificación completa con OpenRouter: misma lógica que Groq pero usando OpenRouter API */
+async function generarConOpenRouter(dg, ra, fechasClase) {
+  const apiKey = getOpenRouterKey();
   if (!apiKey) return null;
 
   // --- LLAMADA 1: EC y Actividades ---
   const promptBase = construirPromptBase(dg, ra);
-  console.log('[IA-Gemini] ========= PROMPT ENVIADO =========');
+  console.log('[IA-OpenRouter] ========= PROMPT ENVIADO =========');
   console.log(promptBase);
-  console.log('[IA-Gemini] ===================================');
-  const datosBase = await _llamarGeminiConFallback(promptBase, apiKey, 'Generando estructura');
+  console.log('[IA-OpenRouter] ===================================');
+  const datosBase = await _llamarOpenRouterConFallback(promptBase, apiKey, 'Generando estructura');
 
-  console.log('[IA-Gemini] ========= RESPUESTA IA =========');
+  console.log('[IA-OpenRouter] ========= RESPUESTA IA =========');
   console.log(JSON.stringify(datosBase, null, 2));
-  console.log('[IA-Gemini] =================================');
+  console.log('[IA-OpenRouter] =================================');
   if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
-    throw new Error('Gemini no devolvió la estructura esperada de EC y actividades');
+    throw new Error('OpenRouter no devolvió la estructura esperada de EC y actividades');
   }
 
   // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
-  let _geminiAbortado = false;
+  let _openrouterAbortado = false;
   for (let i = 0; i < datosBase.actividades.length; i++) {
-    if (_geminiAbortado) break;
+    if (_openrouterAbortado) break;
     const act = datosBase.actividades[i];
     const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
-    mostrarToast(`🔵 Generando instrumento ${i + 1}/${datosBase.actividades.length} (Gemini)…`, 'info');
+    mostrarToast(`🔵 Generando instrumento ${i + 1}/${datosBase.actividades.length} (OpenRouter)…`, 'info');
     try {
       const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
-      const det = await _llamarGeminiConFallback(promptDet, apiKey, `Instrumento ${i + 1}`);
+      const det = await _llamarOpenRouterConFallback(promptDet, apiKey, `Instrumento ${i + 1}`);
       if (det) {
         act.instrumentoDetalle = det.instrumentoDetalle || null;
         act.sesionDiaria = det.sesionDiaria || null;
       }
     } catch (e) {
-      console.warn(`Instrumento ${i + 1} no generado con Gemini:`, e.message);
-      if (e.message && (e.message.includes('rate_limit') || e.message.includes('QUOTA') || e.message.includes('todos los modelos'))) {
-        mostrarToast('⏳ Cuota de Gemini agotada. Los instrumentos restantes se generarán localmente.', 'warning');
-        _geminiAbortado = true;
+      console.warn(`Instrumento ${i + 1} no generado con OpenRouter:`, e.message);
+      if (e.message && (e.message.includes('rate_limit') || e.message.includes('todos los modelos'))) {
+        mostrarToast('⏳ Cuota de OpenRouter agotada. Los instrumentos restantes se generarán localmente.', 'warning');
+        _openrouterAbortado = true;
       }
     }
   }
@@ -15885,116 +15877,82 @@ async function generarConGeminiCompleto(dg, ra, fechasClase) {
   return datosBase;
 }
 
-/** Llama a Gemini con fallback entre modelos. Devuelve datos parseados o lanza error. */
-async function _llamarGeminiConFallback(prompt, apiKey, mensajeToast) {
+/** Llama a OpenRouter con fallback entre modelos. Devuelve datos parseados o lanza error. */
+async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
   let ultimoError = '';
-  for (let m = 0; m < MODELOS_GEMINI.length; m++) {
-    const modelo = MODELOS_GEMINI[m];
-    console.log(`[IA-Gemini] Intentando modelo: ${modelo}`);
-    mostrarToast(`🔵 ${mensajeToast} (${modelo})…`, 'info');
-    const resultado = await _llamarModelo(modelo, apiKey, prompt);
+  for (let m = 0; m < MODELOS_OPENROUTER.length; m++) {
+    const modelo = MODELOS_OPENROUTER[m];
+    console.log(`[IA-OpenRouter] Intentando modelo: ${modelo}`);
+    mostrarToast(`🔵 ${mensajeToast} (${modelo.split('/').pop()})…`, 'info');
+    const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt);
     if (resultado.ok) {
-      console.log(`[IA-Gemini] ✅ ${modelo} respondió OK`);
+      console.log(`[IA-OpenRouter] ✅ ${modelo} respondió OK`);
       return resultado.data;
     }
-    console.warn(`[IA-Gemini] ❌ ${modelo} falló:`, resultado.error);
+    console.warn(`[IA-OpenRouter] ❌ ${modelo} falló:`, resultado.error);
     ultimoError = resultado.error;
     if (resultado.esRateLimit) {
-      continue; // probar siguiente modelo
+      continue;
     }
-    // Error no-rate-limit, saltar modelo
   }
-  throw new Error('rate_limit: Todos los modelos de Gemini agotaron su cuota.');
+  throw new Error('rate_limit: Todos los modelos de OpenRouter agotaron su cuota.');
 }
 
-/** Intenta llamar a UN modelo específico. Devuelve {ok, data, esRateLimit, error} */
-async function _llamarModelo(modelo, apiKey, prompt) {
-  const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+/** Llama a UN modelo específico de OpenRouter. Devuelve {ok, data, esRateLimit, error} */
+async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
+  const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
   const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.35,
-      maxOutputTokens: 2048
-    }
+    model: modelo,
+    messages: [
+      { role: 'system', content: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.40,
+    max_tokens: 8192
   };
 
   const resp = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'Metabot - Planificador Educativo'
+    },
     body: JSON.stringify(body)
   });
 
   if (resp.ok) {
     const data = await resp.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de Gemini' };
+    const rawText = data?.choices?.[0]?.message?.content;
+    if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de OpenRouter' };
 
     const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
     try {
       return { ok: true, data: JSON.parse(cleaned) };
     } catch (e) {
-      return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de Gemini' };
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
+      }
+      console.error('JSON inválido de OpenRouter:', cleaned.substring(0, 300));
+      return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de OpenRouter' };
     }
   }
 
   const errJson = await resp.json().catch(() => ({}));
   const msg = errJson?.error?.message || resp.statusText;
-  const esRateLimit = resp.status === 429 || msg.includes('QUOTA') || msg.includes('RESOURCE_EXHAUSTED');
-  return { ok: false, esRateLimit, error: `Gemini (${modelo}) error ${resp.status}: ${msg}` };
-}
-
-async function generarConGemini(dg, ra, fechasClase) {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-
-  const prompt = construirPromptGemini(dg, ra, fechasClase);
-  let ultimoError = '';
-
-  // Probar cada modelo; si uno da rate-limit, pasar al siguiente
-  for (let m = 0; m < MODELOS_GEMINI.length; m++) {
-    const modelo = MODELOS_GEMINI[m];
-    mostrarToast(`🤖 Consultando ${modelo}…`, 'info');
-
-    // Hasta 2 reintentos por modelo (espera 15s entre cada uno)
-    for (let intento = 0; intento < 2; intento++) {
-      const resultado = await _llamarModelo(modelo, apiKey, prompt);
-
-      if (resultado.ok) {
-        if (m > 0) mostrarToast(`✅ Generado con modelo alternativo (${modelo})`, 'success');
-        return resultado.data;
-      }
-
-      if (!resultado.esRateLimit) {
-        // Error que no es rate-limit → no reintentar este modelo
-        ultimoError = resultado.error;
-        break;
-      }
-
-      // Rate limit en este modelo
-      ultimoError = resultado.error;
-
-      if (intento === 0 && m < MODELOS_GEMINI.length - 1) {
-        // Primer intento fallido → pasar al siguiente modelo sin esperar mucho
-        mostrarToast(`⏳ ${modelo} bloqueado por cuota. Probando modelo alternativo...`, 'info');
-        break;
-      } else if (intento === 0) {
-        // Último modelo, primer intento → esperar 20s y reintentar
-        await _esperarConCountdown(20000, '⏳ Último modelo — reintentando en');
-      }
-    }
-  }
-
-  // Todos los modelos de Gemini fallaron
-  throw new Error(ultimoError || 'Todos los modelos de Gemini están bloqueados por cuota');
+  const esRateLimit = resp.status === 429 || resp.status === 402;
+  console.error('OpenRouter error detalle:', resp.status, JSON.stringify(errJson));
+  return { ok: false, esRateLimit, error: `OpenRouter (${modelo}) error ${resp.status}: ${msg}` };
 }
 
 // ─────────────────────────────────────────────────────────────
-// APLICAR RESPUESTA DE GEMINI AL ESTADO DE LA APP
+// APLICAR RESPUESTA DE IA AL ESTADO DE LA APP
 // ─────────────────────────────────────────────────────────────
 
-function aplicarRespuestaGemini(aiData, fechasClase) {
+function aplicarRespuestaIA(aiData, fechasClase) {
   const dg = planificacion.datosGenerales;
 
   // 1. Nivel del RA
@@ -16162,9 +16120,9 @@ generarPlanificacion = async function () {
   planificacion.horasTotal = fechasClase.reduce((s, f) => s + f.horas, 0);
 
   const groqKey = getGroqKey();
-  const geminiKey = getGeminiKey();
+  const openrouterKey = getOpenRouterKey();
 
-  if (!groqKey && !geminiKey) {
+  if (!groqKey && !openrouterKey) {
     mostrarToast('💡 Sin claves de IA: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
     _generarPlanificacionLocal();
     return;
@@ -16183,7 +16141,7 @@ generarPlanificacion = async function () {
     let aiData = null;
     let proveedorUsado = 'local';
 
-    console.log('[IA] Claves disponibles — Groq:', !!groqKey, '| Gemini:', !!geminiKey);
+    console.log('[IA] Claves disponibles — Groq:', !!groqKey, '| OpenRouter:', !!openrouterKey);
 
     // 1. Intentar con Groq primero
     if (groqKey) {
@@ -16199,31 +16157,31 @@ generarPlanificacion = async function () {
         console.warn('[IA] ❌ Groq falló:', errGroq.message);
         const msg = errGroq.message || '';
         if (msg.includes('rate_limit') || msg.includes('429') || msg.includes('todos los modelos')) {
-          if (geminiKey) {
-            mostrarToast('⏳ Groq sin cuota. Cambiando a Gemini...', 'warning');
+          if (openrouterKey) {
+            mostrarToast('⏳ Groq sin cuota. Cambiando a OpenRouter...', 'warning');
           } else {
-            mostrarToast('⏳ Groq sin cuota y no hay clave de Gemini. Usando generación local.', 'warning');
+            mostrarToast('⏳ Groq sin cuota y no hay clave de OpenRouter. Usando generación local.', 'warning');
           }
-        } else if (!geminiKey) {
-          throw errGroq; // sin Gemini, propagar el error
+        } else if (!openrouterKey) {
+          throw errGroq;
         }
       }
     }
 
-    // 2. Si Groq no devolvió datos, intentar con Gemini
-    if (!aiData && geminiKey) {
+    // 2. Si Groq no devolvió datos, intentar con OpenRouter
+    if (!aiData && openrouterKey) {
       try {
-        console.log('[IA] Intentando generar con GEMINI...');
-        mostrarToast('🔵 Consultando Google Gemini...', 'info');
-        if (btnTexto) btnTexto.textContent = 'Generando con Gemini...';
-        aiData = await generarConGeminiCompleto(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        console.log('[IA] Intentando generar con OPENROUTER...');
+        mostrarToast('🔵 Consultando OpenRouter...', 'info');
+        if (btnTexto) btnTexto.textContent = 'Generando con OpenRouter...';
+        aiData = await generarConOpenRouter(planificacion.datosGenerales, planificacion.ra, fechasClase);
         if (aiData) {
-          proveedorUsado = 'Gemini';
-          console.log('[IA] ✅ Generado exitosamente con GEMINI — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+          proveedorUsado = 'OpenRouter';
+          console.log('[IA] ✅ Generado exitosamente con OPENROUTER — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
         }
-      } catch (errGemini) {
-        console.warn('[IA] ❌ Gemini falló:', errGemini.message);
-        throw errGemini;
+      } catch (errOpenRouter) {
+        console.warn('[IA] ❌ OpenRouter falló:', errOpenRouter.message);
+        throw errOpenRouter;
       }
     }
 
@@ -16235,7 +16193,7 @@ generarPlanificacion = async function () {
     console.log(`[IA] 🎯 Planificación generada con ${proveedorUsado} — ${aiData.elementosCapacidad.length} ECs, ${aiData.actividades.length} actividades`);
 
     // Aplicar resultados
-    aplicarRespuestaGemini(aiData, fechasClase);
+    aplicarRespuestaIA(aiData, fechasClase);
 
     // Renderizar
     renderizarEC(planificacion.elementosCapacidad);
@@ -17497,7 +17455,7 @@ function exportarDatos() {
     recuperaciones: localStorage.getItem(RECUP_KEY) || '{}',
     borrador: localStorage.getItem(STORAGE_KEY) || 'null',
     groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || '',
-    geminiKey: localStorage.getItem('planificadorRA_geminiKey') || '',
+    openrouterKey: localStorage.getItem(OPENROUTER_KEY_STORAGE) || '',
     notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
     libreta: localStorage.getItem(LIBRETA_KEY) || '{"entries":[]}',
     cuentasEstudiantes: localStorage.getItem(CUENTAS_EST_KEY) || '{"cuentas":[]}'
@@ -17610,7 +17568,7 @@ function importarDatos() {
       } catch { }
     }
     if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
-    if (d.geminiKey) localStorage.setItem('planificadorRA_geminiKey', d.geminiKey);
+    if (d.openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, d.openrouterKey);
     if (d.cuentasEstudiantes) localStorage.setItem(CUENTAS_EST_KEY, d.cuentasEstudiantes);
 
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
@@ -17676,7 +17634,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v13.2</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v13.3</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
