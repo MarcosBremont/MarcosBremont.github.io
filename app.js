@@ -15592,8 +15592,10 @@ function _esperarConCountdown(ms, mensajeBase) {
 
 /** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
 const MODELOS_OPENROUTER = [
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'minimax/minimax-m2.5:free'
+  'google/gemma-3-27b-it:free',
+  'mistralai/mistral-small-3.1-24b-instruct:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'nousresearch/hermes-3-llama-3.1-405b:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
