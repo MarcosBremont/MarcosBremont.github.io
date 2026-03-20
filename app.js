@@ -15511,8 +15511,15 @@ ${ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n')}
 
 REGLAS PARA LAS ACTIVIDADES:
 - Genera ${actsPorEC} actividad(es) por cada EC = ${totalActs} actividades en total.
-- Cada actividad es una tarea concreta que el estudiante realiza.
-- Formato: "Tipo de actividad: descripción concreta" (ej: "Práctica de laboratorio: Diseñar una base de datos relacional para un sistema de inventario")
+- Cada actividad es una TAREA CONCRETA que el estudiante realiza, NO es lo mismo que el EC.
+- Las actividades NO deben repetir el enunciado del EC. Son tareas prácticas distintas.
+- PROHIBIDO: poner "Práctica de laboratorio: [copiar el EC]". Eso está MAL.
+- Cada actividad del mismo EC debe ser DIFERENTE entre sí. Varía el tipo de actividad.
+- Tipos de actividad válidos: Investigación, Práctica guiada, Exposición, Debate, Taller, Estudio de caso, Proyecto, Ejercicio práctico, Análisis comparativo, Presentación, Cuestionario, Mapa conceptual, Role-playing
+- Ejemplo CORRECTO para un EC de "Identificar componentes de un sistema":
+  * "Investigación: Elaborar un cuadro comparativo de los componentes de hardware y software de un sistema"
+  * "Taller: Clasificar componentes de un sistema real proporcionado por el docente"
+  * "Exposición: Presentar en equipos los tipos de sistemas de información según su función"
 
 JSON requerido (respetar esta estructura exacta):
 {
@@ -15593,8 +15600,8 @@ function _esperarConCountdown(ms, mensajeBase) {
 
 /** Modelos a intentar en orden (si uno da rate-limit, prueba el siguiente) */
 const MODELOS_GEMINI = [
-  'gemini-2.5-flash',
   'gemini-2.0-flash',
+  'gemini-1.5-flash',
   'gemini-2.0-flash-lite'
 ];
 
@@ -15883,9 +15890,14 @@ async function _llamarGeminiConFallback(prompt, apiKey, mensajeToast) {
   let ultimoError = '';
   for (let m = 0; m < MODELOS_GEMINI.length; m++) {
     const modelo = MODELOS_GEMINI[m];
+    console.log(`[IA-Gemini] Intentando modelo: ${modelo}`);
     mostrarToast(`🔵 ${mensajeToast} (${modelo})…`, 'info');
     const resultado = await _llamarModelo(modelo, apiKey, prompt);
-    if (resultado.ok) return resultado.data;
+    if (resultado.ok) {
+      console.log(`[IA-Gemini] ✅ ${modelo} respondió OK`);
+      return resultado.data;
+    }
+    console.warn(`[IA-Gemini] ❌ ${modelo} falló:`, resultado.error);
     ultimoError = resultado.error;
     if (resultado.esRateLimit) {
       continue; // probar siguiente modelo
