@@ -15592,10 +15592,11 @@ function _esperarConCountdown(ms, mensajeBase) {
 
 /** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
 const MODELOS_OPENROUTER = [
+  'openrouter/free',
   'google/gemma-3-27b-it:free',
-  'mistralai/mistral-small-3.1-24b-instruct:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free'
+  'qwen/qwen3-coder:free',
+  'openai/gpt-oss-20b:free',
+  'z-ai/glm-4.5-air:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
@@ -15878,14 +15879,16 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
   return datosBase;
 }
 
-/** Llama a OpenRouter con fallback entre modelos. Devuelve datos parseados o lanza error. */
+/** Llama a OpenRouter con fallback entre modelos + 1 reintento tras espera. Devuelve datos parseados o lanza error. */
 async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
   let ultimoError = '';
+
+  // Ronda 1: intentar cada modelo una vez
   for (let m = 0; m < MODELOS_OPENROUTER.length; m++) {
     const modelo = MODELOS_OPENROUTER[m];
     const nombreCorto = modelo.split('/').pop().replace(':free', '');
     console.log(`[IA-OpenRouter] Intentando modelo: ${modelo}`);
-    mostrarToast(`🔵 ${mensajeToast} — esperando ${nombreCorto}… (máx 30s)`, 'info');
+    mostrarToast(`🔵 ${mensajeToast} — ${nombreCorto}… (máx 30s)`, 'info');
     const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt);
     if (resultado.ok) {
       console.log(`[IA-OpenRouter] ✅ ${modelo} respondió OK`);
@@ -15893,11 +15896,27 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
     }
     console.warn(`[IA-OpenRouter] ❌ ${modelo} falló:`, resultado.error);
     ultimoError = resultado.error;
-    // Siempre intentar el siguiente modelo (sea timeout, rate limit o error)
     if (m < MODELOS_OPENROUTER.length - 1) {
-      mostrarToast(`⏳ ${nombreCorto} no respondió. Probando siguiente modelo...`, 'warning');
+      mostrarToast(`⏳ ${nombreCorto} sin cuota. Probando siguiente...`, 'warning');
     }
   }
+
+  // Ronda 2: esperar 8 segundos y reintentar el primer modelo (openrouter/free)
+  console.log('[IA-OpenRouter] Todos los modelos fallaron. Esperando 8s para reintentar...');
+  mostrarToast('⏳ Todos los modelos ocupados. Reintentando en 8 segundos...', 'warning');
+  await new Promise(r => setTimeout(r, 8000));
+
+  const modeloRetry = MODELOS_OPENROUTER[0];
+  const nombreRetry = modeloRetry.split('/').pop().replace(':free', '');
+  console.log(`[IA-OpenRouter] Reintento final: ${modeloRetry}`);
+  mostrarToast(`🔵 Reintento: ${nombreRetry}…`, 'info');
+  const resultado2 = await _llamarModeloOpenRouter(modeloRetry, apiKey, prompt);
+  if (resultado2.ok) {
+    console.log(`[IA-OpenRouter] ✅ Reintento exitoso con ${modeloRetry}`);
+    return resultado2.data;
+  }
+  console.warn(`[IA-OpenRouter] ❌ Reintento falló:`, resultado2.error);
+
   throw new Error('rate_limit: Todos los modelos de OpenRouter fallaron. ' + ultimoError);
 }
 
