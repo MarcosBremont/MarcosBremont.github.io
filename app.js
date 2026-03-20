@@ -19939,7 +19939,12 @@ async function _calEscGuardarAdmin() {
     await db.collection('public_calendar').doc('main').set(_calEsc.adminDatos || _calEscDatosVacios());
     mostrarToast('Calendario publicado para todos los docentes ✓', 'success');
   } catch (e) {
-    mostrarToast('Error al guardar en Firestore', 'error');
+    console.error('[Calendario] Error Firestore:', e.code, e.message);
+    if (e.code === 'permission-denied') {
+      mostrarToast('Sin permisos en Firestore. Verifica las reglas de public_calendar en Firebase Console.', 'error');
+    } else {
+      mostrarToast('Error al guardar en Firestore: ' + (e.message || e.code), 'error');
+    }
   }
 }
 
