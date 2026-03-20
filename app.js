@@ -15762,7 +15762,7 @@ Genera exactamente este JSON:
 
 
 
-/** Genera planificación completa con Groq: 1 llamada para EC/actividades + 1 por cada actividad */
+/** Genera planificación completa con Groq: llamada 1 para estructura + llamada 2 para instrumentos en batch */
 async function generarConGroq(dg, ra, fechasClase) {
   const groqKey = getGroqKey();
   if (!groqKey) return null;
@@ -15781,28 +15781,42 @@ async function generarConGroq(dg, ra, fechasClase) {
     throw new Error('Groq no devolvió la estructura esperada de EC y actividades');
   }
 
-  // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
-  // Solo intentar con Groq. Si falla, los instrumentos se generan localmente.
-  // (OpenRouter free no aguanta 8 llamadas seguidas por rate limits)
-  let _groqAgotado = false;
-
-  for (let i = 0; i < datosBase.actividades.length; i++) {
-    if (_groqAgotado) break;
-    const act = datosBase.actividades[i];
-    const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
-    const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
-
-    try {
-      mostrarToast(`🟢 Instrumento ${i + 1}/${datosBase.actividades.length} (Groq)…`, 'info');
-      const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
-      if (det) {
-        act.instrumentoDetalle = det.instrumentoDetalle || null;
-        act.sesionDiaria = det.sesionDiaria || null;
+  // --- LLAMADA 2: Todos los instrumentos en UNA sola llamada batch ---
+  try {
+    mostrarToast('🟢 Generando instrumentos y sesiones (Groq)…', 'info');
+    const promptInst = construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+    const instData = await _llamarGroqConFallback(promptInst, 'Instrumentos');
+    if (instData && instData.detalles && Array.isArray(instData.detalles)) {
+      console.log(`[IA] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
+      instData.detalles.forEach((det, i) => {
+        if (i < datosBase.actividades.length) {
+          datosBase.actividades[i].instrumentoDetalle = det.instrumentoDetalle || null;
+          datosBase.actividades[i].sesionDiaria = det.sesionDiaria || null;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[IA] Instrumentos batch falló en Groq:', e.message);
+    // Intentar con OpenRouter como fallback para instrumentos
+    const openrouterKey = getOpenRouterKey();
+    if (openrouterKey) {
+      try {
+        mostrarToast('🔵 Generando instrumentos (OpenRouter)…', 'info');
+        const promptInst = construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+        const instData = await _llamarOpenRouterConFallback(promptInst, openrouterKey, 'Instrumentos');
+        if (instData && instData.detalles && Array.isArray(instData.detalles)) {
+          console.log(`[IA-OpenRouter] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
+          instData.detalles.forEach((det, i) => {
+            if (i < datosBase.actividades.length) {
+              datosBase.actividades[i].instrumentoDetalle = det.instrumentoDetalle || null;
+              datosBase.actividades[i].sesionDiaria = det.sesionDiaria || null;
+            }
+          });
+        }
+      } catch (e2) {
+        console.warn('[IA] Instrumentos batch también falló en OpenRouter:', e2.message);
+        mostrarToast('⏳ Instrumentos se generarán con datos básicos.', 'warning');
       }
-    } catch (e) {
-      console.warn(`[IA] Instrumento ${i + 1} falló en Groq:`, e.message);
-      mostrarToast('⏳ Groq sin cuota para instrumentos. Se generarán localmente.', 'warning');
-      _groqAgotado = true;
     }
   }
 
@@ -15828,8 +15842,24 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
     throw new Error('OpenRouter no devolvió la estructura esperada de EC y actividades');
   }
 
-  // Los instrumentos se generarán localmente (OpenRouter free no aguanta 8 llamadas seguidas)
-  console.log('[IA-OpenRouter] Estructura base generada. Instrumentos se generarán localmente.');
+  // --- LLAMADA 2: Instrumentos en batch (1 sola llamada) ---
+  try {
+    mostrarToast('🔵 Generando instrumentos y sesiones (OpenRouter)…', 'info');
+    const promptInst = construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+    const instData = await _llamarOpenRouterConFallback(promptInst, apiKey, 'Instrumentos');
+    if (instData && instData.detalles && Array.isArray(instData.detalles)) {
+      console.log(`[IA-OpenRouter] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
+      instData.detalles.forEach((det, i) => {
+        if (i < datosBase.actividades.length) {
+          datosBase.actividades[i].instrumentoDetalle = det.instrumentoDetalle || null;
+          datosBase.actividades[i].sesionDiaria = det.sesionDiaria || null;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[IA-OpenRouter] Instrumentos batch falló:', e.message);
+    mostrarToast('⏳ Instrumentos se generarán con datos básicos.', 'warning');
+  }
 
   return datosBase;
 }
