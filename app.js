@@ -13496,7 +13496,7 @@ function _regenerarInstrumentoEnCard(act, ec) {
 // ════════════════════════════════════════════════════════════════════
 // GENERAR SESIÓN DIARIA CON GROQ — PROMPT PERSONALIZADO
 // ════════════════════════════════════════════════════════════════════
-async function _generarSesionConGroq(actId, act, ec) {
+async function _generarSesionConIA(actId, act, ec) {
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
   const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
@@ -13542,8 +13542,21 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
 }`;
 
   try {
-    const data = await _llamarGroqConFallback(prompt, 'Generando sesión');
-    if (!data) throw new Error('Sin respuesta de Groq');
+    let data = null;
+    // Intentar con Groq primero
+    if (getGroqKey()) {
+      try {
+        data = await _llamarGroqConFallback(prompt, 'Generando sesión');
+      } catch (eGroq) {
+        console.warn('[IA] Sesión falló en Groq:', eGroq.message);
+      }
+    }
+    // Si Groq falló, intentar con OpenRouter
+    if (!data && getOpenRouterKey()) {
+      mostrarToast('🔵 Generando sesión con OpenRouter...', 'info');
+      data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando sesión');
+    }
+    if (!data) throw new Error('Sin respuesta de IA');
 
     // Normaliza un campo: convierte arrays u objetos a texto legible
     const toStr = (val) => {
@@ -13605,7 +13618,7 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
 
     mostrarToast('✅ Sesión generada con IA', 'success');
   } catch (e) {
-    console.error('_generarSesionConGroq error:', e);
+    console.error('_generarSesionConIA error:', e);
     mostrarToast('⚠️ Error con IA, usando generación local', 'warning');
     // Fallback a generación local
     const ec2 = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
@@ -13635,9 +13648,9 @@ function generarSesion(actId) {
   const act = (planificacion.actividades || []).find(a => a.id === actId);
   if (!act) return;
   const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
-  // Si tiene clave Groq, regenerar con IA directamente (prompt personalizado del usuario)
-  if (getGroqKey()) {
-    _generarSesionConGroq(actId, act, ec);
+  // Si tiene clave de IA, regenerar con IA directamente
+  if (getGroqKey() || getOpenRouterKey()) {
+    _generarSesionConIA(actId, act, ec);
     return;
   }
   const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
