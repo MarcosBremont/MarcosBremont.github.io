@@ -15782,52 +15782,27 @@ async function generarConGroq(dg, ra, fechasClase) {
   }
 
   // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
-  // Intentar con Groq, si falla por rate limit pasar a OpenRouter para el resto
-  let _usarOpenRouterParaInstrumentos = false;
-  const openrouterKey = getOpenRouterKey();
+  // Solo intentar con Groq. Si falla, los instrumentos se generan localmente.
+  // (OpenRouter free no aguanta 8 llamadas seguidas por rate limits)
+  let _groqAgotado = false;
 
   for (let i = 0; i < datosBase.actividades.length; i++) {
+    if (_groqAgotado) break;
     const act = datosBase.actividades[i];
     const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
     const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
 
-    // Intentar con Groq o OpenRouter según el estado
-    if (!_usarOpenRouterParaInstrumentos) {
-      try {
-        mostrarToast(`🟢 Instrumento ${i + 1}/${datosBase.actividades.length} (Groq)…`, 'info');
-        const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
-        if (det) {
-          act.instrumentoDetalle = det.instrumentoDetalle || null;
-          act.sesionDiaria = det.sesionDiaria || null;
-        }
-        continue;
-      } catch (e) {
-        console.warn(`[IA] Instrumento ${i + 1} falló en Groq:`, e.message);
-        if (openrouterKey) {
-          console.log('[IA] Cambiando a OpenRouter para instrumentos restantes...');
-          mostrarToast('⏳ Groq sin cuota. Cambiando a OpenRouter para instrumentos...', 'warning');
-          _usarOpenRouterParaInstrumentos = true;
-        } else {
-          console.warn(`[IA] Sin OpenRouter, instrumento ${i + 1} se generará localmente`);
-          break;
-        }
+    try {
+      mostrarToast(`🟢 Instrumento ${i + 1}/${datosBase.actividades.length} (Groq)…`, 'info');
+      const det = await _llamarGroqConFallback(promptDet, `Instrumento ${i + 1}`);
+      if (det) {
+        act.instrumentoDetalle = det.instrumentoDetalle || null;
+        act.sesionDiaria = det.sesionDiaria || null;
       }
-    }
-
-    // Intentar con OpenRouter
-    if (_usarOpenRouterParaInstrumentos) {
-      try {
-        mostrarToast(`🔵 Instrumento ${i + 1}/${datosBase.actividades.length} (OpenRouter)…`, 'info');
-        const det = await _llamarOpenRouterConFallback(promptDet, openrouterKey, `Instrumento ${i + 1}`);
-        if (det) {
-          act.instrumentoDetalle = det.instrumentoDetalle || null;
-          act.sesionDiaria = det.sesionDiaria || null;
-        }
-      } catch (e) {
-        console.warn(`[IA] Instrumento ${i + 1} también falló en OpenRouter:`, e.message);
-        mostrarToast('⏳ OpenRouter también sin cuota. Instrumentos restantes se generarán localmente.', 'warning');
-        break;
-      }
+    } catch (e) {
+      console.warn(`[IA] Instrumento ${i + 1} falló en Groq:`, e.message);
+      mostrarToast('⏳ Groq sin cuota para instrumentos. Se generarán localmente.', 'warning');
+      _groqAgotado = true;
     }
   }
 
@@ -15853,28 +15828,8 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
     throw new Error('OpenRouter no devolvió la estructura esperada de EC y actividades');
   }
 
-  // --- LLAMADAS 2..N: Una por actividad (instrumento + sesión) ---
-  let _openrouterAbortado = false;
-  for (let i = 0; i < datosBase.actividades.length; i++) {
-    if (_openrouterAbortado) break;
-    const act = datosBase.actividades[i];
-    const ec = datosBase.elementosCapacidad.find(e => e.codigo === act.ecCodigo);
-    mostrarToast(`🔵 Generando instrumento ${i + 1}/${datosBase.actividades.length} (OpenRouter)…`, 'info');
-    try {
-      const promptDet = construirPromptDetalleUno(dg, ra, act, ec);
-      const det = await _llamarOpenRouterConFallback(promptDet, apiKey, `Instrumento ${i + 1}`);
-      if (det) {
-        act.instrumentoDetalle = det.instrumentoDetalle || null;
-        act.sesionDiaria = det.sesionDiaria || null;
-      }
-    } catch (e) {
-      console.warn(`Instrumento ${i + 1} no generado con OpenRouter:`, e.message);
-      if (e.message && (e.message.includes('rate_limit') || e.message.includes('todos los modelos'))) {
-        mostrarToast('⏳ Cuota de OpenRouter agotada. Los instrumentos restantes se generarán localmente.', 'warning');
-        _openrouterAbortado = true;
-      }
-    }
-  }
+  // Los instrumentos se generarán localmente (OpenRouter free no aguanta 8 llamadas seguidas)
+  console.log('[IA-OpenRouter] Estructura base generada. Instrumentos se generarán localmente.');
 
   return datosBase;
 }
