@@ -13562,11 +13562,23 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     const toStr = (val) => {
       if (!val) return '';
       if (typeof val === 'string') return val;
-      if (Array.isArray(val)) return val.map(item =>
-        typeof item === 'string' ? item
-          : (item.nombre || item.name || item.estrategia || item.descripcion || item.paso || JSON.stringify(item))
-      ).join('\n');
-      if (typeof val === 'object') return val.texto || val.text || val.descripcion || val.contenido || Object.entries(val).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join('\n');
+      if (Array.isArray(val)) return val.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item) {
+          // Convertir objeto a "clave: valor" líneas legibles
+          return Object.entries(item).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : String(v)}`).join('\n');
+        }
+        return String(item);
+      }).join('\n\n');
+      if (typeof val === 'object') {
+        // Convertir objeto a líneas legibles clave: valor
+        return Object.entries(val).map(([k, v]) => {
+          if (typeof v === 'string') return `${k}: ${v}`;
+          if (Array.isArray(v)) return `${k}:\n${toStr(v)}`;
+          if (typeof v === 'object' && v) return `${k}: ${Object.entries(v).map(([k2, v2]) => `${k2}: ${v2}`).join(', ')}`;
+          return `${k}: ${String(v)}`;
+        }).join('\n');
+      }
       return String(val);
     };
 
@@ -13574,29 +13586,36 @@ Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
     let d = data.sesionDiaria || data;
 
     // Si la IA no devolvió las claves esperadas (apertura, procedimental, etc.)
-    // sino un objeto plano con claves numeradas ("1. Apertura motivadora": "texto"),
-    // normalizar mapeando por palabras clave
+    // normalizar: convertir cualquier formato a texto legible en los campos esperados
     if (!d.apertura && !d.procedimental && !d.sintesis) {
+      // Caso especial: {detalles: [...]} — expandir el array
+      if (d.detalles && Array.isArray(d.detalles)) {
+        d = { apertura: toStr(d.detalles) };
+      }
       const entries = Object.entries(d);
-      if (entries.length > 0 && entries.every(([k]) => typeof k === 'string')) {
+      if (entries.length > 0) {
         const norm = {};
-        // Convertir todo el objeto a texto legible y distribuir por secciones
-        // Agrupar por momentos: inicio (items 1-4 aprox), desarrollo (5-7), cierre (8+)
-        const textos = entries.map(([k, v]) => `${k}: ${typeof v === 'string' ? v : toStr(v)}`);
+        // Convertir todo a texto limpio sin JSON
+        const textos = entries.map(([k, v]) => {
+          const texto = typeof v === 'string' ? v : toStr(v);
+          // No prefijar con la clave si es genérica como "detalles" o "respuesta"
+          if (['detalles', 'respuesta', 'resultado', 'contenido', 'data'].includes(k.toLowerCase())) return texto;
+          return `${k}: ${texto}`;
+        });
         const total = textos.length;
-        const corte1 = Math.max(1, Math.ceil(total * 0.3)); // ~30% inicio
-        const corte2 = Math.max(corte1 + 1, Math.ceil(total * 0.75)); // ~45% desarrollo
-        norm.apertura = textos.slice(0, corte1).join('\n\n');
-        norm.encuadre = textos.slice(corte1, Math.min(corte1 + 1, total)).join('\n\n') || '';
-        norm.organizacion = textos.slice(corte1 + 1, Math.min(corte1 + 2, total)).join('\n\n') || '';
-        norm.procedimental = textos.slice(corte1 + 2, corte2).join('\n\n') || '';
-        norm.conceptual = textos.slice(corte2, Math.min(corte2 + 1, total)).join('\n\n') || '';
-        norm.sintesis = textos.slice(corte2 + 1).join('\n\n') || '';
-        // Si hay muy pocos items, poner todo en apertura
-        if (total <= 4) {
+        if (total >= 7) {
+          // Muchos campos: distribuir entre inicio/desarrollo/cierre
+          const corte1 = Math.max(1, Math.ceil(total * 0.3));
+          const corte2 = Math.max(corte1 + 1, Math.ceil(total * 0.75));
+          norm.apertura = textos.slice(0, corte1).join('\n\n');
+          norm.encuadre = textos.slice(corte1, corte1 + 1).join('\n\n');
+          norm.organizacion = textos.slice(corte1 + 1, corte1 + 2).join('\n\n');
+          norm.procedimental = textos.slice(corte1 + 2, corte2).join('\n\n');
+          norm.conceptual = textos.slice(corte2, corte2 + 1).join('\n\n');
+          norm.sintesis = textos.slice(corte2 + 1).join('\n\n');
+        } else {
+          // Pocos campos: todo al campo apertura, el resto usa fallback local
           norm.apertura = textos.join('\n\n');
-          delete norm.encuadre; delete norm.organizacion;
-          delete norm.procedimental; delete norm.conceptual; delete norm.sintesis;
         }
         d = norm;
         console.log('[IA] Sesión normalizada desde formato libre:', total, 'campos →', Object.keys(norm));
