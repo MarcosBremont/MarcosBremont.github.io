@@ -13510,36 +13510,14 @@ async function _generarSesionConIA(actId, act, ec) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
   mostrarToast('🧠 Generando sesión personalizada con IA...', 'info');
 
-  const prompt = `dame una planificacion diaria de esta actividad:
+  const prompt = `Eres un planificador educativo. Genera una sesión de clase para:
+Módulo: ${dg.moduloFormativo || ''} | ${dg.familiaProfesional || ''}
+Actividad: ${act.enunciado}
+EC: ${ec?.enunciado || ''} (Bloom: ${ec?.nivel || 'aplicación'})
+Duración: ${minTotal}min (Inicio:${minInicio}, Desarrollo:${minDesarr}, Cierre:${minCierre})
 
-MÓDULO: ${dg.moduloFormativo || ''}
-FAMILIA PROFESIONAL: ${dg.familiaProfesional || ''}
-BACHILLERATO: ${dg.nombreBachillerato || ''}
-RESULTADO DE APRENDIZAJE: ${ra.descripcion || ''}
-ELEMENTO DE CAPACIDAD (${act.ecCodigo}): ${ec?.enunciado || ''}
-NIVEL BLOOM: ${ec?.nivel || ''}
-DURACIÓN TOTAL: ${minTotal} minutos
-RECURSOS DISPONIBLES: ${ra.recursosDid || 'pizarrón, computadoras, guías de trabajo'}
-
-ACTIVIDAD: ${act.enunciado}
-
-yo necesito:
-1er momento. Inicio (${minInicio} minutos): apertura motivadora con pregunta detonante específica al tema, activación de conocimientos previos con preguntas concretas del campo profesional, presentación del objetivo y criterios de evaluación.
-
-2do momento. Desarrollo (${minDesarr} minutos): desarrollo paso a paso con bloques temáticos numerados y tiempos parciales, actividades prácticas específicas al tema, preguntas de verificación de comprensión concretas, dinámicas (individual/parejas/equipos según aplique).
-
-3er momento. Cierre (${minCierre} minutos): síntesis de lo aprendido con pregunta reflexiva específica, evaluación formativa rápida con 2-3 preguntas concretas al tema, tarea/próximo paso si aplica.
-
-Responde SOLO con JSON válido, sin markdown ni explicaciones. Formato exacto:
-{
-  "apertura": "texto detallado del INICIO con pasos numerados, preguntas concretas al tema y tiempos parciales",
-  "encuadre": "propósito específico de la sesión: qué van a aprender, por qué es importante para su perfil profesional y cómo se conecta con el RA",
-  "organizacion": "organización pedagógica: individual/grupos, roles, materiales por estudiante, normas de participación específicas para esta actividad",
-  "procedimental": "texto detallado del DESARROLLO con bloques numerados (Bloque 1, 2, 3...) con tiempos parciales, pasos específicos, preguntas de verificación concretas al tema",
-  "conceptual": "reflexión conceptual: ejemplo real del campo profesional ${dg.familiaProfesional || ''}, cómo aplica en el trabajo diario, pregunta metacognitiva específica",
-  "sintesis": "texto detallado del CIERRE con recapitulación de conceptos clave, preguntas de evaluación formativa específicas al tema, tarea concreta si aplica y próximo paso",
-  "estrategias": "lista de 3-4 estrategias didácticas usadas con nombre, descripción de cómo se aplican en ESTA sesión y justificación según nivel Bloom: ${ec?.nivel || 'aplicacion'}"
-}`;
+RESPONDE SOLO JSON, sin markdown. USA EXACTAMENTE estas 7 claves:
+{"apertura":"pregunta motivadora y activación de conocimientos previos (${minInicio}min)","encuadre":"objetivo de la sesión y criterios de evaluación","organizacion":"cómo se organizan los estudiantes y materiales","procedimental":"desarrollo paso a paso con bloques numerados y tiempos (${minDesarr}min)","conceptual":"reflexión y ejemplo real del campo profesional","sintesis":"cierre con recapitulación y evaluación formativa (${minCierre}min)","estrategias":"3 estrategias didácticas con justificación"}`;
 
   try {
     let data = null;
@@ -15704,7 +15682,11 @@ async function _llamarGroqConFallback(prompt, mensajeToast) {
       continue;
     }
     if (resultado.esRateLimit) {
-      algunoDisponible = true; // el modelo existe pero sin cuota
+      // Si es rate limit diario (TPD), no tiene sentido probar otros modelos
+      if ((resultado.error || '').includes('TPD') || (resultado.error || '').includes('tokens per day')) {
+        throw new Error('rate_limit: Cuota diaria de Groq agotada (100k tokens/día). Se reestablece mañana.');
+      }
+      algunoDisponible = true;
       continue;
     }
     algunoDisponible = true;
