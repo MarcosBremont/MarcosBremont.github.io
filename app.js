@@ -11990,6 +11990,15 @@ function guardarPlanificacionActual() {
   planificacion._id = registro.id;
   persistirBiblioteca(biblio);
 
+  // Actualizar planActivaId en cursos que tengan esta planificación
+  const finalIdActiva = registro.id;
+  Object.values(calState.cursos || {}).forEach(c => {
+    if ((c.planIds || []).includes(finalIdActiva)) {
+      c.planActivaId = finalIdActiva;
+    }
+  });
+  guardarCalificaciones();
+
   // Asignar al curso si hay cursos creados y no está ya asignada
   const cursosExist = Object.values(calState.cursos);
   if (cursosExist.length > 0) {
@@ -12183,13 +12192,19 @@ function cargarPlanificacionGuardada(id) {
 
 
 
+  // Marcar como planificación activa en todos los cursos que la tengan asignada
+  cargarCalificaciones();
+  Object.values(calState.cursos || {}).forEach(c => {
+    if ((c.planIds || []).includes(id)) {
+      c.planActivaId = id;
+    }
+  });
+  guardarCalificaciones();
+
   // Cerrar panel de biblioteca y abrir el wizard en paso 1 (Datos Generales)
   _ocultarPaneles();
   irAlPaso(1, false);
   mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
-
-
-
 }
 
 
