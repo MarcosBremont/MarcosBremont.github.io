@@ -12551,17 +12551,20 @@ function renderizarBiblioteca() {
       sinCurso.push(reg);
     } else {
       cursosDePlan.forEach(c => {
-        if (!grupos[c.nombre]) grupos[c.nombre] = [];
-        grupos[c.nombre].push({ reg, esPlanActiva: c.planActivaId === reg.id });
+        if (!grupos[c.nombre]) grupos[c.nombre] = { cursoId: c.id, planes: [] };
+        const idx = (c.planIds || []).indexOf(reg.id);
+        grupos[c.nombre].planes.push({ reg, esPlanActiva: c.planActivaId === reg.id, idx });
       });
     }
   });
+  // Ordenar planes dentro de cada curso por su posición en planIds
+  Object.values(grupos).forEach(g => g.planes.sort((a, b) => a.idx - b.idx));
 
   // Ordenar grupos alfabéticamente; "Sin curso asignado" al final
   const nombresCurso = Object.keys(grupos).sort();
 
   // ── Renderizar función de card ────────────────────────────────
-  const _renderCard = (reg, esPlanActiva) => {
+  const _renderCard = (reg, esPlanActiva, cursoId, raNum, totalPlanes) => {
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
     const ec = reg.planificacion?.elementosCapacidad || [];
@@ -12573,11 +12576,23 @@ function renderizarBiblioteca() {
 
     const card = document.createElement('div');
     card.className = 'pln-card' + (esPlanActiva ? ' pln-card-activa' : '');
+    const raLabel = cursoId && raNum ? `<span class="pln-badge-ra">RA${raNum}</span>` : '';
+    const moveButtons = cursoId && totalPlanes > 1 ? `
+      <div class="pln-card-move">
+        <button class="btn-pln-move" onclick="moverPlanEnCurso('${cursoId}','${reg.id}',-1)" title="Mover arriba" ${raNum === 1 ? 'disabled' : ''}>
+          <span class="material-icons">arrow_upward</span>
+        </button>
+        <button class="btn-pln-move" onclick="moverPlanEnCurso('${cursoId}','${reg.id}',1)" title="Mover abajo" ${raNum === totalPlanes ? 'disabled' : ''}>
+          <span class="material-icons">arrow_downward</span>
+        </button>
+      </div>` : '';
     card.innerHTML = `
       <div class="pln-card-date">
+        ${raLabel}
         <span class="material-icons">schedule</span>
         ${escHTML(reg.fechaGuardadoLabel || reg.fechaGuardado)}
         ${esPlanActiva ? '<span class="pln-badge-activa"><span class="material-icons" style="font-size:11px;">star</span>Activa</span>' : ''}
+        ${moveButtons}
       </div>
       <div class="pln-card-modulo">${escHTML(dg.moduloFormativo || 'Sin módulo')}</div>
       <div class="pln-card-meta">
@@ -12611,7 +12626,7 @@ function renderizarBiblioteca() {
   };
 
   // ── Sección de grupo ──────────────────────────────────────────
-  const _renderGrupo = (titulo, icono, color, planes) => {
+  const _renderGrupo = (titulo, icono, color, planes, cursoId) => {
     const section = document.createElement('div');
     section.className = 'pln-grupo';
     const header = document.createElement('div');
@@ -12628,8 +12643,8 @@ function renderizarBiblioteca() {
     section.appendChild(header);
     const cardsWrap = document.createElement('div');
     cardsWrap.className = 'pln-grupo-cards';
-    planes.forEach(({ reg, esPlanActiva }) => {
-      cardsWrap.appendChild(_renderCard(reg, esPlanActiva));
+    planes.forEach(({ reg, esPlanActiva }, i) => {
+      cardsWrap.appendChild(_renderCard(reg, esPlanActiva, cursoId, i + 1, planes.length));
     });
     section.appendChild(cardsWrap);
     return section;
@@ -12637,14 +12652,31 @@ function renderizarBiblioteca() {
 
   // Cursos con planes
   nombresCurso.forEach(nombre => {
-    grid.appendChild(_renderGrupo(nombre, 'class', '#1565C0', grupos[nombre]));
+    const g = grupos[nombre];
+    grid.appendChild(_renderGrupo(nombre, 'class', '#1565C0', g.planes, g.cursoId));
   });
 
   // Sin curso asignado
   if (sinCurso.length > 0) {
     grid.appendChild(_renderGrupo('Sin curso asignado', 'folder_off', '#78909C',
-      sinCurso.map(reg => ({ reg, esPlanActiva: false }))));
+      sinCurso.map(reg => ({ reg, esPlanActiva: false, idx: 0 })), null));
   }
+}
+
+/** Mueve una planificación arriba (-1) o abajo (+1) dentro de un curso */
+function moverPlanEnCurso(cursoId, planId, dir) {
+  cargarCalificaciones();
+  const curso = calState.cursos[cursoId];
+  if (!curso || !curso.planIds) return;
+  const idx = curso.planIds.indexOf(planId);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= curso.planIds.length) return;
+  // Intercambiar posiciones
+  [curso.planIds[idx], curso.planIds[newIdx]] = [curso.planIds[newIdx], curso.planIds[idx]];
+  guardarCalificaciones();
+  renderizarBiblioteca();
+  mostrarToast('Orden actualizado (RA' + (newIdx + 1) + ')', 'success');
 }
 
 /** Escapa HTML básico (helper local para la biblioteca) */
