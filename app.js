@@ -15881,8 +15881,9 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
   let ultimoError = '';
   for (let m = 0; m < MODELOS_OPENROUTER.length; m++) {
     const modelo = MODELOS_OPENROUTER[m];
+    const nombreCorto = modelo.split('/').pop().replace(':free', '');
     console.log(`[IA-OpenRouter] Intentando modelo: ${modelo}`);
-    mostrarToast(`🔵 ${mensajeToast} (${modelo.split('/').pop()})…`, 'info');
+    mostrarToast(`🔵 ${mensajeToast} — esperando ${nombreCorto}… (máx 30s)`, 'info');
     const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt);
     if (resultado.ok) {
       console.log(`[IA-OpenRouter] ✅ ${modelo} respondió OK`);
@@ -15890,11 +15891,12 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
     }
     console.warn(`[IA-OpenRouter] ❌ ${modelo} falló:`, resultado.error);
     ultimoError = resultado.error;
-    if (resultado.esRateLimit) {
-      continue;
+    // Siempre intentar el siguiente modelo (sea timeout, rate limit o error)
+    if (m < MODELOS_OPENROUTER.length - 1) {
+      mostrarToast(`⏳ ${nombreCorto} no respondió. Probando siguiente modelo...`, 'warning');
     }
   }
-  throw new Error('rate_limit: Todos los modelos de OpenRouter agotaron su cuota.');
+  throw new Error('rate_limit: Todos los modelos de OpenRouter fallaron. ' + ultimoError);
 }
 
 /** Llama a UN modelo específico de OpenRouter. Devuelve {ok, data, esRateLimit, error} */
@@ -15911,9 +15913,9 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
     max_tokens: 8192
   };
 
-  // Timeout de 60 segundos para evitar que se congele
+  // Timeout de 30 segundos para evitar que se congele
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   let resp;
   try {
@@ -15931,8 +15933,8 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
   } catch (e) {
     clearTimeout(timeoutId);
     if (e.name === 'AbortError') {
-      console.warn(`[IA-OpenRouter] Timeout de 60s alcanzado para ${modelo}`);
-      return { ok: false, esRateLimit: false, error: `OpenRouter (${modelo}) timeout: el modelo tardó más de 60 segundos` };
+      console.warn(`[IA-OpenRouter] Timeout de 30s alcanzado para ${modelo}`);
+      return { ok: false, esRateLimit: true, error: `OpenRouter (${modelo}) timeout: el modelo tardó más de 30 segundos` };
     }
     return { ok: false, esRateLimit: false, error: `OpenRouter (${modelo}) error de red: ${e.message}` };
   }
@@ -16196,7 +16198,7 @@ generarPlanificacion = async function () {
         }
       } catch (errOpenRouter) {
         console.warn('[IA] ❌ OpenRouter falló:', errOpenRouter.message);
-        throw errOpenRouter;
+        mostrarToast('⏳ OpenRouter tampoco respondió. Usando generación local.', 'warning');
       }
     }
 
