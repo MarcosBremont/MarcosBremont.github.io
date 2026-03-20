@@ -15913,16 +15913,32 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
     max_tokens: 8192
   };
 
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'Metabot - Planificador Educativo'
-    },
-    body: JSON.stringify(body)
-  });
+  // Timeout de 60 segundos para evitar que se congele
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+  let resp;
+  try {
+    resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Metabot - Planificador Educativo'
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      console.warn(`[IA-OpenRouter] Timeout de 60s alcanzado para ${modelo}`);
+      return { ok: false, esRateLimit: false, error: `OpenRouter (${modelo}) timeout: el modelo tardó más de 60 segundos` };
+    }
+    return { ok: false, esRateLimit: false, error: `OpenRouter (${modelo}) error de red: ${e.message}` };
+  }
+  clearTimeout(timeoutId);
 
   if (resp.ok) {
     const data = await resp.json();
