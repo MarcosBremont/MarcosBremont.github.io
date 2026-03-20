@@ -15594,8 +15594,8 @@ function _esperarConCountdown(ms, mensajeBase) {
 const MODELOS_OPENROUTER = [
   'openrouter/free',
   'google/gemma-3-27b-it:free',
+  'google/gemma-3-12b-it:free',
   'qwen/qwen3-coder:free',
-  'openai/gpt-oss-20b:free',
   'z-ai/glm-4.5-air:free'
 ];
 
@@ -15920,6 +15920,32 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
   throw new Error('rate_limit: Todos los modelos de OpenRouter fallaron. ' + ultimoError);
 }
 
+/** Intenta reparar JSON truncado cerrando brackets/braces abiertos */
+function _repararJsonTruncado(texto) {
+  // Quitar trailing comas y texto incompleto después del último valor completo
+  let t = texto.replace(/,\s*$/, '');
+  // Quitar valor de string incompleto al final (ej: "texto incomple)
+  t = t.replace(/"[^"]*$/, '""');
+  // Contar brackets/braces abiertos
+  let abreLlave = 0, abreCorchete = 0;
+  let enString = false, escape = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\') { escape = true; continue; }
+    if (c === '"') { enString = !enString; continue; }
+    if (enString) continue;
+    if (c === '{') abreLlave++;
+    if (c === '}') abreLlave--;
+    if (c === '[') abreCorchete++;
+    if (c === ']') abreCorchete--;
+  }
+  // Cerrar lo que quedó abierto
+  for (let i = 0; i < abreCorchete; i++) t += ']';
+  for (let i = 0; i < abreLlave; i++) t += '}';
+  return t;
+}
+
 /** Llama a UN modelo específico de OpenRouter. Devuelve {ok, data, esRateLimit, error} */
 async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
@@ -15927,11 +15953,11 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
   const body = {
     model: modelo,
     messages: [
-      { role: 'system', content: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' },
+      { role: 'system', content: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido y COMPACTO, sin markdown, sin texto adicional. Mantén las respuestas cortas.' },
       { role: 'user', content: prompt }
     ],
     temperature: 0.40,
-    max_tokens: 8192
+    max_tokens: 4096
   };
 
   // Timeout de 30 segundos para evitar que se congele
@@ -15967,16 +15993,38 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
     if (!rawText) return { ok: false, esRateLimit: false, error: 'Respuesta vacía de OpenRouter' };
 
     const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+
+    // Intento 1: parsear directamente
     try {
       return { ok: true, data: JSON.parse(cleaned) };
-    } catch (e) {
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
-      }
-      console.error('JSON inválido de OpenRouter:', cleaned.substring(0, 300));
-      return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de OpenRouter' };
+    } catch (_) { }
+
+    // Intento 2: extraer bloque JSON
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch (_) { }
     }
+
+    // Intento 3: reparar JSON truncado
+    const reparado = _repararJsonTruncado(cleaned);
+    try {
+      const parsed = JSON.parse(reparado);
+      console.log('[IA-OpenRouter] JSON reparado exitosamente (estaba truncado)');
+      return { ok: true, data: parsed };
+    } catch (_) { }
+
+    // Intento 4: reparar dentro del bloque extraído
+    if (jsonMatch) {
+      const reparado2 = _repararJsonTruncado(jsonMatch[0]);
+      try {
+        const parsed = JSON.parse(reparado2);
+        console.log('[IA-OpenRouter] JSON reparado exitosamente (bloque extraído)');
+        return { ok: true, data: parsed };
+      } catch (_) { }
+    }
+
+    console.error('JSON inválido de OpenRouter (no se pudo reparar):', cleaned.substring(0, 300));
+    return { ok: false, esRateLimit: false, error: 'JSON inválido en respuesta de OpenRouter' };
   }
 
   const errJson = await resp.json().catch(() => ({}));
