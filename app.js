@@ -15601,8 +15601,8 @@ function _esperarConCountdown(ms, mensajeBase) {
 /** Modelos a intentar en orden (si uno da rate-limit, prueba el siguiente) */
 const MODELOS_GEMINI = [
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-2.0-flash-lite'
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash-latest'
 ];
 
 /** Modelos de Groq a intentar en orden */
