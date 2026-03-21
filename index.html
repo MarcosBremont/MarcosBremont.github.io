@@ -475,7 +475,7 @@
   <!-- ===== STEPPER ===== -->
   <div class="stepper-container">
     <div class="stepper" id="stepper">
-      <div class="step active" data-step="1">
+      <div class="step active" data-step="1" onclick="irAlPaso(1)" style="cursor:pointer;">
         <div class="step-circle">
           <span class="step-number">1</span>
           <span class="material-icons step-check hidden">check</span>
@@ -483,7 +483,7 @@
         <span class="step-label">Datos Generales</span>
       </div>
       <div class="step-line"></div>
-      <div class="step" data-step="2">
+      <div class="step" data-step="2" onclick="irAlPaso(2)" style="cursor:pointer;">
         <div class="step-circle">
           <span class="step-number">2</span>
           <span class="material-icons step-check hidden">check</span>
@@ -491,7 +491,7 @@
         <span class="step-label">Resultado de Aprendizaje</span>
       </div>
       <div class="step-line"></div>
-      <div class="step" data-step="3">
+      <div class="step" data-step="3" onclick="irAlPaso(3)" style="cursor:pointer;">
         <div class="step-circle">
           <span class="step-number">3</span>
           <span class="material-icons step-check hidden">check</span>
@@ -499,7 +499,7 @@
         <span class="step-label">Elementos de Capacidad</span>
       </div>
       <div class="step-line"></div>
-      <div class="step" data-step="4">
+      <div class="step" data-step="4" onclick="irAlPaso(4)" style="cursor:pointer;">
         <div class="step-circle">
           <span class="step-number">4</span>
           <span class="material-icons step-check hidden">check</span>
@@ -507,7 +507,7 @@
         <span class="step-label">Actividades</span>
       </div>
       <div class="step-line"></div>
-      <div class="step" data-step="5">
+      <div class="step" data-step="5" onclick="irAlPaso(5)" style="cursor:pointer;">
         <div class="step-circle">
           <span class="step-number">5</span>
           <span class="material-icons step-check hidden">check</span>
@@ -515,7 +515,7 @@
         <span class="step-label">Plan. Diaria</span>
       </div>
       <div class="step-line"></div>
-      <div class="step" data-step="6">
+      <div class="step" data-step="6" onclick="irAlPaso(6)" style="cursor:pointer;">
         <div class="step-circle">
           <span class="step-number">6</span>
           <span class="material-icons step-check hidden">check</span>
@@ -1980,6 +1980,26 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#E65100;">v14.0<span class="about-ver-fecha">Mar
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Plantillas Word, Editor de Prompts IA y nuevos instrumentos</div>
+              <ul class="about-ver-items">
+                <li><strong>Plantilla Word por centro:</strong> cada centro educativo puede subir su plantilla .docx con placeholders que se reemplazan con los datos de la planificación al exportar</li>
+                <li><strong>Editor de Prompts IA:</strong> nueva pestaña en Superadmin para ver y editar los 4 prompts que usa la IA, sin tocar código</li>
+                <li><strong>Contenidos del RA:</strong> campos opcionales para conceptuales, procedimentales y actitudinales que mejoran la generación con IA</li>
+                <li><strong>Nuevos instrumentos de evaluación:</strong> Escala de Valoración, Estimativa, Rango y Diario de Doble Entrada con generación automática de contenido</li>
+                <li><strong>Chip de instrumento:</strong> nombre del instrumento visible en cada tarjeta de planificación diaria</li>
+                <li><strong>Puntaje correcto:</strong> el instrumento ahora usa el valor real de la actividad como puntaje máximo</li>
+                <li><strong>Navegación por pasos:</strong> clic directo en los números del stepper para moverse entre secciones</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
