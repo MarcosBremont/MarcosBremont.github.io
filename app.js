@@ -4260,16 +4260,31 @@ function imprimirPDF() {
 async function _getPlantillaUrlCentro() {
   if (!window.currentUser) return null;
   try {
-    // Obtener centroId del usuario
+    // 1. Buscar centroId en perfiles
+    let centroId = null;
     const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
-    const centroId = userDoc.exists ? userDoc.data().centroId : null;
+    if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+
+    // 2. Buscar en colección usuarios
     if (!centroId) {
-      // Intentar desde colección usuarios
       const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
-      if (!userDoc2.exists || !userDoc2.data().centroId) return null;
-      return _getPlantillaFromCentro(userDoc2.data().centroId);
+      if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
     }
-    return _getPlantillaFromCentro(centroId);
+
+    // 3. Si tiene centroId, buscar plantilla de ese centro
+    if (centroId) {
+      const result = await _getPlantillaFromCentro(centroId);
+      if (result) return result;
+    }
+
+    // 4. Superadmin/sin centro: buscar cualquier centro que tenga plantilla
+    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaUrl', '!=', '').limit(1).get();
+    if (!snap.empty) {
+      const centro = snap.docs[0].data();
+      return { url: centro.plantillaUrl, centroNombre: centro.nombre || '' };
+    }
+
+    return null;
   } catch (e) {
     console.warn('[Plantilla] Error obteniendo centro:', e);
     return null;
@@ -4286,8 +4301,12 @@ async function _getPlantillaFromCentro(centroId) {
 
 /** Exporta usando la plantilla .docx del centro con docxtemplater */
 async function _exportarConPlantillaCentro() {
-  const Docxtemplater = window.docxtemplater || window.Docxtemplater;
-  if (typeof PizZip === 'undefined' || !Docxtemplater) return false;
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) {
+    console.warn('[Plantilla] PizZip o docxtemplater no disponible');
+    return false;
+  }
 
   const info = await _getPlantillaUrlCentro();
   if (!info) return false;
@@ -4350,8 +4369,7 @@ async function _exportarConPlantillaCentro() {
 
   // Procesar con docxtemplater
   const zip = new PizZip(arrayBuffer);
-  const DocxT = window.docxtemplater || window.Docxtemplater;
-  const doc = new DocxT(zip, {
+  const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
     delimiters: { start: '{', end: '}' }
@@ -4382,10 +4400,12 @@ async function _exportarConPlantillaCentro() {
 async function exportarWord() {
   // Intentar exportar con plantilla del centro si existe
   try {
+    console.log('[Exportar] Intentando con plantilla del centro...');
     const exported = await _exportarConPlantillaCentro();
     if (exported) return; // plantilla usada exitosamente
+    console.log('[Exportar] Sin plantilla, usando método HTML-Word');
   } catch (e) {
-    console.warn('[Plantilla] No se pudo usar plantilla del centro:', e.message);
+    console.warn('[Plantilla] No se pudo usar plantilla del centro:', e.message, e);
   }
 
   // Fallback: exportar como HTML-Word
