@@ -4278,10 +4278,10 @@ async function _getPlantillaUrlCentro() {
     }
 
     // 4. Superadmin/sin centro: buscar cualquier centro que tenga plantilla
-    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaUrl', '!=', '').limit(1).get();
+    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaBase64', '!=', '').limit(1).get();
     if (!snap.empty) {
       const centro = snap.docs[0].data();
-      return { url: centro.plantillaUrl, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+      return { base64: centro.plantillaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
     }
 
     return null;
@@ -4295,8 +4295,8 @@ async function _getPlantillaFromCentro(centroId) {
   const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
   if (!centroDoc.exists) return null;
   const centro = centroDoc.data();
-  if (!centro.plantillaUrl) return null;
-  return { url: centro.plantillaUrl, centroId, centroNombre: centro.nombre || '' };
+  if (!centro.plantillaBase64) return null;
+  return { base64: centro.plantillaBase64, centroId, centroNombre: centro.nombre || '' };
 }
 
 /** Exporta usando la plantilla .docx del centro con docxtemplater */
@@ -4313,17 +4313,11 @@ async function _exportarConPlantillaCentro() {
 
   mostrarToast('Exportando con plantilla del centro...', 'info');
 
-  // Descargar plantilla usando Firebase Storage SDK (evita CORS)
-  const ref = storage.ref('centros/' + info.centroId + '/plantilla.docx');
-  const downloadUrl = await ref.getDownloadURL();
-  const xhr = new XMLHttpRequest();
-  const arrayBuffer = await new Promise((resolve, reject) => {
-    xhr.responseType = 'arraybuffer';
-    xhr.onload = () => resolve(xhr.response);
-    xhr.onerror = () => reject(new Error('Error descargando plantilla'));
-    xhr.open('GET', downloadUrl);
-    xhr.send();
-  });
+  // Decodificar plantilla base64 almacenada en Firestore
+  const binaryStr = atob(info.base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  const arrayBuffer = bytes.buffer;
 
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
@@ -21965,7 +21959,7 @@ async function _mostrarFormCentro(centroId) {
     + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Planificación (.docx)</label>'
     + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx del centro con placeholders como <code>{familia_profesional}</code>, <code>{modulo_formativo}</code>, etc. '
     + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholders();" style="color:#7C4DFF;font-weight:600;">Ver lista de placeholders</a></p>'
-    + (centro.plantillaUrl
+    + (centro.plantillaBase64
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
         + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaNombre || 'plantilla.docx') + '</span>'
@@ -22030,14 +22024,20 @@ async function _guardarCentro(centroId) {
       finalId = docRef.id;
     }
 
-    // Subir plantilla después de tener el ID
+    // Guardar plantilla como base64 en Firestore
     if (file && finalId) {
-      mostrarToast('Subiendo plantilla...', 'info');
-      const ref = storage.ref('centros/' + finalId + '/plantilla.docx');
-      await ref.put(file);
-      const url = await ref.getDownloadURL();
+      mostrarToast('Guardando plantilla...', 'info');
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result;
+          resolve(result.split(',')[1]); // quitar prefijo data:...;base64,
+        };
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
       await db.collection(CENTROS_COLLECTION).doc(finalId).update({
-        plantillaUrl: url,
+        plantillaBase64: base64,
         plantillaNombre: file.name
       });
     }
@@ -22054,10 +22054,8 @@ async function _guardarCentro(centroId) {
 async function _eliminarPlantillaCentro(centroId) {
   if (!confirm('¿Eliminar la plantilla Word de este centro?')) return;
   try {
-    const ref = storage.ref('centros/' + centroId + '/plantilla.docx');
-    await ref.delete().catch(() => {}); // ignorar si no existe en storage
     await db.collection(CENTROS_COLLECTION).doc(centroId).update({
-      plantillaUrl: firebase.firestore.FieldValue.delete(),
+      plantillaBase64: firebase.firestore.FieldValue.delete(),
       plantillaNombre: firebase.firestore.FieldValue.delete()
     });
     mostrarToast('Plantilla eliminada', 'success');
