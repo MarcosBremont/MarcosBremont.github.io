@@ -4325,22 +4325,23 @@ async function _exportarConPlantillaCentro() {
   const ecs = planificacion.elementosCapacidad || [];
 
   // Construir tabla de EC + Actividades
-  const tablaECActividades = [];
+  // Construir filas para loop de docxtemplater (tabla en Word)
+  const actividades = [];
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
     actsEC.forEach((a, i) => {
-      tablaECActividades.push({
+      actividades.push({
         ec_codigo: ec.codigo || '',
         ec_enunciado: i === 0 ? (ec.enunciado || '') : '',
         ec_nivel: i === 0 ? (ec.nivel || ec.nivelBloom || '') : '',
         act_enunciado: a.enunciado || '',
-        act_fecha: a.fechaStr || a.fecha || '',
+        act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
         act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || ''
       });
     });
   });
 
-  // Datos para placeholders
+  // Datos para placeholders — todo como string, nunca undefined
   const data = {
     familia_profesional: dg.familiaProfesional || '',
     codigo_fp: dg.codigoFP || '',
@@ -4349,11 +4350,11 @@ async function _exportarConPlantillaCentro() {
     modulo_formativo: dg.moduloFormativo || '',
     codigo_mf: dg.codigoModulo || '',
     nombre_docente: dg.nombreDocente || '',
-    unidad_competencia: dg.unidadCompetencia || '',
-    codigo_uc: dg.codigoUC || '',
-    cantidad_ra: dg.cantidadRA || '',
-    valor_ra: dg.valorRA || '',
-    horas_semana: dg.horasSemana || '',
+    unidad_competencia: dg.unidadCompetencia || dg.competenciaAsociada || '',
+    codigo_uc: dg.codigoUC || dg.codigoCompetencia || '',
+    cantidad_ra: String(dg.cantidadRA || ''),
+    valor_ra: String(dg.valorRA || ''),
+    horas_semana: String(dg.horasSemana || ''),
     fecha_inicio: dg.fechaInicio || '',
     fecha_termino: dg.fechaTermino || '',
     resultado_aprendizaje: ra.descripcion || '',
@@ -4364,8 +4365,8 @@ async function _exportarConPlantillaCentro() {
     criterios_evaluacion: ra.criterios || '',
     recursos_didacticos: ra.recursos || ra.recursosDid || '',
     centro_educativo: info.centroNombre || '',
-    // Tabla de EC y Actividades (para loops en docxtemplater)
-    actividades: tablaECActividades
+    // Array para loop en tabla: {#actividades}...{/actividades}
+    actividades: actividades
   };
 
   // Procesar con docxtemplater
@@ -4373,7 +4374,8 @@ async function _exportarConPlantillaCentro() {
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
     linebreaks: true,
-    delimiters: { start: '{', end: '}' }
+    delimiters: { start: '{', end: '}' },
+    nullGetter: () => ''
   });
   doc.render(data);
 
@@ -22089,9 +22091,30 @@ function _mostrarGuiaPlaceholders() {
     ['{contenidos_actitudinales}', 'Contenidos actitudinales'],
     ['{criterios_evaluacion}', 'Criterios de evaluación del currículo'],
     ['{recursos_didacticos}', 'Recursos didácticos disponibles'],
-    ['{centro_educativo}', 'Nombre del centro educativo'],
-    ['{tabla_ec_actividades}', 'Tabla completa de EC y actividades (se inserta como tabla)']
+    ['{centro_educativo}', 'Nombre del centro educativo']
   ];
+
+  const tablaInfo = `<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">
+    <strong style="color:#E65100;font-size:0.82rem;">Tabla de EC y Actividades (loop):</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">En tu plantilla Word, crea una tabla con una fila de datos y pon estos tags en las celdas:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.75rem;margin:6px 0;">
+      <tr style="background:#E65100;color:#fff;">
+        <th style="padding:4px 8px;border:1px solid #E65100;">Celda 1</th>
+        <th style="padding:4px 8px;border:1px solid #E65100;">Celda 2</th>
+        <th style="padding:4px 8px;border:1px solid #E65100;">Celda 3</th>
+        <th style="padding:4px 8px;border:1px solid #E65100;">Celda 4</th>
+        <th style="padding:4px 8px;border:1px solid #E65100;">Celda 5</th>
+      </tr>
+      <tr>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{#actividades}{ec_enunciado}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{ec_nivel}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_enunciado}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_fecha}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_instrumento}{/actividades}</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;"><code>{#actividades}</code> abre el loop y <code>{/actividades}</code> lo cierra. La fila se repite por cada actividad.</p>
+  </div>`;
   const rows = placeholders.map(([ph, desc]) =>
     '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#4527A0;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
     + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
@@ -22104,6 +22127,7 @@ function _mostrarGuiaPlaceholders() {
     + '<thead><tr><th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Placeholder</th>'
     + '<th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Dato que inserta</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table></div>'
+    + tablaInfo
     + '<p style="font-size:0.75rem;color:#9E9E9E;margin-top:10px;">Tip: En tu archivo Word, simplemente escribe el placeholder (ej: <code>{familia_profesional}</code>) donde quieras que aparezca el dato.</p>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
