@@ -4281,7 +4281,7 @@ async function _getPlantillaUrlCentro() {
     const snap = await db.collection(CENTROS_COLLECTION).where('plantillaUrl', '!=', '').limit(1).get();
     if (!snap.empty) {
       const centro = snap.docs[0].data();
-      return { url: centro.plantillaUrl, centroNombre: centro.nombre || '' };
+      return { url: centro.plantillaUrl, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
     }
 
     return null;
@@ -4296,7 +4296,7 @@ async function _getPlantillaFromCentro(centroId) {
   if (!centroDoc.exists) return null;
   const centro = centroDoc.data();
   if (!centro.plantillaUrl) return null;
-  return { url: centro.plantillaUrl, centroNombre: centro.nombre || '' };
+  return { url: centro.plantillaUrl, centroId, centroNombre: centro.nombre || '' };
 }
 
 /** Exporta usando la plantilla .docx del centro con docxtemplater */
@@ -4313,10 +4313,17 @@ async function _exportarConPlantillaCentro() {
 
   mostrarToast('Exportando con plantilla del centro...', 'info');
 
-  // Descargar plantilla
-  const response = await fetch(info.url);
-  if (!response.ok) throw new Error('No se pudo descargar la plantilla');
-  const arrayBuffer = await response.arrayBuffer();
+  // Descargar plantilla usando Firebase Storage SDK (evita CORS)
+  const ref = storage.ref('centros/' + info.centroId + '/plantilla.docx');
+  const downloadUrl = await ref.getDownloadURL();
+  const xhr = new XMLHttpRequest();
+  const arrayBuffer = await new Promise((resolve, reject) => {
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = () => resolve(xhr.response);
+    xhr.onerror = () => reject(new Error('Error descargando plantilla'));
+    xhr.open('GET', downloadUrl);
+    xhr.send();
+  });
 
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
