@@ -1500,7 +1500,7 @@ function _generarEscalaValoracion(actividad, nivel) {
     tipo: 'valoracion', tipoLabel: 'Escala de Valoración',
     titulo: `Escala de Valoración – ${actividad.enunciado.split(':')[0]}`,
     actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
-    niveles, puntajeMax: criterios.length * 5,
+    niveles, puntajeMax: parseFloat(actividad.valor) || criterios.length * 5,
     instrucciones: 'Marque el nivel que mejor describe el desempeño del estudiante en cada criterio.',
     criterios: criterios.map((c, i) => ({
       numero: i + 1, criterio: c,
@@ -1521,7 +1521,7 @@ function _generarEscalaEstimativa(actividad, nivel) {
     tipo: 'estimativa', tipoLabel: 'Escala Estimativa',
     titulo: `Escala Estimativa – ${actividad.enunciado.split(':')[0]}`,
     actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
-    niveles: frecuencias, puntajeMax: criterios.length * 4,
+    niveles: frecuencias, puntajeMax: parseFloat(actividad.valor) || criterios.length * 4,
     instrucciones: 'Indique la frecuencia con la que el estudiante demuestra cada criterio.',
     criterios: criterios.map((c, i) => ({
       numero: i + 1, criterio: c,
@@ -1542,7 +1542,7 @@ function _generarEscalaRango(actividad, nivel) {
     tipo: 'rango', tipoLabel: 'Escala de Rango',
     titulo: `Escala de Rango – ${actividad.enunciado.split(':')[0]}`,
     actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
-    niveles: rangos, puntajeMax: criterios.length * 10,
+    niveles: rangos, puntajeMax: parseFloat(actividad.valor) || criterios.length * 10,
     instrucciones: 'Asigne el rango de puntuación que corresponda al desempeño del estudiante.',
     criterios: criterios.map((c, i) => ({
       numero: i + 1, criterio: c,
@@ -1564,7 +1564,7 @@ function _generarDiarioDobleEntrada(actividad, nivel) {
     tipo: 'diario', tipoLabel: 'Diario de Doble Entrada',
     titulo: `Diario de Doble Entrada – ${actividad.enunciado.split(':')[0]}`,
     actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
-    niveles: [], puntajeMax: aspectos.length * 2,
+    niveles: [], puntajeMax: parseFloat(actividad.valor) || aspectos.length * 2,
     instrucciones: 'El estudiante completa la columna "Mi reflexión" para cada aspecto. El docente evalúa con 0-2 puntos.',
     criterios: aspectos.map((c, i) => ({
       numero: i + 1, criterio: c, texto: c
@@ -1654,7 +1654,7 @@ function generarListaCotejo(actividad, nivel) {
 
 
 
-    puntaje: 100,
+    puntaje: parseFloat(actividad.valor) || 100,
 
 
 
@@ -1770,7 +1770,7 @@ function generarRubrica(actividad, nivel) {
 
 
 
-    puntajeMax: criterios.length * 4,
+    puntajeMax: parseFloat(actividad.valor) || criterios.length * 4,
 
 
 
@@ -16413,7 +16413,7 @@ function aplicarRespuestaIA(aiData, fechasClase) {
               ? niveles.map(n => `${c} – ${n.nombre}.`)
               : (c.descriptores || niveles.map(n => `${c.criterio} – ${n.nombre}.`))
           })),
-          puntajeMax: det.criterios.length * 4,
+          puntajeMax: parseFloat(act.valor) || det.criterios.length * 4,
           instrucciones: det.instrucciones || 'Seleccione el nivel de desempeño alcanzado en cada criterio.'
         };
       } else {
@@ -16431,7 +16431,7 @@ function aplicarRespuestaIA(aiData, fechasClase) {
             observacion: ''
           })),
           escala: ['Logrado', 'No Logrado'],
-          puntaje: 100,
+          puntaje: parseFloat(act.valor) || 100,
           instrucciones: det.instrucciones || 'Marque con ✓ según el desempeño observado.'
         };
       }
