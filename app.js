@@ -13811,14 +13811,14 @@ async function _generarSesionConIA(actId, act, ec) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
   mostrarToast('🧠 Generando sesión personalizada con IA...', 'info');
 
-  const prompt = `Eres un planificador educativo. Genera una sesión de clase para:
-Módulo: ${dg.moduloFormativo || ''} | ${dg.familiaProfesional || ''}
-Actividad: ${act.enunciado}
-EC: ${ec?.enunciado || ''} (Bloom: ${ec?.nivel || 'aplicación'})
-Duración: ${minTotal}min (Inicio:${minInicio}, Desarrollo:${minDesarr}, Cierre:${minCierre})
-
-RESPONDE SOLO JSON, sin markdown. USA EXACTAMENTE estas 7 claves:
-{"apertura":"pregunta motivadora y activación de conocimientos previos (${minInicio}min)","encuadre":"objetivo de la sesión y criterios de evaluación","organizacion":"cómo se organizan los estudiantes y materiales","procedimental":"desarrollo paso a paso con bloques numerados y tiempos (${minDesarr}min)","conceptual":"reflexión y ejemplo real del campo profesional","sintesis":"cierre con recapitulación y evaluación formativa (${minCierre}min)","estrategias":"3 estrategias didácticas con justificación"}`;
+  const prompt = await _getPromptResuelto('prompt_sesion', {
+    moduloFormativo: dg.moduloFormativo || '',
+    familiaProfesional: dg.familiaProfesional || '',
+    actividad: act.enunciado,
+    ecEnunciado: ec?.enunciado || '',
+    nivelBloom: ec?.nivel || 'aplicación',
+    minTotal, minInicio, minDesarrollo: minDesarr, minCierre
+  });
 
   try {
     let data = null;
@@ -15774,7 +15774,7 @@ function actualizarBtnConfigIA() {
 // CONSTRUCTOR DEL PROMPT
 // ─────────────────────────────────────────────────────────────
 
-function construirPromptBase(dg, ra) {
+async function construirPromptBase(dg, ra) {
   const diasClaseObj = dg.diasClase || {};
   const diasArr = Object.entries(diasClaseObj)
     .filter(([_k, v]) => v && v.activo)
@@ -15812,82 +15812,33 @@ function construirPromptBase(dg, ra) {
     }
   }
 
-  return `Asume el rol de docente experto en educación técnico profesional de República Dominicana.
-Responde SOLO con JSON válido, sin markdown, sin texto extra.
+  const ecCodigosLista = ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n');
+  const ecCodigosJSON = ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"VERBO + OBJETO + MODO DE HACER"}`).join(',\n');
+  const actEsperadasJSON = actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}"}`).join(',\n');
 
-Estoy elaborando una planificación por RA para el módulo "${dg.moduloFormativo || ''}" de la familia "${dg.familiaProfesional || ''}". Horario: ${diasStr}.
-
-RESULTADO DE APRENDIZAJE (RA): ${ra.descripcion || ''}
-
-CRITERIOS DE EVALUACIÓN (solo para guiarte temáticamente, NO los copies como EC):
-${ra.criterios || 'No especificados'}
-
-RECURSOS: ${ra.recursosDid || 'Pizarrón, guías'}
-
-TAREA: Elabora ${cantEC} Elementos de Capacidad (EC) siguiendo la Taxonomía de Bloom.
-
-REGLAS PARA LOS EC:
-- Cada EC debe tener la estructura: VERBO + OBJETO + MODO DE HACER
-- Los EC NO son los criterios de evaluación. Los criterios son solo referencia temática.
-- NUNCA copies ni parafrasees los criterios de evaluación como EC.
-- NUNCA menciones "CE1", "CE2", "criterios de evaluación", "en correspondencia con" en los enunciados.
-- El VERBO debe corresponder al nivel de Bloom asignado:
-  * Conocimiento: Identificar, Reconocer, Clasificar, Enumerar, Definir
-  * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
-  * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
-  * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
-- El OBJETO es lo que el estudiante aprende (específico al módulo, pero redactado de forma original)
-- El MODO DE HACER es cómo o para qué lo aprende
-
-EJEMPLO de EC bien redactado (para un módulo de programación):
-  ❌ MAL: "Crear un formulario web con validaciones HTML5" (esto es copiar un criterio)
-  ✅ BIEN: "Aplicar técnicas de validación de datos de entrada en interfaces web, utilizando estándares y buenas prácticas del desarrollo front-end."
-
-Códigos y niveles de los ${cantEC} EC:
-${ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n')}
-
-REGLAS PARA LAS ACTIVIDADES:
-- Genera ${actsPorEC} actividad(es) por cada EC = ${totalActs} actividades en total.
-- Cada actividad es una TAREA CONCRETA que el estudiante realiza, NO es lo mismo que el EC.
-- Las actividades NO deben repetir el enunciado del EC. Son tareas prácticas distintas.
-- PROHIBIDO: poner "Práctica de laboratorio: [copiar el EC]". Eso está MAL.
-- Cada actividad del mismo EC debe ser DIFERENTE entre sí. Varía el tipo de actividad.
-- Tipos de actividad válidos: Investigación, Práctica guiada, Exposición, Debate, Taller, Estudio de caso, Proyecto, Ejercicio práctico, Análisis comparativo, Presentación, Cuestionario, Mapa conceptual, Role-playing
-- Ejemplo CORRECTO para un EC de "Identificar componentes de un sistema":
-  * "Investigación: Elaborar un cuadro comparativo de los componentes de hardware y software de un sistema"
-  * "Taller: Clasificar componentes de un sistema real proporcionado por el docente"
-  * "Exposición: Presentar en equipos los tipos de sistemas de información según su función"
-
-JSON requerido (respetar esta estructura exacta):
-{
-  "nivelBloomRA": "(conocimiento|comprension|aplicacion|sintesis|evaluacion)",
-  "elementosCapacidad": [
-${ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"VERBO + OBJETO + MODO DE HACER"}`).join(',\n')}
-  ],
-  "actividades": [
-${actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}"}`).join(',\n')}
-  ]
-}`;
+  return _getPromptResuelto('prompt_base', {
+    moduloFormativo: dg.moduloFormativo || '',
+    familiaProfesional: dg.familiaProfesional || '',
+    diasStr,
+    raDescripcion: ra.descripcion || '',
+    raCriterios: ra.criterios || 'No especificados',
+    raRecursos: ra.recursosDid || 'Pizarrón, guías',
+    cantEC, actsPorEC, totalActs,
+    ecCodigosLista, ecCodigosJSON, actEsperadasJSON
+  });
 }
 
-function construirPromptInstrumentos(dg, ra, actividades, elementosCapacidad) {
+async function construirPromptInstrumentos(dg, ra, actividades, elementosCapacidad) {
   const acts = actividades.map(a => {
     const ec = elementosCapacidad.find(e => e.codigo === a.ecCodigo) || {};
     return `- [${a.ecCodigo}] "${a.enunciado}" | tipo: ${a.instrumento} | nivel: ${ec.nivel || ''}`;
   }).join('\n');
 
-  return `Docente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown. Sé BREVE y COMPACTO.
-
-MÓDULO: ${dg.moduloFormativo || ''} | RA: ${ra.descripcion || ''}
-
-Para cada actividad genera SOLO el instrumento (sin sesión). Criterios cortos (máx 10 palabras c/u).
-ACTIVIDADES:
-${acts}
-
-JSON (exactamente este formato, SIN campos extra):
-{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título corto","instrucciones":"Instrucción breve.","criterios":["Criterio 1","Criterio 2","Criterio 3","Criterio 4","Criterio 5"]}}]}
-Para rúbrica: {"criterio":"...","descriptores":["Excelente: breve","Bueno: breve","En proceso: breve","Insuficiente: breve"]}
-IMPORTANTE: Responde COMPACTO. No incluyas sesionDiaria. Solo instrumentoDetalle.`;
+  return _getPromptResuelto('prompt_instrumentos', {
+    moduloFormativo: dg.moduloFormativo || '',
+    raDescripcion: ra.descripcion || '',
+    actividadesLista: acts
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -15998,7 +15949,7 @@ async function _llamarGroqConFallback(prompt, mensajeToast) {
 }
 
 /** Genera detalle (instrumento + sesión) para UNA sola actividad */
-function construirPromptDetalleUno(dg, ra, act, ec) {
+async function construirPromptDetalleUno(dg, ra, act, ec) {
   const tipo = act.instrumento === 'rubrica' ? 'rubrica' : 'cotejo';
   const horasSesion = ec && ec.horasAsignadas ? Math.round((ec.horasAsignadas / 2) * 10) / 10 : 1.5;
   const minTotal = Math.round(horasSesion * 60);
@@ -16029,52 +15980,17 @@ function construirPromptDetalleUno(dg, ra, act, ec) {
     ]
   }`;
 
-  return `Eres docente experto en educación técnico-profesional. Responde SOLO con JSON válido, sin markdown.
-
-MÓDULO: ${dg.moduloFormativo || ''}
-FAMILIA PROFESIONAL: ${dg.familiaProfesional || ''}
-RA: ${ra.descripcion || ''}
-ACTIVIDAD: ${act.enunciado}
-EC: ${ec?.enunciado || ''} | Nivel Bloom: ${ec?.nivel || ''}
-RECURSOS DISPONIBLES: ${ra.recursosDid || 'pizarrón, guías de trabajo, computadoras'}
-DURACIÓN TOTAL: ${minTotal} minutos (Inicio: ${minInicio} min | Desarrollo: ${minDesarrollo} min | Cierre: ${minCierre} min)
-
-INSTRUCCIÓN PRINCIPAL:
-Genera una planificación de sesión diaria MUY DETALLADA Y EXTENSA, como si fuera una guía didáctica completa.
-Cada momento debe tener subtemas, pasos numerados, preguntas concretas, dinámicas específicas y tiempos parciales.
-
-REFERENCIA DE NIVEL DE DETALLE (adapta al tema del módulo, NO copies esto):
-- INICIO debe incluir: bienvenida con pregunta detonante específica al tema, activación de conocimientos previos con preguntas concretas, presentación del objetivo y metodología
-- DESARROLLO debe incluir: bloques temáticos numerados con tiempos, actividades paso a paso, preguntas de verificación de comprensión, ejemplos concretos del campo profesional, dinámicas (individual, parejas, equipos)
-- CIERRE debe incluir: síntesis con pregunta reflexiva específica, evaluación formativa rápida (quiz verbal o escrito con preguntas concretas), tarea para casa si aplica, anuncio del próximo tema
-
-IMPORTANTE:
-- Usa vocabulario específico del módulo "${dg.moduloFormativo || ''}" y la familia profesional "${dg.familiaProfesional || ''}"
-- Las preguntas deben ser CONCRETAS al tema, no genéricas
-- Los pasos del desarrollo deben ser ESPECÍFICOS con tiempos parciales (Ej: "Bloque 1 (15 min): ...")
-- Incluye al menos 3 preguntas detonantes específicas al tema
-- El campo "procedimental" debe tener mínimo 5 pasos detallados con subtemas
-- El campo "apertura" debe tener mínimo 3 secciones: bienvenida/contexto, activación de saberes previos, presentación del objetivo
-
-Genera exactamente este JSON:
-{
-  ${instPrompt},
-  "sesionDiaria": {
-    "apertura": "INICIO (${minInicio} minutos)\\n\\n1. Bienvenida y contextualización (X min)\\n   • [Descripción específica del saludo y conexión con el tema]\\n   • Pregunta motivadora: \\"[pregunta concreta al tema]\\"\\n\\n2. Activación de conocimientos previos (X min)\\n   • Pregunta detonante: \\"[pregunta específica al campo profesional]\\"\\n   • [Dinámica específica: lluvia de ideas, preguntas orales, etc.]\\n   • [Segunda pregunta de exploración]\\n\\n3. Presentación del objetivo y metodología (X min)\\n   • Objetivo de la sesión: [objetivo específico]\\n   • Dinámica de trabajo: [individual/parejas/equipos con justificación]\\n   • Criterios de evaluación: [mencionar el instrumento que se usará]",
-
-    "encuadre": "Propósito específico y detallado de la sesión en relación con el EC y el RA. Explica QUÉ van a aprender, POR QUÉ es importante para su perfil profesional y CÓMO se conecta con competencias previas o futuras. Mínimo 3-4 oraciones concretas al tema.",
-
-    "organizacion": "Describe la organización pedagógica completa: cómo se forman los grupos o si es individual, roles de cada integrante si aplica, materiales que necesita cada quien, normas de participación específicas para esta actividad, y criterios de evaluación compartidos con los estudiantes.",
-
-    "procedimental": "DESARROLLO (${minDesarrollo} minutos)\\n\\nBloque 1: [Nombre del primer bloque temático] (X min)\\n• [Descripción detallada del contenido teórico con ejemplos]\\n• Demostración práctica: [qué hace el docente paso a paso]\\n• Pregunta de verificación: \\"[pregunta concreta]\\"\\n\\nBloque 2: [Nombre del segundo bloque] (X min)\\n• Actividad de investigación/práctica: [descripción detallada]\\n• Paso 1: [acción específica que hacen los estudiantes]\\n• Paso 2: [siguiente acción]\\n• Paso 3: [siguiente acción]\\n• Paso 4: [siguiente acción]\\n• Puesta en común: [cómo comparten resultados]\\n\\nBloque 3: [Nombre del tercer bloque si aplica] (X min)\\n• [Actividad integradora o de profundización]\\n• [Análisis comparativo o reflexión guiada]",
-
-    "conceptual": "Reflexión conceptual profunda: explica la conexión del tema con el entorno laboral real del ${dg.familiaProfesional || 'campo profesional'}. Incluye: (1) un ejemplo de caso real de la profesión, (2) cómo este conocimiento se aplica en el día a día laboral, (3) pregunta reflexiva metacognitiva: [pregunta concreta]. Mínimo 4-5 oraciones.",
-
-    "sintesis": "CIERRE (${minCierre} minutos)\\n\\n1. Síntesis y consolidación (X min)\\n   • Recapitulación: [conceptos clave aprendidos listados]\\n   • Pregunta reflexiva final: \\"[pregunta específica al tema]\\"\\n   • [Actividad de cierre: mural de compromisos, tarjeta de salida, etc.]\\n\\n2. Evaluación formativa rápida (X min)\\n   • Preguntas orales o escritas:\\n     - [Pregunta 1 específica al tema]\\n     - [Pregunta 2 específica al tema]\\n     - [Pregunta 3 específica al tema]\\n   • Modalidad: [verbal/escrita/Kahoot/Mentimeter]\\n\\n3. Tarea y próximos pasos (X min)\\n   • Asignación: [tarea específica relacionada al tema si aplica]\\n   • Próxima clase: [tema siguiente]\\n   • Feedback: \\"¿Qué les pareció más interesante de hoy?\\"",
-
-    "estrategias": "• [Estrategia 1 con nombre]: [descripción de cómo se aplica en esta sesión y justificación pedagógica de por qué es adecuada para este nivel Bloom: ${ec?.nivel || 'aplicacion'}]\\n• [Estrategia 2 con nombre]: [descripción y justificación]\\n• [Estrategia 3 con nombre]: [descripción y justificación]\\n• [Estrategia 4 con nombre si aplica]: [descripción y justificación]"
-  }
-}`;
+  return _getPromptResuelto('prompt_detalle_uno', {
+    moduloFormativo: dg.moduloFormativo || '',
+    familiaProfesional: dg.familiaProfesional || '',
+    raDescripcion: ra.descripcion || '',
+    actividad: act.enunciado,
+    ecEnunciado: ec?.enunciado || '',
+    nivelBloom: ec?.nivel || '',
+    recursos: ra.recursosDid || 'pizarrón, guías de trabajo, computadoras',
+    minTotal, minInicio, minDesarrollo, minCierre,
+    instrPrompt: instPrompt
+  });
 }
 
 
@@ -16085,7 +16001,7 @@ async function generarConGroq(dg, ra, fechasClase) {
   if (!groqKey) return null;
 
   // --- LLAMADA 1: EC y Actividades ---
-  const promptBase = construirPromptBase(dg, ra);
+  const promptBase = await construirPromptBase(dg, ra);
   console.log('[IA] ========= PROMPT ENVIADO =========');
   console.log(promptBase);
   console.log('[IA] ===================================');
@@ -16119,7 +16035,7 @@ async function generarConGroq(dg, ra, fechasClase) {
     if (openrouterKey) {
       try {
         mostrarToast('🔵 Generando instrumentos (OpenRouter)…', 'info');
-        const promptInst = construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+        const promptInst = await construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
         const instData = await _llamarOpenRouterConFallback(promptInst, openrouterKey, 'Instrumentos');
         if (instData && instData.detalles && Array.isArray(instData.detalles)) {
           console.log(`[IA-OpenRouter] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
@@ -16146,7 +16062,7 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
   if (!apiKey) return null;
 
   // --- LLAMADA 1: EC y Actividades ---
-  const promptBase = construirPromptBase(dg, ra);
+  const promptBase = await construirPromptBase(dg, ra);
   console.log('[IA-OpenRouter] ========= PROMPT ENVIADO =========');
   console.log(promptBase);
   console.log('[IA-OpenRouter] ===================================');
@@ -21493,7 +21409,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones' };
+  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', prompts: 'tab-sa-prompts' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -21503,6 +21419,284 @@ function switchTabSuperadmin(tab) {
   if (tab === 'centros') _renderCentrosEducativos();
   else if (tab === 'admins') _renderEmailsSuperadmin();
   else if (tab === 'opciones') _renderOpcionesDocentes();
+  else if (tab === 'prompts') _renderPromptsIA();
+}
+
+// ── EDITOR DE PROMPTS IA ─────────────────────────────────────────
+
+const PROMPTS_IA_DEFS = [
+  {
+    key: 'prompt_sesion',
+    label: 'Prompt — Sesión Diaria',
+    icono: 'school',
+    desc: 'Prompt para generar la sesión de clase de una actividad individual. Variables disponibles: {{moduloFormativo}}, {{familiaProfesional}}, {{actividad}}, {{ecEnunciado}}, {{nivelBloom}}, {{minTotal}}, {{minInicio}}, {{minDesarrollo}}, {{minCierre}}'
+  },
+  {
+    key: 'prompt_base',
+    label: 'Prompt — Estructura Base (EC + Actividades)',
+    icono: 'account_tree',
+    desc: 'Prompt para generar los Elementos de Capacidad y actividades a partir del RA. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{diasStr}}, {{raDescripcion}}, {{raCriterios}}, {{raRecursos}}, {{cantEC}}, {{actsPorEC}}, {{totalActs}}, {{ecCodigosLista}}, {{actEsperadasLista}}'
+  },
+  {
+    key: 'prompt_instrumentos',
+    label: 'Prompt — Instrumentos de Evaluación',
+    icono: 'checklist',
+    desc: 'Prompt para generar los instrumentos de evaluación en lote. Variables: {{moduloFormativo}}, {{raDescripcion}}, {{actividadesLista}}'
+  },
+  {
+    key: 'prompt_detalle_uno',
+    label: 'Prompt — Detalle Completo (Instrumento + Sesión)',
+    icono: 'description',
+    desc: 'Prompt para generar el detalle completo de una sola actividad. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{raDescripcion}}, {{actividad}}, {{ecEnunciado}}, {{nivelBloom}}, {{recursos}}, {{minTotal}}, {{minInicio}}, {{minDesarrollo}}, {{minCierre}}, {{instrPrompt}}'
+  }
+];
+
+let _promptsIACache = null;
+
+async function _cargarPromptsIA() {
+  if (_promptsIACache) return _promptsIACache;
+  try {
+    const doc = await db.collection('config').doc('prompts_ia').get();
+    _promptsIACache = doc.exists ? doc.data() : {};
+    return _promptsIACache;
+  } catch (e) {
+    console.error('[Prompts IA] Error cargando:', e);
+    return {};
+  }
+}
+
+async function _guardarPromptIA(key, texto) {
+  try {
+    await db.collection('config').doc('prompts_ia').set({ [key]: texto }, { merge: true });
+    _promptsIACache = null; // invalidar cache
+    mostrarToast('Prompt guardado correctamente', 'success');
+  } catch (e) {
+    console.error('[Prompts IA] Error guardando:', e);
+    mostrarToast('Error al guardar prompt: ' + e.message, 'error');
+  }
+}
+
+async function _resetearPromptIA(key) {
+  try {
+    await db.collection('config').doc('prompts_ia').set({ [key]: firebase.firestore.FieldValue.delete() }, { merge: true });
+    _promptsIACache = null;
+    mostrarToast('Prompt restaurado al valor por defecto', 'success');
+    _renderPromptsIA();
+  } catch (e) {
+    console.error('[Prompts IA] Error reseteando:', e);
+    mostrarToast('Error al restaurar prompt: ' + e.message, 'error');
+  }
+}
+
+function _getPromptDefaultByKey(key) {
+  if (key === 'prompt_sesion') return _DEFAULT_PROMPT_SESION;
+  if (key === 'prompt_base') return _DEFAULT_PROMPT_BASE;
+  if (key === 'prompt_instrumentos') return _DEFAULT_PROMPT_INSTRUMENTOS;
+  if (key === 'prompt_detalle_uno') return _DEFAULT_PROMPT_DETALLE_UNO;
+  return '';
+}
+
+async function _renderPromptsIA() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando prompts...</div>';
+
+  const saved = await _cargarPromptsIA();
+
+  let html = `<div style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="material-icons" style="color:#7C4DFF;">psychology</span>
+      <h3 style="margin:0;font-size:1rem;color:#424242;">Editor de Prompts de IA</h3>
+    </div>
+    <p style="font-size:0.8rem;color:#78909C;margin:0 0 16px;">
+      Modifica los prompts que usa la IA para generar contenido. Usa las variables entre <code>{{llaves}}</code> para insertar datos dinámicos.
+      Si dejas un prompt vacío o lo restauras, se usará el valor por defecto del sistema.
+    </p>
+  </div>`;
+
+  PROMPTS_IA_DEFS.forEach(p => {
+    const savedVal = saved[p.key] || '';
+    const defaultVal = _getPromptDefaultByKey(p.key);
+    const isCustom = savedVal && savedVal !== defaultVal;
+    const displayVal = savedVal || defaultVal;
+    const badgeColor = isCustom ? '#E65100' : '#4CAF50';
+    const badgeText = isCustom ? 'Personalizado' : 'Por defecto';
+
+    html += `<div style="margin-bottom:20px;border:1px solid #E0E0E0;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#F5F5F5;cursor:pointer;"
+           onclick="document.getElementById('prompt-body-${p.key}').classList.toggle('hidden');">
+        <span class="material-icons" style="font-size:20px;color:#7C4DFF;">${p.icono}</span>
+        <strong style="flex:1;font-size:0.88rem;">${p.label}</strong>
+        <span style="font-size:0.7rem;background:${badgeColor};color:#fff;padding:2px 8px;border-radius:10px;">${badgeText}</span>
+        <span class="material-icons" style="font-size:18px;color:#9E9E9E;">expand_more</span>
+      </div>
+      <div id="prompt-body-${p.key}" class="hidden" style="padding:12px 16px;">
+        <p style="font-size:0.75rem;color:#78909C;margin:0 0 8px;">${p.desc}</p>
+        <textarea id="prompt-ta-${p.key}" style="width:100%;min-height:200px;font-family:monospace;font-size:0.78rem;
+          border:1px solid #CFD8DC;border-radius:8px;padding:10px;resize:vertical;line-height:1.5;
+          background:#FAFAFA;box-sizing:border-box;">${_escapeHTMLForTextarea(displayVal)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap;">
+          <button onclick="_resetearPromptIA('${p.key}')"
+            style="padding:6px 14px;border:1px solid #E0E0E0;border-radius:8px;background:#fff;color:#616161;font-size:0.78rem;cursor:pointer;">
+            <span class="material-icons" style="font-size:14px;vertical-align:middle;">restart_alt</span> Restaurar por defecto
+          </button>
+          <button onclick="_guardarPromptIADesdeEditor('${p.key}')"
+            style="padding:6px 14px;border:none;border-radius:8px;background:#7C4DFF;color:#fff;font-size:0.78rem;cursor:pointer;font-weight:600;">
+            <span class="material-icons" style="font-size:14px;vertical-align:middle;">save</span> Guardar
+          </button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  cont.innerHTML = html;
+}
+
+function _escapeHTMLForTextarea(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _guardarPromptIADesdeEditor(key) {
+  const ta = document.getElementById('prompt-ta-' + key);
+  if (!ta) return;
+  const texto = ta.value.trim();
+  const defaultVal = _getPromptDefaultByKey(key);
+  if (!texto || texto === defaultVal) {
+    _resetearPromptIA(key);
+  } else {
+    _guardarPromptIA(key, texto);
+  }
+}
+
+// ── PROMPTS POR DEFECTO (templates con {{variables}}) ────────────
+
+const _DEFAULT_PROMPT_SESION = `Eres un planificador educativo. Genera una sesión de clase para:
+Módulo: {{moduloFormativo}} | {{familiaProfesional}}
+Actividad: {{actividad}}
+EC: {{ecEnunciado}} (Bloom: {{nivelBloom}})
+Duración: {{minTotal}}min (Inicio:{{minInicio}}, Desarrollo:{{minDesarrollo}}, Cierre:{{minCierre}})
+
+RESPONDE SOLO JSON, sin markdown. USA EXACTAMENTE estas 7 claves:
+{"apertura":"pregunta motivadora y activación de conocimientos previos ({{minInicio}}min)","encuadre":"objetivo de la sesión y criterios de evaluación","organizacion":"cómo se organizan los estudiantes y materiales","procedimental":"desarrollo paso a paso con bloques numerados y tiempos ({{minDesarrollo}}min)","conceptual":"reflexión y ejemplo real del campo profesional","sintesis":"cierre con recapitulación y evaluación formativa ({{minCierre}}min)","estrategias":"3 estrategias didácticas con justificación"}`;
+
+const _DEFAULT_PROMPT_BASE = `Asume el rol de docente experto en educación técnico profesional de República Dominicana.
+Responde SOLO con JSON válido, sin markdown, sin texto extra.
+
+Estoy elaborando una planificación por RA para el módulo "{{moduloFormativo}}" de la familia "{{familiaProfesional}}". Horario: {{diasStr}}.
+
+RESULTADO DE APRENDIZAJE (RA): {{raDescripcion}}
+
+CRITERIOS DE EVALUACIÓN (solo para guiarte temáticamente, NO los copies como EC):
+{{raCriterios}}
+
+RECURSOS: {{raRecursos}}
+
+TAREA: Elabora {{cantEC}} Elementos de Capacidad (EC) siguiendo la Taxonomía de Bloom.
+
+REGLAS PARA LOS EC:
+- Cada EC debe tener la estructura: VERBO + OBJETO + MODO DE HACER
+- Los EC NO son los criterios de evaluación. Los criterios son solo referencia temática.
+- NUNCA copies ni parafrasees los criterios de evaluación como EC.
+- NUNCA menciones "CE1", "CE2", "criterios de evaluación", "en correspondencia con" en los enunciados.
+- El VERBO debe corresponder al nivel de Bloom asignado:
+  * Conocimiento: Identificar, Reconocer, Clasificar, Enumerar, Definir
+  * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
+  * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
+  * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
+- El OBJETO es lo que el estudiante aprende (específico al módulo, pero redactado de forma original)
+- El MODO DE HACER es cómo o para qué lo aprende
+
+EJEMPLO de EC bien redactado (para un módulo de programación):
+  ❌ MAL: "Crear un formulario web con validaciones HTML5" (esto es copiar un criterio)
+  ✅ BIEN: "Aplicar técnicas de validación de datos de entrada en interfaces web, utilizando estándares y buenas prácticas del desarrollo front-end."
+
+Códigos y niveles de los {{cantEC}} EC:
+{{ecCodigosLista}}
+
+REGLAS PARA LAS ACTIVIDADES:
+- Genera {{actsPorEC}} actividad(es) por cada EC = {{totalActs}} actividades en total.
+- Cada actividad es una TAREA CONCRETA que el estudiante realiza, NO es lo mismo que el EC.
+- Las actividades NO deben repetir el enunciado del EC. Son tareas prácticas distintas.
+- PROHIBIDO: poner "Práctica de laboratorio: [copiar el EC]". Eso está MAL.
+- Cada actividad del mismo EC debe ser DIFERENTE entre sí. Varía el tipo de actividad.
+- Tipos de actividad válidos: Investigación, Práctica guiada, Exposición, Debate, Taller, Estudio de caso, Proyecto, Ejercicio práctico, Análisis comparativo, Presentación, Cuestionario, Mapa conceptual, Role-playing
+
+JSON requerido (respetar esta estructura exacta):
+{
+  "nivelBloomRA": "(conocimiento|comprension|aplicacion|sintesis|evaluacion)",
+  "elementosCapacidad": [
+{{ecCodigosJSON}}
+  ],
+  "actividades": [
+{{actEsperadasJSON}}
+  ]
+}`;
+
+const _DEFAULT_PROMPT_INSTRUMENTOS = `Docente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown. Sé BREVE y COMPACTO.
+
+MÓDULO: {{moduloFormativo}} | RA: {{raDescripcion}}
+
+Para cada actividad genera SOLO el instrumento (sin sesión). Criterios cortos (máx 10 palabras c/u).
+ACTIVIDADES:
+{{actividadesLista}}
+
+JSON (exactamente este formato, SIN campos extra):
+{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título corto","instrucciones":"Instrucción breve.","criterios":["Criterio 1","Criterio 2","Criterio 3","Criterio 4","Criterio 5"]}}]}
+Para rúbrica: {"criterio":"...","descriptores":["Excelente: breve","Bueno: breve","En proceso: breve","Insuficiente: breve"]}
+IMPORTANTE: Responde COMPACTO. No incluyas sesionDiaria. Solo instrumentoDetalle.`;
+
+const _DEFAULT_PROMPT_DETALLE_UNO = `Eres docente experto en educación técnico-profesional. Responde SOLO con JSON válido, sin markdown.
+
+MÓDULO: {{moduloFormativo}}
+FAMILIA PROFESIONAL: {{familiaProfesional}}
+RA: {{raDescripcion}}
+ACTIVIDAD: {{actividad}}
+EC: {{ecEnunciado}} | Nivel Bloom: {{nivelBloom}}
+RECURSOS DISPONIBLES: {{recursos}}
+DURACIÓN TOTAL: {{minTotal}} minutos (Inicio: {{minInicio}} min | Desarrollo: {{minDesarrollo}} min | Cierre: {{minCierre}} min)
+
+INSTRUCCIÓN PRINCIPAL:
+Genera una planificación de sesión diaria MUY DETALLADA Y EXTENSA, como si fuera una guía didáctica completa.
+Cada momento debe tener subtemas, pasos numerados, preguntas concretas, dinámicas específicas y tiempos parciales.
+
+REFERENCIA DE NIVEL DE DETALLE (adapta al tema del módulo, NO copies esto):
+- INICIO debe incluir: bienvenida con pregunta detonante específica al tema, activación de conocimientos previos con preguntas concretas, presentación del objetivo y metodología
+- DESARROLLO debe incluir: bloques temáticos numerados con tiempos, actividades paso a paso, preguntas de verificación de comprensión, ejemplos concretos del campo profesional, dinámicas (individual, parejas, equipos)
+- CIERRE debe incluir: síntesis con pregunta reflexiva específica, evaluación formativa rápida (quiz verbal o escrito con preguntas concretas), tarea para casa si aplica, anuncio del próximo tema
+
+IMPORTANTE:
+- Usa vocabulario específico del módulo "{{moduloFormativo}}" y la familia profesional "{{familiaProfesional}}"
+- Las preguntas deben ser CONCRETAS al tema, no genéricas
+- Los pasos del desarrollo deben ser ESPECÍFICOS con tiempos parciales
+- Incluye al menos 3 preguntas detonantes específicas al tema
+- El campo "procedimental" debe tener mínimo 5 pasos detallados con subtemas
+
+Genera exactamente este JSON:
+{
+  {{instrPrompt}},
+  "sesionDiaria": {
+    "apertura": "INICIO ({{minInicio}} minutos)...",
+    "encuadre": "Propósito específico...",
+    "organizacion": "Organización pedagógica...",
+    "procedimental": "DESARROLLO ({{minDesarrollo}} minutos)...",
+    "conceptual": "Reflexión conceptual profunda...",
+    "sintesis": "CIERRE ({{minCierre}} minutos)...",
+    "estrategias": "Estrategias didácticas con justificación..."
+  }
+}`;
+
+/** Reemplaza {{variables}} en un template de prompt */
+function _resolverPromptTemplate(template, vars) {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    return vars[key] !== undefined ? vars[key] : match;
+  });
+}
+
+/** Obtiene un prompt (personalizado o default) y resuelve variables */
+async function _getPromptResuelto(key, vars) {
+  const saved = await _cargarPromptsIA();
+  const template = saved[key] || _getPromptDefaultByKey(key);
+  return _resolverPromptTemplate(template, vars);
 }
 
 // ── CRUD CENTROS EDUCATIVOS ──────────────────────────────────────
