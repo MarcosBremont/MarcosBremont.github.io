@@ -2442,6 +2442,100 @@ function _confirmarNuevaActividad() {
   mostrarToast('Actividad agregada ✓', 'success');
 }
 
+// ── Ítems complementarios (Actitudes, Cuaderno, etc.) ──────────────────
+const ITEMS_COMPLEMENTARIOS = [
+  { id: 'actitudes', label: 'Actitudes y Valores', icono: 'volunteer_activism' },
+  { id: 'cuaderno', label: 'Cuaderno', icono: 'menu_book' },
+  { id: 'participacion', label: 'Participación', icono: 'record_voice_over' },
+  { id: 'asistencia_item', label: 'Asistencia', icono: 'how_to_reg' },
+  { id: 'otro', label: 'Otro (personalizado)', icono: 'add_box' }
+];
+
+function _agregarItemComplementario() {
+  const opciones = ITEMS_COMPLEMENTARIOS.map(it =>
+    `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FAFAFA;border:1.5px solid #E0E0E0;border-radius:10px;cursor:pointer;transition:all 0.15s;"
+       onmouseover="this.style.borderColor='#E65100'" onmouseout="this.style.borderColor='#E0E0E0'">
+      <input type="radio" name="comp-tipo" value="${it.id}" style="accent-color:#E65100;">
+      <span class="material-icons" style="font-size:22px;color:#E65100;">${it.icono}</span>
+      <span style="font-weight:600;font-size:0.9rem;">${it.label}</span>
+    </label>`
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Agregar ítem complementario';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <p style="color:#78909C;font-size:0.82rem;margin:0;">
+        Los ítems complementarios se califican igual que las actividades y suman al total del RA.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;">${opciones}</div>
+      <div id="comp-custom-wrap" class="hidden" style="margin-top:4px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Nombre del ítem</label>
+        <input type="text" id="comp-custom-nombre" placeholder="Ej: Proyecto final, Exposición..."
+          style="width:100%;padding:9px 12px;border:1.5px solid #FFCC80;border-radius:8px;font-size:0.88rem;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" style="background:#E65100;" onclick="_confirmarItemComplementario()">
+          <span class="material-icons">add</span> Agregar
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+
+  // Mostrar campo custom cuando selecciona "Otro"
+  setTimeout(() => {
+    document.querySelectorAll('input[name="comp-tipo"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const wrap = document.getElementById('comp-custom-wrap');
+        if (wrap) wrap.classList.toggle('hidden', r.value !== 'otro');
+      });
+    });
+  }, 50);
+}
+
+function _confirmarItemComplementario() {
+  const sel = document.querySelector('input[name="comp-tipo"]:checked');
+  if (!sel) { mostrarToast('Selecciona un tipo de ítem', 'error'); return; }
+
+  const tipo = sel.value;
+  let label, icono;
+
+  if (tipo === 'otro') {
+    label = document.getElementById('comp-custom-nombre')?.value?.trim();
+    if (!label || label.length < 2) { mostrarToast('Escribe el nombre del ítem', 'error'); return; }
+    icono = 'add_box';
+  } else {
+    const def = ITEMS_COMPLEMENTARIOS.find(i => i.id === tipo);
+    label = def.label;
+    icono = def.icono;
+  }
+
+  // Verificar que no exista ya uno igual
+  const yaExiste = (planificacion.actividades || []).some(a =>
+    a.esComplementario && a.complementarioTipo === tipo && tipo !== 'otro'
+  );
+  if (yaExiste) { mostrarToast(`Ya existe un ítem "${label}". Solo se permite uno por tipo.`, 'error'); return; }
+
+  const nuevoItem = {
+    id: 'comp-' + Date.now(),
+    ecCodigo: 'COMP',
+    enunciado: label,
+    fecha: '',
+    fechaStr: '',
+    esComplementario: true,
+    complementarioTipo: tipo,
+    complementarioIcono: icono,
+    instrumento: { tipo: 'complementario', tipoLabel: label, titulo: label }
+  };
+
+  if (!planificacion.actividades) planificacion.actividades = [];
+  planificacion.actividades.push(nuevoItem);
+  guardarBorrador();
+  cerrarModalBtn();
+  renderizarActividades(planificacion.actividades);
+  mostrarToast(`Ítem "${label}" agregado ✓ — Asígnale un valor en puntos`, 'success');
+}
+
 function renderizarActividades(listaActividades) {
   // Mostrar alerta si hay ECs sin actividades
   const _ecsSinActs = (planificacion.elementosCapacidad || []).filter(ec =>
@@ -2500,12 +2594,11 @@ function renderizarActividades(listaActividades) {
     if (act.instrumento && !act.instrumento.tipo && act.instrumento.tipoLabel) {
       act.instrumento.tipo = act.instrumento.tipoLabel.toLowerCase().includes('cotejo') ? 'cotejo' : 'rubrica';
     }
+    const esComp = act.esComplementario === true;
     const instTipo = act.instrumento?.tipo || 'cotejo';
-    const tipoLabel = _getInstrLabel(instTipo);
-    const badgeClass = instTipo === 'cotejo' ? 'badge-cotejo' : instTipo === 'rubrica' ? 'badge-rubrica' : 'badge-cotejo';
-    const icono = _getInstrIcono(instTipo);
-
-
+    const tipoLabel = esComp ? act.enunciado : _getInstrLabel(instTipo);
+    const badgeClass = esComp ? '' : (instTipo === 'cotejo' ? 'badge-cotejo' : instTipo === 'rubrica' ? 'badge-rubrica' : 'badge-cotejo');
+    const icono = esComp ? (act.complementarioIcono || 'star') : _getInstrIcono(instTipo);
 
 
 
@@ -2515,10 +2608,40 @@ function renderizarActividades(listaActividades) {
 
 
 
+    if (esComp) {
+      tr.style.background = 'rgba(230,81,0,0.04)';
+      tr.innerHTML = `
+      <td style="text-align:center;">
+        <span class="material-icons" style="font-size:20px;color:#E65100;">${act.complementarioIcono || 'star'}</span>
+      </td>
+      <td><span style="font-size:0.75rem;font-weight:700;color:#E65100;background:#FFF3E0;padding:2px 8px;border-radius:10px;">COMP</span></td>
+      <td style="max-width:280px;font-weight:600;color:#E65100;">${escapeHTML(act.enunciado)}</td>
+      <td><span style="font-size:0.78rem;color:#78909C;">—</span></td>
+      <td style="text-align:center;">
+        <input type="number" class="act-valor-input" data-idx="${idx}"
+          value="${act.valor != null ? act.valor : ''}"
+          min="0" max="100" step="0.5" placeholder="—"
+          title="Valor en puntos de este ítem complementario"
+          style="width:65px;padding:5px 6px;border:1.5px solid #FFCC80;border-radius:8px;
+                 font-size:0.88rem;text-align:center;background:transparent;
+                 color:inherit;font-weight:700;">
+      </td>
+      <td style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
+        <div style="display:flex;gap:3px;margin-bottom:2px;">
+          <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
+            <span class="material-icons" style="font-size:16px;">arrow_upward</span>
+          </button>
+          <button class="ec-move-btn" onclick="_moverActividad(${idx}, 1)" title="Mover abajo" ${idx === listaActividades.length - 1 ? 'disabled' : ''}>
+            <span class="material-icons" style="font-size:16px;">arrow_downward</span>
+          </button>
+        </div>
+        <button class="btn-ver-instrumento" onclick="_eliminarActividad(${idx})" style="background:#FFEBEE;color:#C62828;border-color:#FFCDD2;">
+          <span class="material-icons">delete_outline</span> Eliminar
+        </button>
+      </td>
+      `;
+    } else {
     tr.innerHTML = `
-
-
-
       <td>
         <input type="date" class="act-fecha-input" data-idx="${idx}"
           value="${(() => {
@@ -2534,29 +2657,11 @@ function renderizarActividades(listaActividades) {
                  font-size:0.82rem;font-family:inherit;background:transparent;
                  color:inherit;cursor:pointer;min-width:145px;">
       </td>
-
-
-
       <td><code style="font-size:0.8rem;color:#1565C0;font-weight:600;">${act.ecCodigo}</code></td>
-
-
-
       <td style="max-width:280px;">${act.enunciado}</td>
-
-
-
       <td><span class="instrumento-badge ${badgeClass}">
-
-
-
         <span class="material-icons" style="font-size:14px;">${icono}</span>
-
-
-
         ${tipoLabel}
-
-
-
       </span></td>
       <td style="text-align:center;">
         <input type="number" class="act-valor-input" data-idx="${idx}"
@@ -2567,9 +2672,6 @@ function renderizarActividades(listaActividades) {
                  font-size:0.88rem;text-align:center;background:transparent;
                  color:inherit;font-weight:700;">
       </td>
-
-
-
       <td style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
         <div style="display:flex;gap:3px;margin-bottom:2px;">
           <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
@@ -2592,10 +2694,8 @@ function renderizarActividades(listaActividades) {
           <span class="material-icons">delete_outline</span> Eliminar
         </button>
       </td>
-
-
-
     `;
+    }
 
 
 
@@ -7814,7 +7914,9 @@ function _ensureRA(curso, raKey) {
       valores,
       _actividadesSnapshot: acts.map(a => ({
         id: a.id, enunciado: a.enunciado,
-        ecCodigo: a.ecCodigo, fechaStr: a.fechaStr
+        ecCodigo: a.ecCodigo, fechaStr: a.fechaStr,
+        esComplementario: a.esComplementario || false,
+        complementarioIcono: a.complementarioIcono || ''
       }))
     };
   } else {
@@ -7836,7 +7938,9 @@ function _ensureRA(curso, raKey) {
         if (!raInfo._actividadesSnapshot) raInfo._actividadesSnapshot = [];
         raInfo._actividadesSnapshot.push({
           id: a.id, enunciado: a.enunciado,
-          ecCodigo: a.ecCodigo, fechaStr: a.fechaStr
+          ecCodigo: a.ecCodigo, fechaStr: a.fechaStr,
+          esComplementario: a.esComplementario || false,
+          complementarioIcono: a.complementarioIcono || ''
         });
       });
       guardarCalificaciones();
@@ -8032,23 +8136,42 @@ function renderizarTablaCalificaciones() {
   const _idxEC = {};
 
   let h2 = '<tr>';
+  let actNum = 0;
   actividades.forEach((a, i) => {
     const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
-    const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
-    const fechaNum = a.fecha ? (() => { const p = String(a.fecha).split('-'); return p[2] + '/' + p[1]; })() : '';
-    const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
-    _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
-    const numInEC = _idxEC[a.ecCodigo || ''];
-    const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
-    h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
-      + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i + 1)
-      + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
-      + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
-      + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
-      + ' title="Valor máximo de esta actividad" placeholder="pts"'
-      + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
-      + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #90CAF9;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
-      + '</th>';
+    const esComp = a.esComplementario === true;
+    if (!esComp) actNum++;
+
+    if (esComp) {
+      // Columna de ítem complementario
+      const compIcono = a.complementarioIcono || 'star';
+      const compLabel = (a.enunciado || '').substring(0, 12);
+      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;background:rgba(230,81,0,0.08);">'
+        + '<div style="font-size:0.72rem;font-weight:600;color:#E65100;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
+        + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">Complementario</div>'
+        + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
+        + ' title="Valor máximo de este ítem" placeholder="pts"'
+        + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
+        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
+        + '</th>';
+    } else {
+      // Columna de actividad normal
+      const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
+      const fechaNum = a.fecha ? (() => { const p = String(a.fecha).split('-'); return p[2] + '/' + p[1]; })() : '';
+      const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
+      _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
+      const numInEC = _idxEC[a.ecCodigo || ''];
+      const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
+      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
+        + '<div style="font-size:0.72rem;font-weight:600;">Act.' + actNum
+        + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
+        + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
+        + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
+        + ' title="Valor máximo de esta actividad" placeholder="pts"'
+        + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
+        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #90CAF9;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
+        + '</th>';
+    }
   });
   h2 += '</tr>';
   thead.innerHTML = h1 + h2;
@@ -8100,13 +8223,14 @@ function renderizarTablaCalificaciones() {
       const val = nota !== undefined ? nota : '';
       const max = raInfo.valores[a.id] || 100;
       const cls = nota !== undefined ? _clsNota(nota, max) : '';
+      const esCompCol = a.esComplementario === true;
       const recKey = raKey + '__' + a.id;
       const recup = recupMapEst[recKey];
       const tdStyle = recup
         ? (recup.estado === 'pendiente'
             ? ' style="position:relative;background:rgba(255,143,0,0.08);"'
             : ' style="position:relative;background:rgba(46,125,50,0.06);"')
-        : '';
+        : (esCompCol ? ' style="position:relative;background:rgba(230,81,0,0.04);"' : '');
       const recupDot = recup
         ? '<span style="position:absolute;bottom:2px;right:2px;width:6px;height:6px;border-radius:50%;background:'
           + (recup.estado === 'pendiente' ? '#FF8F00' : '#2E7D32')
@@ -14077,7 +14201,7 @@ function renderizarDiarias() {
 
 
 
-  const ecCodigos = [...new Set(actividades.map(a => a.ecCodigo).filter(Boolean))];
+  const ecCodigos = [...new Set(actividades.filter(a => !a.esComplementario).map(a => a.ecCodigo).filter(Boolean))];
 
 
 
@@ -14119,9 +14243,10 @@ function renderizarDiarias() {
 
   lista.innerHTML = '';
 
+  // Filtrar ítems complementarios — no tienen sesión de clase
+  const actsSesion = actividades.filter(a => !a.esComplementario);
 
-
-  actividades.forEach((act, idx) => {
+  actsSesion.forEach((act, idx) => {
 
 
 
@@ -17776,7 +17901,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v13.5</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v13.6</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

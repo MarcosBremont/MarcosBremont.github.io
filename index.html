@@ -898,11 +898,15 @@
           </table>
         </div>
 
-        <!-- Botón agregar nueva actividad -->
-        <div style="display:flex;justify-content:center;margin-top:14px;">
+        <!-- Botones agregar actividad / ítem complementario -->
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
           <button onclick="_agregarNuevaActividad()"
             style="display:flex;align-items:center;gap:6px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
             <span class="material-icons">add_circle</span> Agregar actividad
+          </button>
+          <button onclick="_agregarItemComplementario()"
+            style="display:flex;align-items:center;gap:6px;background:#FFF3E0;border:1.5px solid #FFCC80;color:#E65100;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            <span class="material-icons">star</span> Agregar complementario
           </button>
         </div>
 
@@ -1938,6 +1942,25 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v13.6<span class="about-ver-fecha">Mar
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ítems complementarios, fechas en tabla y mejoras</div>
+              <ul class="about-ver-items">
+                <li><strong>Ítems complementarios:</strong> agrega Actitudes y Valores, Cuaderno, Participación u otros ítems que suman al total del RA junto a las actividades</li>
+                <li><strong>Fechas en calificaciones:</strong> cada columna de actividad muestra la fecha (dd/mm) junto al día de la semana</li>
+                <li><strong>Vista estudiante simplificada:</strong> se eliminó el código QR, dejando solo el enlace compartible con botón Copiar</li>
+                <li><strong>Botón Copiar arreglado:</strong> funciona correctamente en todos los navegadores y contextos</li>
+                <li><strong>Reglas Firestore:</strong> soporte para colecciones config, centros, perfiles y avisos</li>
+                <li><strong>Toggles superadmin:</strong> los toggles de opciones docentes ahora guardan correctamente con mensajes de error claros</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
