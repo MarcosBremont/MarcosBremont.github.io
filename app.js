@@ -8035,6 +8035,7 @@ function renderizarTablaCalificaciones() {
   actividades.forEach((a, i) => {
     const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
     const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
+    const fechaNum = a.fecha ? (() => { const p = String(a.fecha).split('-'); return p[2] + '/' + p[1]; })() : '';
     const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
     _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
     const numInEC = _idxEC[a.ecCodigo || ''];
@@ -8042,7 +8043,7 @@ function renderizarTablaCalificaciones() {
     h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
       + '<div style="font-size:0.72rem;font-weight:600;">Act.' + (i + 1)
       + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
-      + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + '</div>'
+      + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
       + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
       + ' title="Valor máximo de esta actividad" placeholder="pts"'
       + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
@@ -8905,35 +8906,11 @@ function abrirVistaEstudiante(estId) {
 
   const base = window.location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
 
-  // URL COMPLETA → para botón Abrir y Copiar (incluye enunciados completos)
   const b64Full = btoa(encodeURIComponent(JSON.stringify(data)));
   _vistaEstUrl = base + 'viewer.html#data=' + b64Full;
 
-  // URL COMPACTA → para el QR (menos datos = QR menos denso y más escaneable)
-  const dataCompacta = {
-    n: data.n,
-    c: data.c,
-    vt: data.vt,
-    f: data.f,
-    acts: data.acts.map(a => ({ v: a.v, n: a.n, r: a.r, rs: a.rs })),
-    tRA: data.tRA,
-    tTotal: data.tTotal,
-    asist: data.asist
-  };
-  const b64QR = btoa(encodeURIComponent(JSON.stringify(dataCompacta)));
-  const urlQR = base + 'viewer.html#data=' + b64QR;
-
   document.getElementById('vista-est-titulo').textContent = est.nombre;
   document.getElementById('vista-est-url').value = _vistaEstUrl;
-
-  // Generar QR como <img> usando api.qrserver.com (sin librería JS)
-  const qrDiv = document.getElementById('vista-est-qr');
-  qrDiv.innerHTML = '<div style="width:210px;height:210px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:6px;">'
-    + '<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&ecc=L&data='
-    + encodeURIComponent(urlQR)
-    + '" alt="QR" style="width:198px;height:198px;border-radius:4px;image-rendering:crisp-edges;image-rendering:-moz-crisp-edges;image-rendering:pixelated;"'
-    + ' onerror="this.parentElement.innerHTML=\'<span style=\\\'color:#9E9E9E;font-size:0.8rem;text-align:center;padding:10px;\\\'>Sin conexión — usa el botón Abrir o Copiar enlace</span>\'" />'
-    + '</div>';
 
   document.getElementById('vista-est-overlay').classList.remove('hidden');
 }
@@ -8947,13 +8924,20 @@ function abrirVistaEstudianteTab() {
   window.open(_vistaEstUrl, '_blank');
 }
 function copiarLinkEstudiante() {
-  navigator.clipboard?.writeText(_vistaEstUrl).then(() => {
-    mostrarToast('Enlace copiado al portapapeles', 'success');
-  }).catch(() => {
-    const inp = document.getElementById('vista-est-url');
-    inp.select(); document.execCommand('copy');
-    mostrarToast('Enlace copiado', 'success');
-  });
+  const inp = document.getElementById('vista-est-url');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(_vistaEstUrl).then(() => {
+      mostrarToast('Enlace copiado al portapapeles', 'success');
+    }).catch(() => _copiarFallback(inp));
+  } else {
+    _copiarFallback(inp);
+  }
+}
+function _copiarFallback(inp) {
+  inp.select();
+  inp.setSelectionRange(0, 99999);
+  document.execCommand('copy');
+  mostrarToast('Enlace copiado', 'success');
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -21565,13 +21549,26 @@ async function _cargarOpcionesDocentes() {
   try {
     const doc = await db.collection('config').doc('opciones_docentes').get();
     return doc.exists ? doc.data() : {};
-  } catch { return {}; }
+  } catch (e) {
+    console.error('[Opciones Docentes] Error leyendo config:', e.code, e.message);
+    if (e.code === 'permission-denied') {
+      mostrarToast('Sin permisos para leer config. Agrega la regla de Firestore para la colección "config".', 'error');
+    }
+    return {};
+  }
 }
 
 async function _guardarOpcionesDocentes(opciones) {
   try {
     await db.collection('config').doc('opciones_docentes').set(opciones);
-  } catch (e) { mostrarToast('Error guardando opciones: ' + e.message, 'error'); }
+  } catch (e) {
+    console.error('[Opciones Docentes] Error guardando:', e.code, e.message);
+    if (e.code === 'permission-denied') {
+      mostrarToast('Sin permisos en Firestore. Agrega la regla para la colección "config" en Firebase Console.', 'error');
+    } else {
+      mostrarToast('Error guardando opciones: ' + e.message, 'error');
+    }
+  }
 }
 
 async function _renderOpcionesDocentes() {

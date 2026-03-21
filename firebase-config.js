@@ -55,6 +55,26 @@
 //        match /users/{userId}/sessions/{sessionId} {
 //          allow read, write: if request.auth != null && request.auth.uid == userId;
 //        }
+//        // Configuración global (superadmin/admin escribe, todos los autenticados leen)
+//        match /config/{doc} {
+//          allow read: if request.auth != null;
+//          allow write: if request.auth != null;
+//        }
+//        // Centros educativos (todos los autenticados leen, autenticados escriben)
+//        match /centros/{centroId} {
+//          allow read: if request.auth != null;
+//          allow write: if request.auth != null;
+//        }
+//        // Perfiles de usuario
+//        match /perfiles/{userId} {
+//          allow read: if request.auth != null;
+//          allow write: if request.auth != null;
+//        }
+//        // Avisos de directores
+//        match /avisos/{avisoId} {
+//          allow read: if request.auth != null;
+//          allow write: if request.auth != null;
+//        }
 //      }
 //    }
 // ================================================================

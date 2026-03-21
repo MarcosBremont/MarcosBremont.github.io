@@ -50,13 +50,12 @@
           <img src="LogoTinClassSoloLogo.svg" alt="TinClass" class="header-logo" />
         </button>
         <div>
-          <h1 class="header-title">Planificador Educativo por RA</h1>
-          <p class="header-subtitle">Sistema de Educación Técnico Profesional · República Dominicana</p>
+          <h1 class="header-title">TinClass</h1>
+          <p class="header-subtitle">Planificador Educativo por RA · ETP Rep. Dominicana</p>
         </div>
       </div>
       <button id="btn-notificaciones" class="btn-config-ia" onclick="abrirNotificaciones()"
-        title="Notificaciones y recordatorios"
-        style="position:relative;">
+        title="Notificaciones y recordatorios" style="position:relative;">
         <span class="material-icons">notifications</span>
         <span class="btn-nueva-label">Avisos</span>
         <span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;background:#E53935;color:#fff;
@@ -125,39 +124,46 @@
         </button>
         <div class="auth-divider">o</div>
         <button class="auth-btn-google" onclick="authIniciarSesionGoogle()">
-          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 48 48">
+            <path fill="#EA4335"
+              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+            <path fill="#4285F4"
+              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+            <path fill="#FBBC05"
+              d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+            <path fill="#34A853"
+              d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+          </svg>
           Continuar con Google
         </button>
       </div>
 
       <!-- Panel OTP — verificación por código -->
       <div id="auth-verificacion-panel" style="display:none;text-align:center;padding:8px 0 4px;">
-        <span class="material-icons" style="font-size:52px;color:#1565C0;display:block;margin-bottom:8px;">mark_email_unread</span>
-        <div style="font-weight:800;font-size:1.05rem;color:#212121;margin-bottom:6px;">Revisa tu correo electrónico</div>
+        <span class="material-icons"
+          style="font-size:52px;color:#1565C0;display:block;margin-bottom:8px;">mark_email_unread</span>
+        <div style="font-weight:800;font-size:1.05rem;color:#212121;margin-bottom:6px;">Revisa tu correo electrónico
+        </div>
         <p style="font-size:0.83rem;color:#546E7A;margin:0 0 4px;">Te enviamos un código de 6 dígitos a:</p>
-        <div id="auth-ver-email" style="font-weight:700;color:#1565C0;font-size:0.88rem;margin-bottom:14px;word-break:break-all;"></div>
-        <input type="text" id="auth-otp-input" maxlength="6" inputmode="numeric"
-          placeholder="000000"
-          style="width:100%;text-align:center;font-size:1.8rem;letter-spacing:0.35em;font-weight:800;
+        <div id="auth-ver-email"
+          style="font-weight:700;color:#1565C0;font-size:0.88rem;margin-bottom:14px;word-break:break-all;"></div>
+        <input type="text" id="auth-otp-input" maxlength="6" inputmode="numeric" placeholder="000000" style="width:100%;text-align:center;font-size:1.8rem;letter-spacing:0.35em;font-weight:800;
                  padding:12px 8px;border:2px solid #90CAF9;border-radius:12px;margin-bottom:6px;
                  box-sizing:border-box;outline:none;color:#1565C0;font-family:monospace;"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           onkeydown="if(event.key==='Enter') authVerificarOTPRegistro()" />
         <div id="auth-ver-msg" style="font-size:0.78rem;margin-bottom:10px;min-height:18px;color:#C62828;"></div>
-        <button onclick="authVerificarOTPRegistro()" id="auth-btn-otp"
-          style="width:100%;background:#1565C0;color:#fff;border:none;border-radius:8px;
+        <button onclick="authVerificarOTPRegistro()" id="auth-btn-otp" style="width:100%;background:#1565C0;color:#fff;border:none;border-radius:8px;
                  padding:11px;font-size:0.88rem;font-weight:700;cursor:pointer;
                  display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px;">
           <span class="material-icons" style="font-size:17px;">check_circle</span> Verificar código
         </button>
-        <button onclick="authReenviarOTPRegistro()" id="auth-btn-otp-reenv"
-          style="width:100%;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;
+        <button onclick="authReenviarOTPRegistro()" id="auth-btn-otp-reenv" style="width:100%;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;
                  border-radius:8px;padding:10px;font-size:0.84rem;font-weight:700;cursor:pointer;
                  display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px;">
           <span class="material-icons" style="font-size:16px;">refresh</span> Reenviar código
         </button>
-        <button onclick="authVolverAlLogin()"
-          style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;
+        <button onclick="authVolverAlLogin()" style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;
                  border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;
                  display:flex;align-items:center;justify-content:center;gap:6px;">
           <span class="material-icons" style="font-size:16px;">arrow_back</span> Volver al inicio
@@ -177,7 +183,8 @@
         </div>
         <div class="auth-field">
           <label for="auth-centro-reg">Centro Educativo *</label>
-          <select id="auth-centro-reg" style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;background:#fff;color:#212121;">
+          <select id="auth-centro-reg"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;background:#fff;color:#212121;">
             <option value="">Cargando centros...</option>
           </select>
         </div>
@@ -196,15 +203,26 @@
         </button>
         <div class="auth-divider">o</div>
         <button class="auth-btn-google" onclick="authMostrarCodigoGoogle()">
-          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 48 48">
+            <path fill="#EA4335"
+              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+            <path fill="#4285F4"
+              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+            <path fill="#FBBC05"
+              d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+            <path fill="#34A853"
+              d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+          </svg>
           Registrarme con Google
         </button>
       </div>
 
       <!-- Pantalla de espera: pendiente de aprobación -->
       <div id="auth-pending-panel" style="display:none;text-align:center;padding:16px 0;">
-        <span class="material-icons" style="font-size:64px;color:#FF9800;display:block;margin-bottom:12px;">hourglass_top</span>
-        <div style="font-weight:800;font-size:1.1rem;color:#212121;margin-bottom:8px;">Cuenta pendiente de aprobación</div>
+        <span class="material-icons"
+          style="font-size:64px;color:#FF9800;display:block;margin-bottom:12px;">hourglass_top</span>
+        <div style="font-weight:800;font-size:1.1rem;color:#212121;margin-bottom:8px;">Cuenta pendiente de aprobación
+        </div>
         <p style="font-size:0.88rem;color:#546E7A;margin:0 0 8px;line-height:1.5;">
           Tu registro fue recibido correctamente.<br>
           El administrador de tu centro educativo debe aprobar tu cuenta para que puedas acceder al sistema.
@@ -212,9 +230,11 @@
         <div id="auth-pending-centro" style="font-weight:700;color:#1565C0;font-size:0.9rem;margin-bottom:16px;"></div>
         <div style="background:#FFF3E0;border:1.5px solid #FFE0B2;border-radius:12px;padding:14px;margin-bottom:16px;">
           <span class="material-icons" style="font-size:20px;color:#E65100;vertical-align:middle;">info</span>
-          <span style="font-size:0.82rem;color:#E65100;">Contacta al administrador de tu centro si necesitas acceso inmediato.</span>
+          <span style="font-size:0.82rem;color:#E65100;">Contacta al administrador de tu centro si necesitas acceso
+            inmediato.</span>
         </div>
-        <button onclick="authCerrarSesionPendiente()" style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+        <button onclick="authCerrarSesionPendiente()"
+          style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
           <span class="material-icons" style="font-size:16px;">logout</span> Cerrar sesión
         </button>
       </div>
@@ -222,16 +242,21 @@
   </div>
 
   <!-- ===== MODAL: CÓDIGO PARA GOOGLE REGISTRO ===== -->
-  <div id="auth-google-code-overlay" class="hidden" style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:16px;padding:28px 24px;width:min(340px,calc(100vw - 32px));box-shadow:0 8px 40px rgba(0,0,0,0.28);">
+  <div id="auth-google-code-overlay" class="hidden"
+    style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;">
+    <div
+      style="background:#fff;border-radius:16px;padding:28px 24px;width:min(340px,calc(100vw - 32px));box-shadow:0 8px 40px rgba(0,0,0,0.28);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span class="material-icons" style="color:#6A1B9A;">vpn_key</span>
         <span style="font-size:1rem;font-weight:800;color:#212121;">Código de invitación</span>
       </div>
-      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Ingresa el código secreto para completar el registro con Google.</p>
+      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Ingresa el código secreto para completar el registro
+        con Google.</p>
       <div style="margin-bottom:10px;">
-        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo *</label>
-        <select id="auth-centro-google" style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo
+          *</label>
+        <select id="auth-centro-google"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
           <option value="">Cargando centros...</option>
         </select>
       </div>
@@ -240,7 +265,8 @@
         onkeydown="if(event.key==='Enter') _confirmarCodigoGoogle()" />
       <div class="auth-error" id="auth-codigo-google-error" style="margin-top:6px;min-height:18px;"></div>
       <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
-        <button onclick="document.getElementById('auth-google-code-overlay').classList.add('hidden');document.getElementById('auth-codigo-google').value='';document.getElementById('auth-codigo-google-error').textContent='';"
+        <button
+          onclick="document.getElementById('auth-google-code-overlay').classList.add('hidden');document.getElementById('auth-codigo-google').value='';document.getElementById('auth-codigo-google-error').textContent='';"
           style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">
           Cancelar
         </button>
@@ -316,11 +342,13 @@
           <span class="material-icons">article</span>
           <span>Blog</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-calendario" onclick="abrirCalendarioEscolar()" style="--accent:#1565C0;">
+        <button class="dash-nav-btn" id="btn-dash-calendario" onclick="abrirCalendarioEscolar()"
+          style="--accent:#1565C0;">
           <span class="material-icons">event_note</span>
           <span>Calendario Escolar</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()" style="--accent:#C62828;">
+        <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()"
+          style="--accent:#C62828;">
           <span class="material-icons">assignment_late</span>
           <span>Reportes Estudiantes</span>
         </button>
@@ -336,15 +364,18 @@
           <span class="material-icons">cast_for_education</span>
           <span>Presentación</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-director" onclick="abrirDirector()" style="--accent:#4A148C;display:none;">
+        <button class="dash-nav-btn" id="btn-dash-director" onclick="abrirDirector()"
+          style="--accent:#4A148C;display:none;">
           <span class="material-icons">school</span>
           <span>Panel Director</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-admin-centro" onclick="abrirAdminCentro()" style="--accent:#00695C;display:none;">
+        <button class="dash-nav-btn" id="btn-dash-admin-centro" onclick="abrirAdminCentro()"
+          style="--accent:#00695C;display:none;">
           <span class="material-icons">groups</span>
           <span>Gestión Docentes</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-superadmin" onclick="abrirSuperadmin()" style="--accent:#B71C1C;display:none;">
+        <button class="dash-nav-btn" id="btn-dash-superadmin" onclick="abrirSuperadmin()"
+          style="--accent:#B71C1C;display:none;">
           <span class="material-icons">admin_panel_settings</span>
           <span>Superadmin</span>
         </button>
@@ -357,7 +388,8 @@
           <div class="dash-section-label">
             <span class="material-icons">today</span>Clases de hoy
             <span id="dash-hoy-fecha" style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
-            <button onclick="abrirMoverDia(_isoDate(new Date()))" title="Mover actividades de hoy al siguiente día que toca"
+            <button onclick="abrirMoverDia(_isoDate(new Date()))"
+              title="Mover actividades de hoy al siguiente día que toca"
               style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
               <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
             </button>
@@ -370,7 +402,8 @@
             <span class="material-icons">event</span>Mañana
             <span id="dash-manana-fecha"
               style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
-            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+86400000)))" title="Mover actividades de mañana al siguiente día que toca"
+            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+86400000)))"
+              title="Mover actividades de mañana al siguiente día que toca"
               style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
               <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
             </button>
@@ -383,7 +416,8 @@
             <span class="material-icons">date_range</span>Pasado mañana
             <span id="dash-pasado-fecha"
               style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
-            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+172800000)))" title="Mover actividades de pasado mañana al siguiente día que toca"
+            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+172800000)))"
+              title="Mover actividades de pasado mañana al siguiente día que toca"
               style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
               <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
             </button>
@@ -426,7 +460,8 @@
           <div class="kofi-banner-icon">☕</div>
           <div>
             <div class="kofi-banner-title">¿Te está siendo útil TinClass?</div>
-            <div class="kofi-banner-desc">Esta herramienta es gratuita y de código abierto. Si te ahorra tiempo, considera invitarme un café para seguir mejorándola.</div>
+            <div class="kofi-banner-desc">Esta herramienta es gratuita y de código abierto. Si te ahorra tiempo,
+              considera invitarme un café para seguir mejorándola.</div>
           </div>
         </div>
         <a href="https://ko-fi.com/marcosbremont" target="_blank" rel="noopener" class="kofi-banner-btn">
@@ -1096,9 +1131,9 @@
       <!-- Layout: lista de días (izq) + entradas del día (der) -->
       <div style="display:flex;min-height:480px;border-top:1px solid #E0E0E0;">
         <div id="libreta-lista-dias"
-          style="width:210px;flex-shrink:0;border-right:1px solid #E0E0E0;overflow-y:auto;max-height:600px;background:#FAFAFA;"></div>
-        <div id="libreta-panel-dia"
-          style="flex:1;padding:20px;overflow-y:auto;max-height:600px;min-width:0;"></div>
+          style="width:210px;flex-shrink:0;border-right:1px solid #E0E0E0;overflow-y:auto;max-height:600px;background:#FAFAFA;">
+        </div>
+        <div id="libreta-panel-dia" style="flex:1;padding:20px;overflow-y:auto;max-height:600px;min-width:0;"></div>
       </div>
     </div>
     <div class="nav-buttons">
@@ -1171,15 +1206,19 @@
           <span class="material-icons" style="color:#1565C0;">person_add</span>
           <textarea id="input-estudiantes" rows="3"
             placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
-          <button class="btn-siguiente" style="align-self:flex-end;white-space:nowrap;"
-            onclick="agregarEstudiantes()">
+          <button class="btn-siguiente" style="align-self:flex-end;white-space:nowrap;" onclick="agregarEstudiantes()">
             <span class="material-icons">group_add</span> Agregar
           </button>
-          <label class="btn-export btn-sm" style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;align-self:flex-end;white-space:nowrap;" title="Importar desde archivo CSV o Excel guardado como CSV">
+          <label class="btn-export btn-sm"
+            style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;align-self:flex-end;white-space:nowrap;"
+            title="Importar desde archivo CSV o Excel guardado como CSV">
             <span class="material-icons">upload_file</span> Importar CSV
-            <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none" onchange="importarAlumnosCSV(this)">
+            <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none"
+              onchange="importarAlumnosCSV(this)">
           </label>
-          <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()" style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;align-self:flex-end;white-space:nowrap;" title="Exportar lista de alumnos a CSV">
+          <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
+            style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;align-self:flex-end;white-space:nowrap;"
+            title="Exportar lista de alumnos a CSV">
             <span class="material-icons">download</span> Exportar CSV
           </button>
         </div>
@@ -1362,7 +1401,8 @@
   <div id="panel-auditoria" class="cal-panel hidden">
     <div class="section-card">
       <div class="section-header">
-        <h2><span class="material-icons" style="vertical-align:middle;margin-right:6px;">security</span>Auditoría de Actividad</h2>
+        <h2><span class="material-icons" style="vertical-align:middle;margin-right:6px;">security</span>Auditoría de
+          Actividad</h2>
       </div>
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
         <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#546E7A;">
@@ -1475,11 +1515,13 @@
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
         <button class="ra-tab activo" id="tab-rep-reportes" onclick="switchTabReportes('reportes')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#1565C0;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
-          <span class="material-icons" style="font-size:14px;vertical-align:middle;">description</span> Reportes recibidos
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">description</span> Reportes
+          recibidos
         </button>
         <button class="ra-tab" id="tab-rep-cuentas" onclick="switchTabReportes('cuentas')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
-          <span class="material-icons" style="font-size:14px;vertical-align:middle;">manage_accounts</span> Cuentas de estudiantes
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">manage_accounts</span> Cuentas de
+          estudiantes
         </button>
         <button class="ra-tab" id="tab-rep-enlace" onclick="switchTabReportes('enlace')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -1515,7 +1557,8 @@
         </button>
         <button class="ra-tab" id="tab-dir-docentes" onclick="switchTabDirector('docentes')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
-          <span class="material-icons" style="font-size:14px;vertical-align:middle;">monitoring</span> Monitoreo Docentes
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">monitoring</span> Monitoreo
+          Docentes
         </button>
       </div>
 
@@ -1541,7 +1584,8 @@
 
       <!-- Selector de centro (si administra varios) -->
       <div id="ac-selector-centro" style="display:none;margin-bottom:16px;">
-        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro educativo:</label>
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro
+          educativo:</label>
         <select id="ac-centro-sel" onchange="_renderDocentesCentro()"
           style="width:100%;max-width:400px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;background:#fff;">
         </select>
@@ -1552,7 +1596,8 @@
         <button class="ra-tab activo" id="tab-ac-pendientes" onclick="switchTabAdminCentro('pendientes')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#00695C;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">hourglass_top</span> Pendientes
-          <span id="ac-badge-pendientes" style="background:#FF5722;color:#fff;border-radius:50%;padding:1px 6px;font-size:0.7rem;margin-left:4px;display:none;">0</span>
+          <span id="ac-badge-pendientes"
+            style="background:#FF5722;color:#fff;border-radius:50%;padding:1px 6px;font-size:0.7rem;margin-left:4px;display:none;">0</span>
         </button>
         <button class="ra-tab" id="tab-ac-aprobados" onclick="switchTabAdminCentro('aprobados')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -1611,8 +1656,7 @@
   </div>
 
   <!-- ===== MODO PRESENTACIÓN ===== -->
-  <div id="pres-overlay" class="hidden"
-    style="position:fixed;inset:0;z-index:9000;
+  <div id="pres-overlay" class="hidden" style="position:fixed;inset:0;z-index:9000;
            background:linear-gradient(160deg,#070B18 0%,#0D1635 60%,#111827 100%);
            overflow-y:auto;display:flex;flex-direction:column;min-height:100vh;">
 
@@ -1658,7 +1702,9 @@
   <div id="pres-picker-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:420px;" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">cast_for_education</span>Seleccionar clase</h3>
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">cast_for_education</span>Seleccionar clase
+        </h3>
         <button class="modal-close" onclick="cerrarPresPicker()"><span class="material-icons">close</span></button>
       </div>
       <div class="modal-body" id="pres-picker-body" style="padding:16px 20px;max-height:400px;overflow-y:auto;"></div>
@@ -1666,12 +1712,10 @@
   </div>
 
   <!-- ===== PANTALLA DE BLOQUEO ===== -->
-  <div id="lock-overlay" class="hidden"
-    style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0D1B4B 0%,#1A237E 60%,#283593 100%);
+  <div id="lock-overlay" class="hidden" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0D1B4B 0%,#1A237E 60%,#283593 100%);
            display:flex;align-items:center;justify-content:center;flex-direction:column;">
     <div style="text-align:center;color:#fff;width:min(340px,calc(100vw - 32px));padding:0 16px;">
-      <div id="lock-avatar"
-        style="width:80px;height:80px;border-radius:50%;background:#1E3A8A;display:flex;align-items:center;
+      <div id="lock-avatar" style="width:80px;height:80px;border-radius:50%;background:#1E3A8A;display:flex;align-items:center;
                justify-content:center;font-size:2.2rem;font-weight:800;margin:0 auto 14px;
                border:3px solid #5C6BC0;box-shadow:0 0 0 8px rgba(92,107,192,0.15);">U</div>
       <div style="font-size:1.15rem;font-weight:800;margin-bottom:4px;letter-spacing:0.01em;">Pantalla bloqueada</div>
@@ -1679,13 +1723,11 @@
       <div id="lock-time" style="font-size:0.73rem;color:#5C6BC0;margin-bottom:28px;"></div>
       <!-- Sección email/contraseña -->
       <div id="lock-pass-section">
-        <input type="password" id="lock-pass-input" placeholder="Ingresa tu contraseña para continuar"
-          style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #3949AB;
+        <input type="password" id="lock-pass-input" placeholder="Ingresa tu contraseña para continuar" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #3949AB;
                  background:rgba(255,255,255,0.08);color:#fff;font-size:0.9rem;box-sizing:border-box;
                  outline:none;margin-bottom:10px;text-align:center;"
           onkeydown="if(event.key==='Enter')desbloquearPantalla()" />
-        <button onclick="desbloquearPantalla()" id="lock-btn-unlock"
-          style="width:100%;background:#3F51B5;color:#fff;border:none;border-radius:10px;padding:12px;
+        <button onclick="desbloquearPantalla()" id="lock-btn-unlock" style="width:100%;background:#3F51B5;color:#fff;border:none;border-radius:10px;padding:12px;
                  font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px;
                  display:flex;align-items:center;justify-content:center;gap:6px;">
           <span class="material-icons" style="font-size:18px;">lock_open</span> Desbloquear
@@ -1693,17 +1735,24 @@
       </div>
       <!-- Sección Google -->
       <div id="lock-google-section" style="display:none;">
-        <button onclick="_desbloquearConGoogle()"
-          style="width:100%;background:#fff;color:#333;border:none;border-radius:10px;padding:12px;
+        <button onclick="_desbloquearConGoogle()" style="width:100%;background:#fff;color:#333;border:none;border-radius:10px;padding:12px;
                  font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:10px;
                  display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 48 48">
+            <path fill="#EA4335"
+              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+            <path fill="#4285F4"
+              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+            <path fill="#FBBC05"
+              d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+            <path fill="#34A853"
+              d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+          </svg>
           Verificar con Google
         </button>
       </div>
       <div id="lock-error" style="font-size:0.8rem;color:#EF9A9A;margin-bottom:14px;min-height:20px;"></div>
-      <button onclick="authCerrarSesion()"
-        style="background:none;border:none;color:#5C6BC0;font-size:0.75rem;cursor:pointer;
+      <button onclick="authCerrarSesion()" style="background:none;border:none;color:#5C6BC0;font-size:0.75rem;cursor:pointer;
                text-decoration:underline;padding:4px;">
         Cerrar sesión
       </button>
@@ -1745,7 +1794,8 @@
           </div>
           <div class="toggle-row">
             <div class="toggle-label">
-              <span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;color:#00838F;">touch_app</span>
+              <span class="material-icons"
+                style="font-size:16px;vertical-align:middle;margin-right:4px;color:#00838F;">touch_app</span>
               Modo Pantalla Táctil
               <small>Botones grandes, teclado numérico en pantalla, swipe en wizard</small>
             </div>
@@ -1812,7 +1862,8 @@
               Ver el tour introductorio
               <small>Repasa los módulos de la aplicación paso a paso</small>
             </div>
-            <button onclick="cerrarConfiguracion();iniciarTour()" style="background:#6A1B9A;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <button onclick="cerrarConfiguracion();iniciarTour()"
+              style="background:#6A1B9A;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
               <span class="material-icons" style="font-size:16px;">play_circle</span>Iniciar tour
             </button>
           </div>
@@ -1891,118 +1942,163 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#D84315;">v13.5<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#D84315;">v13.5<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Reordenar planificaciones, mejoras IA y plan activo</div>
               <ul class="about-ver-items">
-                <li><strong>Reordenar planificaciones:</strong> botones de flecha arriba/abajo en cada card para mover el orden de los RA dentro de un curso</li>
-                <li><strong>Badge RA visible:</strong> cada planificación muestra su número de RA (RA1, RA2...) según el orden del curso</li>
-                <li><strong>Plan activo automático:</strong> al cargar o guardar una planificación se marca automáticamente como activa en el curso</li>
-                <li><strong>Sesión con IA mejorada:</strong> el botón Generar de sesión diaria usa Groq → OpenRouter → local, con normalización inteligente de respuestas</li>
-                <li><strong>Prompt optimizado:</strong> prompt de sesión simplificado para mejor compatibilidad con modelos gratuitos</li>
-                <li><strong>Rate limit inteligente:</strong> si Groq agota cuota diaria, salta inmediatamente a OpenRouter sin reintentos</li>
+                <li><strong>Reordenar planificaciones:</strong> botones de flecha arriba/abajo en cada card para mover
+                  el orden de los RA dentro de un curso</li>
+                <li><strong>Badge RA visible:</strong> cada planificación muestra su número de RA (RA1, RA2...) según el
+                  orden del curso</li>
+                <li><strong>Plan activo automático:</strong> al cargar o guardar una planificación se marca
+                  automáticamente como activa en el curso</li>
+                <li><strong>Sesión con IA mejorada:</strong> el botón Generar de sesión diaria usa Groq → OpenRouter →
+                  local, con normalización inteligente de respuestas</li>
+                <li><strong>Prompt optimizado:</strong> prompt de sesión simplificado para mejor compatibilidad con
+                  modelos gratuitos</li>
+                <li><strong>Rate limit inteligente:</strong> si Groq agota cuota diaria, salta inmediatamente a
+                  OpenRouter sin reintentos</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1565C0;">v13.3<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#1565C0;">v13.3<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">OpenRouter como IA de respaldo</div>
               <ul class="about-ver-items">
-                <li><strong>OpenRouter reemplaza a Gemini:</strong> se integra OpenRouter como proveedor de IA de respaldo con modelos gratuitos</li>
+                <li><strong>OpenRouter reemplaza a Gemini:</strong> se integra OpenRouter como proveedor de IA de
+                  respaldo con modelos gratuitos</li>
                 <li><strong>Flujo de IA:</strong> Groq (principal) → OpenRouter (respaldo) → generación local</li>
-                <li><strong>Configuración actualizada:</strong> el modal de IA permite ingresar claves de Groq y OpenRouter (sk-or-...)</li>
+                <li><strong>Configuración actualizada:</strong> el modal de IA permite ingresar claves de Groq y
+                  OpenRouter (sk-or-...)</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#43A047;">v13.2<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#43A047;">v13.2<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Mejoras en generación con IA</div>
               <ul class="about-ver-items">
-                <li><strong>Prompt mejorado para EC:</strong> los Elementos de Capacidad ahora se generan con estructura VERBO + OBJETO + MODO DE HACER, sin copiar los criterios de evaluación</li>
-                <li><strong>Sin referencias a CE:</strong> los enunciados de EC ya no mencionan "en correspondencia con CE1" ni criterios de evaluación</li>
-                <li><strong>Fallback inteligente:</strong> si el proveedor principal falla en instrumentos, el respaldo toma el relevo automáticamente</li>
-                <li><strong>Modelos actualizados:</strong> eliminados modelos descontinuados de Groq (gemma2, mixtral, llama3-70b/8b). Reducción de llamadas innecesarias</li>
+                <li><strong>Prompt mejorado para EC:</strong> los Elementos de Capacidad ahora se generan con estructura
+                  VERBO + OBJETO + MODO DE HACER, sin copiar los criterios de evaluación</li>
+                <li><strong>Sin referencias a CE:</strong> los enunciados de EC ya no mencionan "en correspondencia con
+                  CE1" ni criterios de evaluación</li>
+                <li><strong>Fallback inteligente:</strong> si el proveedor principal falla en instrumentos, el respaldo
+                  toma el relevo automáticamente</li>
+                <li><strong>Modelos actualizados:</strong> eliminados modelos descontinuados de Groq (gemma2, mixtral,
+                  llama3-70b/8b). Reducción de llamadas innecesarias</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#E65100;">v13.1<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#E65100;">v13.1<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Corrección generación de actividades por EC</div>
               <ul class="about-ver-items">
-                <li><strong>Fix actividades por EC:</strong> corregido bug donde el prompt de IA siempre generaba 4 EC con 1 actividad cada uno, ignorando la cantidad configurada por el usuario</li>
-                <li><strong>Prompt dinámico:</strong> el prompt para la IA ahora genera exactamente la cantidad de EC y actividades por EC que el usuario configura en el formulario</li>
-                <li><strong>Opciones Docentes:</strong> panel en Superadmin para ocultar/mostrar opciones del dashboard a los docentes (tareas, notas, libreta, rendimiento, IA, blog, calendario, reportes, denuncias, auditoría)</li>
+                <li><strong>Fix actividades por EC:</strong> corregido bug donde el prompt de IA siempre generaba 4 EC
+                  con 1 actividad cada uno, ignorando la cantidad configurada por el usuario</li>
+                <li><strong>Prompt dinámico:</strong> el prompt para la IA ahora genera exactamente la cantidad de EC y
+                  actividades por EC que el usuario configura en el formulario</li>
+                <li><strong>Opciones Docentes:</strong> panel en Superadmin para ocultar/mostrar opciones del dashboard
+                  a los docentes (tareas, notas, libreta, rendimiento, IA, blog, calendario, reportes, denuncias,
+                  auditoría)</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#B71C1C;">v13.0<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#B71C1C;">v13.0<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Sistema de Roles, Centros Educativos y Director</div>
               <ul class="about-ver-items">
-                <li><strong>Panel Superadmin:</strong> gestión completa de centros educativos (nombre, logo, dirección, regional, distrito, código), asignación de administradores por correo electrónico</li>
-                <li><strong>Centros Educativos:</strong> cada docente se registra seleccionando su centro de una lista; queda en estado pendiente hasta ser aprobado por el admin del centro</li>
-                <li><strong>Panel Admin Centro:</strong> aprobar/rechazar docentes pendientes, ver docentes aprobados/rechazados, revocar acceso</li>
-                <li><strong>Rol Director:</strong> nuevo rol asignable desde el panel Admin Centro; panel exclusivo con envío de avisos (normal/importante/urgente) y monitoreo de actividad de docentes</li>
-                <li><strong>Avisos en Dashboard:</strong> los avisos del director aparecen automáticamente en el dashboard de cada docente del centro con colores según prioridad</li>
-                <li><strong>Pantalla de espera:</strong> docentes pendientes ven una pantalla informativa hasta ser aprobados; control de acceso robusto con protección anti-bypass</li>
-                <li><strong>6 instrumentos de evaluación:</strong> además de Lista de Cotejo y Rúbrica, ahora incluye Escala de Valoración, Escala Estimativa, Escala de Rango y Diario de Doble Entrada</li>
-                <li><strong>Cantidad configurable de EC y actividades:</strong> al generar planificación se puede elegir cuántos Elementos de Capacidad (1-10) y cuántas actividades por EC (1-5)</li>
-                <li><strong>Perfil completo del estudiante:</strong> al buscar un estudiante se muestra historial de asistencia detallado, reportes de comportamiento, denuncias, calificaciones por RA y comentarios</li>
-                <li><strong>Curso asignado en Datos Generales:</strong> al cargar una planificación se muestra qué curso tiene asignada esa planificación</li>
-                <li><strong>Enlace de recurso en modal de clase:</strong> agregar/editar el enlace de recurso directamente desde el modal del dashboard</li>
+                <li><strong>Panel Superadmin:</strong> gestión completa de centros educativos (nombre, logo, dirección,
+                  regional, distrito, código), asignación de administradores por correo electrónico</li>
+                <li><strong>Centros Educativos:</strong> cada docente se registra seleccionando su centro de una lista;
+                  queda en estado pendiente hasta ser aprobado por el admin del centro</li>
+                <li><strong>Panel Admin Centro:</strong> aprobar/rechazar docentes pendientes, ver docentes
+                  aprobados/rechazados, revocar acceso</li>
+                <li><strong>Rol Director:</strong> nuevo rol asignable desde el panel Admin Centro; panel exclusivo con
+                  envío de avisos (normal/importante/urgente) y monitoreo de actividad de docentes</li>
+                <li><strong>Avisos en Dashboard:</strong> los avisos del director aparecen automáticamente en el
+                  dashboard de cada docente del centro con colores según prioridad</li>
+                <li><strong>Pantalla de espera:</strong> docentes pendientes ven una pantalla informativa hasta ser
+                  aprobados; control de acceso robusto con protección anti-bypass</li>
+                <li><strong>6 instrumentos de evaluación:</strong> además de Lista de Cotejo y Rúbrica, ahora incluye
+                  Escala de Valoración, Escala Estimativa, Escala de Rango y Diario de Doble Entrada</li>
+                <li><strong>Cantidad configurable de EC y actividades:</strong> al generar planificación se puede elegir
+                  cuántos Elementos de Capacidad (1-10) y cuántas actividades por EC (1-5)</li>
+                <li><strong>Perfil completo del estudiante:</strong> al buscar un estudiante se muestra historial de
+                  asistencia detallado, reportes de comportamiento, denuncias, calificaciones por RA y comentarios</li>
+                <li><strong>Curso asignado en Datos Generales:</strong> al cargar una planificación se muestra qué curso
+                  tiene asignada esa planificación</li>
+                <li><strong>Enlace de recurso en modal de clase:</strong> agregar/editar el enlace de recurso
+                  directamente desde el modal del dashboard</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#0277BD;">v12.7<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#0277BD;">v12.7<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Enlace de recurso por sesión en Planificaciones Diarias</div>
               <ul class="about-ver-items">
-                <li><strong>Campo "Enlace de recurso":</strong> cada sesión de planificación diaria ahora tiene un campo para pegar un enlace (Google Drive, OneDrive, Dropbox, etc.) con la presentación, documento o carpeta de la clase</li>
-                <li><strong>Botón "Abrir":</strong> al pegar el enlace aparece un botón que abre el recurso en una pestaña nueva directamente desde la sesión</li>
-                <li><strong>Acceso desde el horario:</strong> si la sesión tiene un enlace guardado, aparece el botón "Abrir recurso de la clase" en el modal de detalle al tocar una clase del día</li>
-                <li><strong>Persistente:</strong> el enlace se guarda junto con el resto de la planificación diaria en el almacenamiento local</li>
+                <li><strong>Campo "Enlace de recurso":</strong> cada sesión de planificación diaria ahora tiene un campo
+                  para pegar un enlace (Google Drive, OneDrive, Dropbox, etc.) con la presentación, documento o carpeta
+                  de la clase</li>
+                <li><strong>Botón "Abrir":</strong> al pegar el enlace aparece un botón que abre el recurso en una
+                  pestaña nueva directamente desde la sesión</li>
+                <li><strong>Acceso desde el horario:</strong> si la sesión tiene un enlace guardado, aparece el botón
+                  "Abrir recurso de la clase" en el modal de detalle al tocar una clase del día</li>
+                <li><strong>Persistente:</strong> el enlace se guarda junto con el resto de la planificación diaria en
+                  el almacenamiento local</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#B71C1C;">v12.6<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#B71C1C;">v12.6<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Corrección de seguridad: bloqueo por inactividad resistente a refresco</div>
               <ul class="about-ver-items">
-                <li><strong>Bloqueo persistente al refrescar:</strong> al recargar la página con la sesión bloqueada ya no es posible saltarse el bloqueo; el sistema verifica dos capas al arrancar</li>
-                <li><strong>Capa 1 — Flag explícito:</strong> al bloquearse la pantalla se guarda una marca en <code>sessionStorage</code>; si el usuario refresca, la marca sigue ahí y fuerza el bloqueo de inmediato</li>
-                <li><strong>Capa 2 — Timestamp de actividad:</strong> mientras el usuario interactúa se registra cada 5 s el momento de última actividad; al recargar, si el tiempo transcurrido supera los 3 minutos la sesión se bloquea aunque la capa 1 no exista (compatible con versiones anteriores)</li>
+                <li><strong>Bloqueo persistente al refrescar:</strong> al recargar la página con la sesión bloqueada ya
+                  no es posible saltarse el bloqueo; el sistema verifica dos capas al arrancar</li>
+                <li><strong>Capa 1 — Flag explícito:</strong> al bloquearse la pantalla se guarda una marca en
+                  <code>sessionStorage</code>; si el usuario refresca, la marca sigue ahí y fuerza el bloqueo de
+                  inmediato
+                </li>
+                <li><strong>Capa 2 — Timestamp de actividad:</strong> mientras el usuario interactúa se registra cada 5
+                  s el momento de última actividad; al recargar, si el tiempo transcurrido supera los 3 minutos la
+                  sesión se bloquea aunque la capa 1 no exista (compatible con versiones anteriores)</li>
                 <li>Al desbloquear, el timestamp se reinicia para evitar bloqueos inmediatos sin motivo</li>
               </ul>
             </div>
@@ -2010,97 +2106,139 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1565C0;">v12.5<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#1565C0;">v12.5<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Calendario Escolar compartido</div>
               <ul class="about-ver-items">
-                <li><strong>Calendario Escolar:</strong> nuevo módulo accesible desde el Dashboard; organizado por meses (agosto–junio) con dos secciones por mes: <em>Actividades</em> y <em>Efemérides</em></li>
-                <li><strong>Calendario oficial del centro:</strong> el administrador publica un calendario que todos los docentes registrados pueden consultar automáticamente al abrir la sección</li>
-                <li><strong>Calendario personal:</strong> cada docente puede crear su propio calendario (se copia el oficial como base) y editarlo de forma independiente sin afectar al resto</li>
-                <li><strong>Restaurar calendario oficial:</strong> en cualquier momento el docente puede descartar su versión personal y volver al calendario publicado por el administrador</li>
-                <li>Efemérides ordenadas por día del mes; las actividades se gestionan con agregar, editar y eliminar en línea</li>
-                <li>El calendario personal se sincroniza con la nube (Firebase) igual que el resto de los datos del docente</li>
+                <li><strong>Calendario Escolar:</strong> nuevo módulo accesible desde el Dashboard; organizado por meses
+                  (agosto–junio) con dos secciones por mes: <em>Actividades</em> y <em>Efemérides</em></li>
+                <li><strong>Calendario oficial del centro:</strong> el administrador publica un calendario que todos los
+                  docentes registrados pueden consultar automáticamente al abrir la sección</li>
+                <li><strong>Calendario personal:</strong> cada docente puede crear su propio calendario (se copia el
+                  oficial como base) y editarlo de forma independiente sin afectar al resto</li>
+                <li><strong>Restaurar calendario oficial:</strong> en cualquier momento el docente puede descartar su
+                  versión personal y volver al calendario publicado por el administrador</li>
+                <li>Efemérides ordenadas por día del mes; las actividades se gestionan con agregar, editar y eliminar en
+                  línea</li>
+                <li>El calendario personal se sincroniza con la nube (Firebase) igual que el resto de los datos del
+                  docente</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#4A148C;">v12.4<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#4A148C;">v12.4<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Historial de sesiones</div>
               <ul class="about-ver-items">
-                <li><strong>Historial de sesiones:</strong> registro privado de cada acceso a la app con navegador, sistema operativo, tipo de dispositivo, resolución e idioma; accesible desde Mi cuenta → "Ver historial de sesiones"; almacenado en Firestore bajo la cuenta del docente (nadie más puede verlo)</li>
-                <li>Se conservan automáticamente las últimas 50 sesiones; opción de limpiar el historial completo desde el panel</li>
+                <li><strong>Historial de sesiones:</strong> registro privado de cada acceso a la app con navegador,
+                  sistema operativo, tipo de dispositivo, resolución e idioma; accesible desde Mi cuenta → "Ver
+                  historial de sesiones"; almacenado en Firestore bajo la cuenta del docente (nadie más puede verlo)
+                </li>
+                <li>Se conservan automáticamente las últimas 50 sesiones; opción de limpiar el historial completo desde
+                  el panel</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#004D40;">v12.3<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#004D40;">v12.3<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Correcciones de sincronización Firebase, opción de deshabilitar asistencia y revisión general</div>
+              <div class="about-ver-titulo">Correcciones de sincronización Firebase, opción de deshabilitar asistencia y
+                revisión general</div>
               <ul class="about-ver-items">
-                <li><strong>Opción para deshabilitar asistencia:</strong> nuevo toggle en Configuración para desactivar el módulo de asistencia para docentes que llevan el registro de forma manual; oculta el botón del libro de calificaciones</li>
-                <li><strong>Corrección Firebase — Notas del docente:</strong> al borrar las notas del docente ahora se sincroniza correctamente con Firebase; antes el borrado era solo local y las notas reaparecían al iniciar sesión de nuevo</li>
-                <li><strong>Análisis y revisión general:</strong> verificación de consistencia entre Firebase stores, funciones HTML y módulos; todos los stores críticos confirmados sincronizando correctamente con Firestore</li>
-                <li>Corrección de estado inicial de toggles en Configuración (alertas y columna Mañana aparecían desmarcados en el primer uso)</li>
+                <li><strong>Opción para deshabilitar asistencia:</strong> nuevo toggle en Configuración para desactivar
+                  el módulo de asistencia para docentes que llevan el registro de forma manual; oculta el botón del
+                  libro de calificaciones</li>
+                <li><strong>Corrección Firebase — Notas del docente:</strong> al borrar las notas del docente ahora se
+                  sincroniza correctamente con Firebase; antes el borrado era solo local y las notas reaparecían al
+                  iniciar sesión de nuevo</li>
+                <li><strong>Análisis y revisión general:</strong> verificación de consistencia entre Firebase stores,
+                  funciones HTML y módulos; todos los stores críticos confirmados sincronizando correctamente con
+                  Firestore</li>
+                <li>Corrección de estado inicial de toggles en Configuración (alertas y columna Mañana aparecían
+                  desmarcados en el primer uso)</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#B71C1C;">v12.2<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#B71C1C;">v12.2<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Auditoría de actividad y bloqueo automático por inactividad</div>
               <ul class="about-ver-items">
-                <li><strong>Panel de Auditoría:</strong> historial completo de toda la actividad de la sesión (notas registradas, planificaciones guardadas, bloqueos, inicio/cierre de sesión, etc.) con filtros por fecha y búsqueda de texto; exportable a .txt</li>
-                <li><strong>Bloqueo automático:</strong> la pantalla se bloquea después de 3 minutos de inactividad; desbloqueo con contraseña (email/contraseña) o Google; se registra en la auditoría</li>
-                <li><strong>Mensajes de auditoría mejorados:</strong> los eventos de calificaciones incluyen el nombre del estudiante, actividad y valor exacto en lugar de mensajes genéricos</li>
-                <li>Corrección de duplicados en la auditoría mediante deduplicación automática de eventos idénticos en menos de 600 ms</li>
+                <li><strong>Panel de Auditoría:</strong> historial completo de toda la actividad de la sesión (notas
+                  registradas, planificaciones guardadas, bloqueos, inicio/cierre de sesión, etc.) con filtros por fecha
+                  y búsqueda de texto; exportable a .txt</li>
+                <li><strong>Bloqueo automático:</strong> la pantalla se bloquea después de 3 minutos de inactividad;
+                  desbloqueo con contraseña (email/contraseña) o Google; se registra en la auditoría</li>
+                <li><strong>Mensajes de auditoría mejorados:</strong> los eventos de calificaciones incluyen el nombre
+                  del estudiante, actividad y valor exacto en lugar de mensajes genéricos</li>
+                <li>Corrección de duplicados en la auditoría mediante deduplicación automática de eventos idénticos en
+                  menos de 600 ms</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#4A148C;">v12.1<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#4A148C;">v12.1<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Verificación de correo por código OTP al registrarse</div>
               <ul class="about-ver-items">
-                <li><strong>Registro seguro con OTP:</strong> al crear una cuenta se envía un código de 6 dígitos al correo del docente; el registro solo se completa al ingresar el código correcto, garantizando que el email existe y es válido</li>
-                <li><strong>Código expira en 10 minutos</strong> con cuenta regresiva visible; botón "Reenviar código" genera uno nuevo si no llegó el primero</li>
-                <li>Se elimina el campo de código de invitación del formulario de registro (reemplazado por la verificación OTP)</li>
+                <li><strong>Registro seguro con OTP:</strong> al crear una cuenta se envía un código de 6 dígitos al
+                  correo del docente; el registro solo se completa al ingresar el código correcto, garantizando que el
+                  email existe y es válido</li>
+                <li><strong>Código expira en 10 minutos</strong> con cuenta regresiva visible; botón "Reenviar código"
+                  genera uno nuevo si no llegó el primero</li>
+                <li>Se elimina el campo de código de invitación del formulario de registro (reemplazado por la
+                  verificación OTP)</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#006064;">v12.0<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#006064;">v12.0<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Blog del Docente, Temporizador de Clase, Participación y mejoras generales</div>
+              <div class="about-ver-titulo">Blog del Docente, Temporizador de Clase, Participación y mejoras generales
+              </div>
               <ul class="about-ver-items">
-                <li><strong>Blog del Docente:</strong> publicación de tareas e información por curso y RA con enlace público para estudiantes; soporte para tareas en PC (entrega de archivos desde el navegador) y tareas en cuaderno; gestión de borradores y publicación</li>
-                <li><strong>Temporizador de Clase:</strong> botón flotante accesible desde cualquier pantalla con presets (5–60 min), tiempo personalizado, anillo de progreso SVG y alerta sonora al finalizar</li>
-                <li><strong>Participación en Clase:</strong> registro diario de participación por estudiante (Destacado / Participó / No participó) dentro del libro de calificaciones, sin afectar las notas</li>
-                <li><strong>Tour de Bienvenida:</strong> guía interactiva de 10 pasos que se inicia automáticamente al primer acceso; reiniciable desde Configuración</li>
-                <li><strong>Código de invitación:</strong> protección del registro con código secreto configurable para evitar accesos no autorizados</li>
-                <li><strong>Dashboard mejorado:</strong> accesos rápidos reubicados al inicio, estadísticas de rendimiento navegables (clic en RA abre el libro directamente), modal de clase con navegación directa al RA correspondiente</li>
+                <li><strong>Blog del Docente:</strong> publicación de tareas e información por curso y RA con enlace
+                  público para estudiantes; soporte para tareas en PC (entrega de archivos desde el navegador) y tareas
+                  en cuaderno; gestión de borradores y publicación</li>
+                <li><strong>Temporizador de Clase:</strong> botón flotante accesible desde cualquier pantalla con
+                  presets (5–60 min), tiempo personalizado, anillo de progreso SVG y alerta sonora al finalizar</li>
+                <li><strong>Participación en Clase:</strong> registro diario de participación por estudiante (Destacado
+                  / Participó / No participó) dentro del libro de calificaciones, sin afectar las notas</li>
+                <li><strong>Tour de Bienvenida:</strong> guía interactiva de 10 pasos que se inicia automáticamente al
+                  primer acceso; reiniciable desde Configuración</li>
+                <li><strong>Código de invitación:</strong> protección del registro con código secreto configurable para
+                  evitar accesos no autorizados</li>
+                <li><strong>Dashboard mejorado:</strong> accesos rápidos reubicados al inicio, estadísticas de
+                  rendimiento navegables (clic en RA abre el libro directamente), modal de clase con navegación directa
+                  al RA correspondiente</li>
                 <li><strong>Tareas:</strong> nuevo estado "No entregada", corrección de color en modo oscuro</li>
               </ul>
             </div>
@@ -2108,31 +2246,44 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v11.5<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#1B5E20;">v11.5<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
               <div class="about-ver-titulo">Horario: deduplicación inteligente de planes del mismo módulo</div>
               <ul class="about-ver-items">
-                <li><strong>Horario hoy/mañana:</strong> si un curso tiene dos planificaciones del mismo módulo (ej: dos unidades de FOL), se muestra solo el plan marcado como activo en Calificaciones; si el plan activo es de otra materia, se muestra el primer plan encontrado en lugar de ambos</li>
+                <li><strong>Horario hoy/mañana:</strong> si un curso tiene dos planificaciones del mismo módulo (ej: dos
+                  unidades de FOL), se muestra solo el plan marcado como activo en Calificaciones; si el plan activo es
+                  de otra materia, se muestra el primer plan encontrado en lugar de ambos</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#BF360C;">v11.0<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#BF360C;">v11.0<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Recuperaciones, Vista del Estudiante, Modo Táctil y mejoras al Libro de Calificaciones</div>
+              <div class="about-ver-titulo">Recuperaciones, Vista del Estudiante, Modo Táctil y mejoras al Libro de
+                Calificaciones</div>
               <ul class="about-ver-items">
-                <li><strong>Modo Recuperación / 2da Oportunidad:</strong> registra notas de recuperación por actividad (independientes de la nota final). Botón ↺ por estudiante, punto de color en cada celda (naranja = pendiente, verde = completada), columnas Recuper. y Total RA + Recup. en la tabla</li>
-                <li><strong>Control de límite en recuperaciones:</strong> la nota de recuperación no puede hacer que el total supere el valorTotal del RA; el formulario muestra el máximo disponible</li>
-                <li><strong>Control de valores de actividades:</strong> la suma de los valores de las actividades no puede exceder el Total del RA; indicador verde/naranja/rojo en el encabezado de la tabla</li>
-                <li><strong>Vista del Estudiante (QR):</strong> genera un enlace y código QR para que el estudiante vea sus calificaciones en modo solo lectura (viewer.html)</li>
-                <li><strong>Modo Pantalla Táctil:</strong> botones y celdas de notas más grandes, teclado numérico en pantalla tipo calculadora, swipe izquierda/derecha en el wizard, sin efectos hover. Se activa en Configuración</li>
-                <li><strong>Tabla de calificaciones simplificada:</strong> se eliminaron las columnas "Otros RAs", "FINAL" y "Asistencia"; se agregaron "Recuper." y "Total RA + Recup."</li>
+                <li><strong>Modo Recuperación / 2da Oportunidad:</strong> registra notas de recuperación por actividad
+                  (independientes de la nota final). Botón ↺ por estudiante, punto de color en cada celda (naranja =
+                  pendiente, verde = completada), columnas Recuper. y Total RA + Recup. en la tabla</li>
+                <li><strong>Control de límite en recuperaciones:</strong> la nota de recuperación no puede hacer que el
+                  total supere el valorTotal del RA; el formulario muestra el máximo disponible</li>
+                <li><strong>Control de valores de actividades:</strong> la suma de los valores de las actividades no
+                  puede exceder el Total del RA; indicador verde/naranja/rojo en el encabezado de la tabla</li>
+                <li><strong>Vista del Estudiante (QR):</strong> genera un enlace y código QR para que el estudiante vea
+                  sus calificaciones en modo solo lectura (viewer.html)</li>
+                <li><strong>Modo Pantalla Táctil:</strong> botones y celdas de notas más grandes, teclado numérico en
+                  pantalla tipo calculadora, swipe izquierda/derecha en el wizard, sin efectos hover. Se activa en
+                  Configuración</li>
+                <li><strong>Tabla de calificaciones simplificada:</strong> se eliminaron las columnas "Otros RAs",
+                  "FINAL" y "Asistencia"; se agregaron "Recuper." y "Total RA + Recup."</li>
                 <li><strong>Columna # de estudiante</strong> en la tabla de calificaciones</li>
                 <li>Backup completo: incluye recuperaciones, incidencias, claves de IA y groqKey</li>
               </ul>
@@ -2141,16 +2292,20 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#00695C;">v10.0<span class="about-ver-fecha">Mar 2026</span>
+              <div class="about-ver-badge" style="background:#00695C;">v10.0<span class="about-ver-fecha">Mar
+                  2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Planificación Diaria integrada en el stepper y correcciones de modo oscuro</div>
+              <div class="about-ver-titulo">Planificación Diaria integrada en el stepper y correcciones de modo oscuro
+              </div>
               <ul class="about-ver-items">
-                <li>Planificación Diaria añadida como paso 5 del wizard de planificación (antes de Vista Previa, que pasa al paso 6)</li>
+                <li>Planificación Diaria añadida como paso 5 del wizard de planificación (antes de Vista Previa, que
+                  pasa al paso 6)</li>
                 <li>Modo oscuro: chips EC (pd-ec-chip) ahora muestran texto en blanco para mejor legibilidad</li>
                 <li>Modo oscuro: caja RA en Vista Previa (vp-ra-box) con fondo azul oscuro y texto celeste legible</li>
-                <li>Selector de planificaciones diarias ahora muestra módulo, curso asignado y descripción del RA (truncada) para identificar fácilmente cada planificación</li>
+                <li>Selector de planificaciones diarias ahora muestra módulo, curso asignado y descripción del RA
+                  (truncada) para identificar fácilmente cada planificación</li>
               </ul>
             </div>
           </div>
@@ -2164,7 +2319,8 @@
               <div class="about-ver-titulo">Cuentas de usuario y sincronización en la nube (Firebase)</div>
               <ul class="about-ver-items">
                 <li>Sistema de autenticación completo: login con email/contraseña y con Google</li>
-                <li>Los datos se guardan en la nube (Firebase Firestore) y se sincronizan entre dispositivos y navegadores</li>
+                <li>Los datos se guardan en la nube (Firebase Firestore) y se sincronizan entre dispositivos y
+                  navegadores</li>
                 <li>Migración automática de datos locales al iniciar sesión por primera vez</li>
                 <li>Menú de usuario en el header con avatar, nombre e indicador de cuenta activa</li>
                 <li>Cierre de sesión seguro con limpieza de caché local</li>
@@ -2180,9 +2336,11 @@
             <div>
               <div class="about-ver-titulo">Paneles ampliados, modo oscuro completo y correcciones de UI</div>
               <ul class="about-ver-items">
-                <li>Paneles (Calificaciones, Planificaciones, Diarias, Notas) movidos fuera del contenedor principal para aprovechar todo el ancho de pantalla</li>
+                <li>Paneles (Calificaciones, Planificaciones, Diarias, Notas) movidos fuera del contenedor principal
+                  para aprovechar todo el ancho de pantalla</li>
                 <li>Tarjetas de planificaciones más anchas (380px mín.) para evitar texto cortado</li>
-                <li>Modo oscuro completo en "Importar desde Word": labels, placeholders, inputs, días de clase, tabs y tarjetas de resumen</li>
+                <li>Modo oscuro completo en "Importar desde Word": labels, placeholders, inputs, días de clase, tabs y
+                  tarjetas de resumen</li>
                 <li>Modo oscuro completo en "Acerca de": nombre de app, descripción y bullets de versión</li>
                 <li>Encabezado de tabla en Libro de Calificaciones alineado a la izquierda</li>
                 <li>Corrección: "Nueva Planificación" ya no redirige al dashboard al recargar</li>
@@ -2621,7 +2779,8 @@
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
     <div class="modal-box" style="max-width:480px;" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">manage_accounts</span>Mi cuenta</h3>
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">manage_accounts</span>Mi cuenta</h3>
         <button class="modal-close" onclick="cerrarMiCuenta()"><span class="material-icons">close</span></button>
       </div>
       <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:24px;">
@@ -2659,11 +2818,13 @@
           </div>
           <div class="auth-field">
             <label for="cuenta-pass-nueva">Nueva contraseña</label>
-            <input type="password" id="cuenta-pass-nueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+            <input type="password" id="cuenta-pass-nueva" placeholder="Mínimo 6 caracteres"
+              autocomplete="new-password" />
           </div>
           <div class="auth-field">
             <label for="cuenta-pass-nueva2">Confirmar nueva contraseña</label>
-            <input type="password" id="cuenta-pass-nueva2" placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+            <input type="password" id="cuenta-pass-nueva2" placeholder="Repite la nueva contraseña"
+              autocomplete="new-password" />
           </div>
           <div class="auth-error" id="cuenta-msg-pass"></div>
           <button class="auth-btn-primary" id="cuenta-btn-pass" onclick="authCambiarPassword()">
@@ -2682,7 +2843,8 @@
         <p style="font-size:0.83rem;color:var(--color-texto-sec,#757575);margin:0 0 10px;">
           Muestra los últimos accesos a la app: dispositivo, navegador y fecha/hora.
         </p>
-        <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;" onclick="cerrarMiCuenta();abrirHistorialSesiones()">
+        <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
+          onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
         </button>
       </div>
@@ -2694,11 +2856,15 @@
   </div>
 
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
-  <div id="sesiones-overlay" class="modal-overlay hidden" onclick="this.id==='sesiones-overlay'&&cerrarHistorialSesiones()">
-    <div class="modal-box" style="max-width:560px;max-height:88vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+  <div id="sesiones-overlay" class="modal-overlay hidden"
+    onclick="this.id==='sesiones-overlay'&&cerrarHistorialSesiones()">
+    <div class="modal-box" style="max-width:560px;max-height:88vh;display:flex;flex-direction:column;"
+      onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">devices</span>Historial de sesiones</h3>
-        <button class="modal-close" onclick="cerrarHistorialSesiones()"><span class="material-icons">close</span></button>
+        <h3><span class="material-icons"
+            style="vertical-align:middle;margin-right:6px;font-size:20px;">devices</span>Historial de sesiones</h3>
+        <button class="modal-close" onclick="cerrarHistorialSesiones()"><span
+            class="material-icons">close</span></button>
       </div>
       <div class="modal-body" style="padding:16px 20px;overflow-y:auto;flex:1;">
         <div id="sesiones-loading" style="text-align:center;padding:32px;color:var(--color-texto-sec,#757575);">
@@ -2761,9 +2927,11 @@
   <!-- Teclado numérico táctil para notas -->
   <div id="teclado-notas-overlay" class="hidden"
     style="position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#16162a;border-top:2px solid #1565C0;box-shadow:0 -8px 32px rgba(0,0,0,0.65);">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #2a2a3a;">
+    <div
+      style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #2a2a3a;">
       <div style="display:flex;align-items:baseline;gap:10px;">
-        <span id="teclado-display" style="font-size:2.4rem;font-weight:700;color:#90CAF9;min-width:110px;display:inline-block;letter-spacing:1px;">—</span>
+        <span id="teclado-display"
+          style="font-size:2.4rem;font-weight:700;color:#90CAF9;min-width:110px;display:inline-block;letter-spacing:1px;">—</span>
         <span id="teclado-max-label" style="font-size:0.8rem;color:#546E7A;">Máx: 100</span>
       </div>
       <button onclick="cerrarTecladoNotas()"
@@ -2772,23 +2940,39 @@
       </button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;max-width:440px;margin:0 auto;">
-      <button onclick="tecladoPresionar('7')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">7</button>
-      <button onclick="tecladoPresionar('8')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">8</button>
-      <button onclick="tecladoPresionar('9')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">9</button>
-      <button onclick="tecladoPresionar('DEL')" style="background:#2a1a1a;border:1px solid #3a2020;color:#EF5350;font-size:1.5rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;"><span class="material-icons">backspace</span></button>
+      <button onclick="tecladoPresionar('7')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">7</button>
+      <button onclick="tecladoPresionar('8')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">8</button>
+      <button onclick="tecladoPresionar('9')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">9</button>
+      <button onclick="tecladoPresionar('DEL')"
+        style="background:#2a1a1a;border:1px solid #3a2020;color:#EF5350;font-size:1.5rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;"><span
+          class="material-icons">backspace</span></button>
 
-      <button onclick="tecladoPresionar('4')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">4</button>
-      <button onclick="tecladoPresionar('5')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">5</button>
-      <button onclick="tecladoPresionar('6')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">6</button>
-      <button onclick="tecladoConfirmar()" style="background:#1B5E20;border:1px solid #2E7D32;color:#69F0AE;font-size:2.2rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;grid-row:span 2;display:flex;align-items:center;justify-content:center;"><span class="material-icons" style="font-size:2.4rem;">check</span></button>
+      <button onclick="tecladoPresionar('4')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">4</button>
+      <button onclick="tecladoPresionar('5')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">5</button>
+      <button onclick="tecladoPresionar('6')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">6</button>
+      <button onclick="tecladoConfirmar()"
+        style="background:#1B5E20;border:1px solid #2E7D32;color:#69F0AE;font-size:2.2rem;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;grid-row:span 2;display:flex;align-items:center;justify-content:center;"><span
+          class="material-icons" style="font-size:2.4rem;">check</span></button>
 
-      <button onclick="tecladoPresionar('1')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">1</button>
-      <button onclick="tecladoPresionar('2')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">2</button>
-      <button onclick="tecladoPresionar('3')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">3</button>
+      <button onclick="tecladoPresionar('1')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">1</button>
+      <button onclick="tecladoPresionar('2')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">2</button>
+      <button onclick="tecladoPresionar('3')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">3</button>
 
-      <button onclick="tecladoPresionar('0')" style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">0</button>
-      <button onclick="tecladoPresionar('.')" style="background:#252535;border:1px solid #2a2a3a;color:#90CAF9;font-size:1.7rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">.</button>
-      <button onclick="tecladoPresionar('AC')" style="background:#1a0a0a;border:1px solid #3a1a1a;color:#EF5350;font-size:1rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">AC</button>
+      <button onclick="tecladoPresionar('0')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#e0e0e0;font-size:1.7rem;font-weight:600;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">0</button>
+      <button onclick="tecladoPresionar('.')"
+        style="background:#252535;border:1px solid #2a2a3a;color:#90CAF9;font-size:1.7rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">.</button>
+      <button onclick="tecladoPresionar('AC')"
+        style="background:#1a0a0a;border:1px solid #3a1a1a;color:#EF5350;font-size:1rem;font-weight:700;padding:18px 8px;border-radius:10px;cursor:pointer;touch-action:manipulation;">AC</button>
     </div>
   </div>
 
@@ -2803,9 +2987,8 @@
       </div>
       <div class="modal-body" style="padding:20px;text-align:center;">
         <p style="color:#9E9E9E;font-size:0.82rem;margin-bottom:16px;">
-          El estudiante escanea el QR o abre el enlace para ver sus calificaciones en modo solo lectura.
+          Comparte este enlace con el estudiante para que vea sus calificaciones en modo solo lectura.
         </p>
-        <div id="vista-est-qr" style="display:flex;justify-content:center;align-items:center;min-height:224px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <input id="vista-est-url" readonly
             style="flex:1;padding:7px 10px;background:#0e0e1a;border:1px solid #333;border-radius:6px;color:#90CAF9;font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" />
@@ -2815,13 +2998,9 @@
           </button>
         </div>
         <button onclick="abrirVistaEstudianteTab()"
-          style="width:100%;padding:10px;background:#1B5E20;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;">
+          style="width:100%;padding:10px;background:#1B5E20;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;gap:6px;">
           <span class="material-icons">open_in_new</span>Abrir vista completa
         </button>
-        <p style="color:#455A64;font-size:0.72rem;display:flex;align-items:center;justify-content:center;gap:4px;">
-          <span class="material-icons" style="font-size:13px;">wifi</span>
-          El QR funciona si el estudiante está en la misma red WiFi que este equipo.
-        </p>
       </div>
     </div>
   </div>
@@ -2840,8 +3019,8 @@
       <!-- Anillo de progreso + tiempo -->
       <div class="timer-display-wrap">
         <svg class="timer-ring" viewBox="0 0 120 120">
-          <circle class="timer-ring-bg" cx="60" cy="60" r="52"/>
-          <circle id="timer-ring-prog" class="timer-ring-prog" cx="60" cy="60" r="52"/>
+          <circle class="timer-ring-bg" cx="60" cy="60" r="52" />
+          <circle id="timer-ring-prog" class="timer-ring-prog" cx="60" cy="60" r="52" />
         </svg>
         <div id="timer-display" class="timer-time-text">00:00</div>
       </div>
