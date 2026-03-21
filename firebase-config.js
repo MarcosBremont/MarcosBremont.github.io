@@ -77,6 +77,18 @@
 //        }
 //      }
 //    }
+//
+// 9. En Storage → Rules, pega estas reglas:
+//    rules_version = '2';
+//    service firebase.storage {
+//      match /b/{bucket}/o {
+//        match /centros/{centroId}/{allPaths=**} {
+//          allow read: if request.auth != null;
+//          allow write: if request.auth != null
+//                       && request.resource.size < 5 * 1024 * 1024;
+//        }
+//      }
+//    }
 // ================================================================
 
 // ── Código de invitación por defecto (cámbialo desde Configuración dentro de la app)
@@ -115,5 +127,6 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-const db   = firebase.firestore();
-const auth = firebase.auth();
+const db      = firebase.firestore();
+const auth    = firebase.auth();
+const storage = firebase.storage();

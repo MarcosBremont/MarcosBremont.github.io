@@ -4256,14 +4256,139 @@ function imprimirPDF() {
 
 
 
+/** Obtiene la URL de plantilla del centro del usuario actual */
+async function _getPlantillaUrlCentro() {
+  if (!window.currentUser) return null;
+  try {
+    // Obtener centroId del usuario
+    const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+    const centroId = userDoc.exists ? userDoc.data().centroId : null;
+    if (!centroId) {
+      // Intentar desde colección usuarios
+      const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+      if (!userDoc2.exists || !userDoc2.data().centroId) return null;
+      return _getPlantillaFromCentro(userDoc2.data().centroId);
+    }
+    return _getPlantillaFromCentro(centroId);
+  } catch (e) {
+    console.warn('[Plantilla] Error obteniendo centro:', e);
+    return null;
+  }
+}
+
+async function _getPlantillaFromCentro(centroId) {
+  const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+  if (!centroDoc.exists) return null;
+  const centro = centroDoc.data();
+  if (!centro.plantillaUrl) return null;
+  return { url: centro.plantillaUrl, centroNombre: centro.nombre || '' };
+}
+
+/** Exporta usando la plantilla .docx del centro con docxtemplater */
+async function _exportarConPlantillaCentro() {
+  const Docxtemplater = window.docxtemplater || window.Docxtemplater;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return false;
+
+  const info = await _getPlantillaUrlCentro();
+  if (!info) return false;
+
+  mostrarToast('Exportando con plantilla del centro...', 'info');
+
+  // Descargar plantilla
+  const response = await fetch(info.url);
+  if (!response.ok) throw new Error('No se pudo descargar la plantilla');
+  const arrayBuffer = await response.arrayBuffer();
+
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const acts = planificacion.actividades || [];
+  const ecs = planificacion.elementosCapacidad || [];
+
+  // Construir tabla de EC + Actividades
+  const tablaECActividades = [];
+  ecs.forEach(ec => {
+    const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
+    actsEC.forEach((a, i) => {
+      tablaECActividades.push({
+        ec_codigo: ec.codigo || '',
+        ec_enunciado: i === 0 ? (ec.enunciado || '') : '',
+        ec_nivel: i === 0 ? (ec.nivel || ec.nivelBloom || '') : '',
+        act_enunciado: a.enunciado || '',
+        act_fecha: a.fechaStr || a.fecha || '',
+        act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || ''
+      });
+    });
+  });
+
+  // Datos para placeholders
+  const data = {
+    familia_profesional: dg.familiaProfesional || '',
+    codigo_fp: dg.codigoFP || '',
+    bachillerato: dg.nombreBachillerato || '',
+    codigo_tit: dg.codigoTitulo || '',
+    modulo_formativo: dg.moduloFormativo || '',
+    codigo_mf: dg.codigoModulo || '',
+    nombre_docente: dg.nombreDocente || '',
+    unidad_competencia: dg.unidadCompetencia || '',
+    codigo_uc: dg.codigoUC || '',
+    cantidad_ra: dg.cantidadRA || '',
+    valor_ra: dg.valorRA || '',
+    horas_semana: dg.horasSemana || '',
+    fecha_inicio: dg.fechaInicio || '',
+    fecha_termino: dg.fechaTermino || '',
+    resultado_aprendizaje: ra.descripcion || '',
+    nivel_dominio: ra.nivelBloom || planificacion.nivelBloomRA || '',
+    contenidos_conceptuales: ra.contenidosConceptuales || '',
+    contenidos_procedimentales: ra.contenidosProcedimentales || '',
+    contenidos_actitudinales: ra.contenidosActitudinales || '',
+    criterios_evaluacion: ra.criterios || '',
+    recursos_didacticos: ra.recursos || ra.recursosDid || '',
+    centro_educativo: info.centroNombre || '',
+    // Tabla de EC y Actividades (para loops en docxtemplater)
+    actividades: tablaECActividades
+  };
+
+  // Procesar con docxtemplater
+  const zip = new PizZip(arrayBuffer);
+  const DocxT = window.docxtemplater || window.Docxtemplater;
+  const doc = new DocxT(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{', end: '}' }
+  });
+  doc.render(data);
+
+  const out = doc.getZip().generate({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+
+  // Descargar
+  const nombre = `Planificacion_RA_${(dg.moduloFormativo || 'modulo').replace(/\s+/g, '_')}.docx`;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(out);
+  link.download = nombre;
+  link.click();
+  URL.revokeObjectURL(link.href);
+
+  mostrarToast('Planificación exportada con plantilla del centro', 'success');
+  return true;
+}
+
 /** Exporta a Word como .doc (HTML compatible con Word) */
 
 
 
-function exportarWord() {
+async function exportarWord() {
+  // Intentar exportar con plantilla del centro si existe
+  try {
+    const exported = await _exportarConPlantillaCentro();
+    if (exported) return; // plantilla usada exitosamente
+  } catch (e) {
+    console.warn('[Plantilla] No se pudo usar plantilla del centro:', e.message);
+  }
 
-
-
+  // Fallback: exportar como HTML-Word
   const contenido = document.getElementById('vista-previa').innerHTML;
 
 
@@ -21808,6 +21933,20 @@ async function _mostrarFormCentro(centroId) {
     + _inputCentro('sa-centro-email', 'Email del Centro', centro.email, 'Ej: info@liceo.edu.do')
     + _inputCentro('sa-centro-logo', 'URL del Logo', centro.logoUrl, 'https://ejemplo.com/logo.png')
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #7C4DFF;border-radius:10px;background:#F3E5F5;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#4527A0;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Planificación (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx del centro con placeholders como <code>{familia_profesional}</code>, <code>{modulo_formativo}</code>, etc. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholders();" style="color:#7C4DFF;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (centro.plantillaUrl
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaNombre || 'plantilla.docx') + '</span>'
+        + '<button onclick="_eliminarPlantillaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '')
+    + '<input type="file" id="sa-centro-plantilla" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -21821,7 +21960,7 @@ function _inputCentro(id, label, val, ph) {
     + 'style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>';
 }
 
-/** Guarda centro en Firestore */
+/** Guarda centro en Firestore (y sube plantilla si se seleccionó) */
 async function _guardarCentro(centroId) {
   const nombre = document.getElementById('sa-centro-nombre')?.value?.trim();
   if (!nombre) { mostrarToast('El nombre del centro es obligatorio', 'error'); return; }
@@ -21838,22 +21977,110 @@ async function _guardarCentro(centroId) {
     updatedAt: new Date().toISOString()
   };
 
+  // Subir plantilla Word si se seleccionó
+  const fileInput = document.getElementById('sa-centro-plantilla');
+  const file = fileInput?.files?.[0];
+  if (file) {
+    if (!file.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
+    let finalId = centroId;
     if (centroId) {
       await db.collection(CENTROS_COLLECTION).doc(centroId).update(data);
-      mostrarToast('Centro actualizado correctamente', 'success');
     } else {
       data.createdAt = new Date().toISOString();
       data.createdBy = window.currentUser?.uid || '';
       data.admins = [];
-      await db.collection(CENTROS_COLLECTION).add(data);
-      mostrarToast('Centro creado correctamente', 'success');
+      const docRef = await db.collection(CENTROS_COLLECTION).add(data);
+      finalId = docRef.id;
     }
+
+    // Subir plantilla después de tener el ID
+    if (file && finalId) {
+      mostrarToast('Subiendo plantilla...', 'info');
+      const ref = storage.ref('centros/' + finalId + '/plantilla.docx');
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
+        plantillaUrl: url,
+        plantillaNombre: file.name
+      });
+    }
+
+    mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
   } catch (e) {
     console.error('Error guardando centro:', e);
     mostrarToast('Error guardando centro: ' + e.message, 'error');
   }
+}
+
+/** Elimina plantilla del centro */
+async function _eliminarPlantillaCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de este centro?')) return;
+  try {
+    const ref = storage.ref('centros/' + centroId + '/plantilla.docx');
+    await ref.delete().catch(() => {}); // ignorar si no existe en storage
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
+      plantillaUrl: firebase.firestore.FieldValue.delete(),
+      plantillaNombre: firebase.firestore.FieldValue.delete()
+    });
+    mostrarToast('Plantilla eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla: ' + e.message, 'error');
+  }
+}
+
+/** Muestra guía de placeholders para la plantilla */
+function _mostrarGuiaPlaceholders() {
+  const placeholders = [
+    ['{familia_profesional}', 'Nombre de la familia profesional'],
+    ['{codigo_fp}', 'Código de la familia profesional'],
+    ['{bachillerato}', 'Bachillerato técnico en...'],
+    ['{codigo_tit}', 'Código de titulación'],
+    ['{modulo_formativo}', 'Nombre del módulo formativo'],
+    ['{codigo_mf}', 'Código del módulo'],
+    ['{nombre_docente}', 'Nombre completo del docente'],
+    ['{unidad_competencia}', 'Unidad de competencia asociada'],
+    ['{codigo_uc}', 'Código UC'],
+    ['{cantidad_ra}', 'Cantidad de RA del MF'],
+    ['{valor_ra}', 'Valor del RA a trabajar'],
+    ['{horas_semana}', 'Horas por semana del MF'],
+    ['{fecha_inicio}', 'Fecha de inicio'],
+    ['{fecha_termino}', 'Fecha de término'],
+    ['{resultado_aprendizaje}', 'Descripción del RA'],
+    ['{nivel_dominio}', 'Nivel de dominio del RA (Bloom)'],
+    ['{contenidos_conceptuales}', 'Contenidos conceptuales'],
+    ['{contenidos_procedimentales}', 'Contenidos procedimentales'],
+    ['{contenidos_actitudinales}', 'Contenidos actitudinales'],
+    ['{criterios_evaluacion}', 'Criterios de evaluación del currículo'],
+    ['{recursos_didacticos}', 'Recursos didácticos disponibles'],
+    ['{centro_educativo}', 'Nombre del centro educativo'],
+    ['{tabla_ec_actividades}', 'Tabla completa de EC y actividades (se inserta como tabla)']
+  ];
+  const rows = placeholders.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#4527A0;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Plantilla Word';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Escribe estos placeholders dentro de tu plantilla .docx y el sistema los reemplazará con los datos reales al exportar:</p>'
+    + '<div style="max-height:400px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + '<p style="font-size:0.75rem;color:#9E9E9E;margin-top:10px;">Tip: En tu archivo Word, simplemente escribe el placeholder (ej: <code>{familia_profesional}</code>) donde quieras que aparezca el dato.</p>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
 /** Elimina centro */
