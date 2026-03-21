@@ -14480,7 +14480,7 @@ function renderizarDiarias() {
 
             <span class="pd-ec-chip" style="background:${color}22;color:${color};">${nivLabel[nivel] || nivel}</span>
 
-
+            ${(() => { const it = act.instrumento?.tipo; if (!it) return ''; const inf = INSTRUMENTOS[it] || {}; return `<span class="pd-ec-chip" style="background:${inf.bg || '#F5F5F5'};color:${inf.color || '#616161'};gap:2px;"><span class="material-icons" style="font-size:13px;">${inf.icono || 'assignment'}</span>${inf.label || it}</span>`; })()}
 
           </div>
 

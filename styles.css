@@ -3184,6 +3184,9 @@ body.dark-mode .btn-pln-dup:hover {
 
 /* Chip EC en sesion */
 .pd-ec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   padding: 2px 10px;
   border-radius: var(--radio-full);
   font-size: 0.75rem;
