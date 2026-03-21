@@ -8293,7 +8293,7 @@ function renderizarTablaCalificaciones() {
     } else {
       // Columna de actividad normal
       const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
-      const fechaNum = a.fecha ? (() => { const p = String(a.fecha).split('-'); return p[2] + '/' + p[1]; })() : '';
+      const fechaNum = a.fecha ? (() => { const p = String(a.fecha).split('T')[0].split('-'); return p[2] + '/' + p[1]; })() : '';
       const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
       _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
       const numInEC = _idxEC[a.ecCodigo || ''];
