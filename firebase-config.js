@@ -60,9 +60,9 @@
 //          allow read: if request.auth != null;
 //          allow write: if request.auth != null;
 //        }
-//        // Centros educativos (todos los autenticados leen, autenticados escriben)
+//        // Centros educativos (lectura pública para registro, escritura autenticada)
 //        match /centros/{centroId} {
-//          allow read: if request.auth != null;
+//          allow read: if true;
 //          allow write: if request.auth != null;
 //        }
 //        // Perfiles de usuario

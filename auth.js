@@ -112,7 +112,13 @@ async function _cargarCentrosParaRegistro() {
       });
     });
   } catch (e) {
-    console.warn('Error cargando centros para registro:', e);
+    console.warn('Error cargando centros para registro:', e.code, e.message);
+    const selectors = ['auth-centro-reg', 'auth-centro-google'];
+    selectors.forEach(selId => {
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Error al cargar centros —</option>';
+    });
   }
 }
 

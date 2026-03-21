@@ -3135,6 +3135,22 @@ function _renderInstrumentoGenerico(inst) {
   return html;
 }
 
+/** Renderiza cualquier tipo de instrumento de forma segura */
+function _renderInstrumentoHTML(inst) {
+  if (!inst) return '<p style="color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;">No hay instrumento generado.</p>';
+  const tipo = inst.tipo || 'cotejo';
+  if (tipo === 'cotejo') return renderizarListaCotejoHTML(inst);
+  if (tipo === 'rubrica' && inst.niveles) return renderizarRubricaHTML(inst);
+  // Para tipos nuevos o instrumentos sin datos generados
+  const info = INSTRUMENTOS[tipo] || {};
+  return `<div style="padding:16px;text-align:center;">
+    <span class="material-icons" style="font-size:36px;color:${info.color || '#616161'};display:block;margin-bottom:8px;">${info.icono || 'assignment'}</span>
+    <div style="font-weight:700;font-size:0.95rem;color:#424242;margin-bottom:4px;">${info.label || inst.tipoLabel || tipo}</div>
+    <p style="font-size:0.82rem;color:#78909C;margin:0;">${info.desc || ''}</p>
+    <p style="font-size:0.78rem;color:#9E9E9E;margin-top:8px;">Usa el botón "Ver" en el paso 4 (Actividades) para generar los criterios de este instrumento.</p>
+  </div>`;
+}
+
 function renderizarListaCotejoHTML(inst) {
   if (!inst || !inst.criterios?.length) return '<p style="color:#9E9E9E;font-style:italic;padding:10px;">Sin criterios. Guarda y vuelve a abrir el instrumento para regenerar.</p>';
 
@@ -3329,7 +3345,7 @@ function renderizarListaCotejoHTML(inst) {
 
 
 function renderizarRubricaHTML(inst) {
-  if (!inst || !inst.criterios?.length) return '<p style="color:#9E9E9E;font-style:italic;padding:10px;">Sin criterios. Guarda y vuelve a abrir el instrumento para regenerar.</p>';
+  if (!inst || !inst.criterios?.length || !inst.niveles?.length) return '<p style="color:#9E9E9E;font-style:italic;padding:10px;">Sin criterios. Guarda y vuelve a abrir el instrumento para regenerar.</p>';
 
 
 
@@ -3836,7 +3852,7 @@ function renderizarVistaPrevia() {
 
 
 
-      ${a.instrumento.tipo === 'cotejo' ? renderizarListaCotejoHTML(a.instrumento) : renderizarRubricaHTML(a.instrumento)}
+      ${_renderInstrumentoHTML(a.instrumento)}
 
 
 
@@ -13652,11 +13668,7 @@ function _regenerarInstrumentoEnCard(act, ec) {
   guardarBorrador();
   const body = document.getElementById(`pd-instrumento-body-${act.id}`);
   if (body) {
-    body.innerHTML = act.instrumento
-      ? (act.instrumento.tipo === 'cotejo'
-          ? renderizarListaCotejoHTML(act.instrumento)
-          : renderizarRubricaHTML(act.instrumento))
-      : '<p style="color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;">No hay instrumento generado.</p>';
+    body.innerHTML = _renderInstrumentoHTML(act.instrumento);
   }
   const label = document.getElementById(`pd-instrumento-label-${act.id}`);
   if (label) label.textContent = act.instrumento?.tipoLabel || 'Sin instrumento';
@@ -14862,9 +14874,7 @@ function renderizarDiarias() {
           </div>
           <div id="pd-instrumento-body-${act.id}" style="border:1.5px solid #C8E6C9;border-top:none;border-radius:0 0 8px 8px;padding:16px;">
             ${act.instrumento
-        ? (act.instrumento.tipo === 'cotejo'
-          ? renderizarListaCotejoHTML(act.instrumento)
-          : renderizarRubricaHTML(act.instrumento))
+        ? _renderInstrumentoHTML(act.instrumento)
         : '<p style=\"color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;\">No hay instrumento generado para esta actividad.</p>'
       }
           </div>
