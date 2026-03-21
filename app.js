@@ -1479,14 +1479,96 @@ function generarInstrumento(actividad, nivelEC, tipoForzado) {
     || ((nivelEC === 'conocimiento' || nivelEC === 'comprension') ? 'cotejo' : 'rubrica');
   if (tipo === 'cotejo') return generarListaCotejo(actividad, nivelEC);
   if (tipo === 'rubrica') return generarRubrica(actividad, nivelEC);
-  // Instrumentos sin generación automática — devolver estructura base
+  if (tipo === 'valoracion') return _generarEscalaValoracion(actividad, nivelEC);
+  if (tipo === 'estimativa') return _generarEscalaEstimativa(actividad, nivelEC);
+  if (tipo === 'rango') return _generarEscalaRango(actividad, nivelEC);
+  if (tipo === 'diario') return _generarDiarioDobleEntrada(actividad, nivelEC);
   const codAct = (actividad.enunciado || '').split(':')[0];
+  return { tipo, tipoLabel: _getInstrLabel(tipo), titulo: `${_getInstrLabel(tipo)} – ${codAct}`, criterios: [], niveles: [] };
+}
+
+function _generarEscalaValoracion(actividad, nivel) {
+  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const niveles = [
+    { nombre: 'Excelente', puntos: 5, clase: 'nivel-excelente' },
+    { nombre: 'Muy Bueno', puntos: 4, clase: 'nivel-bueno' },
+    { nombre: 'Bueno', puntos: 3, clase: 'nivel-proceso' },
+    { nombre: 'Regular', puntos: 2, clase: 'nivel-insuficiente' },
+    { nombre: 'Deficiente', puntos: 1, clase: 'nivel-insuficiente' }
+  ];
   return {
-    tipo,
-    tipoLabel: _getInstrLabel(tipo),
-    titulo: `${_getInstrLabel(tipo)} – ${codAct}`,
-    criterios: [],
-    niveles: []
+    tipo: 'valoracion', tipoLabel: 'Escala de Valoración',
+    titulo: `Escala de Valoración – ${actividad.enunciado.split(':')[0]}`,
+    actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
+    niveles, puntajeMax: criterios.length * 5,
+    instrucciones: 'Marque el nivel que mejor describe el desempeño del estudiante en cada criterio.',
+    criterios: criterios.map((c, i) => ({
+      numero: i + 1, criterio: c,
+      descriptores: niveles.map(n => `${n.nombre} (${n.puntos})`)
+    }))
+  };
+}
+
+function _generarEscalaEstimativa(actividad, nivel) {
+  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const frecuencias = [
+    { nombre: 'Siempre', puntos: 4, clase: 'nivel-excelente' },
+    { nombre: 'Frecuentemente', puntos: 3, clase: 'nivel-bueno' },
+    { nombre: 'A veces', puntos: 2, clase: 'nivel-proceso' },
+    { nombre: 'Nunca', puntos: 1, clase: 'nivel-insuficiente' }
+  ];
+  return {
+    tipo: 'estimativa', tipoLabel: 'Escala Estimativa',
+    titulo: `Escala Estimativa – ${actividad.enunciado.split(':')[0]}`,
+    actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
+    niveles: frecuencias, puntajeMax: criterios.length * 4,
+    instrucciones: 'Indique la frecuencia con la que el estudiante demuestra cada criterio.',
+    criterios: criterios.map((c, i) => ({
+      numero: i + 1, criterio: c,
+      descriptores: frecuencias.map(f => f.nombre)
+    }))
+  };
+}
+
+function _generarEscalaRango(actividad, nivel) {
+  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const rangos = [
+    { nombre: 'Avanzado (9-10)', puntos: 10, clase: 'nivel-excelente' },
+    { nombre: 'Satisfactorio (7-8)', puntos: 8, clase: 'nivel-bueno' },
+    { nombre: 'En desarrollo (5-6)', puntos: 6, clase: 'nivel-proceso' },
+    { nombre: 'Inicial (1-4)', puntos: 4, clase: 'nivel-insuficiente' }
+  ];
+  return {
+    tipo: 'rango', tipoLabel: 'Escala de Rango',
+    titulo: `Escala de Rango – ${actividad.enunciado.split(':')[0]}`,
+    actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
+    niveles: rangos, puntajeMax: criterios.length * 10,
+    instrucciones: 'Asigne el rango de puntuación que corresponda al desempeño del estudiante.',
+    criterios: criterios.map((c, i) => ({
+      numero: i + 1, criterio: c,
+      descriptores: rangos.map(r => r.nombre)
+    }))
+  };
+}
+
+function _generarDiarioDobleEntrada(actividad, nivel) {
+  const aspectos = [
+    'Descripción de la actividad realizada',
+    'Conceptos o procedimientos clave identificados',
+    'Dificultades encontradas y cómo las resolvió',
+    'Relación con conocimientos previos',
+    'Reflexión personal sobre el aprendizaje',
+    'Aplicación al contexto profesional'
+  ];
+  return {
+    tipo: 'diario', tipoLabel: 'Diario de Doble Entrada',
+    titulo: `Diario de Doble Entrada – ${actividad.enunciado.split(':')[0]}`,
+    actividad: actividad.enunciado, ecCodigo: actividad.ecCodigo,
+    niveles: [], puntajeMax: aspectos.length * 2,
+    instrucciones: 'El estudiante completa la columna "Mi reflexión" para cada aspecto. El docente evalúa con 0-2 puntos.',
+    criterios: aspectos.map((c, i) => ({
+      numero: i + 1, criterio: c, texto: c
+    }))
   };
 }
 
@@ -3140,8 +3222,15 @@ function _renderInstrumentoHTML(inst) {
   if (!inst) return '<p style="color:#9E9E9E;font-size:0.85rem;text-align:center;padding:12px 0;">No hay instrumento generado.</p>';
   const tipo = inst.tipo || 'cotejo';
   if (tipo === 'cotejo') return renderizarListaCotejoHTML(inst);
-  if (tipo === 'rubrica' && inst.niveles) return renderizarRubricaHTML(inst);
-  // Para tipos nuevos o instrumentos sin datos generados
+  // Rubrica, valoración, estimativa y rango usan tabla con niveles
+  if (['rubrica','valoracion','estimativa','rango'].includes(tipo) && inst.niveles?.length && inst.criterios?.length) {
+    return renderizarRubricaHTML(inst);
+  }
+  // Diario de doble entrada — tabla de dos columnas
+  if (tipo === 'diario' && inst.criterios?.length) {
+    return _renderDiarioHTML(inst);
+  }
+  // Fallback para instrumentos sin datos generados
   const info = INSTRUMENTOS[tipo] || {};
   return `<div style="padding:16px;text-align:center;">
     <span class="material-icons" style="font-size:36px;color:${info.color || '#616161'};display:block;margin-bottom:8px;">${info.icono || 'assignment'}</span>
@@ -3149,6 +3238,37 @@ function _renderInstrumentoHTML(inst) {
     <p style="font-size:0.82rem;color:#78909C;margin:0;">${info.desc || ''}</p>
     <p style="font-size:0.78rem;color:#9E9E9E;margin-top:8px;">Usa el botón "Ver" en el paso 4 (Actividades) para generar los criterios de este instrumento.</p>
   </div>`;
+}
+
+function _renderDiarioHTML(inst) {
+  let html = `<div class="instrumento-seccion">
+    <h4 style="margin:0 0 4px;font-size:0.95rem;color:#4527A0;">
+      <span class="material-icons" style="font-size:18px;vertical-align:middle;margin-right:4px;">auto_stories</span>
+      ${escapeHTML(inst.titulo || 'Diario de Doble Entrada')}
+    </h4>`;
+  if (inst.instrucciones) {
+    html += `<p style="font-size:0.8rem;color:#78909C;margin:0 0 10px;">${escapeHTML(inst.instrucciones)}</p>`;
+  }
+  html += `<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+    <thead><tr>
+      <th style="background:#4527A0;color:#fff;padding:8px;text-align:left;width:5%;">#</th>
+      <th style="background:#4527A0;color:#fff;padding:8px;text-align:left;width:50%;">Aspecto</th>
+      <th style="background:#4527A0;color:#fff;padding:8px;text-align:left;width:45%;">Mi reflexión</th>
+    </tr></thead><tbody>`;
+  inst.criterios.forEach((c, i) => {
+    const bg = i % 2 === 0 ? '#F3E5F5' : '#fff';
+    html += `<tr style="background:${bg};">
+      <td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;font-weight:600;">${c.numero || i + 1}</td>
+      <td style="padding:6px 8px;border:1px solid #E0E0E0;">${escapeHTML(c.criterio || c.texto)}</td>
+      <td style="padding:6px 8px;border:1px solid #E0E0E0;color:#BDBDBD;font-style:italic;">Escribir aquí…</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  if (inst.puntajeMax) {
+    html += `<p style="font-size:0.78rem;color:#78909C;margin:8px 0 0;text-align:right;">Puntaje máximo: <strong>${inst.puntajeMax} pts</strong> (0-2 pts por aspecto)</p>`;
+  }
+  html += `</div>`;
+  return html;
 }
 
 function renderizarListaCotejoHTML(inst) {
