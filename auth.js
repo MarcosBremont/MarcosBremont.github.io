@@ -166,7 +166,7 @@ function _esSuperadminAuth(email) {
   const defaults = ['soymarcosbremont@gmail.com'];
   if (defaults.includes(email.toLowerCase())) return true;
   try {
-    const extra = JSON.parse(localStorage.getItem('metabot_superadmin_emails') || '[]');
+    const extra = JSON.parse(localStorage.getItem('tinclass_superadmin_emails') || '[]');
     return extra.map(e => e.toLowerCase()).includes(email.toLowerCase());
   } catch { return false; }
 }
@@ -358,9 +358,9 @@ async function authIniciarSesionEmail() {
 
 // ── Código de invitación ─────────────────────────────────────────
 function _getCodigoInvitacion() {
-  const custom = localStorage.getItem('metabot_invite_code');
+  const custom = localStorage.getItem('tinclass_invite_code');
   if (custom) return custom;
-  return (typeof METABOT_INVITE_CODE_DEFAULT !== 'undefined') ? METABOT_INVITE_CODE_DEFAULT : 'METABOT2026';
+  return (typeof TINCLASS_INVITE_CODE_DEFAULT !== 'undefined') ? TINCLASS_INVITE_CODE_DEFAULT : 'TINCLASS2026';
 }
 
 function guardarCodigoInvitacion() {
@@ -368,7 +368,7 @@ function guardarCodigoInvitacion() {
   const val = input?.value.trim();
   if (!val) { if (typeof mostrarToast === 'function') mostrarToast('Ingresa un código', 'error'); return; }
   if (val.length < 4) { if (typeof mostrarToast === 'function') mostrarToast('Mínimo 4 caracteres', 'error'); return; }
-  localStorage.setItem('metabot_invite_code', val.toUpperCase());
+  localStorage.setItem('tinclass_invite_code', val.toUpperCase());
   if (input) input.value = '';
   const lbl = document.getElementById('cfg-invite-code-actual');
   if (lbl) lbl.textContent = 'Código activo: ' + val.toUpperCase();

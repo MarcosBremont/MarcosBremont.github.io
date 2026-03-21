@@ -6089,8 +6089,8 @@ function limpiarAuditoria() {
 // PANTALLA DE BLOQUEO — Inactividad automática
 // ════════════════════════════════════════════════════════════════════
 const INACTIVITY_MS        = 3 * 60 * 1000; // 3 minutos
-const _LOCK_KEY            = 'metabot_locked';
-const _LAST_ACT_KEY        = 'metabot_last_activity';
+const _LOCK_KEY            = 'tinclass_locked';
+const _LAST_ACT_KEY        = 'tinclass_last_activity';
 let _lastActivity          = Date.now();
 let _pantallaBloqueada     = false;
 let _inactivityInterval    = null;
@@ -16072,7 +16072,7 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'Metabot - Planificador Educativo'
+        'X-Title': 'TinClass - Planificador Educativo'
       },
       body: JSON.stringify(body),
       signal: controller.signal
@@ -16414,13 +16414,13 @@ generarPlanificacion = async function () {
 // ════════════════════════════════════════════════════════════════
 // TOUR DE BIENVENIDA
 // ════════════════════════════════════════════════════════════════
-const TOUR_KEY = 'metabot_tour_done';
+const TOUR_KEY = 'tinclass_tour_done';
 let _tourPaso = 0;
 let _tourOriginalOverflow = '';
 
 const TOUR_PASOS = [
   {
-    titulo: '¡Bienvenido a Metabot!',
+    titulo: '¡Bienvenido a TinClass!',
     desc: 'Este rápido tour te mostrará los módulos principales de la aplicación. Solo toma un minuto. ¡Empecemos!',
     icono: 'waving_hand',
     target: null,
@@ -16475,7 +16475,7 @@ const TOUR_PASOS = [
   },
   {
     titulo: '¡Todo listo!',
-    desc: 'Ya conoces Metabot. Puedes reiniciar este tour desde Configuración → Tour de bienvenida cuando lo necesites. ¡Mucho éxito!',
+    desc: 'Ya conoces TinClass. Puedes reiniciar este tour desde Configuración → Tour de bienvenida cuando lo necesites. ¡Mucho éxito!',
     icono: 'rocket_launch',
     target: null,
   },
@@ -17368,8 +17368,8 @@ function abrirConfiguracion() {
   // Mostrar código de invitación activo
   const inviteLbl = document.getElementById('cfg-invite-code-actual');
   if (inviteLbl) {
-    const codigoActual = localStorage.getItem('metabot_invite_code')
-      || (typeof METABOT_INVITE_CODE_DEFAULT !== 'undefined' ? METABOT_INVITE_CODE_DEFAULT : 'METABOT2026');
+    const codigoActual = localStorage.getItem('tinclass_invite_code')
+      || (typeof TINCLASS_INVITE_CODE_DEFAULT !== 'undefined' ? TINCLASS_INVITE_CODE_DEFAULT : 'TINCLASS2026');
     inviteLbl.textContent = 'Código activo: ' + codigoActual;
   }
   overlay.classList.remove('hidden');
@@ -21201,7 +21201,7 @@ async function _renderMonitoreoDocentes() {
 // ── MÓDULO: SUPERADMIN — GESTIÓN DE CENTROS EDUCATIVOS ───────────
 // ════════════════════════════════════════════════════════════════════
 
-const SUPERADMIN_EMAILS_KEY = 'metabot_superadmin_emails';
+const SUPERADMIN_EMAILS_KEY = 'tinclass_superadmin_emails';
 const CENTROS_COLLECTION = 'centros';
 
 /** Emails de superadmin por defecto — se complementan con los de Firestore */

@@ -1,6 +1,6 @@
 {
-  "name": "Metabot - Planificador Educativo",
-  "short_name": "Metabot",
+  "name": "TinClass - Planificador Educativo",
+  "short_name": "TinClass",
   "description": "Sistema de Planificación Educativa por Resultados de Aprendizaje para docentes de educación técnico profesional de la República Dominicana.",
   "start_url": "/index.html",
   "display": "standalone",
@@ -11,7 +11,7 @@
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "LogoMetabot.png",
+      "src": "LogoTinClass.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
@@ -24,7 +24,7 @@
       "short_name": "Nueva",
       "description": "Crear una nueva planificación educativa",
       "url": "/index.html#nueva",
-      "icons": [{ "src": "LogoMetabot.png", "sizes": "any" }]
+      "icons": [{ "src": "LogoTinClass.png", "sizes": "any" }]
     }
   ]
 }

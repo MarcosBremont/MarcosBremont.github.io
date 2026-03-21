@@ -1,4 +1,4 @@
-const CACHE_NAME = 'metabot-v1';
+const CACHE_NAME = 'tinclass-v1';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -9,7 +9,7 @@ const STATIC_ASSETS = [
   '/auth.js',
   '/docx.js',
   '/firebase-config.js',
-  '/LogoMetabot.png',
+  '/LogoTinClass.png',
   '/manifest.json',
   '/reporte.html',
   '/denuncia.html'

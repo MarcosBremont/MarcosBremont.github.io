@@ -60,7 +60,7 @@
 // ================================================================
 
 // ── Código de invitación por defecto (cámbialo desde Configuración dentro de la app)
-const METABOT_INVITE_CODE_DEFAULT = 'METABOT2026';
+const TINCLASS_INVITE_CODE_DEFAULT = 'TINCLASS2026';
 
 // ── Email del administrador (propietario del calendario escolar compartido) ──
 // Cambia este valor por tu propio correo de Google/Email registrado en la app
@@ -74,7 +74,7 @@ const ADMIN_EMAIL = 'soymarcosbremont@gmail.com';
 // 2. En "Email Services" → Add New Service → Gmail (u otro)
 //    → conecta tu cuenta → copia el Service ID (ej: service_abc123)
 // 3. En "Email Templates" → Create New Template → elegir "One-Time Password"
-//    → Asunto: "Codigo de verificacion - Metabot"
+//    → Asunto: "Codigo de verificacion - TinClass"
 //    → La plantilla usa las variables {{passcode}} (código) y {{email}} (destinatario)
 //    → Guarda y copia el Template ID (ej: template_xyz789)
 // 4. En "Account" → copia tu Public Key (ej: user_AbCdEfGhIj)
