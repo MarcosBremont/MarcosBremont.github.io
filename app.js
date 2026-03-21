@@ -4763,8 +4763,14 @@ function poblarFormularioDesdeEstado() {
 
 
   setVal('recursos-didacticos', ra.recursos);
-
-
+  setVal('contenidos-conceptuales', ra.contenidosConceptuales);
+  setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
+  setVal('contenidos-actitudinales', ra.contenidosActitudinales);
+  // Mostrar sección contenidos si hay datos
+  if (ra.contenidosConceptuales || ra.contenidosProcedimentales || ra.contenidosActitudinales) {
+    const wrap = document.getElementById('contenidos-wrap');
+    if (wrap) wrap.classList.remove('hidden');
+  }
 
 
 
@@ -5552,6 +5558,10 @@ function guardarDatosFormulario() {
     recursos: getVal('recursos-didacticos'),
 
 
+
+    contenidosConceptuales: getVal('contenidos-conceptuales'),
+    contenidosProcedimentales: getVal('contenidos-procedimentales'),
+    contenidosActitudinales: getVal('contenidos-actitudinales'),
 
     nivelBloom: planificacion.ra?.nivelBloom || ''
 
@@ -15823,6 +15833,7 @@ async function construirPromptBase(dg, ra) {
     raDescripcion: ra.descripcion || '',
     raCriterios: ra.criterios || 'No especificados',
     raRecursos: ra.recursosDid || 'Pizarrón, guías',
+    contenidosBloque: _buildContenidosBloque(ra),
     cantEC, actsPorEC, totalActs,
     ecCodigosLista, ecCodigosJSON, actEsperadasJSON
   });
@@ -21435,7 +21446,7 @@ const PROMPTS_IA_DEFS = [
     key: 'prompt_base',
     label: 'Prompt — Estructura Base (EC + Actividades)',
     icono: 'account_tree',
-    desc: 'Prompt para generar los Elementos de Capacidad y actividades a partir del RA. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{diasStr}}, {{raDescripcion}}, {{raCriterios}}, {{raRecursos}}, {{cantEC}}, {{actsPorEC}}, {{totalActs}}, {{ecCodigosLista}}, {{actEsperadasLista}}'
+    desc: 'Prompt para generar los Elementos de Capacidad y actividades a partir del RA. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{diasStr}}, {{raDescripcion}}, {{raCriterios}}, {{raRecursos}}, {{contenidosBloque}}, {{cantEC}}, {{actsPorEC}}, {{totalActs}}, {{ecCodigosLista}}, {{actEsperadasLista}}'
   },
   {
     key: 'prompt_instrumentos',
@@ -21591,6 +21602,8 @@ CRITERIOS DE EVALUACIÓN (solo para guiarte temáticamente, NO los copies como E
 
 RECURSOS: {{raRecursos}}
 
+{{contenidosBloque}}
+
 TAREA: Elabora {{cantEC}} Elementos de Capacidad (EC) siguiendo la Taxonomía de Bloom.
 
 REGLAS PARA LOS EC:
@@ -21684,6 +21697,19 @@ Genera exactamente este JSON:
     "estrategias": "Estrategias didácticas con justificación..."
   }
 }`;
+
+/** Construye bloque de contenidos para el prompt (solo si hay datos) */
+function _buildContenidosBloque(ra) {
+  const c = ra.contenidosConceptuales;
+  const p = ra.contenidosProcedimentales;
+  const a = ra.contenidosActitudinales;
+  if (!c && !p && !a) return '';
+  let bloque = 'CONTENIDOS DEL RA (usa estos como referencia temática para generar los EC y actividades):';
+  if (c) bloque += '\n• Conceptuales: ' + c.replace(/\n/g, ', ');
+  if (p) bloque += '\n• Procedimentales: ' + p.replace(/\n/g, ', ');
+  if (a) bloque += '\n• Actitudinales: ' + a.replace(/\n/g, ', ');
+  return bloque;
+}
 
 /** Reemplaza {{variables}} en un template de prompt */
 function _resolverPromptTemplate(template, vars) {
