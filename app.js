@@ -22929,10 +22929,9 @@ async function _coordMonitorCalificaciones() {
     const docentesData = await Promise.all(docentes.map(async d => {
       try {
         const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
-        console.log('[Coord] Leyendo calificaciones de', d.nombre || d.email, '(uid:', d.uid, ') → exists:', calDoc.exists);
-        const calData = calDoc.exists ? calDoc.data() : {};
+        const calRaw = calDoc.exists ? calDoc.data() : {};
+        const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
         const cursos = calData.cursos || {};
-        console.log('[Coord]   Cursos encontrados:', Object.keys(cursos).length);
         let totalActs = 0, actsSinNota = 0, totalEstudiantes = 0;
         Object.values(cursos).forEach(curso => {
           const ests = curso.estudiantes || [];
@@ -23016,10 +23015,12 @@ async function _coordMonitorPlanificaciones() {
     const docentesData = await Promise.all(docentes.map(async d => {
       try {
         const biblioDoc = await db.collection('users').doc(d.uid).collection('data').doc('biblioteca_planificaciones').get();
-        const biblio = biblioDoc.exists ? biblioDoc.data() : {};
+        const biblioRaw = biblioDoc.exists ? biblioDoc.data() : {};
+        const biblio = biblioRaw.payload ? JSON.parse(biblioRaw.payload) : biblioRaw;
         const items = biblio.items || [];
         const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
-        const calData = calDoc.exists ? calDoc.data() : {};
+        const calRaw2 = calDoc.exists ? calDoc.data() : {};
+        const calData = calRaw2.payload ? JSON.parse(calRaw2.payload) : calRaw2;
         const cursos = calData.cursos || {};
         let asignadas = 0;
         Object.values(cursos).forEach(c => { asignadas += (c.planIds || []).length; });
@@ -23087,7 +23088,8 @@ async function _coordResumenDocentes() {
       try {
         // Calificaciones
         const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
-        const calData = calDoc.exists ? calDoc.data() : {};
+        const calRaw3 = calDoc.exists ? calDoc.data() : {};
+        const calData = calRaw3.payload ? JSON.parse(calRaw3.payload) : calRaw3;
         const cursos = calData.cursos || {};
         let totalEst = 0, totalActs = 0, actsSinNota = 0, cursosArr = [];
         Object.entries(cursos).forEach(([cId, curso]) => {
@@ -23111,7 +23113,9 @@ async function _coordResumenDocentes() {
 
         // Planificaciones
         const biblioDoc = await db.collection('users').doc(d.uid).collection('data').doc('biblioteca_planificaciones').get();
-        const nPlan = biblioDoc.exists ? (biblioDoc.data().items || []).length : 0;
+        const biblioRaw3 = biblioDoc.exists ? biblioDoc.data() : {};
+        const biblio3 = biblioRaw3.payload ? JSON.parse(biblioRaw3.payload) : biblioRaw3;
+        const nPlan = (biblio3.items || []).length;
 
         // Última sesión
         let ultimaSesion = null;
