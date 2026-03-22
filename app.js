@@ -8504,8 +8504,8 @@ function renderizarTablaCalificaciones() {
       const compIcono = a.complementarioIcono || 'star';
       const compLabel = (a.enunciado || '').substring(0, 12);
       h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;background:rgba(230,81,0,0.08);">'
-        + '<div style="font-size:0.72rem;font-weight:600;color:#E65100;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
-        + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">Complementario</div>'
+        + '<div style="font-size:0.72rem;font-weight:600;color:#212121;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
+        + '<div style="font-size:0.68rem;color:#616161;margin:1px 0;">Complementario</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
         + ' title="Valor máximo de este ítem" placeholder="pts"'
         + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
