@@ -23648,10 +23648,14 @@ async function _pagosRenderEstado() {
     const conceptos = (confDoc.exists ? confDoc.data().items : []) || [];
     if (!conceptos.length) { cont.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">receipt_long</span>No hay conceptos de pago configurados.<br>Ve a la pestaña "Conceptos" para crear uno.</div>'; return; }
 
-    // Cargar pagos registrados
+    // Cargar pagos registrados y cédulas
     const pagosDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').get();
     const pagos = (pagosDoc.exists ? pagosDoc.data().registros : []) || [];
     window._pagosRegistros = pagos;
+
+    const cedDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('cedulas').get();
+    const cedulas = (cedDoc.exists ? cedDoc.data() : {}) || {};
+    window._pagosCedulas = cedulas;
 
     // Cargar estudiantes de todos los docentes del centro
     const docentes = await _coordGetDocentes(centroId);
@@ -23731,10 +23735,12 @@ function _pagosRenderTablaEstado() {
     html += '<div style="text-align:center;padding:30px;color:#9E9E9E;">No hay estudiantes registrados en este centro.</div>';
   } else {
     // Tabla
+    const cedulas = window._pagosCedulas || {};
     html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;">'
       + '<thead><tr style="background:#E3F2FD;">'
       + '<th style="text-align:left;padding:8px;border:1px solid #BBDEFB;">Estudiante</th>'
       + '<th style="text-align:left;padding:8px;border:1px solid #BBDEFB;">Curso</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Cédula Padre</th>'
       + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Monto</th>'
       + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Estado</th>'
       + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Fecha Pago</th>'
@@ -23745,9 +23751,15 @@ function _pagosRenderTablaEstado() {
     estConEstado.forEach(est => {
       const fechaPago = est.pago ? new Date(est.pago.fecha).toLocaleDateString('es-DO') : '—';
       const ref = est.pago?.referencia || '—';
+      const cedula = cedulas[est.id] || '';
       html += '<tr style="background:' + est.color + '08;">'
         + '<td style="padding:6px 8px;border:1px solid #E0E0E0;font-weight:500;">' + escapeHTML(est.nombre) + '</td>'
         + '<td style="padding:6px 8px;border:1px solid #E0E0E0;font-size:0.78rem;color:#546E7A;">' + escapeHTML(est.curso) + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;">'
+        + '<input type="text" value="' + escapeHTML(cedula) + '" placeholder="000-0000000-0"'
+        + ' onchange="_pagosGuardarCedula(\'' + est.id + '\',this.value)"'
+        + ' style="width:110px;padding:3px 6px;border:1px solid #CFD8DC;border-radius:4px;font-size:0.78rem;text-align:center;">'
+        + '</td>'
         + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;">RD$ ' + Number(concepto.monto).toLocaleString('es-DO') + '</td>'
         + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;"><span style="padding:2px 10px;border-radius:10px;background:' + est.color + '22;color:' + est.color + ';font-weight:600;font-size:0.75rem;">' + est.estado + '</span></td>'
         + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;font-size:0.78rem;">' + fechaPago + '</td>'
@@ -23956,6 +23968,166 @@ async function _pagosRenderReportes() {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
   }
 }
+
+// ── Guardar cédula del padre ─────────────────────────────────────
+
+async function _pagosGuardarCedula(estId, cedula) {
+  const centroId = _pagosGetCentroId();
+  if (!centroId) return;
+  const cedulas = window._pagosCedulas || {};
+  const val = cedula.replace(/[^0-9-]/g, '').trim();
+  if (val) cedulas[estId] = val;
+  else delete cedulas[estId];
+  window._pagosCedulas = cedulas;
+  try {
+    await db.collection('centros').doc(centroId).collection('pagos_config').doc('cedulas').set(cedulas);
+  } catch (e) { console.warn('Error guardando cédula:', e); }
+}
+
+// ── VISTA PÚBLICA PARA PADRES ───────────────────────────────────
+
+function _pagosIniciarVistaPublica() {
+  // Ocultar todo y mostrar la vista de consulta de pagos
+  const app = document.getElementById('app-container') || document.body;
+  let overlay = document.getElementById('pagos-publico-overlay');
+  if (overlay) { overlay.remove(); return; }
+
+  overlay = document.createElement('div');
+  overlay.id = 'pagos-publico-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);z-index:99999;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px;';
+  overlay.innerHTML = '<div style="max-width:500px;width:100%;margin:auto;">'
+    + '<div style="text-align:center;margin-bottom:30px;">'
+    + '<span class="material-icons" style="font-size:56px;color:#fff;margin-bottom:8px;">payments</span>'
+    + '<h1 style="color:#fff;margin:0;font-size:1.5rem;">Consulta de Pagos</h1>'
+    + '<p style="color:rgba(255,255,255,0.8);font-size:0.85rem;margin:6px 0 0;">Ingresa la cédula del padre/madre para consultar el estado de pagos</p>'
+    + '</div>'
+    + '<div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">'
+    + '<div style="margin-bottom:16px;">'
+    + '<label style="font-size:0.85rem;font-weight:600;color:#37474F;display:block;margin-bottom:6px;">Cédula del Padre/Madre</label>'
+    + '<input id="pagos-pub-cedula" type="text" placeholder="000-0000000-0" maxlength="13"'
+    + ' style="width:100%;padding:14px 16px;border:2px solid #1565C0;border-radius:10px;font-size:1.1rem;text-align:center;letter-spacing:1px;box-sizing:border-box;"'
+    + ' onkeyup="if(event.key===\'Enter\')_pagosConsultarPublico()">'
+    + '</div>'
+    + '<button onclick="_pagosConsultarPublico()" style="width:100%;padding:14px;background:#1565C0;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">'
+    + '<span class="material-icons">search</span> Consultar</button>'
+    + '<div id="pagos-pub-resultado" style="margin-top:20px;"></div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'pagos-publico-overlay\').remove()" style="margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;font-size:0.85rem;cursor:pointer;">Volver</button>'
+    + '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('pagos-pub-cedula')?.focus();
+}
+
+async function _pagosConsultarPublico() {
+  const cedula = (document.getElementById('pagos-pub-cedula')?.value || '').replace(/[^0-9-]/g, '').trim();
+  const cont = document.getElementById('pagos-pub-resultado');
+  if (!cont) return;
+  if (!cedula || cedula.length < 5) { cont.innerHTML = '<div style="text-align:center;padding:12px;color:#C62828;font-size:0.85rem;">Ingresa una cédula válida.</div>'; return; }
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;color:#1565C0;">sync</span><div style="font-size:0.85rem;color:#78909C;margin-top:6px;">Buscando...</div></div>';
+
+  try {
+    // Buscar en todos los centros la cédula
+    const centrosSnap = await db.collection('centros').get();
+    let resultados = [];
+
+    for (const centroDoc of centrosSnap.docs) {
+      const centroId = centroDoc.id;
+      const centroNombre = centroDoc.data().nombre || centroId;
+
+      // Cargar cédulas de este centro
+      const cedDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('cedulas').get();
+      if (!cedDoc.exists) continue;
+      const cedulas = cedDoc.data() || {};
+
+      // Buscar estudiantes con esta cédula
+      const estIds = Object.entries(cedulas).filter(([_, ced]) => ced === cedula).map(([id]) => id);
+      if (!estIds.length) continue;
+
+      // Cargar conceptos y pagos
+      const confDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').get();
+      const conceptos = (confDoc.exists ? confDoc.data().items : []) || [];
+      const pagosDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').get();
+      const pagos = (pagosDoc.exists ? pagosDoc.data().registros : []) || [];
+
+      // Buscar nombres de estudiantes en calificaciones de docentes
+      const docentesSnap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
+      const nombres = {};
+      for (const dDoc of docentesSnap.docs) {
+        try {
+          const calDoc = await db.collection('users').doc(dDoc.id).collection('data').doc('calificaciones').get();
+          const calRaw = calDoc.exists ? calDoc.data() : {};
+          const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
+          Object.values(calData.cursos || {}).forEach(curso => {
+            (curso.estudiantes || []).forEach(est => {
+              if (estIds.includes(est.id)) nombres[est.id] = { nombre: est.nombre, curso: curso.nombre };
+            });
+          });
+        } catch {}
+      }
+
+      estIds.forEach(estId => {
+        const info = nombres[estId] || { nombre: 'Estudiante', curso: '' };
+        const pagosEst = conceptos.filter(c => c.activo).map(c => {
+          const pago = pagos.find(p => p.estudianteId === estId && p.conceptoId === c.id);
+          const vencido = c.fechaLimite && new Date(c.fechaLimite) < new Date();
+          return { concepto: c.nombre, monto: c.monto, fechaLimite: c.fechaLimite, pagado: !!pago, fechaPago: pago?.fecha, referencia: pago?.referencia, vencido };
+        });
+        resultados.push({ centroNombre, nombre: info.nombre, curso: info.curso, pagos: pagosEst });
+      });
+    }
+
+    if (!resultados.length) {
+      cont.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;">'
+        + '<span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;color:#BDBDBD;">person_off</span>'
+        + 'No se encontraron estudiantes asociados a esta cédula.<br>'
+        + '<span style="font-size:0.78rem;">Verifica que la cédula esté registrada en el sistema.</span></div>';
+      return;
+    }
+
+    let html = '';
+    resultados.forEach(r => {
+      const totalPendiente = r.pagos.filter(p => !p.pagado).reduce((s, p) => s + p.monto, 0);
+      html += '<div style="margin-bottom:16px;border:1.5px solid #E0E0E0;border-radius:12px;overflow:hidden;">'
+        + '<div style="background:#E3F2FD;padding:12px 16px;">'
+        + '<div style="font-weight:700;font-size:1rem;color:#1565C0;">' + escapeHTML(r.nombre) + '</div>'
+        + '<div style="font-size:0.82rem;color:#546E7A;">' + escapeHTML(r.centroNombre) + (r.curso ? ' — ' + escapeHTML(r.curso) : '') + '</div>'
+        + (totalPendiente > 0 ? '<div style="font-size:0.85rem;font-weight:600;color:#C62828;margin-top:4px;">Pendiente: RD$ ' + totalPendiente.toLocaleString('es-DO') + '</div>' : '<div style="font-size:0.85rem;font-weight:600;color:#2E7D32;margin-top:4px;">Al día</div>')
+        + '</div>';
+
+      html += '<div style="padding:0;">';
+      r.pagos.forEach(p => {
+        let color, icon, estado;
+        if (p.pagado) { color = '#2E7D32'; icon = 'check_circle'; estado = 'Pagado'; }
+        else if (p.vencido) { color = '#C62828'; icon = 'error'; estado = 'Vencido'; }
+        else { color = '#FF9800'; icon = 'schedule'; estado = 'Pendiente'; }
+        const fechaLim = p.fechaLimite ? new Date(p.fechaLimite).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+
+        html += '<div style="padding:10px 16px;border-bottom:1px solid #F5F5F5;display:flex;align-items:center;gap:10px;">'
+          + '<span class="material-icons" style="color:' + color + ';font-size:20px;">' + icon + '</span>'
+          + '<div style="flex:1;">'
+          + '<div style="font-weight:600;font-size:0.85rem;color:#212121;">' + escapeHTML(p.concepto) + '</div>'
+          + '<div style="font-size:0.75rem;color:#90A4AE;">' + (fechaLim ? 'Límite: ' + fechaLim : '') + '</div>'
+          + '</div>'
+          + '<div style="text-align:right;">'
+          + '<div style="font-weight:700;font-size:0.9rem;color:#212121;">RD$ ' + Number(p.monto).toLocaleString('es-DO') + '</div>'
+          + '<span style="font-size:0.72rem;padding:2px 8px;border-radius:8px;background:' + color + '22;color:' + color + ';font-weight:600;">' + estado + '</span>'
+          + '</div></div>';
+      });
+      html += '</div></div>';
+    });
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:12px;color:#C62828;">Error al consultar: ' + e.message + '</div>';
+  }
+}
+
+// ── Detectar hash para vista pública de pagos ───────────────────
+if (window.location.hash === '#pagos' || window.location.hash === '#pagos-consulta') {
+  window.addEventListener('DOMContentLoaded', () => setTimeout(_pagosIniciarVistaPublica, 500));
+}
+window.addEventListener('hashchange', () => {
+  if (window.location.hash === '#pagos' || window.location.hash === '#pagos-consulta') _pagosIniciarVistaPublica();
+});
 
 // ── Agregar verificación de pagos al dashboard ──────────────────
 
