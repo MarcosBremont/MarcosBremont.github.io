@@ -7006,10 +7006,8 @@ body.dark-mode #buscar-lista {
 .est-overflow-menu {
   display: none;
   flex-direction: column;
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 999;
+  position: fixed;
+  z-index: 9999;
   background: #fff;
   border: 1px solid #E0E0E0;
   border-radius: 10px;

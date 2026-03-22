@@ -90,9 +90,18 @@ function _toggleEstMenu(e, estId) {
   const menu = document.getElementById('est-menu-' + estId);
   if (!menu) return;
   const wasOpen = menu.style.display !== 'none';
-  // Cerrar todos los menús abiertos
   document.querySelectorAll('.est-overflow-menu').forEach(m => m.style.display = 'none');
-  if (!wasOpen) menu.style.display = 'flex';
+  if (!wasOpen) {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    menu.style.display = 'flex';
+    let top = rect.bottom + 4;
+    let left = rect.right - menu.offsetWidth;
+    if (top + menu.offsetHeight > window.innerHeight) top = rect.top - menu.offsetHeight - 4;
+    if (left < 8) left = 8;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  }
 }
 // Cerrar menú al hacer clic fuera
 document.addEventListener('click', function(e) {
