@@ -24012,7 +24012,6 @@ function _pagosIniciarVistaPublica() {
     + '<span class="material-icons">search</span> Consultar</button>'
     + '<div id="pagos-pub-resultado" style="margin-top:20px;"></div>'
     + '</div>'
-    + '<button onclick="document.getElementById(\'pagos-publico-overlay\').remove()" style="margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;font-size:0.85rem;cursor:pointer;">Volver</button>'
     + '</div>';
   document.body.appendChild(overlay);
   document.getElementById('pagos-pub-cedula')?.focus();
