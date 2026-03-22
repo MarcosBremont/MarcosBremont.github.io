@@ -21920,14 +21920,30 @@ function _guardarPromptIADesdeEditor(key) {
 
 // ── PROMPTS POR DEFECTO (templates con {{variables}}) ────────────
 
-const _DEFAULT_PROMPT_SESION = `Eres un planificador educativo. Genera una sesión de clase para:
+const _DEFAULT_PROMPT_SESION = `Eres un planificador educativo experto en educación técnico profesional de República Dominicana. Genera una sesión de clase DETALLADA y COMPLETA para:
+
 Módulo: {{moduloFormativo}} | {{familiaProfesional}}
 Actividad: {{actividad}}
 EC: {{ecEnunciado}} (Bloom: {{nivelBloom}})
-Duración: {{minTotal}}min (Inicio:{{minInicio}}, Desarrollo:{{minDesarrollo}}, Cierre:{{minCierre}})
+Duración total: {{minTotal}} minutos (Inicio: {{minInicio}}min, Desarrollo: {{minDesarrollo}}min, Cierre: {{minCierre}}min)
 
-RESPONDE SOLO JSON, sin markdown. USA EXACTAMENTE estas 7 claves:
-{"apertura":"pregunta motivadora y activación de conocimientos previos ({{minInicio}}min)","encuadre":"objetivo de la sesión y criterios de evaluación","organizacion":"cómo se organizan los estudiantes y materiales","procedimental":"desarrollo paso a paso con bloques numerados y tiempos ({{minDesarrollo}}min)","conceptual":"reflexión y ejemplo real del campo profesional","sintesis":"cierre con recapitulación y evaluación formativa ({{minCierre}}min)","estrategias":"3 estrategias didácticas con justificación"}`;
+INSTRUCCIONES IMPORTANTES:
+- Cada campo debe tener contenido EXTENSO y DETALLADO (mínimo 3-5 oraciones por campo).
+- No escribas respuestas cortas de una línea. Desarrolla cada sección con profundidad.
+- Incluye instrucciones específicas, ejemplos concretos, preguntas guía y actividades paso a paso.
+- Adapta todo al contexto técnico profesional del módulo indicado.
+
+RESPONDE SOLO JSON válido, sin markdown, sin texto extra. USA EXACTAMENTE estas 7 claves:
+
+{
+  "apertura": "Escribe una pregunta motivadora abierta que active los conocimientos previos de los estudiantes, seguida de una dinámica de inicio (lluvia de ideas, video corto, caso real, demostración). Describe paso a paso cómo iniciar la clase durante {{minInicio}} minutos. Incluye al menos 2-3 preguntas generadoras y una actividad de enganche.",
+  "encuadre": "Redacta el objetivo claro de la sesión vinculado al EC. Explica los criterios de evaluación que se usarán. Describe qué competencias se desarrollarán y cómo se conecta con sesiones anteriores y posteriores. Incluye los indicadores de logro esperados.",
+  "organizacion": "Describe detalladamente cómo se organizarán los estudiantes (individual, parejas, equipos), qué materiales y recursos necesitarán, cómo se distribuirá el espacio del aula/taller/laboratorio, y qué roles tendrá cada participante si es trabajo grupal.",
+  "procedimental": "Desarrolla el contenido paso a paso del momento de desarrollo ({{minDesarrollo}} min). Incluye: 1) Explicación del docente con ejemplos concretos, 2) Actividad práctica guiada, 3) Actividad práctica autónoma, 4) Momentos de retroalimentación. Detalla cada paso con tiempos estimados, instrucciones claras para el docente y preguntas de verificación.",
+  "conceptual": "Incluye una reflexión profunda sobre la importancia del tema en el campo profesional. Presenta un caso real o situación laboral donde se aplique lo aprendido. Conecta la teoría con la práctica profesional y explica por qué estas competencias son esenciales en el mundo laboral.",
+  "sintesis": "Describe el cierre de la sesión ({{minCierre}} min): recapitulación de los puntos clave, evaluación formativa (preguntas de verificación, ticket de salida, rúbrica rápida), autoevaluación del estudiante, asignación de tarea o preparación para la próxima sesión. Incluye preguntas de metacognición.",
+  "estrategias": "Enumera y describe 3-4 estrategias didácticas utilizadas en la sesión. Para cada una, explica: qué es, cómo se aplica en esta sesión específica, y por qué es efectiva para el nivel de Bloom '{{nivelBloom}}'. Ejemplos: ABP, aprendizaje cooperativo, modelamiento, aula invertida, gamificación, think-pair-share."
+}`;
 
 const _DEFAULT_PROMPT_BASE = `Asume el rol de docente experto en educación técnico profesional de República Dominicana.
 Responde SOLO con JSON válido, sin markdown, sin texto extra.
