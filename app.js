@@ -19203,11 +19203,13 @@ function _blogActualizarRAs(selectedPlanId) {
   const plans = planIds.map(pid => biblio.find(i => i.id === pid)).filter(Boolean);
   selPlan.innerHTML = '<option value="">— Selecciona RA —</option>'
     + plans.map((pl, idx) => {
-        const raNum  = 'RA' + (idx + 1);
+        const raDescRaw = pl.planificacion?.ra?.descripcion || '';
+        const raMatchNum = raDescRaw.match(/RA\s*(\d+)/i);
+        const raNum  = raMatchNum ? 'RA' + raMatchNum[1] : 'RA' + (idx + 1);
         const modulo = pl.planificacion?.datosGenerales?.moduloFormativo || '';
         // Buscar descripción del RA en curso.ras si ya fue inicializado
         const raKey  = 'ra_plan_' + String(pl.id).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
-        const raDesc = (curso.ras || {})[raKey]?.label || pl.planificacion?.ra?.descripcion || '';
+        const raDesc = (curso.ras || {})[raKey]?.label || raDescRaw || '';
         // Label: "RA1 — Módulo · Descripción RA"
         let display = raNum;
         if (modulo) display += ' — ' + modulo.substring(0, 45);
@@ -19263,7 +19265,9 @@ function _guardarPost(id) {
   const biblio  = cargarBiblioteca().items || [];
   const plan    = biblio.find(i => i.id === planId);
   const raIdx   = (curso?.planIds || []).indexOf(planId);
-  const raNum   = raIdx >= 0 ? 'RA' + (raIdx + 1) : 'RA';
+  const raDesc  = plan?.planificacion?.ra?.descripcion || '';
+  const raMatch = raDesc.match(/RA\s*(\d+)/i);
+  const raNum   = raMatch ? 'RA' + raMatch[1] : (raIdx >= 0 ? 'RA' + (raIdx + 1) : 'RA');
   const modulo  = plan?.planificacion?.datosGenerales?.moduloFormativo || '';
   const raLabel = raNum + (modulo ? ' — ' + modulo : '') || planId;
   const blog    = cargarBlog();
