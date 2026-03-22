@@ -19410,9 +19410,27 @@ function copiarLinkBlog() {
   if (!filtro) { mostrarToast('Selecciona un curso para copiar su link', 'info'); return; }
   const url = document.getElementById('blog-link-url')?.textContent?.trim();
   if (!url) return;
-  navigator.clipboard.writeText(url)
-    .then(() => mostrarToast('Link copiado al portapapeles', 'success'))
-    .catch(() => mostrarToast('No se pudo copiar', 'error'));
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => mostrarToast('Link copiado al portapapeles', 'success'))
+      .catch(() => _copiarFallback(url));
+  } else {
+    _copiarFallback(url);
+  }
+}
+function _copiarFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    mostrarToast('Link copiado al portapapeles', 'success');
+  } catch {
+    mostrarToast('No se pudo copiar. Cópialo manualmente.', 'error');
+  }
+  document.body.removeChild(ta);
 }
 
 function verEntregasPost(postId) {
