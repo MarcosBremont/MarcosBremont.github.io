@@ -7623,9 +7623,10 @@ function _rendBarrasActividades(actData) {
 
   return grupos.map(g => {
     const raShort = g.raLabel.length > 60 ? g.raLabel.substring(0, 60) + '…' : g.raLabel;
+    const modulo = g.items[0]?.raModulo || '';
     return `<div style="margin-bottom:12px;">
-      <div style="font-size:0.78rem;font-weight:700;color:#1565C0;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-        <span class="material-icons" style="font-size:15px;">school</span>${escapeHTML(raShort)}
+      <div style="font-size:0.78rem;font-weight:700;color:#1565C0;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span class="material-icons" style="font-size:15px;">school</span>${escapeHTML(raShort)}${modulo ? '<span style="font-weight:500;color:#546E7A;font-size:0.72rem;margin-left:4px;">· ' + escapeHTML(modulo) + '</span>' : ''}
       </div>
       <div class="rend-barras-ra">
         ${g.items.map(d => {
@@ -7700,6 +7701,7 @@ function _renderizarGraficasRendimiento(cursoId) {
   Object.entries(curso.ras || {}).forEach(([rk, ra]) => {
     const snap = ra._actividadesSnapshot || [];
     const raLabel = ra.label || ra.modulo || rk;
+    const raModulo = ra.modulo || '';
     (ra.actividades || []).forEach(actId => {
       const actInfo = snap.find(a => a.id === actId);
       const notas = estudiantes
@@ -7711,6 +7713,7 @@ function _renderizarGraficasRendimiento(cursoId) {
         avg,
         max: ra.valores?.[actId] || 0,
         raLabel,
+        raModulo,
       });
     });
   });
