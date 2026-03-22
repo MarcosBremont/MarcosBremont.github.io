@@ -87,28 +87,34 @@ function eliminarEstudiante(estudianteId) {
 
 function _toggleEstMenu(e, estId) {
   e.stopPropagation();
-  const menu = document.getElementById('est-menu-' + estId);
-  if (!menu) return;
-  const wasOpen = menu.style.display !== 'none';
-  document.querySelectorAll('.est-overflow-menu').forEach(m => m.style.display = 'none');
-  if (!wasOpen) {
-    const btn = e.currentTarget;
-    const rect = btn.getBoundingClientRect();
-    menu.style.display = 'flex';
-    let top = rect.bottom + 4;
-    let left = rect.right - menu.offsetWidth;
-    if (top + menu.offsetHeight > window.innerHeight) top = rect.top - menu.offsetHeight - 4;
-    if (left < 8) left = 8;
-    menu.style.top = top + 'px';
-    menu.style.left = left + 'px';
-  }
+  _cerrarEstMenus();
+  const menuOrig = document.getElementById('est-menu-' + estId);
+  if (!menuOrig) return;
+  // Clonar menú y ponerlo en body para que quede encima de todo
+  const menu = menuOrig.cloneNode(true);
+  menu.id = 'est-menu-flotante';
+  menu.style.display = 'flex';
+  document.body.appendChild(menu);
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  let top = rect.bottom + 4;
+  let left = rect.right - menu.offsetWidth;
+  if (top + menu.offsetHeight > window.innerHeight) top = rect.top - menu.offsetHeight - 4;
+  if (left < 8) left = 8;
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
 }
-// Cerrar menú al hacer clic fuera
+function _cerrarEstMenus() {
+  const f = document.getElementById('est-menu-flotante');
+  if (f) f.remove();
+}
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.est-overflow-wrap')) {
-    document.querySelectorAll('.est-overflow-menu').forEach(m => m.style.display = 'none');
+  if (!e.target.closest('.est-overflow-wrap') && !e.target.closest('#est-menu-flotante')) {
+    _cerrarEstMenus();
   }
 });
+// Cerrar al hacer scroll en la tabla
+document.addEventListener('scroll', _cerrarEstMenus, true);
 
 function _toggleNombreMobile(span) {
   if (window.innerWidth > 600) return; // Solo en móvil
