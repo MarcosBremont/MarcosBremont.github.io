@@ -21758,7 +21758,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', prompts: 'tab-sa-prompts' };
+  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', prompts: 'tab-sa-prompts' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -21768,6 +21768,7 @@ function switchTabSuperadmin(tab) {
   if (tab === 'centros') _renderCentrosEducativos();
   else if (tab === 'admins') _renderEmailsSuperadmin();
   else if (tab === 'opciones') _renderOpcionesDocentes();
+  else if (tab === 'opciones_coord') _renderOpcionesCoordinadora();
   else if (tab === 'prompts') _renderPromptsIA();
 }
 
@@ -22561,13 +22562,136 @@ async function _toggleOpcionDocente(id, activo) {
   mostrarToast(`${activo ? 'Activado' : 'Desactivado'}: ${OPCIONES_DOCENTES.find(o => o.id === id)?.label || id}`, 'success');
 }
 
+// ── OPCIONES DE VISIBILIDAD PARA COORDINADORA ──────────────────
+
+const OPCIONES_COORDINADORA = [
+  { id: 'nueva_planif', label: 'Nueva Planificación', icono: 'add_circle_outline', desc: 'Crear nueva planificación', defecto: false },
+  { id: 'planificaciones', label: 'Mis Planificaciones', icono: 'folder_special', desc: 'Ver planificaciones guardadas', defecto: false },
+  { id: 'diarias', label: 'Planificaciones Diarias', icono: 'today', desc: 'Planificaciones diarias por sesión', defecto: false },
+  { id: 'calificaciones', label: 'Libro de Calificaciones', icono: 'grade', desc: 'Registro de notas por curso', defecto: false },
+  { id: 'horario', label: 'Mi Horario', icono: 'calendar_view_week', desc: 'Horario semanal de clases', defecto: true },
+  { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas', defecto: true },
+  { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas', defecto: true },
+  { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación', defecto: true },
+  { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento', defecto: true },
+  { id: 'ia', label: 'Configurar IA', icono: 'auto_awesome', desc: 'Configuración de inteligencia artificial', defecto: false },
+  { id: 'importar', label: 'Importar Planificación', icono: 'upload_file', desc: 'Importar planificación desde archivo', defecto: false },
+  { id: 'backup', label: 'Mis Datos', icono: 'backup', desc: 'Exportar e importar datos', defecto: true },
+  { id: 'blog', label: 'Blog Educativo', icono: 'rss_feed', desc: 'Blog para estudiantes', defecto: true },
+  { id: 'calendario', label: 'Calendario Escolar', icono: 'event', desc: 'Calendario de actividades', defecto: true },
+  { id: 'reportes', label: 'Reportes Estudiantes', icono: 'flag', desc: 'Reportes de comportamiento', defecto: true },
+  { id: 'denuncias', label: 'Buzón de Denuncias', icono: 'report', desc: 'Denuncias anónimas', defecto: true },
+  { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios', defecto: true },
+  { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global', defecto: true },
+  { id: 'presentacion', label: 'Presentación', icono: 'slideshow', desc: 'Vista de presentación', defecto: false },
+];
+
+async function _cargarOpcionesCoordinadora() {
+  try {
+    const doc = await db.collection('config').doc('opciones_coordinadora').get();
+    return doc.exists ? doc.data() : {};
+  } catch (e) {
+    console.error('[Opciones Coordinadora] Error:', e.code);
+    return {};
+  }
+}
+
+async function _guardarOpcionesCoordinadora(opciones) {
+  try {
+    await db.collection('config').doc('opciones_coordinadora').set(opciones);
+  } catch (e) {
+    mostrarToast('Error guardando opciones: ' + e.message, 'error');
+  }
+}
+
+async function _renderOpcionesCoordinadora() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span></div>';
+
+  const opciones = await _cargarOpcionesCoordinadora();
+
+  let html = '<div style="margin-bottom:16px;padding:12px;background:#E0F2F1;border-radius:10px;font-size:0.85rem;color:#00695C;display:flex;align-items:center;gap:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">info</span>'
+    + 'Activa o desactiva las opciones que las <strong>coordinadoras</strong> pueden ver en su dashboard. Los módulos desactivados por defecto están pensados para que la coordinadora se enfoque en supervisión.'
+    + '</div>';
+
+  html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+  OPCIONES_COORDINADORA.forEach(opt => {
+    const guardado = opciones[opt.id];
+    const activo = guardado !== undefined ? guardado : opt.defecto;
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1.5px solid ' + (activo ? '#80CBC4' : '#E0E0E0') + ';border-radius:10px;">'
+      + '<span class="material-icons" style="font-size:20px;color:' + (activo ? '#00695C' : '#BDBDBD') + ';">' + opt.icono + '</span>'
+      + '<div style="flex:1;">'
+      + '<div style="font-weight:600;font-size:0.9rem;color:' + (activo ? '#212121' : '#9E9E9E') + ';">' + opt.label + '</div>'
+      + '<div style="font-size:0.75rem;color:#999;">' + opt.desc + '</div>'
+      + '</div>'
+      + '<label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">'
+      + '<input type="checkbox" ' + (activo ? 'checked' : '') + ' onchange="_toggleOpcionCoordinadora(\'' + opt.id + '\', this.checked)"'
+      + ' style="opacity:0;width:0;height:0;">'
+      + '<span style="position:absolute;inset:0;background:' + (activo ? '#00695C' : '#ccc') + ';border-radius:24px;transition:0.3s;"></span>'
+      + '<span style="position:absolute;top:2px;left:' + (activo ? '22px' : '2px') + ';width:20px;height:20px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>'
+      + '</label></div>';
+  });
+  html += '</div>';
+  cont.innerHTML = html;
+}
+
+async function _toggleOpcionCoordinadora(id, activo) {
+  const opciones = await _cargarOpcionesCoordinadora();
+  opciones[id] = activo;
+  await _guardarOpcionesCoordinadora(opciones);
+  _renderOpcionesCoordinadora();
+  mostrarToast(`${activo ? 'Activado' : 'Desactivado'}: ${OPCIONES_COORDINADORA.find(o => o.id === id)?.label || id}`, 'success');
+}
+
+/** Aplica restricciones de opciones al dashboard de la coordinadora */
+async function _aplicarOpcionesCoordinadora() {
+  const esCoord = await _esCoordinadora();
+  if (!esCoord) return; // Solo aplica a coordinadoras
+
+  try {
+    const opciones = await _cargarOpcionesCoordinadora();
+    const mapBotones = {
+      nueva_planif: 'btn-dash-nueva-planif',
+      planificaciones: 'btn-dash-planificaciones',
+      diarias: 'btn-dash-diarias',
+      calificaciones: 'btn-dash-calificaciones',
+      horario: 'btn-dash-horario',
+      tareas: 'btn-dash-tareas',
+      notas: 'btn-dash-notas',
+      libreta: 'btn-dash-libreta',
+      rendimiento: 'btn-dash-rendimiento',
+      ia: 'btn-dash-ia',
+      importar: 'btn-dash-importar',
+      backup: 'btn-dash-backup',
+      blog: 'btn-dash-blog',
+      calendario: 'btn-dash-calendario',
+      reportes: 'btn-dash-reportes',
+      denuncias: 'btn-dash-denuncias',
+      auditoria: 'btn-dash-auditoria',
+      buscar: 'btn-buscar-est',
+      presentacion: 'btn-dash-presentacion',
+    };
+    Object.entries(mapBotones).forEach(([key, btnId]) => {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const def = OPCIONES_COORDINADORA.find(o => o.id === key);
+      const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
+      if (!activo) btn.style.display = 'none';
+    });
+  } catch {}
+}
+
 /** Aplica las restricciones de opciones al dashboard del docente */
 async function _aplicarOpcionesDocente() {
-  if (typeof _esSuperadmin === 'function' && _esSuperadmin()) return; // superadmin ve todo
+  if (typeof _esSuperadmin === 'function' && _esSuperadmin()) return;
   const esAdmin = await _esAdminDeCentro();
-  if (esAdmin.length > 0) return; // admin centro ve todo
+  if (esAdmin.length > 0) return;
   const esDir = await _esDirector();
-  if (esDir) return; // director ve todo
+  if (esDir) return;
+  const esCoord = await _esCoordinadora();
+  if (esCoord) return; // coordinadora usa su propia config
 
   try {
     const opciones = await _cargarOpcionesDocentes();
@@ -22611,6 +22735,7 @@ renderizarDashboard = function() {
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
   _cargarAvisosDocente(); // mostrar avisos al docente en dashboard
   _aplicarOpcionesDocente(); // ocultar opciones desactivadas por superadmin
+  _aplicarOpcionesCoordinadora(); // ocultar opciones desactivadas para coordinadora
 };
 
 // ── AVISOS PARA DOCENTES EN DASHBOARD ─────────────────────────────
@@ -22743,7 +22868,7 @@ async function _coordMostrarSelectorCentro(cont, callback) {
 
 async function _coordGetDocentes(centroId) {
   const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
-  return snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => d.rol !== 'admin_centro');
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
 }
 
 // ── 1. MONITOR DE CALIFICACIONES ────────────────────────────────

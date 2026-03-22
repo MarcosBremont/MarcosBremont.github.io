@@ -360,7 +360,7 @@
           <span class="material-icons">security</span>
           <span>Auditoría</span>
         </button>
-        <button class="dash-nav-btn" onclick="abrirModoPresent()" style="--accent:#E65100;">
+        <button class="dash-nav-btn" id="btn-dash-presentacion" onclick="abrirModoPresent()" style="--accent:#E65100;">
           <span class="material-icons">cast_for_education</span>
           <span>Presentación</span>
         </button>
@@ -1737,6 +1737,10 @@
         <button class="ra-tab" id="tab-sa-opciones" onclick="switchTabSuperadmin('opciones')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">toggle_on</span> Opciones Docentes
+        </button>
+        <button class="ra-tab" id="tab-sa-opciones-coord" onclick="switchTabSuperadmin('opciones_coord')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">supervisor_account</span> Opciones Coordinadora
         </button>
         <button class="ra-tab" id="tab-sa-prompts" onclick="switchTabSuperadmin('prompts')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
