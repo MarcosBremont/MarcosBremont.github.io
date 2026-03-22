@@ -22357,17 +22357,24 @@ async function _quitarSuperadmin(email) {
 // ── OPCIONES DE VISIBILIDAD PARA DOCENTES ───────────────────────
 
 const OPCIONES_DOCENTES = [
-  { id: 'blog', label: 'Blog Educativo', icono: 'rss_feed', desc: 'Publicar contenido para estudiantes' },
-  { id: 'reportes', label: 'Reportes Estudiantes', icono: 'flag', desc: 'Reportes de comportamiento' },
-  { id: 'denuncias', label: 'Buzón de Denuncias', icono: 'report', desc: 'Denuncias anónimas' },
+  { id: 'nueva_planif', label: 'Nueva Planificación', icono: 'add_circle_outline', desc: 'Crear nueva planificación desde cero' },
+  { id: 'planificaciones', label: 'Mis Planificaciones', icono: 'folder_special', desc: 'Ver y gestionar planificaciones guardadas' },
+  { id: 'diarias', label: 'Planificaciones Diarias', icono: 'today', desc: 'Planificaciones diarias por sesión' },
+  { id: 'calificaciones', label: 'Libro de Calificaciones', icono: 'grade', desc: 'Registro de notas por curso' },
+  { id: 'horario', label: 'Mi Horario', icono: 'calendar_view_week', desc: 'Horario semanal de clases' },
   { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas y entregas' },
   { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas del docente' },
   { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación' },
   { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento' },
-  { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios' },
-  { id: 'calendario', label: 'Calendario Escolar', icono: 'event', desc: 'Calendario de actividades' },
-  { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global de estudiantes' },
   { id: 'ia', label: 'Generación con IA', icono: 'auto_awesome', desc: 'Generar contenido con inteligencia artificial' },
+  { id: 'importar', label: 'Importar Planificación', icono: 'upload_file', desc: 'Importar planificación desde archivo' },
+  { id: 'backup', label: 'Mis Datos', icono: 'backup', desc: 'Exportar e importar datos personales' },
+  { id: 'blog', label: 'Blog Educativo', icono: 'rss_feed', desc: 'Publicar contenido para estudiantes' },
+  { id: 'calendario', label: 'Calendario Escolar', icono: 'event', desc: 'Calendario de actividades' },
+  { id: 'reportes', label: 'Reportes Estudiantes', icono: 'flag', desc: 'Reportes de comportamiento' },
+  { id: 'denuncias', label: 'Buzón de Denuncias', icono: 'report', desc: 'Denuncias anónimas' },
+  { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios' },
+  { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global de estudiantes' },
 ];
 
 async function _cargarOpcionesDocentes() {
@@ -22449,15 +22456,23 @@ async function _aplicarOpcionesDocente() {
   try {
     const opciones = await _cargarOpcionesDocentes();
     const mapBotones = {
-      blog: 'btn-dash-blog',
-      reportes: 'btn-dash-reportes',
-      denuncias: 'btn-dash-denuncias',
+      nueva_planif: 'btn-dash-nueva-planif',
+      planificaciones: 'btn-dash-planificaciones',
+      diarias: 'btn-dash-diarias',
+      calificaciones: 'btn-dash-calificaciones',
+      horario: 'btn-dash-horario',
       tareas: 'btn-dash-tareas',
       notas: 'btn-dash-notas',
       libreta: 'btn-dash-libreta',
       rendimiento: 'btn-dash-rendimiento',
-      auditoria: 'btn-dash-auditoria',
+      ia: 'btn-dash-ia',
+      importar: 'btn-dash-importar',
+      backup: 'btn-dash-backup',
+      blog: 'btn-dash-blog',
       calendario: 'btn-dash-calendario',
+      reportes: 'btn-dash-reportes',
+      denuncias: 'btn-dash-denuncias',
+      auditoria: 'btn-dash-auditoria',
       buscar: 'btn-buscar-est',
     };
     Object.entries(mapBotones).forEach(([key, btnId]) => {
@@ -22466,11 +22481,6 @@ async function _aplicarOpcionesDocente() {
         btn.style.display = 'none';
       }
     });
-    // IA toggle
-    if (opciones.ia === false) {
-      const btnIA = document.getElementById('btn-dash-ia');
-      if (btnIA) btnIA.style.display = 'none';
-    }
   } catch {}
 }
 
