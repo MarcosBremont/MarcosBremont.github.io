@@ -22992,8 +22992,8 @@ async function _coordMonitorCalificaciones() {
       else if (d.actsSinNota <= 2) { statusColor = '#FF9800'; statusIcon = 'warning'; statusText = d.actsSinNota + ' sin calificar'; }
       else { statusColor = '#C62828'; statusIcon = 'error'; statusText = d.actsSinNota + ' sin calificar'; }
 
-      html += '<div onclick="_coordToggleDetalleCal(' + idx + ')" style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'">'
-        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;transition:box-shadow 0.2s;">'
+        + '<div onclick="_coordToggleDetalleCal(' + idx + ')" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;" onmouseover="this.parentElement.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.parentElement.style.boxShadow=\'none\'">'
         + '<div style="width:44px;height:44px;border-radius:50%;background:' + statusColor + '22;display:flex;align-items:center;justify-content:center;">'
         + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
         + '<div style="flex:1;min-width:150px;">'
@@ -23146,8 +23146,8 @@ async function _coordMonitorPlanificaciones() {
 
       const ultimaMod = d.ultimaModificacion ? new Date(d.ultimaModificacion).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Nunca';
 
-      html += '<div onclick="_coordToggleDetallePlan(' + idx + ')" style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'">'
-        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;transition:box-shadow 0.2s;">'
+        + '<div onclick="_coordToggleDetallePlan(' + idx + ')" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;" onmouseover="this.parentElement.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.parentElement.style.boxShadow=\'none\'">'
         + '<div style="width:44px;height:44px;border-radius:50%;background:' + statusColor + '22;display:flex;align-items:center;justify-content:center;">'
         + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
         + '<div style="flex:1;min-width:150px;">'
