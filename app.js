@@ -22933,31 +22933,41 @@ async function _coordMonitorCalificaciones() {
         const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
         const cursos = calData.cursos || {};
         let totalActs = 0, actsSinNota = 0, totalEstudiantes = 0;
-        Object.values(cursos).forEach(curso => {
+        const cursosDetalle = [];
+        Object.entries(cursos).forEach(([cId, curso]) => {
           const ests = curso.estudiantes || [];
           totalEstudiantes += ests.length;
-          Object.values(curso.ras || {}).forEach(ra => {
+          let cursoActs = 0, cursoSinNota = 0;
+          const rasDetalle = [];
+          Object.entries(curso.ras || {}).forEach(([rk, ra]) => {
             const acts = ra.actividades || [];
+            cursoActs += acts.length;
             totalActs += acts.length;
+            const actsDetalle = [];
             acts.forEach(actId => {
-              const tieneAlMenosUna = ests.some(est => {
+              const snap = (ra._actividadesSnapshot || []).find(a => a.id === actId);
+              let calificados = 0;
+              ests.forEach(est => {
                 const nota = curso.notas?.[est.id]?.[ra.raKey]?.[actId];
-                return nota !== undefined && nota !== null;
+                if (nota !== undefined && nota !== null) calificados++;
               });
-              if (!tieneAlMenosUna && ests.length > 0) actsSinNota++;
+              const sinNota = ests.length - calificados;
+              if (sinNota > 0 && ests.length > 0) actsSinNota++;
+              if (sinNota > 0 && ests.length > 0) cursoSinNota++;
+              actsDetalle.push({ id: actId, nombre: snap?.enunciado || actId, max: ra.valores?.[actId] || 0, calificados, sinNota, total: ests.length });
             });
+            rasDetalle.push({ raKey: rk, label: ra.label || rk, modulo: ra.modulo || '', actividades: actsDetalle });
           });
+          cursosDetalle.push({ id: cId, nombre: curso.nombre || cId, estudiantes: ests, ras: rasDetalle, notas: curso.notas || {}, totalActs: cursoActs, sinNota: cursoSinNota });
         });
-        return { ...d, cursos: Object.keys(cursos).length, totalActs, actsSinNota, totalEstudiantes };
-      } catch { return { ...d, cursos: 0, totalActs: 0, actsSinNota: 0, totalEstudiantes: 0 }; }
+        return { ...d, nCursos: Object.keys(cursos).length, totalActs, actsSinNota, totalEstudiantes, cursosDetalle };
+      } catch (e) { console.warn('Error cal coord:', e); return { ...d, nCursos: 0, totalActs: 0, actsSinNota: 0, totalEstudiantes: 0, cursosDetalle: [] }; }
     }));
 
-    // Ordenar: más atrasados primero
     docentesData.sort((a, b) => b.actsSinNota - a.actsSinNota);
 
     let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">grade</span> Estado de Calificaciones por Docente</h4>';
 
-    // Resumen rápido
     const alDia = docentesData.filter(d => d.actsSinNota === 0 && d.totalActs > 0).length;
     const atrasados = docentesData.filter(d => d.actsSinNota > 0).length;
     const sinData = docentesData.filter(d => d.totalActs === 0).length;
@@ -22970,8 +22980,11 @@ async function _coordMonitorCalificaciones() {
       + '<div style="font-size:1.4rem;font-weight:700;color:#9E9E9E;">' + sinData + '</div><div style="font-size:0.78rem;color:#9E9E9E;">Sin actividades</div></div>'
       + '</div>';
 
+    // Guardar datos para drill-down
+    window._coordCalData = docentesData;
+
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-    docentesData.forEach(d => {
+    docentesData.forEach((d, idx) => {
       const pctCalificado = d.totalActs > 0 ? Math.round(((d.totalActs - d.actsSinNota) / d.totalActs) * 100) : 0;
       let statusColor, statusIcon, statusText;
       if (d.totalActs === 0) { statusColor = '#9E9E9E'; statusIcon = 'remove_circle_outline'; statusText = 'Sin actividades'; }
@@ -22979,23 +22992,93 @@ async function _coordMonitorCalificaciones() {
       else if (d.actsSinNota <= 2) { statusColor = '#FF9800'; statusIcon = 'warning'; statusText = d.actsSinNota + ' sin calificar'; }
       else { statusColor = '#C62828'; statusIcon = 'error'; statusText = d.actsSinNota + ' sin calificar'; }
 
-      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+      html += '<div onclick="_coordToggleDetalleCal(' + idx + ')" style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'">'
+        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
         + '<div style="width:44px;height:44px;border-radius:50%;background:' + statusColor + '22;display:flex;align-items:center;justify-content:center;">'
         + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
         + '<div style="flex:1;min-width:150px;">'
-        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + '</div>'
-        + '<div style="font-size:0.82rem;color:#78909C;">' + d.cursos + ' cursos · ' + d.totalEstudiantes + ' estudiantes · ' + d.totalActs + ' actividades</div>'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + ' <span class="material-icons" style="font-size:16px;vertical-align:middle;color:#90A4AE;">expand_more</span></div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + d.nCursos + ' cursos · ' + d.totalEstudiantes + ' estudiantes · ' + d.totalActs + ' actividades</div>'
         + '</div>'
         + '<div style="text-align:right;min-width:100px;">'
         + '<div style="font-size:1.1rem;font-weight:700;color:' + statusColor + ';">' + pctCalificado + '%</div>'
         + '<div style="font-size:0.72rem;color:' + statusColor + ';">' + statusText + '</div>'
-        + '</div></div>';
+        + '</div></div>'
+        + '<div id="coord-cal-detalle-' + idx + '" style="display:none;margin-top:12px;border-top:1px solid #E0E0E0;padding-top:12px;"></div>'
+        + '</div>';
     });
     html += '</div>';
     cont.innerHTML = html;
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
   }
+}
+
+/** Expandir/colapsar detalle de calificaciones de un docente */
+function _coordToggleDetalleCal(idx) {
+  const el = document.getElementById('coord-cal-detalle-' + idx);
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  const d = window._coordCalData?.[idx];
+  if (!d || !d.cursosDetalle.length) { el.innerHTML = '<div style="color:#9E9E9E;font-size:0.85rem;">Este docente no tiene cursos registrados.</div>'; el.style.display = 'block'; return; }
+
+  let h = '';
+  d.cursosDetalle.forEach(curso => {
+    h += '<div style="margin-bottom:14px;">'
+      + '<div style="font-weight:700;font-size:0.9rem;color:#1565C0;margin-bottom:6px;display:flex;align-items:center;gap:6px;">'
+      + '<span class="material-icons" style="font-size:18px;">school</span> ' + escapeHTML(curso.nombre)
+      + ' <span style="font-weight:400;font-size:0.78rem;color:#78909C;">(' + curso.estudiantes.length + ' est. · ' + curso.totalActs + ' act.)</span></div>';
+
+    if (!curso.ras.length) { h += '<div style="font-size:0.82rem;color:#9E9E9E;margin-left:24px;">Sin RAs asignados</div></div>'; return; }
+
+    curso.ras.forEach(ra => {
+      h += '<div style="margin-left:12px;margin-bottom:8px;">'
+        + '<div style="font-size:0.82rem;font-weight:600;color:#00695C;margin-bottom:4px;">' + escapeHTML(ra.label) + (ra.modulo ? ' <span style="font-weight:400;color:#78909C;">(' + escapeHTML(ra.modulo) + ')</span>' : '') + '</div>';
+
+      if (!ra.actividades.length) { h += '<div style="font-size:0.78rem;color:#9E9E9E;margin-left:12px;">Sin actividades</div></div>'; return; }
+
+      // Tabla de actividades con estado de calificación
+      h += '<div style="overflow-x:auto;margin-left:12px;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;min-width:300px;">'
+        + '<thead><tr style="background:#F5F5F5;"><th style="text-align:left;padding:4px 8px;border:1px solid #E0E0E0;">Actividad</th>'
+        + '<th style="padding:4px 8px;border:1px solid #E0E0E0;width:60px;">Valor</th>'
+        + '<th style="padding:4px 8px;border:1px solid #E0E0E0;width:80px;">Calificados</th>'
+        + '<th style="padding:4px 8px;border:1px solid #E0E0E0;width:80px;">Pendientes</th></tr></thead><tbody>';
+
+      ra.actividades.forEach(act => {
+        const color = act.sinNota > 0 ? '#FFF3E0' : '#E8F5E9';
+        h += '<tr style="background:' + color + ';"><td style="padding:4px 8px;border:1px solid #E0E0E0;">' + escapeHTML(act.nombre) + '</td>'
+          + '<td style="padding:4px 8px;border:1px solid #E0E0E0;text-align:center;">' + act.max + '</td>'
+          + '<td style="padding:4px 8px;border:1px solid #E0E0E0;text-align:center;color:#2E7D32;font-weight:600;">' + act.calificados + '/' + act.total + '</td>'
+          + '<td style="padding:4px 8px;border:1px solid #E0E0E0;text-align:center;color:' + (act.sinNota > 0 ? '#C62828' : '#2E7D32') + ';font-weight:600;">' + act.sinNota + '</td></tr>';
+      });
+      h += '</tbody></table></div></div>';
+    });
+
+    // Mini tabla de notas por estudiante (top 10 para no sobrecargar)
+    if (curso.estudiantes.length && curso.ras.length) {
+      h += '<details style="margin-left:12px;margin-top:6px;"><summary style="cursor:pointer;font-size:0.82rem;color:#1565C0;font-weight:600;">Ver notas por estudiante (' + curso.estudiantes.length + ')</summary>';
+      h += '<div style="overflow-x:auto;margin-top:6px;"><table style="width:100%;border-collapse:collapse;font-size:0.75rem;min-width:400px;">'
+        + '<thead><tr style="background:#E3F2FD;"><th style="text-align:left;padding:3px 6px;border:1px solid #BBDEFB;">Estudiante</th>';
+      // Encabezados: cada actividad
+      const allActs = [];
+      curso.ras.forEach(ra => ra.actividades.forEach(act => allActs.push({ raKey: ra.raKey, actId: act.id, nombre: act.nombre.substring(0, 20) })));
+      allActs.forEach(a => { h += '<th style="padding:3px 4px;border:1px solid #BBDEFB;font-size:0.7rem;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHTML(a.nombre) + '">' + escapeHTML(a.nombre) + '</th>'; });
+      h += '</tr></thead><tbody>';
+      curso.estudiantes.forEach(est => {
+        h += '<tr><td style="padding:3px 6px;border:1px solid #BBDEFB;font-weight:500;">' + escapeHTML(est.nombre) + '</td>';
+        allActs.forEach(a => {
+          const nota = curso.notas?.[est.id]?.[a.raKey]?.[a.actId];
+          const tieneNota = nota !== undefined && nota !== null;
+          h += '<td style="padding:3px 4px;border:1px solid #BBDEFB;text-align:center;background:' + (tieneNota ? '#E8F5E9' : '#FFEBEE') + ';color:' + (tieneNota ? '#1B5E20' : '#C62828') + ';font-weight:600;">' + (tieneNota ? nota : '—') + '</td>';
+        });
+        h += '</tr>';
+      });
+      h += '</tbody></table></div></details>';
+    }
+    h += '</div>';
+  });
+  el.innerHTML = h;
+  el.style.display = 'block';
 }
 
 // ── 2. MONITOR DE PLANIFICACIONES ───────────────────────────────
@@ -23023,13 +23106,22 @@ async function _coordMonitorPlanificaciones() {
         const calData = calRaw2.payload ? JSON.parse(calRaw2.payload) : calRaw2;
         const cursos = calData.cursos || {};
         let asignadas = 0;
-        Object.values(cursos).forEach(c => { asignadas += (c.planIds || []).length; });
-        const ultimaFecha = items.length ? items.sort((a, b) => (b.modificado || b.creado || '').localeCompare(a.modificado || a.creado || ''))[0] : null;
-        return { ...d, totalPlanificaciones: items.length, asignadas, ultimaModificacion: ultimaFecha?.modificado || ultimaFecha?.creado || null };
-      } catch { return { ...d, totalPlanificaciones: 0, asignadas: 0, ultimaModificacion: null }; }
+        const cursosConPlan = [];
+        Object.entries(cursos).forEach(([cId, c]) => {
+          const pIds = c.planIds || [];
+          asignadas += pIds.length;
+          if (pIds.length) cursosConPlan.push({ nombre: c.nombre || cId, planIds: pIds });
+        });
+        const sortedItems = [...items].sort((a, b) => (b.fechaGuardado || b.modificado || b.creado || '').localeCompare(a.fechaGuardado || a.modificado || a.creado || ''));
+        const ultimaFecha = sortedItems[0]?.fechaGuardado || sortedItems[0]?.modificado || sortedItems[0]?.creado || null;
+        return { ...d, totalPlanificaciones: items.length, asignadas, ultimaModificacion: ultimaFecha, planItems: items, cursosConPlan };
+      } catch { return { ...d, totalPlanificaciones: 0, asignadas: 0, ultimaModificacion: null, planItems: [], cursosConPlan: [] }; }
     }));
 
     docentesData.sort((a, b) => a.totalPlanificaciones - b.totalPlanificaciones);
+
+    // Guardar para drill-down
+    window._coordPlanData = docentesData;
 
     let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">description</span> Estado de Planificaciones por Docente</h4>';
 
@@ -23046,7 +23138,7 @@ async function _coordMonitorPlanificaciones() {
       + '</div>';
 
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-    docentesData.forEach(d => {
+    docentesData.forEach((d, idx) => {
       let statusColor, statusIcon;
       if (d.totalPlanificaciones === 0) { statusColor = '#C62828'; statusIcon = 'cancel'; }
       else if (d.asignadas === 0) { statusColor = '#FF9800'; statusIcon = 'warning'; }
@@ -23054,20 +23146,82 @@ async function _coordMonitorPlanificaciones() {
 
       const ultimaMod = d.ultimaModificacion ? new Date(d.ultimaModificacion).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Nunca';
 
-      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+      html += '<div onclick="_coordToggleDetallePlan(' + idx + ')" style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'">'
+        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
         + '<div style="width:44px;height:44px;border-radius:50%;background:' + statusColor + '22;display:flex;align-items:center;justify-content:center;">'
         + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
         + '<div style="flex:1;min-width:150px;">'
-        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + '</div>'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + ' <span class="material-icons" style="font-size:16px;vertical-align:middle;color:#90A4AE;">expand_more</span></div>'
         + '<div style="font-size:0.82rem;color:#78909C;">' + d.totalPlanificaciones + ' planificaciones · ' + d.asignadas + ' asignadas a cursos</div>'
         + '<div style="font-size:0.72rem;color:#B0BEC5;">Última modificación: ' + ultimaMod + '</div>'
-        + '</div></div>';
+        + '</div></div>'
+        + '<div id="coord-plan-detalle-' + idx + '" style="display:none;margin-top:12px;border-top:1px solid #E0E0E0;padding-top:12px;"></div>'
+        + '</div>';
     });
     html += '</div>';
     cont.innerHTML = html;
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
   }
+}
+
+/** Expandir/colapsar detalle de planificaciones de un docente */
+function _coordToggleDetallePlan(idx) {
+  const el = document.getElementById('coord-plan-detalle-' + idx);
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  const d = window._coordPlanData?.[idx];
+  if (!d || !d.planItems.length) { el.innerHTML = '<div style="color:#9E9E9E;font-size:0.85rem;">Este docente no tiene planificaciones.</div>'; el.style.display = 'block'; return; }
+
+  let h = '';
+
+  // Cursos con planificaciones asignadas
+  if (d.cursosConPlan.length) {
+    h += '<div style="margin-bottom:10px;font-size:0.82rem;font-weight:600;color:#1565C0;">Cursos con planificación asignada:</div>';
+    d.cursosConPlan.forEach(c => {
+      h += '<div style="margin-left:12px;margin-bottom:4px;font-size:0.8rem;"><span class="material-icons" style="font-size:14px;vertical-align:middle;color:#2E7D32;">check</span> ' + escapeHTML(c.nombre) + ' <span style="color:#78909C;">(' + c.planIds.length + ' plan' + (c.planIds.length > 1 ? 'es' : '') + ')</span></div>';
+    });
+    h += '<div style="margin-bottom:10px;"></div>';
+  }
+
+  // Lista de planificaciones
+  h += '<div style="font-size:0.82rem;font-weight:600;color:#00695C;margin-bottom:8px;">Planificaciones guardadas (' + d.planItems.length + '):</div>';
+  h += '<div style="display:flex;flex-direction:column;gap:6px;">';
+  d.planItems.forEach(item => {
+    const plan = item.planificacion || {};
+    const raDesc = plan.ra?.descripcion || '';
+    const raCorto = raDesc.substring(0, 60) + (raDesc.length > 60 ? '...' : '');
+    const modulo = plan.datosGenerales?.moduloFormativo || '';
+    const nActs = (plan.actividades || []).length;
+    const fecha = item.fechaGuardadoLabel || (item.fechaGuardado ? new Date(item.fechaGuardado).toLocaleDateString('es-DO') : '');
+
+    h += '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:10px;">'
+      + '<div style="font-weight:600;font-size:0.85rem;color:#212121;">' + escapeHTML(item.nombre || 'Sin nombre') + '</div>';
+    if (modulo) h += '<div style="font-size:0.78rem;color:#1565C0;">' + escapeHTML(modulo) + '</div>';
+    if (raCorto) h += '<div style="font-size:0.75rem;color:#00695C;">' + escapeHTML(raCorto) + '</div>';
+    h += '<div style="font-size:0.72rem;color:#78909C;margin-top:2px;">' + nActs + ' actividades · Guardada: ' + fecha + '</div>';
+
+    // Detalle de actividades
+    if (nActs > 0) {
+      h += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:0.75rem;color:#5C6BC0;">Ver actividades</summary>';
+      h += '<div style="margin-top:4px;">';
+      (plan.actividades || []).forEach((act, i) => {
+        h += '<div style="font-size:0.75rem;padding:3px 0;border-bottom:1px solid #EEE;display:flex;gap:6px;align-items:flex-start;">'
+          + '<span style="color:#78909C;min-width:20px;">' + (i + 1) + '.</span>'
+          + '<div><span style="color:#212121;">' + escapeHTML(act.enunciado || 'Sin descripción') + '</span>';
+        if (act.ecCodigo) h += ' <span style="color:#5C6BC0;font-size:0.7rem;">(' + act.ecCodigo + ')</span>';
+        if (act.instrumento?.tipoLabel) h += ' <span style="color:#78909C;font-size:0.7rem;">— ' + act.instrumento.tipoLabel + '</span>';
+        if (act.valor) h += ' <span style="color:#E65100;font-size:0.7rem;font-weight:600;">' + act.valor + ' pts</span>';
+        h += '</div></div>';
+      });
+      h += '</div></details>';
+    }
+    h += '</div>';
+  });
+  h += '</div>';
+
+  el.innerHTML = h;
+  el.style.display = 'block';
 }
 
 // ── 3. RESUMEN POR DOCENTE ──────────────────────────────────────
