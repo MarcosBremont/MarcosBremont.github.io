@@ -8028,14 +8028,31 @@ function uid() {
 // Helper: footer dinámico (crearCurso, asignar, etc.)
 function _usarFooterDinamico(html) {
   const footer = document.getElementById('modal-footer');
-  if (footer) footer.innerHTML = html;
+  if (footer) { footer.innerHTML = html; footer.style.display = html ? '' : 'none'; }
 }
 // Helper: restaurar footer de instrumento
 const _FOOTER_INST_HTML = `<button class="btn-export btn-print btn-sm" onclick="imprimirModal()"><span class="material-icons">print</span> Imprimir instrumento</button><button class="btn-export btn-copy btn-sm" onclick="copiarModal()"><span class="material-icons">content_copy</span> Copiar</button><button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>`;
 function _usarFooterInstrumento() {
   const footer = document.getElementById('modal-footer');
-  if (footer) footer.innerHTML = _FOOTER_INST_HTML;
+  if (footer) { footer.innerHTML = _FOOTER_INST_HTML; footer.style.display = ''; }
 }
+
+// Auto-ocultar footer de instrumento al abrir cualquier modal
+(function() {
+  const _origRemove = DOMTokenList.prototype.remove;
+  const mo = new MutationObserver(() => {
+    const overlay = document.getElementById('modal-overlay');
+    const footer = document.getElementById('modal-footer');
+    if (overlay && footer && !overlay.classList.contains('hidden')) {
+      // Si el footer tiene los botones de instrumento, ocultarlo
+      if (footer.innerHTML.includes('imprimirModal')) footer.style.display = 'none';
+    }
+  });
+  setTimeout(() => {
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) mo.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+  }, 1000);
+})();
 
 function abrirModalNuevoCurso() {
   const biblio = cargarBiblioteca();
