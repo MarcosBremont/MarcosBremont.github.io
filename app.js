@@ -22679,6 +22679,7 @@ async function _verificarAccesoCoordinadora() {
 }
 
 function abrirCoordinadora() {
+  window._coordCentroSeleccionado = null; // Reset para permitir cambiar centro
   _mostrarPanel('panel-coordinadora');
   switchTabCoordinadora('calificaciones');
 }
@@ -22699,17 +22700,45 @@ function switchTabCoordinadora(tab) {
 }
 
 async function _coordGetCentroId() {
+  // Si ya hay un centro seleccionado en el panel, usarlo
+  if (window._coordCentroSeleccionado) return window._coordCentroSeleccionado;
   if (!window.currentUser) return null;
+  // Buscar centroId del usuario
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    if (doc.exists) return doc.data().centroId || null;
+    if (doc.exists && doc.data().centroId) return doc.data().centroId;
   } catch {}
-  // Superadmin fallback
-  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-  if (esSA) {
-    try { const s = await db.collection('centros').limit(1).get(); if (!s.empty) return s.docs[0].id; } catch {}
-  }
+  // Admin centro: buscar en centros.admins
+  try {
+    const email = window.currentUser.email?.toLowerCase();
+    if (email) {
+      const snap = await db.collection('centros').get();
+      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      if (centro) return centro.id;
+    }
+  } catch {}
+  // Superadmin/Director sin centro: mostrar selector
   return null;
+}
+
+async function _coordMostrarSelectorCentro(cont, callback) {
+  try {
+    const snap = await db.collection('centros').get();
+    const centros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!centros.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centros registrados.</div>'; return; }
+    let html = '<div style="text-align:center;padding:30px;">'
+      + '<span class="material-icons" style="font-size:48px;color:#00695C;display:block;margin-bottom:12px;">business</span>'
+      + '<p style="color:#546E7A;margin-bottom:16px;">Selecciona un centro educativo para ver sus datos:</p>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">';
+    centros.forEach(c => {
+      html += '<button onclick="window._coordCentroSeleccionado=\'' + c.id + '\';' + callback + '()" style="padding:12px 20px;background:#fff;border:2px solid #00695C;border-radius:12px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#00695C;transition:all 0.2s;"'
+        + ' onmouseover="this.style.background=\'#00695C\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#00695C\'">'
+        + '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;">school</span>'
+        + escapeHTML(c.nombre || c.id) + '</button>';
+    });
+    html += '</div></div>';
+    cont.innerHTML = html;
+  } catch (e) { cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>'; }
 }
 
 async function _coordGetDocentes(centroId) {
@@ -22725,7 +22754,7 @@ async function _coordMonitorCalificaciones() {
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando calificaciones...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorCalificaciones'); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
@@ -22811,7 +22840,7 @@ async function _coordMonitorPlanificaciones() {
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando planificaciones...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorPlanificaciones'); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
@@ -22881,7 +22910,7 @@ async function _coordResumenDocentes() {
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando resumen...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordResumenDocentes'); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
@@ -23001,7 +23030,7 @@ async function _coordAvisos() {
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando avisos...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordAvisos'); return; }
 
   let avisos = [];
   try {
