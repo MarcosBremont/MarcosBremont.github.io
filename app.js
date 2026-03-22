@@ -7618,13 +7618,10 @@ function _rendBarrasActividades(actData) {
       currentRA = d.raLabel;
       grupos.push({ raLabel: currentRA, items: [] });
     }
-    grupos.push(null); // placeholder
-    grupos[grupos.length - 2].items.push(d);
+    grupos[grupos.length - 1].items.push(d);
   });
-  // Limpiar placeholders
-  const gruposFiltrados = grupos.filter(g => g && g.items);
 
-  return gruposFiltrados.map(g => {
+  return grupos.map(g => {
     const raShort = g.raLabel.length > 60 ? g.raLabel.substring(0, 60) + '…' : g.raLabel;
     return `<div style="margin-bottom:12px;">
       <div style="font-size:0.78rem;font-weight:700;color:#1565C0;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
