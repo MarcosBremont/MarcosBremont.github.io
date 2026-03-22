@@ -19096,6 +19096,7 @@ function _blogRenderCard(p) {
       ${p.tipo === 'pc'
         ? `<button onclick="verEntregasPost('${p.id}')" style="color:#1565C0;"><span class="material-icons">folder_open</span> Entregas</button>`
         : ''}
+      <button onclick="_duplicarPostACurso('${p.id}')" style="color:#00695C;"><span class="material-icons">content_copy</span> Duplicar</button>
       <button onclick="eliminarPost('${p.id}')" style="color:#C62828;margin-left:auto;"><span class="material-icons">delete</span></button>
     </div>
   </div>`;
@@ -19285,6 +19286,70 @@ function _guardarPost(id) {
   cerrarModalBtn();
   renderizarBlog();
   mostrarToast(id ? 'Post actualizado' : 'Post guardado como borrador', 'success');
+}
+
+function _duplicarPostACurso(postId) {
+  cargarCalificaciones();
+  const blog = cargarBlog();
+  const post = (blog.posts || []).find(p => p.id === postId);
+  if (!post) return;
+  const cursos = Object.values(calState.cursos || {}).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  if (!cursos.length) { mostrarToast('No hay cursos disponibles', 'error'); return; }
+
+  const opciones = cursos
+    .filter(c => c.id !== post.cursoId)
+    .map(c => `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;transition:background 0.15s;">
+      <input type="checkbox" value="${c.id}" data-nombre="${escapeHTML(c.nombre)}" style="accent-color:#1565C0;">
+      <span style="font-size:0.9rem;">${escapeHTML(c.nombre)}</span>
+    </label>`).join('');
+
+  document.getElementById('modal-title').textContent = 'Duplicar post a otros cursos';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="padding:8px 0;">
+      <div style="font-size:0.85rem;color:#546E7A;margin-bottom:10px;">
+        <strong>${escapeHTML(post.titulo)}</strong><br>
+        Selecciona los cursos donde quieres duplicar este post:
+      </div>
+      <div id="dup-cursos-list" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;border:1px solid #E0E0E0;border-radius:10px;padding:8px;">
+        ${opciones || '<div style="color:#9E9E9E;padding:12px;text-align:center;">No hay otros cursos disponibles</div>'}
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="cerrarModalBtn()" style="padding:8px 18px;border:1px solid #E0E0E0;border-radius:8px;background:#fff;cursor:pointer;">Cancelar</button>
+        <button onclick="_ejecutarDuplicarPost('${postId}')" style="padding:8px 18px;border:none;border-radius:8px;background:#1565C0;color:#fff;cursor:pointer;font-weight:600;">
+          <span class="material-icons" style="font-size:16px;vertical-align:middle;">content_copy</span> Duplicar
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function _ejecutarDuplicarPost(postId) {
+  const blog = cargarBlog();
+  const post = (blog.posts || []).find(p => p.id === postId);
+  if (!post) return;
+  const checks = document.querySelectorAll('#dup-cursos-list input[type="checkbox"]:checked');
+  if (!checks.length) { mostrarToast('Selecciona al menos un curso', 'error'); return; }
+
+  let count = 0;
+  checks.forEach(chk => {
+    const cursoId = chk.value;
+    const cursoNombre = chk.dataset.nombre || '';
+    const copia = {
+      ...post,
+      id: 'blog-' + Date.now() + '-' + (++count),
+      cursoId,
+      cursoNombre,
+      publicado: false,
+      creadoEn: new Date().toISOString(),
+    };
+    delete copia.actualizadoEn;
+    (blog.posts = blog.posts || []).push(copia);
+  });
+
+  guardarBlog(blog);
+  cerrarModalBtn();
+  renderizarBlog();
+  mostrarToast(`Post duplicado a ${count} curso${count > 1 ? 's' : ''} como borrador`, 'success');
 }
 
 function publicarPost(id) {
