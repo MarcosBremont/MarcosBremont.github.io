@@ -7610,22 +7610,44 @@ function _rendBarrasRA(raData) {
 
 function _rendBarrasActividades(actData) {
   if (!actData.length) return '<div class="rend-empty-small">Sin actividades calificadas</div>';
-  return `<div class="rend-barras-ra">
-    ${actData.map(d => {
-      const pct = d.max > 0 && d.avg !== null ? d.avg / d.max : 0;
-      const col = _rendColorPct(pct);
-      const w = d.avg !== null ? Math.min(pct * 100, 100).toFixed(1) : 0;
-      const shortLabel = d.label.length > 40 ? d.label.substring(0, 40) + '…' : d.label;
-      return `<div class="rend-barra-ra-row">
-        <div class="rend-barra-ra-label" title="${escapeHTML(d.label)}">${escapeHTML(shortLabel)}</div>
-        <div class="rend-barra-ra-track">
-          <div class="rend-barra-ra-fill" style="width:${w}%;background:${d.avg !== null ? col.fg : '#9E9E9E'};"></div>
-          <span class="rend-barra-ra-pct">${d.avg !== null ? (pct * 100).toFixed(0) + '%' : 'Sin notas'}</span>
-        </div>
-        <div class="rend-barra-ra-val" style="color:${col.fg};">${d.avg !== null ? d.avg.toFixed(1) : '—'}/${d.max}</div>
-      </div>`;
-    }).join('')}
-  </div>`;
+  // Agrupar por RA
+  const grupos = [];
+  let currentRA = null;
+  actData.forEach(d => {
+    if (d.raLabel !== currentRA) {
+      currentRA = d.raLabel;
+      grupos.push({ raLabel: currentRA, items: [] });
+    }
+    grupos.push(null); // placeholder
+    grupos[grupos.length - 2].items.push(d);
+  });
+  // Limpiar placeholders
+  const gruposFiltrados = grupos.filter(g => g && g.items);
+
+  return gruposFiltrados.map(g => {
+    const raShort = g.raLabel.length > 60 ? g.raLabel.substring(0, 60) + '…' : g.raLabel;
+    return `<div style="margin-bottom:12px;">
+      <div style="font-size:0.78rem;font-weight:700;color:#1565C0;padding:6px 8px;background:rgba(21,101,192,0.07);border-radius:6px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:15px;">school</span>${escapeHTML(raShort)}
+      </div>
+      <div class="rend-barras-ra">
+        ${g.items.map(d => {
+          const pct = d.max > 0 && d.avg !== null ? d.avg / d.max : 0;
+          const col = _rendColorPct(pct);
+          const w = d.avg !== null ? Math.min(pct * 100, 100).toFixed(1) : 0;
+          const shortLabel = d.label.length > 40 ? d.label.substring(0, 40) + '…' : d.label;
+          return `<div class="rend-barra-ra-row">
+            <div class="rend-barra-ra-label" title="${escapeHTML(d.label)}">${escapeHTML(shortLabel)}</div>
+            <div class="rend-barra-ra-track">
+              <div class="rend-barra-ra-fill" style="width:${w}%;background:${d.avg !== null ? col.fg : '#9E9E9E'};"></div>
+              <span class="rend-barra-ra-pct">${d.avg !== null ? (pct * 100).toFixed(0) + '%' : 'Sin notas'}</span>
+            </div>
+            <div class="rend-barra-ra-val" style="color:${col.fg};">${d.avg !== null ? d.avg.toFixed(1) : '—'}/${d.max}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function _renderizarGraficasRendimiento(cursoId) {
@@ -7680,6 +7702,7 @@ function _renderizarGraficasRendimiento(cursoId) {
   const actData = [];
   Object.entries(curso.ras || {}).forEach(([rk, ra]) => {
     const snap = ra._actividadesSnapshot || [];
+    const raLabel = ra.label || ra.modulo || rk;
     (ra.actividades || []).forEach(actId => {
       const actInfo = snap.find(a => a.id === actId);
       const notas = estudiantes
@@ -7690,6 +7713,7 @@ function _renderizarGraficasRendimiento(cursoId) {
         label: actInfo?.enunciado || actId,
         avg,
         max: ra.valores?.[actId] || 0,
+        raLabel,
       });
     });
   });
