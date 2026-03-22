@@ -18860,7 +18860,7 @@ function _renderizarResumenCursos() {
 
     const statusColor = nTareasVenc > 0 ? '#C62828' : nTareasPend > 0 ? '#E65100' : '#2E7D32';
 
-    return `<div class="dash-curso-card" onclick="abrirCalificaciones()">
+    return `<div class="dash-curso-card" onclick="calState.cursoActivoId='${curso.id}';abrirCalificaciones()">
       <div class="dash-curso-header">
         <div class="dash-curso-nombre">${escapeHTML(curso.nombre)}</div>
         <div class="dash-curso-dot" style="background:${statusColor};"></div>
