@@ -4876,6 +4876,8 @@ function poblarFormularioDesdeEstado() {
 
 
   setVal('nombre-docente', dg.nombreDocente);
+  setVal('unidad-competencia', dg.unidadCompetencia);
+  setVal('codigo-uc', dg.codigoUC);
 
   // Mostrar curso asignado si la planificación tiene _id
   _mostrarCursoAsignado();
@@ -5654,7 +5656,8 @@ function guardarDatosFormulario() {
 
     nombreDocente: getVal('nombre-docente'),
 
-
+    unidadCompetencia: getVal('unidad-competencia'),
+    codigoUC: getVal('codigo-uc'),
 
     cantidadRA: getVal('cantidad-ra'),
     cantidadEC: getVal('cantidad-ec'),
