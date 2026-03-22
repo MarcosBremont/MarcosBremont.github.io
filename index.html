@@ -379,6 +379,11 @@
           <span class="material-icons">groups</span>
           <span>Gestión Docentes</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-pagos" onclick="abrirPagos()"
+          style="--accent:#1565C0;display:none;">
+          <span class="material-icons">payments</span>
+          <span>Pagos</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-superadmin" onclick="abrirSuperadmin()"
           style="--accent:#B71C1C;display:none;">
           <span class="material-icons">admin_panel_settings</span>
@@ -1706,6 +1711,50 @@
 
       <!-- Contenido dinámico -->
       <div id="ac-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL PAGOS ===== -->
+  <div id="panel-pagos" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">payments</span>
+          Gestión de Pagos
+        </h2>
+      </div>
+
+      <!-- Selector de centro -->
+      <div id="pagos-selector-centro" style="display:none;margin-bottom:16px;">
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro educativo:</label>
+        <select id="pagos-centro-sel" onchange="_pagosRefreshTab()"
+          style="width:100%;max-width:400px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;background:#fff;">
+        </select>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="ra-tab activo" id="tab-pagos-conceptos" onclick="switchTabPagos('conceptos')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#1565C0;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">receipt_long</span> Conceptos
+        </button>
+        <button class="ra-tab" id="tab-pagos-estado" onclick="switchTabPagos('estado')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">fact_check</span> Estado de Pagos
+        </button>
+        <button class="ra-tab" id="tab-pagos-reportes" onclick="switchTabPagos('reportes')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">bar_chart</span> Reportes
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="pagos-contenido"></div>
     </div>
     <div class="nav-buttons">
       <button class="btn-anterior" onclick="abrirDashboard()">

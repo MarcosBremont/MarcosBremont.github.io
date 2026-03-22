@@ -7261,7 +7261,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -7277,7 +7277,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -23436,6 +23436,534 @@ async function _coordEliminarAviso(centroId, avisoId) {
     _coordAvisos();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO DE PAGOS
+// ════════════════════════════════════════════════════════════════════
+
+/** Muestra/oculta botón Pagos en dashboard (admin, director, superadmin) */
+async function _verificarAccesoPagos() {
+  const btn = document.getElementById('btn-dash-pagos');
+  if (!btn) return;
+  const centros = await _esAdminDeCentro();
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  const esDir = typeof _esDirector === 'function' && await _esDirector();
+  btn.style.display = (centros.length > 0 || esSA || esDir) ? '' : 'none';
+}
+
+/** Abre el panel de pagos */
+async function abrirPagos() {
+  _mostrarPanel('panel-pagos');
+  const centros = await _esAdminDeCentro();
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+
+  let todosLosCentros = centros;
+  if (esSA) {
+    try {
+      const snap = await db.collection('centros').orderBy('nombre').get();
+      todosLosCentros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch {}
+  }
+
+  const selWrap = document.getElementById('pagos-selector-centro');
+  const sel = document.getElementById('pagos-centro-sel');
+  if (todosLosCentros.length > 1) {
+    selWrap.style.display = '';
+    sel.innerHTML = '';
+    todosLosCentros.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      sel.appendChild(opt);
+    });
+  } else if (todosLosCentros.length === 1) {
+    selWrap.style.display = 'none';
+    sel.innerHTML = '<option value="' + todosLosCentros[0].id + '">' + todosLosCentros[0].nombre + '</option>';
+  } else {
+    selWrap.style.display = 'none';
+    document.getElementById('pagos-contenido').innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No administras ningún centro educativo.</div>';
+    return;
+  }
+  window._pagosCentros = todosLosCentros;
+  switchTabPagos('conceptos');
+}
+
+function _pagosGetCentroId() {
+  return document.getElementById('pagos-centro-sel')?.value || '';
+}
+
+function _pagosRefreshTab() {
+  switchTabPagos(window._pagosTabActual || 'conceptos');
+}
+
+/** Tabs del módulo de pagos */
+function switchTabPagos(tab) {
+  const tabs = { conceptos: 'tab-pagos-conceptos', estado: 'tab-pagos-estado', reportes: 'tab-pagos-reportes' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) { el.classList.add('activo'); el.style.background = '#1565C0'; el.style.color = '#fff'; }
+    else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
+  });
+  window._pagosTabActual = tab;
+  if (tab === 'conceptos') _pagosRenderConceptos();
+  else if (tab === 'estado') _pagosRenderEstado();
+  else if (tab === 'reportes') _pagosRenderReportes();
+}
+
+// ── CONCEPTOS DE PAGO ───────────────────────────────────────────
+
+async function _pagosRenderConceptos() {
+  const cont = document.getElementById('pagos-contenido');
+  const centroId = _pagosGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">Selecciona un centro.</div>'; return; }
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando conceptos...</div>';
+
+  try {
+    const doc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').get();
+    const data = doc.exists ? doc.data() : {};
+    const conceptos = data.items || [];
+    window._pagosConceptos = conceptos;
+
+    let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">'
+      + '<h4 style="color:#1565C0;margin:0;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">receipt_long</span> Conceptos de Pago</h4>'
+      + '<button onclick="_pagosAgregarConcepto()" style="padding:8px 16px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">'
+      + '<span class="material-icons" style="font-size:16px;">add</span> Nuevo Concepto</button></div>';
+
+    if (!conceptos.length) {
+      html += '<div style="text-align:center;padding:40px;color:#9E9E9E;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">receipt_long</span>No hay conceptos de pago configurados.<br>Agrega el primer concepto para empezar.</div>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+      conceptos.forEach((c, idx) => {
+        const vencido = c.fechaLimite && new Date(c.fechaLimite) < new Date();
+        const estadoColor = !c.activo ? '#9E9E9E' : vencido ? '#C62828' : '#2E7D32';
+        const estadoTexto = !c.activo ? 'Inactivo' : vencido ? 'Vencido' : 'Activo';
+        const estadoIcon = !c.activo ? 'pause_circle' : vencido ? 'error' : 'check_circle';
+        const fechaStr = c.fechaLimite ? new Date(c.fechaLimite).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Sin fecha';
+
+        html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+          + '<div style="width:44px;height:44px;border-radius:50%;background:' + estadoColor + '22;display:flex;align-items:center;justify-content:center;">'
+          + '<span class="material-icons" style="color:' + estadoColor + ';font-size:22px;">' + estadoIcon + '</span></div>'
+          + '<div style="flex:1;min-width:180px;">'
+          + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(c.nombre) + '</div>'
+          + '<div style="font-size:0.82rem;color:#78909C;">Monto: <strong style="color:#1565C0;">RD$ ' + Number(c.monto || 0).toLocaleString('es-DO') + '</strong></div>'
+          + '<div style="font-size:0.78rem;color:#90A4AE;">Fecha límite: ' + fechaStr + '</div>'
+          + '</div>'
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+          + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:12px;background:' + estadoColor + '22;color:' + estadoColor + ';font-weight:600;">' + estadoTexto + '</span>'
+          + '<button onclick="_pagosEditarConcepto(' + idx + ')" style="padding:4px 10px;background:#E3F2FD;color:#1565C0;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">Editar</button>'
+          + '<button onclick="_pagosEliminarConcepto(' + idx + ')" style="padding:4px 10px;background:#FFEBEE;color:#C62828;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">Eliminar</button>'
+          + '</div></div>';
+      });
+      html += '</div>';
+    }
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+function _pagosAgregarConcepto() {
+  _pagosMostrarFormConcepto(-1);
+}
+
+function _pagosEditarConcepto(idx) {
+  _pagosMostrarFormConcepto(idx);
+}
+
+function _pagosMostrarFormConcepto(idx) {
+  const c = idx >= 0 ? (window._pagosConceptos || [])[idx] : null;
+  const titulo = c ? 'Editar Concepto' : 'Nuevo Concepto';
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-pago-concepto';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px;';
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">'
+    + '<h3 style="margin:0 0 16px;color:#1565C0;display:flex;align-items:center;gap:8px;"><span class="material-icons">receipt_long</span> ' + titulo + '</h3>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Nombre del concepto</label>'
+    + '<input id="pago-concepto-nombre" type="text" value="' + escapeHTML(c?.nombre || '') + '" placeholder="Ej: Mensualidad Enero 2026" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Monto (RD$)</label>'
+    + '<input id="pago-concepto-monto" type="number" value="' + (c?.monto || '') + '" placeholder="Ej: 5000" min="0" step="100" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Fecha límite</label>'
+    + '<input id="pago-concepto-fecha" type="date" value="' + (c?.fechaLimite || '') + '" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+    + '<div style="display:flex;align-items:center;gap:8px;">'
+    + '<input id="pago-concepto-activo" type="checkbox" ' + (c ? (c.activo ? 'checked' : '') : 'checked') + ' style="width:18px;height:18px;">'
+    + '<label style="font-size:0.85rem;color:#37474F;">Activo (visible para padres)</label></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end;">'
+    + '<button onclick="document.getElementById(\'modal-pago-concepto\').remove()" style="padding:8px 20px;background:#F5F5F5;color:#616161;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;">Cancelar</button>'
+    + '<button onclick="_pagosGuardarConcepto(' + idx + ')" style="padding:8px 20px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;">Guardar</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function _pagosGuardarConcepto(idx) {
+  const nombre = document.getElementById('pago-concepto-nombre')?.value.trim();
+  const monto = parseFloat(document.getElementById('pago-concepto-monto')?.value) || 0;
+  const fechaLimite = document.getElementById('pago-concepto-fecha')?.value || '';
+  const activo = document.getElementById('pago-concepto-activo')?.checked ?? true;
+  if (!nombre) { mostrarToast('Escribe el nombre del concepto', 'error'); return; }
+  if (monto <= 0) { mostrarToast('Ingresa un monto válido', 'error'); return; }
+
+  const centroId = _pagosGetCentroId();
+  const conceptos = window._pagosConceptos || [];
+  const concepto = { nombre, monto, fechaLimite, activo, id: idx >= 0 ? conceptos[idx].id : Date.now().toString(36) + Math.random().toString(36).substr(2, 5) };
+
+  if (idx >= 0) conceptos[idx] = concepto;
+  else conceptos.push(concepto);
+
+  try {
+    await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').set({ items: conceptos }, { merge: true });
+    document.getElementById('modal-pago-concepto')?.remove();
+    mostrarToast(idx >= 0 ? 'Concepto actualizado' : 'Concepto agregado', 'success');
+    _pagosRenderConceptos();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _pagosEliminarConcepto(idx) {
+  const conceptos = window._pagosConceptos || [];
+  if (!confirm('¿Eliminar "' + conceptos[idx]?.nombre + '"? Esta acción no se puede deshacer.')) return;
+  conceptos.splice(idx, 1);
+  const centroId = _pagosGetCentroId();
+  try {
+    await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').set({ items: conceptos }, { merge: true });
+    mostrarToast('Concepto eliminado', 'success');
+    _pagosRenderConceptos();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── ESTADO DE PAGOS ─────────────────────────────────────────────
+
+async function _pagosRenderEstado() {
+  const cont = document.getElementById('pagos-contenido');
+  const centroId = _pagosGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">Selecciona un centro.</div>'; return; }
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando estado de pagos...</div>';
+
+  try {
+    // Cargar conceptos
+    const confDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').get();
+    const conceptos = (confDoc.exists ? confDoc.data().items : []) || [];
+    if (!conceptos.length) { cont.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">receipt_long</span>No hay conceptos de pago configurados.<br>Ve a la pestaña "Conceptos" para crear uno.</div>'; return; }
+
+    // Cargar pagos registrados
+    const pagosDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').get();
+    const pagos = (pagosDoc.exists ? pagosDoc.data().registros : []) || [];
+    window._pagosRegistros = pagos;
+
+    // Cargar estudiantes de todos los docentes del centro
+    const docentes = await _coordGetDocentes(centroId);
+    let todosEstudiantes = [];
+    await Promise.all(docentes.map(async d => {
+      try {
+        const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        const calRaw = calDoc.exists ? calDoc.data() : {};
+        const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
+        Object.entries(calData.cursos || {}).forEach(([cId, curso]) => {
+          (curso.estudiantes || []).forEach(est => {
+            if (!todosEstudiantes.find(e => e.id === est.id)) {
+              todosEstudiantes.push({ ...est, curso: curso.nombre || cId, docenteUid: d.uid, docenteNombre: d.nombre || d.email });
+            }
+          });
+        });
+      } catch {}
+    }));
+    window._pagosEstudiantes = todosEstudiantes;
+
+    // Selector de concepto
+    let html = '<h4 style="color:#1565C0;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">fact_check</span> Estado de Pagos por Estudiante</h4>';
+    html += '<div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+      + '<select id="pagos-filtro-concepto" onchange="_pagosRenderTablaEstado()" style="padding:8px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.85rem;min-width:200px;">';
+    conceptos.forEach((c, i) => { html += '<option value="' + i + '">' + escapeHTML(c.nombre) + ' — RD$ ' + Number(c.monto).toLocaleString('es-DO') + '</option>'; });
+    html += '</select>'
+      + '<button onclick="_pagosRegistrarPagoManual()" style="padding:8px 16px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">'
+      + '<span class="material-icons" style="font-size:16px;">add_card</span> Registrar Pago</button>'
+      + '</div>';
+
+    html += '<div id="pagos-tabla-estado"></div>';
+    cont.innerHTML = html;
+    _pagosRenderTablaEstado();
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+function _pagosRenderTablaEstado() {
+  const cont = document.getElementById('pagos-tabla-estado');
+  if (!cont) return;
+  const conceptoIdx = parseInt(document.getElementById('pagos-filtro-concepto')?.value || '0');
+  const conceptos = window._pagosConceptos || [];
+  const concepto = conceptos[conceptoIdx];
+  if (!concepto) return;
+
+  const pagos = window._pagosRegistros || [];
+  const estudiantes = window._pagosEstudiantes || [];
+  const hoy = new Date();
+  const vencido = concepto.fechaLimite && new Date(concepto.fechaLimite) < hoy;
+
+  // Contar estados
+  let pagados = 0, pendientes = 0, vencidos = 0, totalRecaudado = 0;
+  const estConEstado = estudiantes.map(est => {
+    const pago = pagos.find(p => p.estudianteId === est.id && p.conceptoId === concepto.id);
+    let estado, color;
+    if (pago) { estado = 'Pagado'; color = '#2E7D32'; pagados++; totalRecaudado += pago.monto || concepto.monto; }
+    else if (vencido) { estado = 'Vencido'; color = '#C62828'; vencidos++; }
+    else { estado = 'Pendiente'; color = '#FF9800'; pendientes++; }
+    return { ...est, pago, estado, color };
+  });
+
+  let html = '';
+  // KPIs
+  html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:110px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:1.3rem;font-weight:700;color:#2E7D32;">' + pagados + '</div><div style="font-size:0.75rem;color:#388E3C;">Pagados</div></div>'
+    + '<div style="flex:1;min-width:110px;background:#FFF3E0;border:1.5px solid #FFB74D;border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:1.3rem;font-weight:700;color:#E65100;">' + pendientes + '</div><div style="font-size:0.75rem;color:#E65100;">Pendientes</div></div>'
+    + '<div style="flex:1;min-width:110px;background:#FFEBEE;border:1.5px solid #EF9A9A;border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:1.3rem;font-weight:700;color:#C62828;">' + vencidos + '</div><div style="font-size:0.75rem;color:#C62828;">Vencidos</div></div>'
+    + '<div style="flex:1;min-width:110px;background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:1.1rem;font-weight:700;color:#1565C0;">RD$ ' + totalRecaudado.toLocaleString('es-DO') + '</div><div style="font-size:0.75rem;color:#1565C0;">Recaudado</div></div>'
+    + '</div>';
+
+  if (!estudiantes.length) {
+    html += '<div style="text-align:center;padding:30px;color:#9E9E9E;">No hay estudiantes registrados en este centro.</div>';
+  } else {
+    // Tabla
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;">'
+      + '<thead><tr style="background:#E3F2FD;">'
+      + '<th style="text-align:left;padding:8px;border:1px solid #BBDEFB;">Estudiante</th>'
+      + '<th style="text-align:left;padding:8px;border:1px solid #BBDEFB;">Curso</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Monto</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Estado</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Fecha Pago</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Referencia</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Acción</th>'
+      + '</tr></thead><tbody>';
+
+    estConEstado.forEach(est => {
+      const fechaPago = est.pago ? new Date(est.pago.fecha).toLocaleDateString('es-DO') : '—';
+      const ref = est.pago?.referencia || '—';
+      html += '<tr style="background:' + est.color + '08;">'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;font-weight:500;">' + escapeHTML(est.nombre) + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;font-size:0.78rem;color:#546E7A;">' + escapeHTML(est.curso) + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;">RD$ ' + Number(concepto.monto).toLocaleString('es-DO') + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;"><span style="padding:2px 10px;border-radius:10px;background:' + est.color + '22;color:' + est.color + ';font-weight:600;font-size:0.75rem;">' + est.estado + '</span></td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;font-size:0.78rem;">' + fechaPago + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;font-size:0.78rem;">' + escapeHTML(ref) + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #E0E0E0;text-align:center;">';
+      if (est.pago) {
+        html += '<button onclick="_pagosAnularPago(\'' + est.id + '\',\'' + concepto.id + '\')" style="padding:3px 8px;background:#FFEBEE;color:#C62828;border:none;border-radius:4px;font-size:0.72rem;cursor:pointer;">Anular</button>';
+      } else {
+        html += '<button onclick="_pagosMarcarPagado(\'' + est.id + '\',\'' + concepto.id + '\',' + concepto.monto + ')" style="padding:3px 8px;background:#E8F5E9;color:#2E7D32;border:none;border-radius:4px;font-size:0.72rem;cursor:pointer;">Marcar Pagado</button>';
+      }
+      html += '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  cont.innerHTML = html;
+}
+
+async function _pagosMarcarPagado(estId, conceptoId, monto) {
+  const ref = prompt('Referencia del pago (recibo, transferencia, etc.):');
+  if (ref === null) return;
+  const centroId = _pagosGetCentroId();
+  const pagos = window._pagosRegistros || [];
+  pagos.push({ estudianteId: estId, conceptoId, monto, fecha: new Date().toISOString(), referencia: ref || '', registradoPor: window.currentUser?.email || '' });
+  try {
+    await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').set({ registros: pagos }, { merge: true });
+    window._pagosRegistros = pagos;
+    mostrarToast('Pago registrado', 'success');
+    _pagosRenderTablaEstado();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _pagosAnularPago(estId, conceptoId) {
+  if (!confirm('¿Anular este pago?')) return;
+  const centroId = _pagosGetCentroId();
+  let pagos = window._pagosRegistros || [];
+  pagos = pagos.filter(p => !(p.estudianteId === estId && p.conceptoId === conceptoId));
+  try {
+    await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').set({ registros: pagos }, { merge: true });
+    window._pagosRegistros = pagos;
+    mostrarToast('Pago anulado', 'success');
+    _pagosRenderTablaEstado();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+function _pagosRegistrarPagoManual() {
+  const estudiantes = window._pagosEstudiantes || [];
+  if (!estudiantes.length) { mostrarToast('No hay estudiantes registrados', 'error'); return; }
+  const conceptoIdx = parseInt(document.getElementById('pagos-filtro-concepto')?.value || '0');
+  const concepto = (window._pagosConceptos || [])[conceptoIdx];
+  if (!concepto) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-pago-manual';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px;';
+  let optsHtml = '';
+  const pagos = window._pagosRegistros || [];
+  const sinPagar = estudiantes.filter(e => !pagos.find(p => p.estudianteId === e.id && p.conceptoId === concepto.id));
+  sinPagar.forEach(e => { optsHtml += '<option value="' + e.id + '">' + escapeHTML(e.nombre) + ' — ' + escapeHTML(e.curso) + '</option>'; });
+
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">'
+    + '<h3 style="margin:0 0 16px;color:#2E7D32;display:flex;align-items:center;gap:8px;"><span class="material-icons">add_card</span> Registrar Pago</h3>'
+    + '<div style="font-size:0.85rem;color:#78909C;margin-bottom:12px;">Concepto: <strong>' + escapeHTML(concepto.nombre) + '</strong> — RD$ ' + Number(concepto.monto).toLocaleString('es-DO') + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Estudiante</label>'
+    + '<select id="pago-manual-est" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;">'
+    + (sinPagar.length ? optsHtml : '<option value="">Todos han pagado</option>') + '</select></div>'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Referencia (recibo, transferencia)</label>'
+    + '<input id="pago-manual-ref" type="text" placeholder="Ej: Recibo #1234" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end;">'
+    + '<button onclick="document.getElementById(\'modal-pago-manual\').remove()" style="padding:8px 20px;background:#F5F5F5;color:#616161;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;">Cancelar</button>'
+    + '<button onclick="_pagosConfirmarManual(\'' + concepto.id + '\',' + concepto.monto + ')" style="padding:8px 20px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;"' + (sinPagar.length ? '' : ' disabled') + '>Confirmar Pago</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function _pagosConfirmarManual(conceptoId, monto) {
+  const estId = document.getElementById('pago-manual-est')?.value;
+  const ref = document.getElementById('pago-manual-ref')?.value || '';
+  if (!estId) { mostrarToast('Selecciona un estudiante', 'error'); return; }
+  const centroId = _pagosGetCentroId();
+  const pagos = window._pagosRegistros || [];
+  pagos.push({ estudianteId: estId, conceptoId, monto, fecha: new Date().toISOString(), referencia: ref, registradoPor: window.currentUser?.email || '' });
+  try {
+    await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').set({ registros: pagos }, { merge: true });
+    window._pagosRegistros = pagos;
+    document.getElementById('modal-pago-manual')?.remove();
+    mostrarToast('Pago registrado', 'success');
+    _pagosRenderTablaEstado();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── REPORTES DE PAGOS ───────────────────────────────────────────
+
+async function _pagosRenderReportes() {
+  const cont = document.getElementById('pagos-contenido');
+  const centroId = _pagosGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">Selecciona un centro.</div>'; return; }
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Generando reportes...</div>';
+
+  try {
+    const confDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').get();
+    const conceptos = (confDoc.exists ? confDoc.data().items : []) || [];
+    const pagosDoc = await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').get();
+    const pagos = (pagosDoc.exists ? pagosDoc.data().registros : []) || [];
+
+    // Cargar estudiantes
+    const docentes = await _coordGetDocentes(centroId);
+    let totalEst = 0;
+    await Promise.all(docentes.map(async d => {
+      try {
+        const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        const calRaw = calDoc.exists ? calDoc.data() : {};
+        const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
+        Object.values(calData.cursos || {}).forEach(curso => { totalEst += (curso.estudiantes || []).length; });
+      } catch {}
+    }));
+
+    let html = '<h4 style="color:#1565C0;margin:0 0 16px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">bar_chart</span> Reportes de Pagos</h4>';
+
+    if (!conceptos.length) {
+      html += '<div style="text-align:center;padding:40px;color:#9E9E9E;">No hay conceptos de pago configurados.</div>';
+      cont.innerHTML = html;
+      return;
+    }
+
+    // Resumen general
+    let totalEsperado = 0, totalRecaudado = 0;
+    const resumenConceptos = conceptos.map(c => {
+      const pagosCon = pagos.filter(p => p.conceptoId === c.id);
+      const recaudado = pagosCon.reduce((sum, p) => sum + (p.monto || c.monto), 0);
+      const esperado = totalEst * c.monto;
+      totalEsperado += esperado;
+      totalRecaudado += recaudado;
+      const pct = esperado > 0 ? Math.round((recaudado / esperado) * 100) : 0;
+      return { ...c, pagados: pagosCon.length, recaudado, esperado, pct };
+    });
+
+    // KPIs generales
+    const pctGeneral = totalEsperado > 0 ? Math.round((totalRecaudado / totalEsperado) * 100) : 0;
+    html += '<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:140px;background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:10px;padding:14px;text-align:center;">'
+      + '<div style="font-size:1.5rem;font-weight:700;color:#1565C0;">RD$ ' + totalRecaudado.toLocaleString('es-DO') + '</div><div style="font-size:0.78rem;color:#1565C0;">Total Recaudado</div></div>'
+      + '<div style="flex:1;min-width:140px;background:#F5F5F5;border:1.5px solid #E0E0E0;border-radius:10px;padding:14px;text-align:center;">'
+      + '<div style="font-size:1.5rem;font-weight:700;color:#616161;">RD$ ' + totalEsperado.toLocaleString('es-DO') + '</div><div style="font-size:0.78rem;color:#616161;">Total Esperado</div></div>'
+      + '<div style="flex:1;min-width:140px;background:' + (pctGeneral >= 70 ? '#E8F5E9' : pctGeneral >= 40 ? '#FFF3E0' : '#FFEBEE') + ';border:1.5px solid ' + (pctGeneral >= 70 ? '#A5D6A7' : pctGeneral >= 40 ? '#FFB74D' : '#EF9A9A') + ';border-radius:10px;padding:14px;text-align:center;">'
+      + '<div style="font-size:1.5rem;font-weight:700;color:' + (pctGeneral >= 70 ? '#2E7D32' : pctGeneral >= 40 ? '#E65100' : '#C62828') + ';">' + pctGeneral + '%</div><div style="font-size:0.78rem;color:#616161;">Recaudación</div></div>'
+      + '</div>';
+
+    // Tabla por concepto
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">'
+      + '<thead><tr style="background:#E3F2FD;">'
+      + '<th style="text-align:left;padding:8px;border:1px solid #BBDEFB;">Concepto</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Monto</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Pagados</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Recaudado</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">Esperado</th>'
+      + '<th style="padding:8px;border:1px solid #BBDEFB;text-align:center;">%</th>'
+      + '</tr></thead><tbody>';
+
+    resumenConceptos.forEach(c => {
+      const barColor = c.pct >= 70 ? '#4CAF50' : c.pct >= 40 ? '#FF9800' : '#F44336';
+      html += '<tr><td style="padding:8px;border:1px solid #E0E0E0;font-weight:500;">' + escapeHTML(c.nombre) + '</td>'
+        + '<td style="padding:8px;border:1px solid #E0E0E0;text-align:center;">RD$ ' + Number(c.monto).toLocaleString('es-DO') + '</td>'
+        + '<td style="padding:8px;border:1px solid #E0E0E0;text-align:center;">' + c.pagados + '/' + totalEst + '</td>'
+        + '<td style="padding:8px;border:1px solid #E0E0E0;text-align:center;font-weight:600;color:#1565C0;">RD$ ' + c.recaudado.toLocaleString('es-DO') + '</td>'
+        + '<td style="padding:8px;border:1px solid #E0E0E0;text-align:center;color:#78909C;">RD$ ' + c.esperado.toLocaleString('es-DO') + '</td>'
+        + '<td style="padding:8px;border:1px solid #E0E0E0;text-align:center;">'
+        + '<div style="background:#E0E0E0;border-radius:8px;height:18px;overflow:hidden;min-width:60px;">'
+        + '<div style="background:' + barColor + ';height:100%;width:' + c.pct + '%;border-radius:8px;display:flex;align-items:center;justify-content:center;">'
+        + '<span style="font-size:0.68rem;color:#fff;font-weight:700;">' + c.pct + '%</span></div></div></td></tr>';
+    });
+    html += '</tbody></table></div>';
+
+    // Estudiantes morosos (más conceptos vencidos sin pagar)
+    if (window._pagosEstudiantes) {
+      const estMorosos = [];
+      window._pagosEstudiantes.forEach(est => {
+        let deuda = 0, conceptosDeuda = 0;
+        conceptos.forEach(c => {
+          if (!c.activo) return;
+          const vencido = c.fechaLimite && new Date(c.fechaLimite) < new Date();
+          const pagado = pagos.find(p => p.estudianteId === est.id && p.conceptoId === c.id);
+          if (!pagado && vencido) { deuda += c.monto; conceptosDeuda++; }
+        });
+        if (conceptosDeuda > 0) estMorosos.push({ ...est, deuda, conceptosDeuda });
+      });
+      estMorosos.sort((a, b) => b.deuda - a.deuda);
+
+      if (estMorosos.length) {
+        html += '<h4 style="color:#C62828;margin:20px 0 10px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">warning</span> Estudiantes con pagos vencidos (' + estMorosos.length + ')</h4>';
+        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+        estMorosos.slice(0, 20).forEach(est => {
+          html += '<div style="background:#FFEBEE;border:1px solid #EF9A9A;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">'
+            + '<div><strong style="color:#212121;">' + escapeHTML(est.nombre) + '</strong> <span style="font-size:0.78rem;color:#78909C;">— ' + escapeHTML(est.curso) + '</span></div>'
+            + '<div style="font-weight:700;color:#C62828;">' + est.conceptosDeuda + ' concepto(s) · RD$ ' + est.deuda.toLocaleString('es-DO') + '</div>'
+            + '</div>';
+        });
+        html += '</div>';
+      }
+    }
+
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+// ── Agregar verificación de pagos al dashboard ──────────────────
+
+const _origRenderDashboardPagos = renderizarDashboard;
+renderizarDashboard = function() {
+  _origRenderDashboardPagos();
+  _verificarAccesoPagos();
+};
 
 // ════════════════════════════════════════════════════════════════════
 const _mf2 = document.getElementById('modal-footer');
