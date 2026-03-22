@@ -85,6 +85,22 @@ function eliminarEstudiante(estudianteId) {
   renderizarTablaCalificaciones();
 }
 
+function _toggleEstMenu(e, estId) {
+  e.stopPropagation();
+  const menu = document.getElementById('est-menu-' + estId);
+  if (!menu) return;
+  const wasOpen = menu.style.display !== 'none';
+  // Cerrar todos los menús abiertos
+  document.querySelectorAll('.est-overflow-menu').forEach(m => m.style.display = 'none');
+  if (!wasOpen) menu.style.display = 'flex';
+}
+// Cerrar menú al hacer clic fuera
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.est-overflow-wrap')) {
+    document.querySelectorAll('.est-overflow-menu').forEach(m => m.style.display = 'none');
+  }
+});
+
 function _toggleNombreMobile(span) {
   if (window.innerWidth > 600) return; // Solo en móvil
   const td = span.closest('.td-nombre');
@@ -8490,29 +8506,40 @@ function renderizarTablaCalificaciones() {
       + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
       + '<span onclick="_toggleNombreMobile(this)" ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Toca para ver opciones · Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
-      + '<button class="btn-coment-est" onclick="abrirComentariosEstudiante(\'' + est.id + '\',\'' + est.id + '\')" title="Comentarios" data-nombre="' + escapeHTML(est.nombre) + '">'
-      + '<span class="material-icons" style="font-size:14px;">comment</span>'
-      + (_getComentariosEst(est.id).length ? '<span class="coment-count-badge">' + _getComentariosEst(est.id).length + '</span>' : '')
+      + '<div class="est-overflow-wrap" style="position:relative;">'
+      + '<button class="btn-coment-est" onclick="_toggleEstMenu(event,\'' + est.id + '\')" title="Opciones" style="font-size:18px;font-weight:700;padding:2px 4px;">'
+      + '<span class="material-icons" style="font-size:18px;">more_vert</span>'
+      + (() => { const t = _getComentariosEst(est.id).length + _getIncidenciasEst(est.id).length + _getReportesEst(est.id).length + nRecupPendiente; return t ? '<span class="coment-count-badge">' + t + '</span>' : ''; })()
       + '</button>'
-      + '<button class="btn-coment-est" onclick="abrirIncidencias(\'' + est.id + '\')" title="Eventos / reuniones / tutorías" style="color:#00695C;">'
-      + '<span class="material-icons" style="font-size:14px;">event_note</span>'
-      + (_getIncidenciasEst(est.id).length ? '<span class="coment-count-badge" style="background:#00695C;">' + _getIncidenciasEst(est.id).length + '</span>' : '')
+      + '<div class="est-overflow-menu" id="est-menu-' + est.id + '" style="display:none;">'
+      + '<button onclick="abrirComentariosEstudiante(\'' + est.id + '\',\'' + est.id + '\')" data-nombre="' + escapeHTML(est.nombre) + '">'
+      + '<span class="material-icons">comment</span> Comentarios'
+      + (_getComentariosEst(est.id).length ? ' <span class="coment-count-badge">' + _getComentariosEst(est.id).length + '</span>' : '')
       + '</button>'
-      + '<button class="btn-coment-est" onclick="abrirReportes(\'' + est.id + '\',\'' + calState.cursoActivoId + '\')" title="Reportes académicos/disciplinarios" style="color:#B71C1C;">'
-      + '<span class="material-icons" style="font-size:14px;">description</span>'
-      + ((_getReportesEst(est.id).length) ? '<span class="coment-count-badge" style="background:#B71C1C;">' + _getReportesEst(est.id).length + '</span>' : '')
+      + '<button onclick="abrirIncidencias(\'' + est.id + '\')" style="color:#00695C;">'
+      + '<span class="material-icons">event_note</span> Eventos'
+      + (_getIncidenciasEst(est.id).length ? ' <span class="coment-count-badge" style="background:#00695C;">' + _getIncidenciasEst(est.id).length + '</span>' : '')
       + '</button>'
-      + '<button class="btn-coment-est" onclick="abrirRecuperaciones(\'' + est.id + '\')" title="Recuperaciones / 2da oportunidad" style="color:#E65100;">'
-      + '<span class="material-icons" style="font-size:14px;">replay</span>'
-      + (nRecupPendiente ? '<span class="coment-count-badge" style="background:#E65100;">' + nRecupPendiente + '</span>' : '')
+      + '<button onclick="abrirReportes(\'' + est.id + '\',\'' + calState.cursoActivoId + '\')" style="color:#B71C1C;">'
+      + '<span class="material-icons">description</span> Reportes'
+      + (_getReportesEst(est.id).length ? ' <span class="coment-count-badge" style="background:#B71C1C;">' + _getReportesEst(est.id).length + '</span>' : '')
       + '</button>'
-      + '<button class="btn-coment-est" onclick="abrirVistaEstudiante(\'' + est.id + '\')" title="Vista del estudiante (QR)" style="color:#00838F;">'
-      + '<span class="material-icons" style="font-size:14px;">qr_code_2</span>'
+      + '<button onclick="abrirRecuperaciones(\'' + est.id + '\')" style="color:#E65100;">'
+      + '<span class="material-icons">replay</span> Recuperaciones'
+      + (nRecupPendiente ? ' <span class="coment-count-badge" style="background:#E65100;">' + nRecupPendiente + '</span>' : '')
       + '</button>'
-      + '<button class="btn-coment-est" onclick="abrirBoletin(\'' + est.id + '\')" title="Boletín de notas" style="color:#6A1B9A;">'
-      + '<span class="material-icons" style="font-size:14px;">receipt_long</span>'
+      + '<button onclick="abrirVistaEstudiante(\'' + est.id + '\')" style="color:#00838F;">'
+      + '<span class="material-icons">qr_code_2</span> Vista estudiante'
       + '</button>'
-      + '<button class="btn-del-estudiante" onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar"><span class="material-icons" style="font-size:16px;">close</span></button>'
+      + '<button onclick="abrirBoletin(\'' + est.id + '\')" style="color:#6A1B9A;">'
+      + '<span class="material-icons">receipt_long</span> Boletín'
+      + '</button>'
+      + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'
+      + '<button onclick="eliminarEstudiante(\'' + est.id + '\')" style="color:#EF5350;">'
+      + '<span class="material-icons">delete</span> Eliminar'
+      + '</button>'
+      + '</div>'
+      + '</div>'
       + '</div></td>';
 
     actividades.forEach(a => {
