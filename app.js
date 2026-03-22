@@ -22648,39 +22648,64 @@ async function _toggleOpcionCoordinadora(id, activo) {
 /** Aplica restricciones de opciones al dashboard de la coordinadora */
 async function _aplicarOpcionesCoordinadora() {
   const esCoord = await _esCoordinadora();
-  if (!esCoord) return; // Solo aplica a coordinadoras
+  if (!esCoord) return;
 
   try {
     const opciones = await _cargarOpcionesCoordinadora();
-    const mapBotones = {
-      nueva_planif: 'btn-dash-nueva-planif',
-      planificaciones: 'btn-dash-planificaciones',
-      diarias: 'btn-dash-diarias',
-      calificaciones: 'btn-dash-calificaciones',
-      horario: 'btn-dash-horario',
-      tareas: 'btn-dash-tareas',
-      notas: 'btn-dash-notas',
-      libreta: 'btn-dash-libreta',
-      rendimiento: 'btn-dash-rendimiento',
-      ia: 'btn-dash-ia',
-      importar: 'btn-dash-importar',
-      backup: 'btn-dash-backup',
-      blog: 'btn-dash-blog',
-      calendario: 'btn-dash-calendario',
-      reportes: 'btn-dash-reportes',
-      denuncias: 'btn-dash-denuncias',
-      auditoria: 'btn-dash-auditoria',
-      buscar: 'btn-buscar-est',
-      presentacion: 'btn-dash-presentacion',
-    };
-    Object.entries(mapBotones).forEach(([key, btnId]) => {
-      const btn = document.getElementById(btnId);
-      if (!btn) return;
-      const def = OPCIONES_COORDINADORA.find(o => o.id === key);
-      const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
-      if (!activo) btn.style.display = 'none';
-    });
+    _ocultarBotonesDesactivados(opciones, OPCIONES_COORDINADORA);
   } catch {}
+}
+
+// Mapa de botones del header que corresponden a cada opción
+const _HEADER_BTNS_MAP = {
+  nueva_planif: 'btn-nueva-planificacion',
+  planificaciones: 'btn-planificaciones',
+  diarias: 'btn-diarias',
+  calificaciones: 'btn-calificaciones',
+  horario: 'btn-horario',
+  tareas: 'btn-tareas',
+  ia: 'btn-config-ia',
+  backup: 'btn-backup',
+  buscar: 'btn-buscar-est',
+};
+
+function _ocultarBotonesDesactivados(opciones, defsArray) {
+  const mapDash = {
+    nueva_planif: 'btn-dash-nueva-planif',
+    planificaciones: 'btn-dash-planificaciones',
+    diarias: 'btn-dash-diarias',
+    calificaciones: 'btn-dash-calificaciones',
+    horario: 'btn-dash-horario',
+    tareas: 'btn-dash-tareas',
+    notas: 'btn-dash-notas',
+    libreta: 'btn-dash-libreta',
+    rendimiento: 'btn-dash-rendimiento',
+    ia: 'btn-dash-ia',
+    importar: 'btn-dash-importar',
+    backup: 'btn-dash-backup',
+    blog: 'btn-dash-blog',
+    calendario: 'btn-dash-calendario',
+    reportes: 'btn-dash-reportes',
+    denuncias: 'btn-dash-denuncias',
+    auditoria: 'btn-dash-auditoria',
+    buscar: 'btn-buscar-est',
+    presentacion: 'btn-dash-presentacion',
+  };
+  Object.entries(mapDash).forEach(([key, btnId]) => {
+    const def = defsArray ? defsArray.find(o => o.id === key) : null;
+    const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
+    if (!activo) {
+      // Ocultar botón del dashboard
+      const btn = document.getElementById(btnId);
+      if (btn) btn.style.display = 'none';
+      // Ocultar botón del header
+      const headerBtnId = _HEADER_BTNS_MAP[key];
+      if (headerBtnId) {
+        const hBtn = document.getElementById(headerBtnId);
+        if (hBtn) hBtn.style.display = 'none';
+      }
+    }
+  });
 }
 
 /** Aplica las restricciones de opciones al dashboard del docente */
@@ -22691,36 +22716,11 @@ async function _aplicarOpcionesDocente() {
   const esDir = await _esDirector();
   if (esDir) return;
   const esCoord = await _esCoordinadora();
-  if (esCoord) return; // coordinadora usa su propia config
+  if (esCoord) return;
 
   try {
     const opciones = await _cargarOpcionesDocentes();
-    const mapBotones = {
-      nueva_planif: 'btn-dash-nueva-planif',
-      planificaciones: 'btn-dash-planificaciones',
-      diarias: 'btn-dash-diarias',
-      calificaciones: 'btn-dash-calificaciones',
-      horario: 'btn-dash-horario',
-      tareas: 'btn-dash-tareas',
-      notas: 'btn-dash-notas',
-      libreta: 'btn-dash-libreta',
-      rendimiento: 'btn-dash-rendimiento',
-      ia: 'btn-dash-ia',
-      importar: 'btn-dash-importar',
-      backup: 'btn-dash-backup',
-      blog: 'btn-dash-blog',
-      calendario: 'btn-dash-calendario',
-      reportes: 'btn-dash-reportes',
-      denuncias: 'btn-dash-denuncias',
-      auditoria: 'btn-dash-auditoria',
-      buscar: 'btn-buscar-est',
-    };
-    Object.entries(mapBotones).forEach(([key, btnId]) => {
-      const btn = document.getElementById(btnId);
-      if (btn && opciones[key] === false) {
-        btn.style.display = 'none';
-      }
-    });
+    _ocultarBotonesDesactivados(opciones, null);
   } catch {}
 }
 
