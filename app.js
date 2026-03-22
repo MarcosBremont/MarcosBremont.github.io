@@ -22867,8 +22867,30 @@ async function _coordMostrarSelectorCentro(cont, callback) {
 }
 
 async function _coordGetDocentes(centroId) {
+  // Docentes aprobados del centro
   const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
-  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const uids = new Set(docentes.map(d => d.uid));
+
+  // Agregar admins del centro que no estén ya en la lista
+  try {
+    const centroDoc = await db.collection('centros').doc(centroId).get();
+    if (centroDoc.exists) {
+      const admins = centroDoc.data().admins || [];
+      for (const email of admins) {
+        const adminSnap = await db.collection('usuarios').where('email', '==', email.toLowerCase()).limit(1).get();
+        if (!adminSnap.empty) {
+          const adminDoc = adminSnap.docs[0];
+          if (!uids.has(adminDoc.id)) {
+            uids.add(adminDoc.id);
+            docentes.push({ uid: adminDoc.id, ...adminDoc.data() });
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return docentes;
 }
 
 // ── 1. MONITOR DE CALIFICACIONES ────────────────────────────────
