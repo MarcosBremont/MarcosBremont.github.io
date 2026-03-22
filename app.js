@@ -22929,8 +22929,10 @@ async function _coordMonitorCalificaciones() {
     const docentesData = await Promise.all(docentes.map(async d => {
       try {
         const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        console.log('[Coord] Leyendo calificaciones de', d.nombre || d.email, '(uid:', d.uid, ') → exists:', calDoc.exists);
         const calData = calDoc.exists ? calDoc.data() : {};
         const cursos = calData.cursos || {};
+        console.log('[Coord]   Cursos encontrados:', Object.keys(cursos).length);
         let totalActs = 0, actsSinNota = 0, totalEstudiantes = 0;
         Object.values(cursos).forEach(curso => {
           const ests = curso.estudiantes || [];
