@@ -3190,8 +3190,9 @@ function cerrarModal(e) {
 function cerrarModalBtn() {
   document.getElementById('modal-overlay').classList.add('hidden');
   document.body.style.overflow = '';
-  // Restaurar botones de instrumento para la próxima vez que se abra
-  _usarFooterInstrumento();
+  // Ocultar footer hasta que se necesite explícitamente
+  const footer = document.getElementById('modal-footer');
+  if (footer) footer.style.display = 'none';
 }
 
 
@@ -8037,21 +8038,10 @@ function _usarFooterInstrumento() {
   if (footer) { footer.innerHTML = _FOOTER_INST_HTML; footer.style.display = ''; }
 }
 
-// Auto-ocultar footer de instrumento al abrir cualquier modal
+// Ocultar footer de instrumento por defecto al cargar
 (function() {
-  const _origRemove = DOMTokenList.prototype.remove;
-  const mo = new MutationObserver(() => {
-    const overlay = document.getElementById('modal-overlay');
-    const footer = document.getElementById('modal-footer');
-    if (overlay && footer && !overlay.classList.contains('hidden')) {
-      // Si el footer tiene los botones de instrumento, ocultarlo
-      if (footer.innerHTML.includes('imprimirModal')) footer.style.display = 'none';
-    }
-  });
-  setTimeout(() => {
-    const overlay = document.getElementById('modal-overlay');
-    if (overlay) mo.observe(overlay, { attributes: true, attributeFilter: ['class'] });
-  }, 1000);
+  const f = document.getElementById('modal-footer');
+  if (f) f.style.display = 'none';
 })();
 
 function abrirModalNuevoCurso() {
@@ -17779,14 +17769,10 @@ function abrirConfiguracion() {
   }
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  const _mf = document.getElementById('modal-footer');
-  if (_mf) _mf.style.visibility = 'hidden';
 }
 function cerrarConfiguracion() {
   document.getElementById('config-overlay')?.classList.add('hidden');
   document.body.style.overflow = '';
-  const _mf = document.getElementById('modal-footer');
-  if (_mf) _mf.style.visibility = '';
 }
 
 function toggleDarkMode(on) {
@@ -24170,5 +24156,3 @@ renderizarDashboard = function() {
 };
 
 // ════════════════════════════════════════════════════════════════════
-const _mf2 = document.getElementById('modal-footer');
-if (_mf2) _mf2.style.visibility = '';
