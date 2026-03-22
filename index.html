@@ -364,6 +364,11 @@
           <span class="material-icons">cast_for_education</span>
           <span>Presentación</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-coordinadora" onclick="abrirCoordinadora()"
+          style="--accent:#00695C;display:none;">
+          <span class="material-icons">supervisor_account</span>
+          <span>Panel Coordinadora</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-director" onclick="abrirDirector()"
           style="--accent:#4A148C;display:none;">
           <span class="material-icons">school</span>
@@ -1614,6 +1619,46 @@
 
       <!-- Contenido dinámico -->
       <div id="dir-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL COORDINADORA ===== -->
+  <div id="panel-coordinadora" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">supervisor_account</span>
+          Panel Coordinadora
+        </h2>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="ra-tab activo" id="tab-coord-calificaciones" onclick="switchTabCoordinadora('calificaciones')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#00695C;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">grade</span> Calificaciones
+        </button>
+        <button class="ra-tab" id="tab-coord-planificaciones" onclick="switchTabCoordinadora('planificaciones')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">description</span> Planificaciones
+        </button>
+        <button class="ra-tab" id="tab-coord-resumen" onclick="switchTabCoordinadora('resumen')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">person</span> Resumen Docentes
+        </button>
+        <button class="ra-tab" id="tab-coord-avisos" onclick="switchTabCoordinadora('avisos')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">campaign</span> Avisos
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="coord-contenido"></div>
     </div>
     <div class="nav-buttons">
       <button class="btn-anterior" onclick="abrirDashboard()">

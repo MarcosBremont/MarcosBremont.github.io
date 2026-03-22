@@ -21370,6 +21370,8 @@ async function _renderDocentesCentro() {
       // Info + badge de rol
       const rolBadge = d.rol === 'director'
         ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>'
+        : d.rol === 'coordinadora'
+        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>'
         : d.rol === 'admin_centro'
         ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>'
         : '';
@@ -21389,6 +21391,11 @@ async function _renderDocentesCentro() {
           html += '<button onclick="_promoverDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#4A148C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star</span> Hacer Director</button>';
         } else {
           html += '<button onclick="_quitarDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star_border</span> Quitar Director</button>';
+        }
+        if (d.rol !== 'coordinadora') {
+          html += '<button onclick="_promoverCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#00695C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">supervisor_account</span> Hacer Coordinadora</button>';
+        } else {
+          html += '<button onclick="_quitarCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Coordinadora</button>';
         }
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">block</span> Revocar</button>';
       } else {
@@ -21429,6 +21436,26 @@ async function _promoverDirector(uid) {
   try {
     await db.collection('usuarios').doc(uid).update({ rol: 'director' });
     mostrarToast('Usuario promovido a Director', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Promover a coordinadora */
+async function _promoverCoordinadora(uid) {
+  if (!confirm('¿Asignar el rol de Coordinadora a este usuario?')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'coordinadora' });
+    mostrarToast('Usuario asignado como Coordinadora', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Quitar rol de coordinadora */
+async function _quitarCoordinadora(uid) {
+  if (!confirm('¿Quitar el rol de Coordinadora a este usuario?')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
+    mostrarToast('Rol de Coordinadora removido', 'success');
     _renderDocentesCentro();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
@@ -21641,7 +21668,9 @@ async function _renderMonitoreoDocentes() {
     docentesConSesion.forEach(d => {
       const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
       const rolBadge = d.rol === 'director'
-        ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>' : '';
+        ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>'
+        : d.rol === 'coordinadora'
+        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>' : '';
 
       let ultimaInfo = 'Sin actividad registrada';
       let statusColor = '#E0E0E0';
@@ -22578,6 +22607,7 @@ renderizarDashboard = function() {
   _verificarAccesoSuperadmin();
   _verificarAccesoAdminCentro();
   _verificarAccesoDirector();
+  _verificarAccesoCoordinadora();
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
   _cargarAvisosDocente(); // mostrar avisos al docente en dashboard
   _aplicarOpcionesDocente(); // ocultar opciones desactivadas por superadmin
@@ -22624,6 +22654,425 @@ async function _cargarAvisosDocente() {
     html += '</div>';
     container.innerHTML = html;
   } catch (e) { console.warn('Error cargando avisos docente:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── MÓDULO COORDINADORA ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+async function _esCoordinadora() {
+  if (!window.currentUser) return false;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    return doc.exists && doc.data().rol === 'coordinadora';
+  } catch { return false; }
+}
+
+async function _verificarAccesoCoordinadora() {
+  const btn = document.getElementById('btn-dash-coordinadora');
+  if (!btn) return;
+  const esCoord = await _esCoordinadora();
+  const esDir = await _esDirector();
+  const esAdmin = (await _esAdminDeCentro()).length > 0;
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  btn.style.display = (esCoord || esDir || esAdmin || esSA) ? '' : 'none';
+}
+
+function abrirCoordinadora() {
+  _mostrarPanel('panel-coordinadora');
+  switchTabCoordinadora('calificaciones');
+}
+
+function switchTabCoordinadora(tab) {
+  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) { el.classList.add('activo'); el.style.background = '#00695C'; el.style.color = '#fff'; }
+    else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
+  });
+  window._coordTabActual = tab;
+  if (tab === 'calificaciones') _coordMonitorCalificaciones();
+  else if (tab === 'planificaciones') _coordMonitorPlanificaciones();
+  else if (tab === 'resumen') _coordResumenDocentes();
+  else if (tab === 'avisos') _coordAvisos();
+}
+
+async function _coordGetCentroId() {
+  if (!window.currentUser) return null;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (doc.exists) return doc.data().centroId || null;
+  } catch {}
+  // Superadmin fallback
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  if (esSA) {
+    try { const s = await db.collection('centros').limit(1).get(); if (!s.empty) return s.docs[0].id; } catch {}
+  }
+  return null;
+}
+
+async function _coordGetDocentes(centroId) {
+  const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => d.rol !== 'admin_centro');
+}
+
+// ── 1. MONITOR DE CALIFICACIONES ────────────────────────────────
+
+async function _coordMonitorCalificaciones() {
+  const cont = document.getElementById('coord-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando calificaciones...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+
+  try {
+    const docentes = await _coordGetDocentes(centroId);
+    if (!docentes.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay docentes en este centro.</div>'; return; }
+
+    // Leer datos de calificaciones de cada docente
+    const docentesData = await Promise.all(docentes.map(async d => {
+      try {
+        const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        const calData = calDoc.exists ? calDoc.data() : {};
+        const cursos = calData.cursos || {};
+        let totalActs = 0, actsSinNota = 0, totalEstudiantes = 0;
+        Object.values(cursos).forEach(curso => {
+          const ests = curso.estudiantes || [];
+          totalEstudiantes += ests.length;
+          Object.values(curso.ras || {}).forEach(ra => {
+            const acts = ra.actividades || [];
+            totalActs += acts.length;
+            acts.forEach(actId => {
+              const tieneAlMenosUna = ests.some(est => {
+                const nota = curso.notas?.[est.id]?.[ra.raKey]?.[actId];
+                return nota !== undefined && nota !== null;
+              });
+              if (!tieneAlMenosUna && ests.length > 0) actsSinNota++;
+            });
+          });
+        });
+        return { ...d, cursos: Object.keys(cursos).length, totalActs, actsSinNota, totalEstudiantes };
+      } catch { return { ...d, cursos: 0, totalActs: 0, actsSinNota: 0, totalEstudiantes: 0 }; }
+    }));
+
+    // Ordenar: más atrasados primero
+    docentesData.sort((a, b) => b.actsSinNota - a.actsSinNota);
+
+    let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">grade</span> Estado de Calificaciones por Docente</h4>';
+
+    // Resumen rápido
+    const alDia = docentesData.filter(d => d.actsSinNota === 0 && d.totalActs > 0).length;
+    const atrasados = docentesData.filter(d => d.actsSinNota > 0).length;
+    const sinData = docentesData.filter(d => d.totalActs === 0).length;
+    html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:120px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:10px;padding:12px;text-align:center;">'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#2E7D32;">' + alDia + '</div><div style="font-size:0.78rem;color:#388E3C;">Al día</div></div>'
+      + '<div style="flex:1;min-width:120px;background:#FFF3E0;border:1.5px solid #FFB74D;border-radius:10px;padding:12px;text-align:center;">'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#E65100;">' + atrasados + '</div><div style="font-size:0.78rem;color:#E65100;">Con atraso</div></div>'
+      + '<div style="flex:1;min-width:120px;background:#F5F5F5;border:1.5px solid #E0E0E0;border-radius:10px;padding:12px;text-align:center;">'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#9E9E9E;">' + sinData + '</div><div style="font-size:0.78rem;color:#9E9E9E;">Sin actividades</div></div>'
+      + '</div>';
+
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    docentesData.forEach(d => {
+      const pctCalificado = d.totalActs > 0 ? Math.round(((d.totalActs - d.actsSinNota) / d.totalActs) * 100) : 0;
+      let statusColor, statusIcon, statusText;
+      if (d.totalActs === 0) { statusColor = '#9E9E9E'; statusIcon = 'remove_circle_outline'; statusText = 'Sin actividades'; }
+      else if (d.actsSinNota === 0) { statusColor = '#2E7D32'; statusIcon = 'check_circle'; statusText = 'Al día'; }
+      else if (d.actsSinNota <= 2) { statusColor = '#FF9800'; statusIcon = 'warning'; statusText = d.actsSinNota + ' sin calificar'; }
+      else { statusColor = '#C62828'; statusIcon = 'error'; statusText = d.actsSinNota + ' sin calificar'; }
+
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+        + '<div style="width:44px;height:44px;border-radius:50%;background:' + statusColor + '22;display:flex;align-items:center;justify-content:center;">'
+        + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
+        + '<div style="flex:1;min-width:150px;">'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + '</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + d.cursos + ' cursos · ' + d.totalEstudiantes + ' estudiantes · ' + d.totalActs + ' actividades</div>'
+        + '</div>'
+        + '<div style="text-align:right;min-width:100px;">'
+        + '<div style="font-size:1.1rem;font-weight:700;color:' + statusColor + ';">' + pctCalificado + '%</div>'
+        + '<div style="font-size:0.72rem;color:' + statusColor + ';">' + statusText + '</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+// ── 2. MONITOR DE PLANIFICACIONES ───────────────────────────────
+
+async function _coordMonitorPlanificaciones() {
+  const cont = document.getElementById('coord-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando planificaciones...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+
+  try {
+    const docentes = await _coordGetDocentes(centroId);
+    if (!docentes.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay docentes en este centro.</div>'; return; }
+
+    const docentesData = await Promise.all(docentes.map(async d => {
+      try {
+        const biblioDoc = await db.collection('users').doc(d.uid).collection('data').doc('biblioteca_planificaciones').get();
+        const biblio = biblioDoc.exists ? biblioDoc.data() : {};
+        const items = biblio.items || [];
+        const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        const calData = calDoc.exists ? calDoc.data() : {};
+        const cursos = calData.cursos || {};
+        let asignadas = 0;
+        Object.values(cursos).forEach(c => { asignadas += (c.planIds || []).length; });
+        const ultimaFecha = items.length ? items.sort((a, b) => (b.modificado || b.creado || '').localeCompare(a.modificado || a.creado || ''))[0] : null;
+        return { ...d, totalPlanificaciones: items.length, asignadas, ultimaModificacion: ultimaFecha?.modificado || ultimaFecha?.creado || null };
+      } catch { return { ...d, totalPlanificaciones: 0, asignadas: 0, ultimaModificacion: null }; }
+    }));
+
+    docentesData.sort((a, b) => a.totalPlanificaciones - b.totalPlanificaciones);
+
+    let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">description</span> Estado de Planificaciones por Docente</h4>';
+
+    const conPlan = docentesData.filter(d => d.totalPlanificaciones > 0).length;
+    const sinPlan = docentesData.filter(d => d.totalPlanificaciones === 0).length;
+    const sinAsignar = docentesData.filter(d => d.totalPlanificaciones > 0 && d.asignadas === 0).length;
+    html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:120px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:10px;padding:12px;text-align:center;">'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#2E7D32;">' + conPlan + '</div><div style="font-size:0.78rem;color:#388E3C;">Con planificaciones</div></div>'
+      + '<div style="flex:1;min-width:120px;background:#FFEBEE;border:1.5px solid #EF9A9A;border-radius:10px;padding:12px;text-align:center;">'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#C62828;">' + sinPlan + '</div><div style="font-size:0.78rem;color:#C62828;">Sin planificaciones</div></div>'
+      + '<div style="flex:1;min-width:120px;background:#FFF3E0;border:1.5px solid #FFB74D;border-radius:10px;padding:12px;text-align:center;">'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#E65100;">' + sinAsignar + '</div><div style="font-size:0.78rem;color:#E65100;">Sin asignar a cursos</div></div>'
+      + '</div>';
+
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    docentesData.forEach(d => {
+      let statusColor, statusIcon;
+      if (d.totalPlanificaciones === 0) { statusColor = '#C62828'; statusIcon = 'cancel'; }
+      else if (d.asignadas === 0) { statusColor = '#FF9800'; statusIcon = 'warning'; }
+      else { statusColor = '#2E7D32'; statusIcon = 'check_circle'; }
+
+      const ultimaMod = d.ultimaModificacion ? new Date(d.ultimaModificacion).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Nunca';
+
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+        + '<div style="width:44px;height:44px;border-radius:50%;background:' + statusColor + '22;display:flex;align-items:center;justify-content:center;">'
+        + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
+        + '<div style="flex:1;min-width:150px;">'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + '</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + d.totalPlanificaciones + ' planificaciones · ' + d.asignadas + ' asignadas a cursos</div>'
+        + '<div style="font-size:0.72rem;color:#B0BEC5;">Última modificación: ' + ultimaMod + '</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+// ── 3. RESUMEN POR DOCENTE ──────────────────────────────────────
+
+async function _coordResumenDocentes() {
+  const cont = document.getElementById('coord-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando resumen...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+
+  try {
+    const docentes = await _coordGetDocentes(centroId);
+    if (!docentes.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay docentes en este centro.</div>'; return; }
+
+    const docentesData = await Promise.all(docentes.map(async d => {
+      try {
+        // Calificaciones
+        const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        const calData = calDoc.exists ? calDoc.data() : {};
+        const cursos = calData.cursos || {};
+        let totalEst = 0, totalActs = 0, actsSinNota = 0, cursosArr = [];
+        Object.entries(cursos).forEach(([cId, curso]) => {
+          const ests = curso.estudiantes || [];
+          totalEst += ests.length;
+          let cursoActs = 0, cursoSinNota = 0;
+          Object.values(curso.ras || {}).forEach(ra => {
+            const acts = ra.actividades || [];
+            cursoActs += acts.length;
+            totalActs += acts.length;
+            acts.forEach(actId => {
+              const tiene = ests.some(est => {
+                const n = curso.notas?.[est.id]?.[ra.raKey]?.[actId];
+                return n !== undefined && n !== null;
+              });
+              if (!tiene && ests.length > 0) { actsSinNota++; cursoSinNota++; }
+            });
+          });
+          cursosArr.push({ nombre: curso.nombre || cId, estudiantes: ests.length, actividades: cursoActs, sinNota: cursoSinNota });
+        });
+
+        // Planificaciones
+        const biblioDoc = await db.collection('users').doc(d.uid).collection('data').doc('biblioteca_planificaciones').get();
+        const nPlan = biblioDoc.exists ? (biblioDoc.data().items || []).length : 0;
+
+        // Última sesión
+        let ultimaSesion = null;
+        try {
+          const sesSnap = await db.collection('users').doc(d.uid).collection('sessions').orderBy('timestamp', 'desc').limit(1).get();
+          if (!sesSnap.empty) ultimaSesion = sesSnap.docs[0].data();
+        } catch {}
+
+        return { ...d, totalEst, totalActs, actsSinNota, cursosArr, nPlan, ultimaSesion };
+      } catch { return { ...d, totalEst: 0, totalActs: 0, actsSinNota: 0, cursosArr: [], nPlan: 0, ultimaSesion: null }; }
+    }));
+
+    let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">person</span> Ficha de cada Docente</h4>';
+    html += '<div style="display:flex;flex-direction:column;gap:14px;">';
+
+    docentesData.forEach(d => {
+      const pct = d.totalActs > 0 ? Math.round(((d.totalActs - d.actsSinNota) / d.totalActs) * 100) : 0;
+      const barColor = pct >= 70 ? '#2E7D32' : pct >= 50 ? '#FF9800' : '#C62828';
+
+      let sesInfo = 'Sin actividad';
+      if (d.ultimaSesion) {
+        const ts = d.ultimaSesion.timestamp?.toDate ? d.ultimaSesion.timestamp.toDate() : new Date(d.ultimaSesion.timestamp);
+        const diff = (Date.now() - ts) / (1000 * 60 * 60);
+        if (diff < 1) sesInfo = 'Activo hace menos de 1h';
+        else if (diff < 24) sesInfo = 'Hoy ' + ts.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+        else sesInfo = ts.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' });
+      }
+
+      const rolBadge = d.rol === 'director' ? ' <span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.65rem;font-weight:600;">Director</span>'
+        : d.rol === 'coordinadora' ? ' <span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.65rem;font-weight:600;">Coordinadora</span>' : '';
+
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
+        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
+        + '<div style="width:48px;height:48px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.2rem;">' + (d.nombre || 'U')[0].toUpperCase() + '</div>'
+        + '<div style="flex:1;">'
+        + '<div style="font-weight:700;font-size:1rem;color:#212121;">' + escapeHTML(d.nombre || 'Sin nombre') + rolBadge + '</div>'
+        + '<div style="font-size:0.8rem;color:#78909C;">' + escapeHTML(d.email || '') + ' · Último acceso: ' + sesInfo + '</div>'
+        + '</div></div>';
+
+      // KPIs
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">'
+        + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
+        + '<div style="font-weight:700;color:#1565C0;">' + d.cursosArr.length + '</div><div style="font-size:0.7rem;color:#78909C;">Cursos</div></div>'
+        + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
+        + '<div style="font-weight:700;color:#1565C0;">' + d.totalEst + '</div><div style="font-size:0.7rem;color:#78909C;">Estudiantes</div></div>'
+        + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
+        + '<div style="font-weight:700;color:#1565C0;">' + d.nPlan + '</div><div style="font-size:0.7rem;color:#78909C;">Planificaciones</div></div>'
+        + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
+        + '<div style="font-weight:700;color:' + barColor + ';">' + pct + '%</div><div style="font-size:0.7rem;color:#78909C;">Calificado</div></div>'
+        + '</div>';
+
+      // Barra de progreso
+      html += '<div style="background:#E0E0E0;border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px;">'
+        + '<div style="width:' + pct + '%;height:100%;background:' + barColor + ';border-radius:6px;transition:width 0.5s;"></div></div>';
+
+      // Cursos detalle
+      if (d.cursosArr.length) {
+        html += '<div style="font-size:0.78rem;color:#546E7A;font-weight:600;margin-bottom:6px;">Cursos:</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+        d.cursosArr.forEach(c => {
+          const cColor = c.sinNota === 0 ? '#2E7D32' : c.sinNota <= 2 ? '#E65100' : '#C62828';
+          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:' + cColor + '11;border:1px solid ' + cColor + '33;border-radius:8px;font-size:0.75rem;color:' + cColor + ';">'
+            + '<span class="material-icons" style="font-size:13px;">class</span>' + escapeHTML(c.nombre) + ' (' + c.estudiantes + ' est, ' + c.actividades + ' act'
+            + (c.sinNota > 0 ? ', <strong>' + c.sinNota + ' sin nota</strong>' : '') + ')</span>';
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+// ── 4. AVISOS COORDINADORA ──────────────────────────────────────
+
+async function _coordAvisos() {
+  const cont = document.getElementById('coord-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando avisos...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
+
+  let avisos = [];
+  try {
+    const snap = await db.collection('centros').doc(centroId).collection('avisos').orderBy('fecha', 'desc').get();
+    avisos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('Error cargando avisos coordinadora:', e); }
+
+  let html = '';
+  // Formulario
+  html += '<div style="background:#E0F2F1;border:1.5px solid #80CBC4;border-radius:12px;padding:16px;margin-bottom:20px;">'
+    + '<h4 style="margin:0 0 10px;color:#00695C;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">campaign</span> Enviar aviso a docentes</h4>'
+    + '<input type="text" id="coord-aviso-titulo" placeholder="Título del aviso" style="width:100%;padding:10px 12px;border:1.5px solid #80CBC4;border-radius:8px;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;">'
+    + '<textarea id="coord-aviso-mensaje" placeholder="Escribe el mensaje..." rows="3" style="width:100%;padding:10px 12px;border:1.5px solid #80CBC4;border-radius:8px;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">'
+    + '<select id="coord-aviso-prioridad" style="padding:8px 12px;border:1.5px solid #80CBC4;border-radius:8px;font-size:0.85rem;background:#fff;">'
+    + '<option value="normal">Normal</option><option value="importante">Importante</option><option value="urgente">Urgente</option>'
+    + '</select>'
+    + '<button onclick="_coordEnviarAviso(\'' + centroId + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#00695C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-left:auto;">'
+    + '<span class="material-icons" style="font-size:18px;">send</span> Enviar</button>'
+    + '</div></div>';
+
+  // Lista
+  if (avisos.length === 0) {
+    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">notifications_none</span>No hay avisos</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    avisos.forEach(a => {
+      const prioMap = { urgente: { color: '#C62828', bg: '#FFEBEE', icon: 'priority_high' }, importante: { color: '#E65100', bg: '#FFF3E0', icon: 'warning' }, normal: { color: '#00695C', bg: '#E0F2F1', icon: 'info' } };
+      const prio = prioMap[a.prioridad] || prioMap.normal;
+      const fecha = a.fecha?.toDate ? a.fecha.toDate().toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      html += '<div style="background:' + prio.bg + ';border:1.5px solid ' + prio.color + '33;border-radius:12px;padding:14px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+        + '<span class="material-icons" style="color:' + prio.color + ';font-size:18px;">' + prio.icon + '</span>'
+        + '<strong style="color:' + prio.color + ';font-size:0.95rem;">' + escapeHTML(a.titulo || 'Sin título') + '</strong>'
+        + '<span style="margin-left:auto;font-size:0.72rem;color:#999;">' + fecha + '</span>'
+        + '<button onclick="_coordEliminarAviso(\'' + centroId + '\',\'' + a.id + '\')" style="background:none;border:none;cursor:pointer;color:#C62828;padding:2px;"><span class="material-icons" style="font-size:16px;">delete</span></button>'
+        + '</div>'
+        + '<div style="font-size:0.88rem;color:#333;line-height:1.5;">' + escapeHTML(a.mensaje || '').replace(/\n/g, '<br>') + '</div>'
+        + '<div style="font-size:0.72rem;color:#999;margin-top:6px;">Enviado por: ' + escapeHTML(a.autor || '') + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  cont.innerHTML = html;
+}
+
+async function _coordEnviarAviso(centroId) {
+  const titulo = document.getElementById('coord-aviso-titulo')?.value.trim();
+  const mensaje = document.getElementById('coord-aviso-mensaje')?.value.trim();
+  const prioridad = document.getElementById('coord-aviso-prioridad')?.value || 'normal';
+  if (!titulo) { mostrarToast('Escribe un título', 'error'); return; }
+  if (!mensaje) { mostrarToast('Escribe el mensaje', 'error'); return; }
+  try {
+    await db.collection('centros').doc(centroId).collection('avisos').add({
+      titulo, mensaje, prioridad,
+      autor: window.currentUser?.email || 'Coordinadora',
+      autorNombre: window.currentUser?.displayName || '',
+      fecha: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    mostrarToast('Aviso enviado correctamente', 'success');
+    _coordAvisos();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _coordEliminarAviso(centroId, avisoId) {
+  if (!confirm('¿Eliminar este aviso?')) return;
+  try {
+    await db.collection('centros').doc(centroId).collection('avisos').doc(avisoId).delete();
+    mostrarToast('Aviso eliminado', 'success');
+    _coordAvisos();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
 // ════════════════════════════════════════════════════════════════════
