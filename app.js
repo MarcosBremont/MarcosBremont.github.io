@@ -8509,7 +8509,7 @@ function renderizarTablaCalificaciones() {
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
         + ' title="Valor máximo de este ítem" placeholder="pts"'
         + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
-        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
+        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;color:#212121;background:#fff;">'
         + '</th>';
     } else {
       // Columna de actividad normal
