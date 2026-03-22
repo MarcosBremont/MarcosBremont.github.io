@@ -23054,26 +23054,34 @@ function _coordToggleDetalleCal(idx) {
       h += '</tbody></table></div></div>';
     });
 
-    // Mini tabla de notas por estudiante (top 10 para no sobrecargar)
+    // Notas por estudiante agrupadas por RA
     if (curso.estudiantes.length && curso.ras.length) {
       h += '<details style="margin-left:12px;margin-top:6px;"><summary style="cursor:pointer;font-size:0.82rem;color:#1565C0;font-weight:600;">Ver notas por estudiante (' + curso.estudiantes.length + ')</summary>';
-      h += '<div style="overflow-x:auto;margin-top:6px;"><table style="width:100%;border-collapse:collapse;font-size:0.75rem;min-width:400px;">'
-        + '<thead><tr style="background:#E3F2FD;"><th style="text-align:left;padding:3px 6px;border:1px solid #BBDEFB;">Estudiante</th>';
-      // Encabezados: cada actividad
-      const allActs = [];
-      curso.ras.forEach(ra => ra.actividades.forEach(act => allActs.push({ raKey: ra.raKey, actId: act.id, nombre: act.nombre.substring(0, 20) })));
-      allActs.forEach(a => { h += '<th style="padding:3px 4px;border:1px solid #BBDEFB;font-size:0.7rem;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHTML(a.nombre) + '">' + escapeHTML(a.nombre) + '</th>'; });
-      h += '</tr></thead><tbody>';
-      curso.estudiantes.forEach(est => {
-        h += '<tr><td style="padding:3px 6px;border:1px solid #BBDEFB;font-weight:500;">' + escapeHTML(est.nombre) + '</td>';
-        allActs.forEach(a => {
-          const nota = curso.notas?.[est.id]?.[a.raKey]?.[a.actId];
-          const tieneNota = nota !== undefined && nota !== null;
-          h += '<td style="padding:3px 4px;border:1px solid #BBDEFB;text-align:center;background:' + (tieneNota ? '#E8F5E9' : '#FFEBEE') + ';color:' + (tieneNota ? '#1B5E20' : '#C62828') + ';font-weight:600;">' + (tieneNota ? nota : '—') + '</td>';
+      h += '<div style="margin-top:8px;">';
+      curso.ras.forEach(ra => {
+        if (!ra.actividades.length) return;
+        h += '<div style="margin-bottom:12px;">'
+          + '<div style="font-size:0.8rem;font-weight:700;color:#00695C;margin-bottom:4px;padding:4px 8px;background:#E0F2F1;border-radius:6px;">'
+          + escapeHTML(ra.label) + (ra.modulo ? ' — ' + escapeHTML(ra.modulo) : '') + '</div>';
+        h += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.75rem;">'
+          + '<thead><tr style="background:#E3F2FD;"><th style="text-align:left;padding:4px 6px;border:1px solid #BBDEFB;min-width:120px;">Estudiante</th>';
+        ra.actividades.forEach(act => {
+          const nombre = act.nombre.length > 25 ? act.nombre.substring(0, 25) + '…' : act.nombre;
+          h += '<th style="padding:4px;border:1px solid #BBDEFB;font-size:0.68rem;max-width:90px;text-align:center;" title="' + escapeHTML(act.nombre) + ' (máx: ' + act.max + ')">' + escapeHTML(nombre) + '<br><span style="font-weight:400;color:#78909C;">/' + act.max + '</span></th>';
         });
-        h += '</tr>';
+        h += '</tr></thead><tbody>';
+        curso.estudiantes.forEach(est => {
+          h += '<tr><td style="padding:3px 6px;border:1px solid #BBDEFB;font-weight:500;">' + escapeHTML(est.nombre) + '</td>';
+          ra.actividades.forEach(act => {
+            const nota = curso.notas?.[est.id]?.[ra.raKey]?.[act.id];
+            const tieneNota = nota !== undefined && nota !== null;
+            h += '<td style="padding:3px 4px;border:1px solid #BBDEFB;text-align:center;background:' + (tieneNota ? '#E8F5E9' : '#FFEBEE') + ';color:' + (tieneNota ? '#1B5E20' : '#C62828') + ';font-weight:600;">' + (tieneNota ? nota : '—') + '</td>';
+          });
+          h += '</tr>';
+        });
+        h += '</tbody></table></div></div>';
       });
-      h += '</tbody></table></div></details>';
+      h += '</div></details>';
     }
     h += '</div>';
   });
