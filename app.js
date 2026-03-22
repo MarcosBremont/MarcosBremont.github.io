@@ -22872,23 +22872,41 @@ async function _coordGetDocentes(centroId) {
   const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
   const uids = new Set(docentes.map(d => d.uid));
 
-  // Agregar admins del centro que no estén ya en la lista
+  // También incluir docentes del centro sin estado (admins auto-aprobados pueden no tener estado)
+  try {
+    const snap2 = await db.collection('usuarios').where('centroId', '==', centroId).get();
+    snap2.docs.forEach(d => {
+      if (!uids.has(d.id)) {
+        uids.add(d.id);
+        docentes.push({ uid: d.id, ...d.data() });
+      }
+    });
+  } catch {}
+
+  // Agregar admins del centro (pueden tener centroId vacío o diferente)
   try {
     const centroDoc = await db.collection('centros').doc(centroId).get();
     if (centroDoc.exists) {
       const admins = centroDoc.data().admins || [];
-      for (const email of admins) {
-        const adminSnap = await db.collection('usuarios').where('email', '==', email.toLowerCase()).limit(1).get();
-        if (!adminSnap.empty) {
-          const adminDoc = adminSnap.docs[0];
-          if (!uids.has(adminDoc.id)) {
-            uids.add(adminDoc.id);
-            docentes.push({ uid: adminDoc.id, ...adminDoc.data() });
+      for (const adminEmail of admins) {
+        const emailLower = adminEmail.toLowerCase().trim();
+        // Buscar por email exacto y en minúsculas
+        let found = false;
+        for (const variant of [emailLower, adminEmail.trim()]) {
+          if (found) break;
+          const adminSnap = await db.collection('usuarios').where('email', '==', variant).limit(1).get();
+          if (!adminSnap.empty) {
+            const adminDoc = adminSnap.docs[0];
+            if (!uids.has(adminDoc.id)) {
+              uids.add(adminDoc.id);
+              docentes.push({ uid: adminDoc.id, ...adminDoc.data() });
+            }
+            found = true;
           }
         }
       }
     }
-  } catch {}
+  } catch (e) { console.warn('Error buscando admins para coordinadora:', e); }
 
   return docentes;
 }
