@@ -4401,6 +4401,23 @@ async function _exportarConPlantillaCentro() {
     actividades: actividades
   };
 
+  // Agregar placeholders de priorización RA1-RA10
+  const prio = dg.priorizacion || [];
+  for (let i = 0; i < 10; i++) {
+    data['ra' + (i + 1) + '_tiempo'] = (prio[i] && prio[i].tiempo) || '';
+    data['ra' + (i + 1) + '_valor'] = (prio[i] && prio[i].valor) || '';
+  }
+  // Totales de priorización
+  let totalValPrio = 0, totalTiempoPrio = 0, allNum = true;
+  prio.forEach(p => {
+    totalValPrio += parseFloat(p.valor) || 0;
+    const t = parseFloat(p.tiempo);
+    if (p.tiempo && isNaN(t)) allNum = false;
+    else totalTiempoPrio += t || 0;
+  });
+  data.prio_total_valor = totalValPrio ? String(totalValPrio) : '';
+  data.prio_total_tiempo = allNum && totalTiempoPrio ? String(totalTiempoPrio) : '';
+
   // Procesar con docxtemplater
   const zip = new PizZip(arrayBuffer);
   const doc = new Docxtemplater(zip, {
@@ -5088,9 +5105,10 @@ function poblarFormularioDesdeEstado() {
   setVal('cantidad-ec', dg.cantidadEC || 4);
   setVal('cantidad-act-por-ec', dg.cantidadActPorEC || 1);
 
-
-
   setVal('valor-ra', dg.valorRA);
+
+  // Renderizar tabla de priorización
+  _renderTablaPriorizacion(parseInt(dg.cantidadRA) || 0, dg.priorizacion);
 
 
 
@@ -5880,7 +5898,8 @@ function guardarDatosFormulario() {
 
 
 
-    diasClase: obtenerDiasClase()
+    diasClase: obtenerDiasClase(),
+    priorizacion: _recogerPriorizacion()
 
 
 
@@ -5935,6 +5954,88 @@ function guardarDatosFormulario() {
 /** Extrae la configuración de días de clase del formulario */
 
 
+
+/** Renderiza la tabla de priorización y ponderación de RA */
+function _renderTablaPriorizacion(cantRA, datos) {
+  const seccion = document.getElementById('seccion-priorizacion');
+  const thead = document.getElementById('priorizacion-thead');
+  const tbody = document.getElementById('priorizacion-tbody');
+  if (!seccion || !thead || !tbody) return;
+
+  cantRA = parseInt(cantRA) || 0;
+  if (cantRA < 1) { seccion.style.display = 'none'; return; }
+  seccion.style.display = '';
+
+  const arr = datos || [];
+  const headerStyle = 'padding:6px 10px;background:#D6E4F0;color:#1F3864;font-weight:700;text-align:center;border:1px solid #B0BEC5;font-size:0.82rem;';
+  const labelStyle = 'padding:8px 12px;background:#ECEFF1;font-weight:700;font-size:0.9rem;border:1px solid #B0BEC5;';
+  const cellStyle = 'padding:4px;border:1px solid #B0BEC5;text-align:center;';
+  const inputStyle = 'width:100%;text-align:center;border:1px solid #CFD8DC;border-radius:4px;padding:6px 4px;font-size:0.85rem;box-sizing:border-box;';
+  const totalStyle = 'padding:6px 10px;background:#D6E4F0;font-weight:700;text-align:center;border:1px solid #B0BEC5;font-size:0.85rem;';
+
+  // Header
+  let hdr = '<tr><th style="' + headerStyle + 'min-width:100px;">No. del RA</th>';
+  for (let i = 1; i <= cantRA; i++) hdr += '<th style="' + headerStyle + '">RA' + i + '</th>';
+  hdr += '<th style="' + headerStyle + '">Total</th></tr>';
+  thead.innerHTML = hdr;
+
+  // Tiempo row
+  let trTiempo = '<tr><td style="' + labelStyle + '">Tiempo</td>';
+  for (let i = 0; i < cantRA; i++) {
+    const val = (arr[i] && arr[i].tiempo) || '';
+    trTiempo += '<td style="' + cellStyle + '"><input type="text" class="prio-tiempo" data-idx="' + i + '" value="' + (val || '').toString().replace(/"/g, '&quot;') + '" placeholder="Ej: 3 Sem." style="' + inputStyle + '"></td>';
+  }
+  trTiempo += '<td id="prio-total-tiempo" style="' + totalStyle + '">—</td></tr>';
+
+  // Valor row
+  let trValor = '<tr><td style="' + labelStyle + '">Valor</td>';
+  for (let i = 0; i < cantRA; i++) {
+    const val = (arr[i] && arr[i].valor) || '';
+    trValor += '<td style="' + cellStyle + '"><input type="number" class="prio-valor" data-idx="' + i + '" value="' + (val || '') + '" placeholder="Ej: 10" min="0" max="100" style="' + inputStyle + '"></td>';
+  }
+  trValor += '<td id="prio-total-valor" style="' + totalStyle + '">—</td></tr>';
+
+  tbody.innerHTML = trTiempo + trValor;
+
+  // Recalcular totales en tiempo real
+  tbody.querySelectorAll('.prio-valor').forEach(inp => inp.addEventListener('input', _calcTotalesPriorizacion));
+  tbody.querySelectorAll('.prio-tiempo').forEach(inp => inp.addEventListener('input', _calcTotalesPriorizacion));
+  _calcTotalesPriorizacion();
+}
+
+function _calcTotalesPriorizacion() {
+  // Total valor
+  let totalVal = 0;
+  document.querySelectorAll('.prio-valor').forEach(inp => { totalVal += parseFloat(inp.value) || 0; });
+  const tdVal = document.getElementById('prio-total-valor');
+  if (tdVal) tdVal.textContent = totalVal || '—';
+
+  // Total tiempo (concatenar o sumar si son numéricos)
+  let totalTiempo = 0;
+  let allNumeric = true;
+  document.querySelectorAll('.prio-tiempo').forEach(inp => {
+    const v = inp.value.trim();
+    const n = parseFloat(v);
+    if (v && isNaN(n)) allNumeric = false;
+    else totalTiempo += n || 0;
+  });
+  const tdTiempo = document.getElementById('prio-total-tiempo');
+  if (tdTiempo) tdTiempo.textContent = allNumeric && totalTiempo ? totalTiempo : '—';
+}
+
+/** Recoge los datos de la tabla de priorización */
+function _recogerPriorizacion() {
+  const result = [];
+  const tiempos = document.querySelectorAll('.prio-tiempo');
+  const valores = document.querySelectorAll('.prio-valor');
+  for (let i = 0; i < tiempos.length; i++) {
+    result.push({
+      tiempo: tiempos[i]?.value?.trim() || '',
+      valor: valores[i]?.value?.trim() || ''
+    });
+  }
+  return result.length ? result : undefined;
+}
 
 function obtenerDiasClase() {
 
@@ -6970,6 +7071,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+  // --- Listener de cantidad-ra para tabla de priorización ---
+  const inputCantRA = document.getElementById('cantidad-ra');
+  if (inputCantRA) {
+    inputCantRA.addEventListener('change', () => {
+      const cant = parseInt(inputCantRA.value) || 0;
+      const dg = planificacion?.datosGenerales || {};
+      _renderTablaPriorizacion(cant, dg.priorizacion);
+    });
+  }
 
   // --- Listeners de checkboxes de días ---
 
@@ -22596,7 +22707,11 @@ function _mostrarGuiaPlaceholders() {
     ['{contenidos_actitudinales}', 'Contenidos actitudinales'],
     ['{criterios_evaluacion}', 'Criterios de evaluación del currículo'],
     ['{recursos_didacticos}', 'Recursos didácticos disponibles'],
-    ['{centro_educativo}', 'Nombre del centro educativo']
+    ['{centro_educativo}', 'Nombre del centro educativo'],
+    ['{ra1_tiempo} ... {ra10_tiempo}', 'Tiempo del RA1 al RA10 (priorización)'],
+    ['{ra1_valor} ... {ra10_valor}', 'Valor del RA1 al RA10 (priorización)'],
+    ['{prio_total_tiempo}', 'Total tiempo (priorización)'],
+    ['{prio_total_valor}', 'Total valor (priorización)']
   ];
 
   const tablaInfo = `<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">
