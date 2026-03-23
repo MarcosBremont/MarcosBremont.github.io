@@ -4428,6 +4428,176 @@ async function _exportarConPlantillaCentro() {
   return true;
 }
 
+/** Obtiene la plantilla diaria del centro del usuario actual */
+async function _getPlantillaDiariaCentro() {
+  if (!window.currentUser) return null;
+  try {
+    let centroId = null;
+    const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+    if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+    if (!centroId) {
+      const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+      if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+    }
+    if (centroId) {
+      const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+      if (centroDoc.exists && centroDoc.data().plantillaDiariaBase64) {
+        const centro = centroDoc.data();
+        return { base64: centro.plantillaDiariaBase64, centroId, centroNombre: centro.nombre || '' };
+      }
+    }
+    // Superadmin fallback
+    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaDiariaBase64', '!=', '').limit(1).get();
+    if (!snap.empty) {
+      const centro = snap.docs[0].data();
+      return { base64: centro.plantillaDiariaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+    }
+    return null;
+  } catch (e) {
+    console.warn('[PlantillaDiaria] Error obteniendo centro:', e);
+    return null;
+  }
+}
+
+/** Exporta planificaciones diarias usando la plantilla .docx del centro con docxtemplater */
+async function _exportarDiariaConPlantillaCentro() {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) {
+    console.warn('[PlantillaDiaria] PizZip o docxtemplater no disponible');
+    return false;
+  }
+
+  const info = await _getPlantillaDiariaCentro();
+  if (!info) return false;
+
+  mostrarToast('Exportando con plantilla diaria del centro...', 'info');
+
+  const binaryStr = atob(info.base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  const templateBuffer = bytes.buffer;
+
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const actividades = planificacion.actividades || [];
+
+  if (!actividades.length) {
+    mostrarToast('No hay sesiones para exportar', 'error');
+    return true;
+  }
+
+  // Generar un documento por sesión y combinar en un solo archivo
+  // Usamos docxtemplater para cada sesión con la misma plantilla
+  const allBlobs = [];
+
+  for (const act of actividades) {
+    const s = estadoDiarias.sesiones[act.id] || {};
+    const ti = (s.tiempos && s.tiempos.ini) || 20;
+    const td = (s.tiempos && s.tiempos.des) || 55;
+    const tc = (s.tiempos && s.tiempos.cie) || 15;
+    const tot = ti + td + tc;
+
+    const inicio = s.inicio || {};
+    const desarrollo = s.desarrollo || {};
+    const cierre = s.cierre || {};
+
+    function instTextoTpl(inst) {
+      if (!inst) return '\u2014';
+      var txt = (inst.tipoLabel || '') + ': ' + (inst.titulo || '');
+      if (inst.tipo === 'cotejo') {
+        (inst.criterios || []).forEach(function (c, i) { txt += '\n' + (i + 1) + '. ' + (c.indicador || c); });
+      } else if (inst.tipo === 'rubrica') {
+        (inst.criterios || []).forEach(function (c, i) {
+          txt += '\n' + (i + 1) + '. ' + c.criterio;
+          (c.descriptores || []).forEach(function (d) { txt += '\n   \u2022 ' + d; });
+        });
+      }
+      return txt;
+    }
+
+    const data = {
+      modulo_formativo: dg.moduloFormativo || '',
+      nombre_docente: dg.nombreDocente || '',
+      centro_educativo: info.centroNombre || '',
+      resultado_aprendizaje: ra.descripcion || '',
+      familia_profesional: dg.familiaProfesional || '',
+      bachillerato: dg.nombreBachillerato || '',
+      codigo_mf: dg.codigoModulo || '',
+      horas_semana: String(dg.horasSemana || ''),
+      fecha: act.fechaStr || (act.fecha ? String(act.fecha).split('T')[0] : '') || '',
+      actividad: act.enunciado || '',
+      tiempo_total: String(tot),
+      tiempo_inicio: String(ti),
+      tiempo_desarrollo: String(td),
+      tiempo_cierre: String(tc),
+      apertura: inicio.apertura || '',
+      encuadre: inicio.encuadre || '',
+      organizacion: inicio.organizacion || '',
+      procedimental: desarrollo.procedimental || '',
+      conceptual: desarrollo.conceptual || '',
+      sintesis: cierre.sintesis || '',
+      conexion: cierre.conexion || '',
+      proximopaso: cierre.proximopaso || '',
+      estrategias: s.estrategias || '',
+      recursos: s.recursos || '',
+      instrumento_evaluacion: instTextoTpl(act.instrumento)
+    };
+
+    const zip = new PizZip(templateBuffer.slice(0));
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      delimiters: { start: '{', end: '}' },
+      nullGetter: () => ''
+    });
+    doc.render(data);
+    allBlobs.push(doc.getZip().generate({ type: 'uint8array' }));
+  }
+
+  // Si solo una sesión, descargar directamente
+  // Si múltiples, usamos el primero y le agregamos secciones (docxtemplater no soporta merge nativo)
+  // Descargamos el primero como archivo principal
+  if (allBlobs.length === 1) {
+    const blob = new Blob([allBlobs[0]], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const nombre = 'PlanificacionDiaria_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = nombre;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } else {
+    // Descargar cada sesión como archivo separado en un ZIP si JSZip available, otherwise download first
+    if (typeof JSZip !== 'undefined') {
+      const jszip = new JSZip();
+      actividades.forEach((act, i) => {
+        const fname = 'Sesion_' + (i + 1) + '_' + (act.fechaStr || '').replace(/\//g, '-') + '.docx';
+        jszip.file(fname, allBlobs[i]);
+      });
+      const zipBlob = await jszip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = 'PlanificacionesDiarias_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.zip';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } else {
+      // Sin JSZip: descargar cada uno individualmente
+      for (let i = 0; i < allBlobs.length; i++) {
+        const blob = new Blob([allBlobs[i]], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const fname = 'PlanificacionDiaria_' + (i + 1) + '_' + (actividades[i].fechaStr || '').replace(/\//g, '-') + '.docx';
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fname;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+    }
+  }
+
+  mostrarToast('Planificaciones diarias exportadas con plantilla del centro', 'success');
+  return true;
+}
+
 /** Exporta a Word como .doc (HTML compatible con Word) */
 
 
@@ -15267,10 +15437,20 @@ function renderizarDiarias() {
 
 
 
-function exportarDiariasWord() {
+async function exportarDiariasWord() {
   guardarTodasDiarias();
   const actividades = planificacion.actividades || [];
   if (!actividades.length) { mostrarToast('No hay sesiones para exportar', 'error'); return; }
+
+  // Intentar exportar con plantilla del centro si existe
+  try {
+    console.log('[ExportarDiarias] Intentando con plantilla del centro...');
+    const exported = await _exportarDiariaConPlantillaCentro();
+    if (exported) return;
+    console.log('[ExportarDiarias] Sin plantilla diaria, usando método programático');
+  } catch (e) {
+    console.warn('[PlantillaDiaria] No se pudo usar plantilla del centro:', e.message, e);
+  }
 
   mostrarToast('Generando planificaciones con la plantilla del centro...', 'info');
 
@@ -22180,6 +22360,20 @@ async function _mostrarFormCentro(centroId) {
       : '')
     + '<input type="file" id="sa-centro-plantilla" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #00897B;border-radius:10px;background:#E0F2F1;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#00695C;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">event_note</span> Plantilla Word para Planificación Diaria (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para las planificaciones diarias/por actividad. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersDiarias();" style="color:#00897B;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (centro.plantillaDiariaBase64
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaDiariaNombre || 'plantilla_diaria.docx') + '</span>'
+        + '<button onclick="_eliminarPlantillaDiariaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '')
+    + '<input type="file" id="sa-centro-plantilla-diaria" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -22224,6 +22418,20 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  // Plantilla diaria
+  const fileInputDiaria = document.getElementById('sa-centro-plantilla-diaria');
+  const fileDiaria = fileInputDiaria?.files?.[0];
+  if (fileDiaria) {
+    if (!fileDiaria.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla diaria', 'error');
+      return;
+    }
+    if (fileDiaria.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla diaria no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -22254,6 +22462,21 @@ async function _guardarCentro(centroId) {
       });
     }
 
+    // Guardar plantilla diaria como base64
+    if (fileDiaria && finalId) {
+      mostrarToast('Guardando plantilla diaria...', 'info');
+      const readerD = new FileReader();
+      const base64D = await new Promise((resolve, reject) => {
+        readerD.onload = () => resolve(readerD.result.split(',')[1]);
+        readerD.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerD.readAsDataURL(fileDiaria);
+      });
+      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
+        plantillaDiariaBase64: base64D,
+        plantillaDiariaNombre: fileDiaria.name
+      });
+    }
+
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
   } catch (e) {
@@ -22275,6 +22498,82 @@ async function _eliminarPlantillaCentro(centroId) {
   } catch (e) {
     mostrarToast('Error eliminando plantilla: ' + e.message, 'error');
   }
+}
+
+/** Elimina plantilla diaria del centro */
+async function _eliminarPlantillaDiariaCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de planificación diaria de este centro?')) return;
+  try {
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
+      plantillaDiariaBase64: firebase.firestore.FieldValue.delete(),
+      plantillaDiariaNombre: firebase.firestore.FieldValue.delete()
+    });
+    mostrarToast('Plantilla diaria eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla diaria: ' + e.message, 'error');
+  }
+}
+
+/** Muestra guía de placeholders para la plantilla diaria */
+function _mostrarGuiaPlaceholdersDiarias() {
+  const placeholders = [
+    ['{modulo_formativo}', 'Nombre del módulo formativo'],
+    ['{nombre_docente}', 'Nombre completo del docente'],
+    ['{centro_educativo}', 'Nombre del centro educativo'],
+    ['{resultado_aprendizaje}', 'Descripción del RA'],
+    ['{familia_profesional}', 'Nombre de la familia profesional'],
+    ['{bachillerato}', 'Bachillerato técnico en...'],
+    ['{codigo_mf}', 'Código del módulo formativo'],
+    ['{horas_semana}', 'Horas por semana del MF'],
+  ];
+
+  const placeholdersSesion = [
+    ['{fecha}', 'Fecha de la actividad/sesión'],
+    ['{actividad}', 'Enunciado de la actividad'],
+    ['{tiempo_total}', 'Tiempo total en minutos'],
+    ['{tiempo_inicio}', 'Minutos del momento de inicio'],
+    ['{tiempo_desarrollo}', 'Minutos del momento de desarrollo'],
+    ['{tiempo_cierre}', 'Minutos del momento de cierre'],
+    ['{apertura}', 'Contenido de apertura (1er momento)'],
+    ['{encuadre}', 'Contenido de encuadre (1er momento)'],
+    ['{organizacion}', 'Contenido de organización (1er momento)'],
+    ['{procedimental}', 'Actividad principal / procedimental (2do momento)'],
+    ['{conceptual}', 'Conceptual / actitudinal (2do momento)'],
+    ['{sintesis}', 'Síntesis (3er momento)'],
+    ['{conexion}', 'Conexión con el mundo real (3er momento)'],
+    ['{proximopaso}', 'Próximo paso (3er momento)'],
+    ['{estrategias}', 'Estrategias utilizadas'],
+    ['{recursos}', 'Recursos didácticos'],
+    ['{instrumento_evaluacion}', 'Instrumento de evaluación'],
+  ];
+
+  const makeRows = (arr) => arr.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#00695C;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  const loopInfo = `<div style="margin-top:14px;padding:12px;background:#E0F2F1;border-radius:8px;border:1px solid #B2DFDB;">
+    <strong style="color:#00695C;font-size:0.82rem;">Loop de sesiones/actividades:</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">La plantilla genera <strong>una página por cada sesión/actividad</strong>. Los placeholders de sesión se reemplazan con los datos de cada actividad.</p>
+    <p style="font-size:0.75rem;color:#9E9E9E;margin:4px 0 0;">Tip: Los placeholders generales (módulo, docente, centro) se repiten en todas las páginas. Los de sesión cambian por actividad.</p>
+  </div>`;
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Plantilla Diaria';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Escribe estos placeholders en tu plantilla .docx para planificaciones diarias:</p>'
+    + '<h4 style="color:#00695C;margin:12px 0 6px;font-size:0.85rem;">Datos generales (iguales en todas las páginas)</h4>'
+    + '<div style="max-height:200px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + makeRows(placeholders) + '</tbody></table></div>'
+    + '<h4 style="color:#00695C;margin:16px 0 6px;font-size:0.85rem;">Datos por sesión (cambian en cada página)</h4>'
+    + '<div style="max-height:300px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + makeRows(placeholdersSesion) + '</tbody></table></div>'
+    + loopInfo;
+  document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
 /** Muestra guía de placeholders para la plantilla */
