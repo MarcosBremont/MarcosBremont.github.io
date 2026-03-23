@@ -13508,11 +13508,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  const navPaso4 = document.querySelector('#section-4 .nav-buttons');
+  const headerPaso4 = document.querySelector('#section-4 .section-header');
 
 
 
-  if (navPaso4 && !document.getElementById('btn-guardar-plan-4')) {
+  if (headerPaso4 && !document.getElementById('btn-guardar-plan-4')) {
 
 
 
@@ -13528,11 +13528,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    btnG4.style.fontSize = '0.82rem';
-
-
-
-    btnG4.style.padding = '7px 14px';
+    btnG4.style.cssText = 'font-size:0.82rem;padding:7px 14px;margin-left:auto;';
 
 
 
@@ -13544,7 +13540,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    navPaso4.appendChild(btnG4);
+    headerPaso4.appendChild(btnG4);
 
 
 
