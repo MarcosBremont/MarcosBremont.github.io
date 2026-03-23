@@ -5062,7 +5062,7 @@ function poblarFormularioDesdeEstado() {
 
 
 
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val != null ? val : ''; };
 
 
 
