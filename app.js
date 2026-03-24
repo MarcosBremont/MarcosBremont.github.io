@@ -10415,6 +10415,8 @@ function abrirBuscadorEstudiante() {
       <p style="font-size:0.88rem;">Escribe el nombre de un estudiante<br>para ver su perfil completo.</p>
     </div>`;
   document.getElementById('buscar-resultados-count').textContent = '';
+  // Resetear estado móvil
+  _buscarVolverListaMovil();
   // Si hay cursos, mostrar todos los estudiantes inicialmente
   buscarEstudiante('');
 }
@@ -10525,6 +10527,26 @@ function seleccionarEstudianteBuscar(cursoId, estId) {
   _buscarReentrante = false;
 
   _renderizarPerfilEstudiante(cursoId, estId);
+  _buscarMostrarPerfilMovil();
+}
+
+function _buscarMostrarPerfilMovil() {
+  if (window.innerWidth > 600) return;
+  const lista = document.getElementById('buscar-lista');
+  const perfil = document.getElementById('buscar-perfil');
+  const searchBar = document.getElementById('buscar-search-bar');
+  if (lista) lista.classList.add('movil-oculta');
+  if (perfil) perfil.classList.add('movil-full');
+  if (searchBar) searchBar.style.display = 'none';
+}
+
+function _buscarVolverListaMovil() {
+  const lista = document.getElementById('buscar-lista');
+  const perfil = document.getElementById('buscar-perfil');
+  const searchBar = document.getElementById('buscar-search-bar');
+  if (lista) lista.classList.remove('movil-oculta');
+  if (perfil) perfil.classList.remove('movil-full');
+  if (searchBar) searchBar.style.display = '';
 }
 
 function _renderizarPerfilEstudiante(cursoId, estId) {
@@ -10570,6 +10592,10 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
   const avatarColor = avatarColors[est.nombre.charCodeAt(0) % avatarColors.length];
 
   perfil.innerHTML = `
+    <!-- Botón volver (solo visible en móvil) -->
+    <button class="buscar-btn-volver-movil" onclick="_buscarVolverListaMovil()">
+      <span class="material-icons" style="font-size:18px;">arrow_back</span> Volver a la lista
+    </button>
     <!-- Cabecera del perfil -->
     <div class="perfil-header">
       <div class="perfil-avatar" style="background:${avatarColor};">

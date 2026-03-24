@@ -6975,6 +6975,89 @@ body.dark-mode #buscar-lista {
   border-color: var(--color-borde) !important;
 }
 
+/* ── Buscador de estudiantes: responsive móvil ── */
+@media (max-width: 600px) {
+  #buscar-overlay .modal-box {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Contenedor flex de lista + perfil: apilado */
+  #buscar-overlay .modal-box > div:last-child {
+    flex-direction: column;
+    position: relative;
+  }
+
+  #buscar-lista {
+    width: 100% !important;
+    flex-shrink: 1 !important;
+    border-right: none !important;
+    border-bottom: 1px solid #E0E0E0;
+  }
+
+  #buscar-perfil {
+    padding: 12px 14px !important;
+  }
+
+  /* Cuando hay perfil activo en móvil: ocultar lista, mostrar perfil a full */
+  #buscar-lista.movil-oculta {
+    display: none !important;
+  }
+
+  #buscar-perfil.movil-full {
+    flex: 1 !important;
+  }
+
+  /* Botón volver visible solo en móvil */
+  .buscar-btn-volver-movil {
+    display: flex !important;
+  }
+
+  .perfil-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .perfil-nombre {
+    font-size: 0.92rem;
+  }
+
+  .perfil-nota-final {
+    font-size: 1.2rem;
+    padding: 6px 10px;
+  }
+
+  .perfil-stats-row {
+    gap: 6px;
+  }
+
+  .perfil-stat {
+    min-width: 70px;
+    padding: 8px 6px;
+  }
+
+  .perfil-stat-num {
+    font-size: 1rem;
+  }
+}
+
+/* Botón volver: oculto por defecto, visible solo en móvil */
+.buscar-btn-volver-movil {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #1565C0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 14px 4px;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    COMENTARIOS POR ESTUDIANTE
