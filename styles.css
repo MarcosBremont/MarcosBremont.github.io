@@ -2249,8 +2249,39 @@ body {
     flex-direction: column;
   }
 
+  .cal-field-group .material-icons:first-child {
+    display: none;
+  }
+
+  .cal-field-group textarea {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .cal-field-group .btn-siguiente,
+  .cal-field-group .btn-export {
+    align-self: stretch !important;
+    justify-content: center;
+  }
+
   .cal-panel {
     padding: var(--espacio-md);
+  }
+
+  /* Planificaciones asignadas: permitir scroll horizontal */
+  .cal-plan-tab {
+    white-space: normal;
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    gap: 4px;
+  }
+
+  .cal-plan-tab span[style*="max-width"] {
+    max-width: 120px !important;
+  }
+
+  .cal-planes-tabs {
+    gap: 6px;
   }
 }
 
