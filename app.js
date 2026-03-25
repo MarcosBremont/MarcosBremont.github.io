@@ -8564,10 +8564,33 @@ function _ensureRA(curso, raKey) {
     const raInfo = curso.ras[raKey];
 
     // Sincronizar valor total con la planificación (puede cambiar si el docente ajusta el RA)
+    let cambioSync = false;
     if (raInfo.valorTotal !== valorTotal) {
       raInfo.valorTotal = valorTotal;
-      guardarCalificaciones();
+      cambioSync = true;
     }
+
+    // Sincronizar valores individuales de actividades con la planificación
+    acts.forEach(a => {
+      const valPlan = a.valor != null ? parseFloat(a.valor) : 0;
+      if (raInfo.valores && raInfo.valores[a.id] !== undefined && raInfo.valores[a.id] !== valPlan) {
+        raInfo.valores[a.id] = valPlan;
+        cambioSync = true;
+      }
+    });
+
+    // Sincronizar snapshot de actividades (enunciado, fecha, etc.)
+    if (raInfo._actividadesSnapshot) {
+      acts.forEach(a => {
+        const snap = raInfo._actividadesSnapshot.find(s => s.id === a.id);
+        if (snap) {
+          if (a.enunciado && snap.enunciado !== a.enunciado) snap.enunciado = a.enunciado;
+          if (a.fechaStr && snap.fechaStr !== a.fechaStr) snap.fechaStr = a.fechaStr;
+        }
+      });
+    }
+
+    if (cambioSync) guardarCalificaciones();
 
     const idsExistentes = new Set(raInfo.actividades);
     const nuevas = acts.filter(a => !idsExistentes.has(a.id));
@@ -9136,6 +9159,16 @@ function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
   raInfo.valores[actividadId] = num;
   registrarCambio(`Valor de actividad actualizado a ${num} pts`);
   guardarCalificaciones();
+
+  // Sincronizar de vuelta a la planificación activa
+  const planSync = _getPlanActivaDeCurso() || planificacion;
+  if (planSync && planSync.actividades) {
+    const actPlan = planSync.actividades.find(a => a.id === actividadId);
+    if (actPlan && actPlan.valor !== num) {
+      actPlan.valor = num;
+      guardarBorrador();
+    }
+  }
 
   if (nuevaSuma > valorTotal) {
     mostrarToast(
