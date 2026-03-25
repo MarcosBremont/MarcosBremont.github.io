@@ -18505,8 +18505,11 @@ function _renderizarSaludo() {
   const hora = ahora.getHours();
   const saludo = hora < 12 ? '¡Buenos días' : hora < 18 ? '¡Buenas tardes' : '¡Buenas noches';
   const dg = planificacion.datosGenerales || {};
-  const nombre = dg.nombreDocente
-    ? ', ' + dg.nombreDocente.trim().split(' ')[0] + '!'
+  const nombreRaw = dg.nombreDocente
+    || window.currentUser?.displayName
+    || '';
+  const nombre = nombreRaw
+    ? ', ' + nombreRaw.trim().split(' ')[0] + '!'
     : '!';
   const fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' · ' + ahora.getFullYear();
 
