@@ -10014,6 +10014,133 @@ function _statsAsistencia(cursoId, estudianteId) {
   return { P, A, T, E, total, pct };
 }
 
+// ─── Calculadora de Asistencia (herramienta independiente) ───────
+function abrirCalculadoraAsistencia() {
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+
+  body.innerHTML = `
+    <div style="max-width:480px;margin:0 auto;padding:10px;">
+      <h3 style="text-align:center;margin:0 0 6px;font-size:1.1rem;">
+        <span class="material-icons" style="vertical-align:middle;color:#00796B;">calculate</span>
+        Calculadora de Asistencia
+      </h3>
+      <p style="text-align:center;color:#666;font-size:0.82rem;margin:0 0 18px;">
+        Calcula el porcentaje de asistencia de un estudiante
+      </p>
+
+      <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <div style="flex:1;">
+          <label style="font-size:0.78rem;font-weight:600;color:#555;display:block;margin-bottom:4px;">Días de clase (total)</label>
+          <input type="number" id="calc-asist-total" min="1" max="365" placeholder="Ej: 12"
+            style="width:100%;padding:10px;font-size:1.1rem;border:2px solid #B2DFDB;border-radius:8px;text-align:center;box-sizing:border-box;"
+            oninput="_calcularAsistencia()">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:0.78rem;font-weight:600;color:#555;display:block;margin-bottom:4px;">Días asistidos</label>
+          <input type="number" id="calc-asist-presente" min="0" max="365" placeholder="Ej: 11"
+            style="width:100%;padding:10px;font-size:1.1rem;border:2px solid #B2DFDB;border-radius:8px;text-align:center;box-sizing:border-box;"
+            oninput="_calcularAsistencia()">
+        </div>
+      </div>
+
+      <div id="calc-asist-resultado" style="text-align:center;padding:20px;border-radius:12px;background:#F5F5F5;margin-bottom:16px;">
+        <div style="font-size:0.82rem;color:#888;">Ingresa los valores para calcular</div>
+      </div>
+
+      <div id="calc-asist-tabla-wrap" style="display:none;">
+        <h4 style="font-size:0.88rem;margin:0 0 8px;color:#00796B;">
+          <span class="material-icons" style="font-size:16px;vertical-align:middle;">table_chart</span>
+          Tabla rápida de referencia
+        </h4>
+        <div style="max-height:220px;overflow-y:auto;border:1px solid #E0E0E0;border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+            <thead>
+              <tr style="background:#E0F2F1;position:sticky;top:0;">
+                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid #ccc;">Días asistidos</th>
+                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid #ccc;">Ausencias</th>
+                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid #ccc;">%</th>
+              </tr>
+            </thead>
+            <tbody id="calc-asist-tabla-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function _calcularAsistencia() {
+  const totalEl = document.getElementById('calc-asist-total');
+  const presenteEl = document.getElementById('calc-asist-presente');
+  const resDiv = document.getElementById('calc-asist-resultado');
+  const tablaWrap = document.getElementById('calc-asist-tabla-wrap');
+  const tablaBody = document.getElementById('calc-asist-tabla-body');
+  if (!totalEl || !presenteEl || !resDiv) return;
+
+  const total = parseInt(totalEl.value);
+  const presente = parseInt(presenteEl.value);
+
+  // Generar tabla de referencia si hay total válido
+  if (total > 0 && tablaWrap && tablaBody) {
+    tablaWrap.style.display = '';
+    let rows = '';
+    for (let i = total; i >= 0; i--) {
+      const pct = Math.round((i / total) * 100);
+      const ausencias = total - i;
+      const color = pct >= 90 ? '#2E7D32' : pct >= 80 ? '#F57F17' : '#C62828';
+      const bg = i === presente ? '#E0F2F1' : '';
+      const fw = i === presente ? 'font-weight:700;' : '';
+      rows += `<tr style="background:${bg};${fw}">
+        <td style="padding:5px 10px;border-bottom:1px solid #f0f0f0;">${i} de ${total}</td>
+        <td style="padding:5px 10px;text-align:center;border-bottom:1px solid #f0f0f0;">${ausencias}</td>
+        <td style="padding:5px 10px;text-align:center;border-bottom:1px solid #f0f0f0;color:${color};font-weight:600;">${pct}%</td>
+      </tr>`;
+    }
+    tablaBody.innerHTML = rows;
+  } else if (tablaWrap) {
+    tablaWrap.style.display = 'none';
+  }
+
+  if (isNaN(total) || isNaN(presente) || total <= 0) {
+    resDiv.innerHTML = '<div style="font-size:0.82rem;color:#888;">Ingresa los valores para calcular</div>';
+    return;
+  }
+
+  if (presente > total) {
+    resDiv.innerHTML = '<div style="color:#C62828;font-size:0.88rem;"><span class="material-icons" style="vertical-align:middle;">error</span> Los días asistidos no pueden ser mayor que el total</div>';
+    resDiv.style.background = '#FFEBEE';
+    return;
+  }
+
+  const pct = Math.round((presente / total) * 100);
+  const ausencias = total - presente;
+  let color, bg, icon, estado;
+  if (pct >= 90) {
+    color = '#2E7D32'; bg = '#E8F5E9'; icon = 'check_circle'; estado = 'Asistencia adecuada';
+  } else if (pct >= 80) {
+    color = '#F57F17'; bg = '#FFFDE7'; icon = 'warning'; estado = 'Asistencia en riesgo';
+  } else {
+    color = '#C62828'; bg = '#FFEBEE'; icon = 'cancel'; estado = 'Asistencia crítica';
+  }
+
+  resDiv.style.background = bg;
+  resDiv.innerHTML = `
+    <div style="font-size:2.5rem;font-weight:800;color:${color};line-height:1;">${pct}%</div>
+    <div style="font-size:0.88rem;color:${color};font-weight:600;margin:6px 0;">
+      <span class="material-icons" style="font-size:16px;vertical-align:middle;">${icon}</span> ${estado}
+    </div>
+    <div style="font-size:0.8rem;color:#666;margin-top:8px;">
+      ${presente} de ${total} días — ${ausencias} ausencia${ausencias !== 1 ? 's' : ''}
+    </div>
+    <div style="font-size:0.75rem;color:#999;margin-top:4px;">
+      Fórmula: ${presente} ÷ ${total} = ${(presente / total).toFixed(3)} → ${pct}%
+    </div>
+  `;
+}
+
 // ─── Abrir panel de asistencia del curso activo ──────────────────
 let _asistVistaActiva = 'pasar'; // 'pasar' | 'historial'
 
