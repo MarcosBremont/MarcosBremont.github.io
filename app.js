@@ -10069,7 +10069,8 @@ function abrirCalculadoraAsistencia() {
     </div>
   `;
 
-  document.getElementById('modal-overlay').classList.add('active');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
 
 function _calcularAsistencia() {
