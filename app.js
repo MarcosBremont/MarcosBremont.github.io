@@ -468,6 +468,22 @@ const INSTRUMENTOS = {
 
 function _getInstrLabel(tipo) { return INSTRUMENTOS[tipo]?.label || tipo || 'Sin instrumento'; }
 function _getInstrIcono(tipo) { return INSTRUMENTOS[tipo]?.icono || 'assignment'; }
+
+/** Devuelve el número de actividad "Act X.X.N" dado el código del EC y el índice de la actividad dentro de ese EC (0-based) */
+function _getActNumero(ecCodigo, actIndexInEC) {
+  const base = (ecCodigo || '').replace(/^E\.C\./i, '').split('.').slice(0, 2).join('.');
+  return `Act ${base}.${actIndexInEC + 1}`;
+}
+
+/** Calcula el índice de una actividad dentro de su EC en la lista dada */
+function _actIndexInEC(listaActividades, idx) {
+  const ecCodigo = listaActividades[idx]?.ecCodigo;
+  let count = 0;
+  for (let i = 0; i < idx; i++) {
+    if (listaActividades[i].ecCodigo === ecCodigo && !listaActividades[i].esComplementario) count++;
+  }
+  return count;
+}
 function _getInstrColor(tipo) { return INSTRUMENTOS[tipo]?.color || '#616161'; }
 
 /** Criterios y descriptores para instrumentos según nivel */
@@ -2708,7 +2724,7 @@ function renderizarActividades(listaActividades) {
 
 
 
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:#757575;">No se generaron actividades. Verifica los días de clase seleccionados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:#757575;">No se generaron actividades. Verifica los días de clase seleccionados.</td></tr>`;
 
 
 
@@ -2746,6 +2762,8 @@ function renderizarActividades(listaActividades) {
 
 
 
+    const actNumero = esComp ? '—' : _getActNumero(act.ecCodigo, _actIndexInEC(listaActividades, idx));
+
     if (esComp) {
       tr.style.background = 'rgba(230,81,0,0.04)';
       tr.innerHTML = `
@@ -2753,6 +2771,7 @@ function renderizarActividades(listaActividades) {
         <span class="material-icons" style="font-size:20px;color:#E65100;">${act.complementarioIcono || 'star'}</span>
       </td>
       <td><span style="font-size:0.75rem;font-weight:700;color:#E65100;background:#FFF3E0;padding:2px 8px;border-radius:10px;">COMP</span></td>
+      <td style="text-align:center;font-size:0.75rem;color:#9E9E9E;">—</td>
       <td style="max-width:280px;font-weight:600;color:#E65100;">${escapeHTML(act.enunciado)}</td>
       <td><span style="font-size:0.78rem;color:#78909C;">—</span></td>
       <td style="text-align:center;">
@@ -2796,6 +2815,9 @@ function renderizarActividades(listaActividades) {
                  color:inherit;cursor:pointer;min-width:145px;">
       </td>
       <td><code style="font-size:0.8rem;color:#1565C0;font-weight:600;">${act.ecCodigo}</code></td>
+      <td style="text-align:center;">
+        <span style="font-size:0.75rem;font-weight:700;color:#546E7A;background:#ECEFF1;padding:2px 8px;border-radius:10px;white-space:nowrap;">${actNumero}</span>
+      </td>
       <td style="max-width:280px;">${act.enunciado}</td>
       <td><span class="instrumento-badge ${badgeClass}">
         <span class="material-icons" style="font-size:14px;">${icono}</span>
@@ -3954,11 +3976,14 @@ function renderizarVistaPrevia() {
 
 
 
+  // Precalcular índice dentro del EC para cada actividad
+  const _actsSeqVP = {};
+
   let tablaActs = `<table class="vp-table">
 
 
 
-    <thead><tr><th>EC</th><th>Actividad</th><th>Fecha</th><th>Instrumento</th></tr></thead>
+    <thead><tr><th>EC</th><th>N°</th><th>Actividad</th><th>Fecha</th><th>Instrumento</th></tr></thead>
 
 
 
@@ -3967,14 +3992,22 @@ function renderizarVistaPrevia() {
 
 
   acts.forEach(a => {
-
-
+    let numLabel = '—';
+    if (!a.esComplementario) {
+      _actsSeqVP[a.ecCodigo] = (_actsSeqVP[a.ecCodigo] || 0);
+      numLabel = _getActNumero(a.ecCodigo, _actsSeqVP[a.ecCodigo]);
+      _actsSeqVP[a.ecCodigo]++;
+    }
 
     tablaActs += `<tr>
 
 
 
       <td><code>${a.ecCodigo}</code></td>
+
+
+
+      <td style="text-align:center;white-space:nowrap;font-size:0.82rem;font-weight:700;color:#546E7A;">${numLabel}</td>
 
 
 
@@ -4011,6 +4044,7 @@ function renderizarVistaPrevia() {
 
 
   let instrumentosHTML = '';
+  const _instSeqVP = {};
 
 
 
@@ -4020,7 +4054,8 @@ function renderizarVistaPrevia() {
 
     if (!a.instrumento) return;
 
-
+    _instSeqVP[a.ecCodigo] = _instSeqVP[a.ecCodigo] || 0;
+    const _instNum = _getActNumero(a.ecCodigo, _instSeqVP[a.ecCodigo]++);
 
     instrumentosHTML += `
 
@@ -4035,6 +4070,7 @@ function renderizarVistaPrevia() {
 
 
         <span class="material-icons" style="font-size:18px;">${a.instrumento.tipo === 'cotejo' ? 'checklist' : 'table_chart'}</span>
+        <span style="font-size:0.78rem;font-weight:700;color:#546E7A;background:#ECEFF1;padding:1px 8px;border-radius:10px;margin-right:6px;">${_instNum}</span>
 
 
 
@@ -4406,8 +4442,9 @@ async function _exportarConPlantillaCentro() {
     actsEC.forEach((a, i) => {
       actividades.push({
         ec_codigo: ec.codigo || '',
-        ec_enunciado: i === 0 ? (ec.enunciado || '') : '',
+        ec_enunciado: i === 0 ? `${ec.codigo}\n${ec.enunciado || ''}` : '',
         ec_nivel: i === 0 ? (ec.nivel || ec.nivelBloom || '') : '',
+        act_numero: _getActNumero(ec.codigo, i),
         act_enunciado: a.enunciado || '',
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
         act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || ''
@@ -23144,7 +23181,14 @@ function _mostrarGuiaPlaceholders() {
     ['{ra1_tiempo} ... {ra10_tiempo}', 'Tiempo del RA1 al RA10 (priorización)'],
     ['{ra1_valor} ... {ra10_valor}', 'Valor del RA1 al RA10 (priorización)'],
     ['{prio_total_tiempo}', 'Total tiempo (priorización)'],
-    ['{prio_total_valor}', 'Total valor (priorización)']
+    ['{prio_total_valor}', 'Total valor (priorización)'],
+    ['{act_numero}', 'Número de actividad (Act 1.1.1, Act 1.1.2…)'],
+    ['{ec_codigo}', 'Código del EC (E.C.1.1.1)'],
+    ['{ec_enunciado}', 'Enunciado del EC (solo primera fila del EC)'],
+    ['{ec_nivel}', 'Nivel Bloom del EC (solo primera fila)'],
+    ['{act_enunciado}', 'Enunciado de la actividad'],
+    ['{act_fecha}', 'Fecha de realización'],
+    ['{act_instrumento}', 'Tipo de instrumento de evaluación']
   ];
 
   const tablaInfo = `<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">
@@ -23161,6 +23205,7 @@ function _mostrarGuiaPlaceholders() {
       <tr>
         <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{#actividades}{ec_enunciado}</td>
         <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{ec_nivel}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_numero}</td>
         <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_enunciado}</td>
         <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_fecha}</td>
         <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{act_instrumento}{/actividades}</td>
