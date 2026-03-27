@@ -13334,6 +13334,40 @@ async function exportarPlanDesdeListado(id) {
   }
 }
 
+async function exportarDiariasDesdeListado(id) {
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === id);
+  if (!reg || !reg.planificacion) { mostrarToast('Planificación no encontrada', 'error'); return; }
+
+  const acts = reg.planificacion.actividades || [];
+  if (!acts.length) { mostrarToast('Esta planificación no tiene actividades/sesiones', 'error'); return; }
+
+  // Verificar que hay sesiones diarias para estas actividades
+  const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
+  const tieneSesiones = acts.some(a => diarias.sesiones && diarias.sesiones[a.id]);
+  if (!tieneSesiones) {
+    mostrarToast('No hay planificaciones diarias generadas para esta planificación. Cárgala primero y genera las sesiones.', 'warning');
+    return;
+  }
+
+  // Swap temporal
+  const backupPlan = planificacion;
+  const backupDiarias = estadoDiarias;
+  try {
+    planificacion = JSON.parse(JSON.stringify(reg.planificacion));
+    // estadoDiarias ya tiene las sesiones en localStorage, solo recargar
+    cargarDiarias();
+    mostrarToast('Exportando diarias a Word...', 'info');
+    await exportarDiariasWord();
+  } catch (e) {
+    console.warn('[ExportDiariasListado] Error:', e);
+    mostrarToast('Error al exportar diarias: ' + e.message, 'error');
+  } finally {
+    planificacion = backupPlan;
+    estadoDiarias = backupDiarias;
+  }
+}
+
 function _exportarWordHTML() {
   // Generar vista previa temporal para export HTML-Word
   const dg = planificacion.datosGenerales || {};
@@ -13815,8 +13849,11 @@ function renderizarBiblioteca() {
         <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación" style="width:100%;justify-content:center;">
           <span class="material-icons">content_copy</span> Duplicar
         </button>
-        <button class="btn-pln-export" onclick="exportarPlanDesdeListado('${reg.id}')" title="Exportar a Word" style="width:100%;justify-content:center;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-          <span class="material-icons" style="font-size:15px;">description</span> Word
+        <button class="btn-pln-export" onclick="exportarPlanDesdeListado('${reg.id}')" title="Exportar planificación RA a Word" style="width:100%;justify-content:center;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:15px;">description</span> Word RA
+        </button>
+        <button class="btn-pln-export" onclick="exportarDiariasDesdeListado('${reg.id}')" title="Exportar planificaciones diarias a Word" style="width:100%;justify-content:center;background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:15px;">event_note</span> Word Diarias
         </button>
         <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar" style="width:100%;justify-content:center;grid-column:1/-1;">
           <span class="material-icons">delete_outline</span>
