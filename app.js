@@ -1008,7 +1008,7 @@ function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
 
 
 
-function calcularFechasClase(diasConfig, fechaInicio, fechaFin) {
+function calcularFechasClase(diasConfig, fechaInicio, fechaFin, festivosExcluir) {
 
 
 
@@ -1076,6 +1076,13 @@ function calcularFechasClase(diasConfig, fechaInicio, fechaFin) {
 
 
 
+      // Excluir días festivos si se proporcionó la lista
+      const fechaISO = cursor.toISOString().slice(0, 10);
+      if (festivosExcluir && festivosExcluir.includes(fechaISO)) {
+        cursor.setDate(cursor.getDate() + 1);
+        continue;
+      }
+
       fechas.push({
 
 
@@ -1123,6 +1130,24 @@ function calcularFechasClase(diasConfig, fechaInicio, fechaFin) {
 
 
 
+
+/**
+ * Muestra en el panel de planificación cuántos días festivos fueron excluidos del cálculo.
+ */
+function _mostrarNotaFestivosExcluidos(diasConfig, fechaInicio, fechaFin) {
+  const nota = document.getElementById('festivos-excluidos-note');
+  if (!nota) return;
+  const festivos = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
+  if (!festivos.length || !fechaInicio || !fechaFin) { nota.style.display = 'none'; return; }
+  // Calcular sin exclusión para contar cuántos coinciden
+  const sinExcluir = calcularFechasClase(diasConfig, fechaInicio, fechaFin, []);
+  const excluidos = sinExcluir.filter(f => festivos.includes(f.fecha.toISOString().slice(0, 10)));
+  if (!excluidos.length) { nota.style.display = 'none'; return; }
+  const labels = excluidos.map(f => f.fechaStr).join(', ');
+  nota.style.display = 'flex';
+  nota.innerHTML = `<span class="material-icons" style="font-size:16px;flex-shrink:0;">event_busy</span>
+    <span><strong>${excluidos.length} día${excluidos.length > 1 ? 's' : ''} festivo${excluidos.length > 1 ? 's' : ''} excluido${excluidos.length > 1 ? 's' : ''} de la planificación:</strong> ${labels}</span>`;
+}
 
 /**
 
@@ -6249,7 +6274,8 @@ function generarPlanificacion() {
 
 
 
-        dg.diasClase, dg.fechaInicio, dg.fechaTermino
+        dg.diasClase, dg.fechaInicio, dg.fechaTermino,
+        typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : []
 
 
 
@@ -6271,6 +6297,8 @@ function generarPlanificacion() {
 
       planificacion.semanas = calcularSemanas(dg.fechaInicio, dg.fechaTermino);
 
+      // Mostrar nota de festivos excluidos
+      _mostrarNotaFestivosExcluidos(dg.diasClase, dg.fechaInicio, dg.fechaTermino);
 
 
 
@@ -17140,7 +17168,8 @@ generarPlanificacion = async function () {
   const fechasClase = calcularFechasClase(
     planificacion.datosGenerales.diasClase,
     planificacion.datosGenerales.fechaInicio,
-    planificacion.datosGenerales.fechaTermino
+    planificacion.datosGenerales.fechaTermino,
+    typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : []
   );
   planificacion.fechasClase = fechasClase;
   planificacion.horasTotal = fechasClase.reduce((s, f) => s + f.horas, 0);
@@ -20873,7 +20902,7 @@ function _calEscDatosActuales() {
 function _calEscDatosVacios() {
   const d = {};
   CAL_ESC_MESES.forEach(m => { d[m] = { actividades: [], efemerides: [] }; });
-  return { meses: d };
+  return { meses: d, festivos: [] };
 }
 
 // ── Cargar calendario del admin desde Firestore ──────────────────────
@@ -20942,6 +20971,7 @@ async function abrirCalendarioEscolar() {
 // ── Render principal ─────────────────────────────────────────────────
 function _calEscRenderizar() {
   _calEscRenderizarBanner();
+  _calEscRenderizarFestivos();
   _calEscRenderizarTabs();
   _calEscRenderizarMes();
   const badge = document.getElementById('cal-escolar-admin-badge');
@@ -21209,6 +21239,111 @@ function _calEscGuardarEfemeride(mes, idx) {
   _calEscSetDatosEditables(datos);
   document.getElementById('cal-esc-modal-ef')?.remove();
   _calEscRenderizarMes();
+}
+
+// ── DÍAS FESTIVOS / NO LECTIVOS ──────────────────────────────────────
+
+function _calEscGetFestivosAdmin() {
+  // Siempre retorna los festivos del calendario ADMIN (son globales para todos)
+  return (_calEsc.adminDatos?.festivos || []).map(f => f.fecha);
+}
+
+function _calEscRenderizarFestivos() {
+  const c = document.getElementById('cal-esc-festivos');
+  if (!c) return;
+  const esAdmin = _calEscEsAdmin();
+  // Siempre mostrar los festivos del admin (son los oficiales)
+  const festivos = (_calEsc.adminDatos?.festivos || []).slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  c.innerHTML = `
+    <div style="background:#FFF8E1;border:1.5px solid #FFD54F;border-radius:12px;padding:14px 16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${festivos.length || esAdmin ? '12px' : '0'};">
+        <h3 style="margin:0;font-size:0.93rem;font-weight:700;color:#E65100;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:18px;color:#FF6F00;">event_busy</span>
+          Días Festivos / No Lectivos
+          <span style="background:#FF6F00;color:#fff;font-size:0.68rem;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:4px;">${festivos.length}</span>
+        </h3>
+        ${esAdmin ? `<button onclick="_calEscModalFestivo()"
+          style="background:#E65100;color:#fff;border:none;border-radius:20px;padding:5px 12px;
+                 font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:14px;">add</span> Agregar
+        </button>` : ''}
+      </div>
+      ${festivos.length === 0
+        ? `<p style="color:#9E9E9E;font-size:0.82rem;margin:0;${esAdmin ? '' : 'text-align:center;padding:4px 0;'}">
+             ${esAdmin ? 'Sin días festivos registrados. Agrégalos para que se excluyan automáticamente de la planificación.' : 'No hay días festivos registrados.'}
+           </p>`
+        : `<div style="display:flex;flex-wrap:wrap;gap:6px;">
+             ${festivos.map((f, i) => {
+               const fecha = new Date(f.fecha + 'T00:00:00');
+               const label = fecha.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+               return `<div style="display:flex;align-items:center;gap:5px;background:#fff;border:1.5px solid #FFCC02;
+                             border-radius:20px;padding:4px 10px;font-size:0.78rem;color:#212121;">
+                 <span class="material-icons" style="font-size:13px;color:#E65100;">block</span>
+                 <span style="font-weight:700;color:#E65100;">${label}</span>
+                 ${f.motivo ? `<span style="color:#78909C;">— ${escapeHTML(f.motivo)}</span>` : ''}
+                 ${esAdmin ? `<button onclick="_calEscEliminarFestivo(${i})" title="Eliminar"
+                   style="background:none;border:none;cursor:pointer;color:#B71C1C;padding:0 2px;line-height:1;margin-left:2px;">
+                   <span class="material-icons" style="font-size:14px;">close</span>
+                 </button>` : ''}
+               </div>`;
+             }).join('')}
+           </div>`
+      }
+    </div>`;
+}
+
+function _calEscModalFestivo() {
+  document.getElementById('cal-esc-modal-fest')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'cal-esc-modal-fest';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
+      <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#E65100;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:18px;">event_busy</span> Nuevo día festivo / no lectivo
+      </h3>
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Fecha</label>
+      <input type="date" id="cfest-fecha"
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;" />
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Motivo / descripción (opcional)</label>
+      <input type="text" id="cfest-motivo" placeholder="Ej: Semana Santa, Día de la Independencia…"
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;" />
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('cal-esc-modal-fest').remove()"
+          style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
+        <button onclick="_calEscGuardarFestivo()"
+          style="background:#E65100;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('cfest-fecha')?.focus(), 50);
+}
+
+function _calEscGuardarFestivo() {
+  const fecha  = document.getElementById('cfest-fecha')?.value;
+  const motivo = document.getElementById('cfest-motivo')?.value.trim();
+  if (!fecha) { mostrarToast('Selecciona una fecha', 'error'); return; }
+  const datos = _calEsc.adminDatos || _calEscDatosVacios();
+  if (!datos.festivos) datos.festivos = [];
+  if (datos.festivos.find(f => f.fecha === fecha)) {
+    mostrarToast('Esa fecha ya está registrada como festivo', 'error'); return;
+  }
+  datos.festivos.push({ id: uid(), fecha, motivo: motivo || '' });
+  _calEsc.adminDatos = datos;
+  document.getElementById('cal-esc-modal-fest')?.remove();
+  _calEscRenderizarFestivos();
+  mostrarToast('Día festivo agregado. Recuerda publicar los cambios.', 'success');
+}
+
+function _calEscEliminarFestivo(idx) {
+  if (!confirm('¿Eliminar este día festivo?')) return;
+  const datos = _calEsc.adminDatos || _calEscDatosVacios();
+  if (!datos.festivos) return;
+  datos.festivos.splice(idx, 1);
+  _calEsc.adminDatos = datos;
+  _calEscRenderizarFestivos();
+  mostrarToast('Día festivo eliminado. Recuerda publicar los cambios.', 'info');
 }
 
 // ── Cambiar entre calendario admin y personal ────────────────────────
