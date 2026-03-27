@@ -13313,6 +13313,92 @@ function cargarPlanificacionGuardada(id) {
 
 
 // ════════════════════════════════════════════════════════════════════
+// EXPORTAR PLANIFICACIÓN DESDE LISTADO (sin cargarla)
+// ════════════════════════════════════════════════════════════════════
+async function exportarPlanDesdeListado(id) {
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === id);
+  if (!reg || !reg.planificacion) { mostrarToast('Planificación no encontrada', 'error'); return; }
+
+  // Guardar estado actual y poner temporalmente la planificación a exportar
+  const backupPlan = planificacion;
+  try {
+    planificacion = JSON.parse(JSON.stringify(reg.planificacion));
+    mostrarToast('Exportando a Word...', 'info');
+    await _exportarConPlantillaCentro() || _exportarWordHTML();
+  } catch (e) {
+    console.warn('[ExportListado] Error:', e);
+    mostrarToast('Error al exportar: ' + e.message, 'error');
+  } finally {
+    planificacion = backupPlan;
+  }
+}
+
+function _exportarWordHTML() {
+  // Generar vista previa temporal para export HTML-Word
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const ec = planificacion.elementosCapacidad || [];
+  const acts = planificacion.actividades || [];
+  const nivelLabel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+
+  // Tabla EC
+  let tablaEC = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
+  tablaEC += '<tr style="background:#1565C0;color:#fff;"><th>Código</th><th>Enunciado del EC</th><th>Nivel</th><th>Horas</th></tr>';
+  ec.forEach(e => {
+    tablaEC += '<tr><td>' + (e.codigo || '') + '</td><td>' + (e.enunciado || '') + '</td><td>' + (nivelLabel[e.nivel] || '') + '</td><td>' + (e.horasAsignadas || '') + 'h</td></tr>';
+  });
+  tablaEC += '</table>';
+
+  // Tabla Actividades agrupada por EC
+  const _seq = {};
+  const groups = [];
+  const gmap = {};
+  acts.filter(a => !a.esComplementario).forEach(a => {
+    const c = a.ecCodigo || '';
+    if (!gmap[c]) { gmap[c] = { code: c, acts: [] }; groups.push(gmap[c]); }
+    _seq[c] = (_seq[c] || 0);
+    gmap[c].acts.push({ ...a, num: _getActNumero(c, _seq[c]) });
+    _seq[c]++;
+  });
+  let tablaActs = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
+  tablaActs += '<tr style="background:#1565C0;color:#fff;"><th>Elemento de Capacidad (EC)</th><th>Nivel de Dominio</th><th>Enunciado de Actividad</th><th>Fecha</th><th>Instrumento</th></tr>';
+  groups.forEach(g => {
+    const ecInfo = ec.find(e => e.codigo === g.code);
+    g.acts.forEach((a, i) => {
+      tablaActs += '<tr>';
+      if (i === 0) {
+        tablaActs += '<td rowspan="' + g.acts.length + '" style="vertical-align:top;font-weight:bold;">' + (g.code || '') + '<br>' + (ecInfo?.enunciado || '') + '</td>';
+        tablaActs += '<td rowspan="' + g.acts.length + '" style="vertical-align:middle;text-align:center;">' + (nivelLabel[ecInfo?.nivel] || '') + '</td>';
+      }
+      tablaActs += '<td>' + a.num + ': ' + (a.enunciado || '') + '</td>';
+      tablaActs += '<td>' + (a.fechaStr || '') + '</td>';
+      tablaActs += '<td>' + (a.instrumento?.tipoLabel || '') + '</td>';
+      tablaActs += '</tr>';
+    });
+  });
+  tablaActs += '</table>';
+
+  const contenido = '<h2 style="text-align:center;">Planificación por RA</h2>'
+    + '<p><b>Módulo Formativo:</b> ' + (dg.moduloFormativo || '') + '</p>'
+    + '<p><b>Docente:</b> ' + (dg.nombreDocente || '') + '</p>'
+    + '<p><b>RA:</b> ' + (ra.descripcion || '') + '</p>'
+    + '<h3>Elementos de Capacidad</h3>' + tablaEC
+    + '<h3>Actividades de Enseñanza/Aprendizaje</h3>' + tablaActs;
+
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"/><style>body{font-family:Calibri,Arial;font-size:11pt;margin:2cm;}table{width:100%;border-collapse:collapse;}th,td{border:1pt solid #999;padding:6pt;font-size:10pt;}th{background:#1565C0;color:#fff;}</style></head><body>' + contenido + '</body></html>';
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const nombre = 'Planificacion_RA_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.doc';
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = nombre;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  mostrarToast('Planificación exportada', 'success');
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════════════
 // DUPLICAR PLANIFICACIÓN
 // ════════════════════════════════════════════════════════════════════
 let _dupPlanId = null; // id del registro original a duplicar
@@ -13728,6 +13814,9 @@ function renderizarBiblioteca() {
         </button>
         <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación">
           <span class="material-icons">content_copy</span> Duplicar
+        </button>
+        <button class="btn-pln-export" onclick="exportarPlanDesdeListado('${reg.id}')" title="Exportar a Word" style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:15px;">description</span> Word
         </button>
         <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar">
           <span class="material-icons">delete_outline</span>
