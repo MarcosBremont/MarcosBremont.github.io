@@ -13805,20 +13805,20 @@ function renderizarBiblioteca() {
         ${horasTotal ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
         ${dg.valorRA ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
       </div>
-      <div class="pln-card-actions">
-        <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')">
+      <div class="pln-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')" style="width:100%;justify-content:center;">
           <span class="material-icons">folder_open</span> Cargar
         </button>
-        <button class="btn-pln-asignar" onclick="asignarPlanACurso('${reg.id}')" title="Asignar a un curso">
+        <button class="btn-pln-asignar" onclick="asignarPlanACurso('${reg.id}')" title="Asignar a un curso" style="width:100%;justify-content:center;">
           <span class="material-icons">link</span> Asignar curso
         </button>
-        <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación">
+        <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación" style="width:100%;justify-content:center;">
           <span class="material-icons">content_copy</span> Duplicar
         </button>
-        <button class="btn-pln-export" onclick="exportarPlanDesdeListado('${reg.id}')" title="Exportar a Word" style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+        <button class="btn-pln-export" onclick="exportarPlanDesdeListado('${reg.id}')" title="Exportar a Word" style="width:100%;justify-content:center;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:15px;">description</span> Word
         </button>
-        <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar">
+        <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar" style="width:100%;justify-content:center;grid-column:1/-1;">
           <span class="material-icons">delete_outline</span>
         </button>
       </div>`;
