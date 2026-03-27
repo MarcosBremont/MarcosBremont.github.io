@@ -21295,45 +21295,105 @@ function _calEscRenderizarFestivos() {
 
 function _calEscModalFestivo() {
   document.getElementById('cal-esc-modal-fest')?.remove();
+  const hoy = new Date().toISOString().slice(0, 10);
   const overlay = document.createElement('div');
   overlay.id = 'cal-esc-modal-fest';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;padding:16px;';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
-      <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#E65100;display:flex;align-items:center;gap:6px;">
-        <span class="material-icons" style="font-size:18px;">event_busy</span> Nuevo día festivo / no lectivo
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
+      <h3 style="margin:0 0 6px;font-size:1rem;font-weight:700;color:#E65100;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:18px;">event_busy</span> Agregar días festivos / no lectivos
       </h3>
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Fecha</label>
-      <input type="date" id="cfest-fecha"
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;" />
+      <p style="margin:0 0 16px;font-size:0.78rem;color:#78909C;">Puedes seleccionar un rango de fechas y se agregarán todos los días de una vez.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Desde</label>
+          <input type="date" id="cfest-desde" value="${hoy}"
+            style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;box-sizing:border-box;"
+            oninput="_calEscPreviewFestivos()" />
+        </div>
+        <div>
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Hasta</label>
+          <input type="date" id="cfest-hasta" value="${hoy}"
+            style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;box-sizing:border-box;"
+            oninput="_calEscPreviewFestivos()" />
+        </div>
+      </div>
+
+      <div id="cfest-preview" style="min-height:32px;margin-bottom:12px;font-size:0.78rem;color:#546E7A;"></div>
+
       <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Motivo / descripción (opcional)</label>
-      <input type="text" id="cfest-motivo" placeholder="Ej: Semana Santa, Día de la Independencia…"
+      <input type="text" id="cfest-motivo" placeholder="Ej: Semana Santa, Vacaciones de Pascua…"
         style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;" />
+
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="document.getElementById('cal-esc-modal-fest').remove()"
           style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
         <button onclick="_calEscGuardarFestivo()"
-          style="background:#E65100;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;">Guardar</button>
+          style="background:#E65100;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">save</span> Guardar
+        </button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  setTimeout(() => document.getElementById('cfest-fecha')?.focus(), 50);
+  setTimeout(() => { _calEscPreviewFestivos(); document.getElementById('cfest-desde')?.focus(); }, 50);
+}
+
+function _calEscPreviewFestivos() {
+  const desde  = document.getElementById('cfest-desde')?.value;
+  const hasta  = document.getElementById('cfest-hasta')?.value;
+  const prev   = document.getElementById('cfest-preview');
+  if (!prev) return;
+  if (!desde || !hasta || hasta < desde) {
+    prev.innerHTML = '<span style="color:#E53935;">La fecha "Hasta" debe ser igual o posterior a "Desde".</span>';
+    return;
+  }
+  const dias = _calEscRangoDias(desde, hasta);
+  if (dias.length === 0) { prev.innerHTML = ''; return; }
+  const ya = (_calEsc.adminDatos?.festivos || []).map(f => f.fecha);
+  const nuevos  = dias.filter(d => !ya.includes(d));
+  const repetidos = dias.length - nuevos.length;
+  const etiquetas = nuevos.slice(0, 6).map(d => {
+    const f = new Date(d + 'T00:00:00');
+    return f.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' });
+  });
+  const mas = nuevos.length > 6 ? ` y ${nuevos.length - 6} más` : '';
+  prev.innerHTML = `
+    <div style="background:#FFF3E0;border-radius:8px;padding:8px 10px;border:1px solid #FFCC80;">
+      <strong style="color:#E65100;">${nuevos.length} día${nuevos.length !== 1 ? 's' : ''}</strong> a agregar:
+      <span style="color:#546E7A;">${etiquetas.join(', ')}${mas}</span>
+      ${repetidos ? `<br><span style="color:#9E9E9E;font-size:0.74rem;">(${repetidos} ya registrado${repetidos !== 1 ? 's' : ''}, se omitirán)</span>` : ''}
+    </div>`;
+}
+
+function _calEscRangoDias(desde, hasta) {
+  const dias = [];
+  const cursor = new Date(desde + 'T00:00:00');
+  const fin    = new Date(hasta + 'T00:00:00');
+  while (cursor <= fin) {
+    dias.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dias;
 }
 
 function _calEscGuardarFestivo() {
-  const fecha  = document.getElementById('cfest-fecha')?.value;
+  const desde  = document.getElementById('cfest-desde')?.value;
+  const hasta  = document.getElementById('cfest-hasta')?.value;
   const motivo = document.getElementById('cfest-motivo')?.value.trim();
-  if (!fecha) { mostrarToast('Selecciona una fecha', 'error'); return; }
+  if (!desde || !hasta) { mostrarToast('Selecciona las fechas', 'error'); return; }
+  if (hasta < desde) { mostrarToast('La fecha "Hasta" debe ser igual o posterior a "Desde"', 'error'); return; }
   const datos = _calEsc.adminDatos || _calEscDatosVacios();
   if (!datos.festivos) datos.festivos = [];
-  if (datos.festivos.find(f => f.fecha === fecha)) {
-    mostrarToast('Esa fecha ya está registrada como festivo', 'error'); return;
-  }
-  datos.festivos.push({ id: uid(), fecha, motivo: motivo || '' });
+  const ya = datos.festivos.map(f => f.fecha);
+  const dias = _calEscRangoDias(desde, hasta).filter(d => !ya.includes(d));
+  if (!dias.length) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
+  dias.forEach(fecha => datos.festivos.push({ id: uid(), fecha, motivo: motivo || '' }));
   _calEsc.adminDatos = datos;
   document.getElementById('cal-esc-modal-fest')?.remove();
   _calEscRenderizarFestivos();
-  mostrarToast('Día festivo agregado. Recuerda publicar los cambios.', 'success');
+  mostrarToast(`${dias.length} día${dias.length !== 1 ? 's' : ''} festivo${dias.length !== 1 ? 's' : ''} agregado${dias.length !== 1 ? 's' : ''}. Recuerda publicar los cambios.`, 'success');
 }
 
 function _calEscEliminarFestivo(idx) {
