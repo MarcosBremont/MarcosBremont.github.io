@@ -2881,9 +2881,9 @@ function renderizarActividades(listaActividades) {
 }
 
 function _actualizarResumenValores(listaActividades) {
-  // Eliminar resumen anterior si existe
-  const existente = document.getElementById('resumen-valores-act');
-  if (existente) existente.remove();
+  // Eliminar resumen anterior y su sub-label si existen
+  document.getElementById('resumen-valores-act')?.remove();
+  document.getElementById('resumen-ia-gen-label')?.remove();
 
   const tbody = document.getElementById('tabla-actividades-body');
   if (!tbody || !listaActividades || listaActividades.length === 0) return;
@@ -2936,6 +2936,7 @@ function _actualizarResumenValores(listaActividades) {
         ? `Generado con IA — <strong>${_iaProveedorLabel}</strong>`
         : 'Generado localmente (sin IA)';
       const subLabel = document.createElement('div');
+      subLabel.id = 'resumen-ia-gen-label';
       subLabel.style.cssText = `display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;color:${labelColor};background:${labelBg};border:1.5px solid ${labelBorde};margin-top:6px;width:fit-content;`;
       subLabel.innerHTML = `<span class="material-icons" style="font-size:14px;">${labelIcono}</span> ${labelTexto}`;
       tabla.parentNode.insertBefore(subLabel, divResumen.nextSibling);
