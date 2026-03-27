@@ -16588,9 +16588,9 @@ async function construirPromptBase(dg, ra) {
 }
 
 async function construirPromptInstrumentos(dg, ra, actividades, elementosCapacidad) {
-  const acts = actividades.map(a => {
+  const acts = actividades.map((a, i) => {
     const ec = elementosCapacidad.find(e => e.codigo === a.ecCodigo) || {};
-    return `- [${a.ecCodigo}] "${a.enunciado}" | tipo: ${a.instrumento} | nivel: ${ec.nivel || ''}`;
+    return `${i + 1}. [${a.ecCodigo}] Actividad: "${a.enunciado}" | EC: "${ec.enunciado || ''}" | tipo instrumento: ${a.instrumento} | nivel Bloom: ${ec.nivel || ''}`;
   }).join('\n');
 
   return _getPromptResuelto('prompt_instrumentos', {
@@ -16776,7 +16776,7 @@ async function generarConGroq(dg, ra, fechasClase) {
   // --- LLAMADA 2: Todos los instrumentos en UNA sola llamada batch ---
   try {
     mostrarToast('🟢 Generando instrumentos y sesiones (Groq)…', 'info');
-    const promptInst = construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+    const promptInst = await construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
     const instData = await _llamarGroqConFallback(promptInst, 'Instrumentos');
     if (instData && instData.detalles && Array.isArray(instData.detalles)) {
       console.log(`[IA] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
@@ -22721,13 +22721,19 @@ const _DEFAULT_PROMPT_INSTRUMENTOS = `Docente experto en educación técnico pro
 
 MÓDULO: {{moduloFormativo}} | RA: {{raDescripcion}}
 
-Para cada actividad genera SOLO el instrumento (sin sesión). Criterios cortos (máx 10 palabras c/u).
-ACTIVIDADES:
+ACTIVIDADES (genera un instrumento por cada una):
 {{actividadesLista}}
 
+REGLAS OBLIGATORIAS:
+- Cada criterio debe ser ESPECÍFICO al contenido de esa actividad (menciona el tema real, no términos genéricos).
+- PROHIBIDO usar frases genéricas como "Identifica correctamente los conceptos", "Nombra y define términos", "Enumera los elementos principales", "Recuerda y reproduce información". Eso está MAL.
+- CORRECTO: criterios que nombren el tema exacto de la actividad. Ejemplo si la actividad es sobre JavaScript: "Identifica las funciones de JavaScript utilizadas en la actividad", "Enumera los eventos DOM empleados en el ejercicio".
+- El título del instrumento debe incluir el tema de la actividad.
+- Máx 12 palabras por criterio.
+
 JSON (exactamente este formato, SIN campos extra):
-{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título corto","instrucciones":"Instrucción breve.","criterios":["Criterio 1","Criterio 2","Criterio 3","Criterio 4","Criterio 5"]}}]}
-Para rúbrica: {"criterio":"...","descriptores":["Excelente: breve","Bueno: breve","En proceso: breve","Insuficiente: breve"]}
+{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título específico al tema","instrucciones":"Instrucción breve.","criterios":["Criterio específico 1","Criterio específico 2","Criterio específico 3","Criterio específico 4","Criterio específico 5"]}}]}
+Para rúbrica: {"criterio":"Criterio específico al tema","descriptores":["Excelente: descripción concreta","Bueno: descripción concreta","En proceso: descripción concreta","Insuficiente: descripción concreta"]}
 IMPORTANTE: Responde COMPACTO. No incluyas sesionDiaria. Solo instrumentoDetalle.`;
 
 const _DEFAULT_PROMPT_DETALLE_UNO = `Eres docente experto en educación técnico-profesional. Responde SOLO con JSON válido, sin markdown.
