@@ -3972,64 +3972,63 @@ function renderizarVistaPrevia() {
 
 
 
-  // Tabla de actividades
+  // Tabla de actividades agrupada por EC (con rowspan)
+  const nivelLabelAct = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
-
-
-  // Precalcular índice dentro del EC para cada actividad
+  // Agrupar actividades por EC manteniendo orden
   const _actsSeqVP = {};
-
-  let tablaActs = `<table class="vp-table">
-
-
-
-    <thead><tr><th>EC</th><th>N°</th><th>Actividad</th><th>Fecha</th><th>Instrumento</th></tr></thead>
-
-
-
-    <tbody>`;
-
-
-
-  acts.forEach(a => {
-    let numLabel = '—';
-    if (!a.esComplementario) {
-      _actsSeqVP[a.ecCodigo] = (_actsSeqVP[a.ecCodigo] || 0);
-      numLabel = _getActNumero(a.ecCodigo, _actsSeqVP[a.ecCodigo]);
-      _actsSeqVP[a.ecCodigo]++;
+  const ecGroups = [];
+  const ecGroupMap = {};
+  acts.filter(a => !a.esComplementario).forEach(a => {
+    const code = a.ecCodigo || '';
+    if (!ecGroupMap[code]) {
+      ecGroupMap[code] = { code, acts: [] };
+      ecGroups.push(ecGroupMap[code]);
     }
-
-    tablaActs += `<tr>
-
-
-
-      <td><code>${a.ecCodigo}</code></td>
-
-
-
-      <td style="text-align:center;white-space:nowrap;font-size:0.82rem;font-weight:700;color:#546E7A;">${numLabel}</td>
-
-
-
-      <td>${a.enunciado}</td>
-
-
-
-      <td>${a.fechaStr}</td>
-
-
-
-      <td>${a.instrumento?.tipoLabel || ''}</td>
-
-
-
-    </tr>`;
-
-
-
+    _actsSeqVP[code] = (_actsSeqVP[code] || 0);
+    ecGroupMap[code].acts.push({ ...a, numLabel: _getActNumero(code, _actsSeqVP[code]) });
+    _actsSeqVP[code]++;
   });
 
+  let tablaActs = `<table class="vp-table">
+    <thead><tr>
+      <th>Elemento de Capacidad (EC)</th>
+      <th>Nivel de Dominio de los EC</th>
+      <th>Enunciado de las Actividades de Enseñanza/Aprendizaje</th>
+      <th>Fecha de Realización (Actividades)</th>
+      <th>Instrumento de evaluación</th>
+    </tr></thead>
+    <tbody>`;
 
+  ecGroups.forEach(group => {
+    const ecInfo = ec.find(e => e.codigo === group.code);
+    const ecEnunciado = ecInfo ? `${ecInfo.codigo}\n${ecInfo.enunciado || ''}` : group.code;
+    const ecNivel = ecInfo ? (nivelLabelAct[ecInfo.nivel] || ecInfo.nivel || '') : '';
+    const rowspan = group.acts.length;
+
+    group.acts.forEach((a, i) => {
+      tablaActs += `<tr>`;
+      if (i === 0) {
+        tablaActs += `<td rowspan="${rowspan}" style="vertical-align:top;font-weight:600;"><code>${escapeHTML(group.code)}</code><br>${escapeHTML(ecInfo?.enunciado || '')}</td>`;
+        tablaActs += `<td rowspan="${rowspan}" style="vertical-align:middle;text-align:center;">${escapeHTML(ecNivel)}</td>`;
+      }
+      tablaActs += `<td>${escapeHTML(a.numLabel + ': ' + (a.enunciado || ''))}</td>`;
+      tablaActs += `<td style="white-space:nowrap;">${escapeHTML(a.fechaStr || '')}</td>`;
+      tablaActs += `<td>${escapeHTML(a.instrumento?.tipoLabel || '')}</td>`;
+      tablaActs += `</tr>`;
+    });
+  });
+
+  // Complementarios al final sin agrupación EC
+  acts.filter(a => a.esComplementario).forEach(a => {
+    tablaActs += `<tr>
+      <td style="font-style:italic;">Complementario</td>
+      <td style="text-align:center;">—</td>
+      <td>${escapeHTML(a.enunciado || '')}</td>
+      <td style="white-space:nowrap;">${escapeHTML(a.fechaStr || '')}</td>
+      <td>${escapeHTML(a.instrumento?.tipoLabel || '')}</td>
+    </tr>`;
+  });
 
   tablaActs += `</tbody></table>`;
 
@@ -4436,6 +4435,7 @@ async function _exportarConPlantillaCentro() {
 
   // Construir tabla de EC + Actividades
   // Construir filas para loop de docxtemplater (tabla en Word)
+  const nivelLabelTpl = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
   const actividades = [];
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
@@ -4443,7 +4443,7 @@ async function _exportarConPlantillaCentro() {
       actividades.push({
         ec_codigo: ec.codigo || '',
         ec_enunciado: i === 0 ? `${ec.codigo}\n${ec.enunciado || ''}` : '',
-        ec_nivel: i === 0 ? (ec.nivel || ec.nivelBloom || '') : '',
+        ec_nivel: i === 0 ? (nivelLabelTpl[ec.nivel] || ec.nivel || ec.nivelBloom || '') : '',
         act_numero: _getActNumero(ec.codigo, i),
         act_enunciado: `${_getActNumero(ec.codigo, i)}: ${a.enunciado || ''}`,
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
