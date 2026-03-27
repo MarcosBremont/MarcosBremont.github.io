@@ -2924,6 +2924,22 @@ function _actualizarResumenValores(listaActividades) {
   const tabla = tbody.closest('table');
   if (tabla && tabla.parentNode) {
     tabla.parentNode.insertBefore(divResumen, tabla.nextSibling);
+
+    // Mostrar sub-label de origen de generación
+    if (_iaProveedorLabel) {
+      const esIA = _iaProveedorLabel !== 'local';
+      const labelColor = esIA ? '#1565C0' : '#546E7A';
+      const labelBg    = esIA ? '#E3F2FD' : '#ECEFF1';
+      const labelBorde = esIA ? '#90CAF9' : '#CFD8DC';
+      const labelIcono = esIA ? 'smart_toy' : 'code';
+      const labelTexto = esIA
+        ? `Generado con IA — <strong>${_iaProveedorLabel}</strong>`
+        : 'Generado localmente (sin IA)';
+      const subLabel = document.createElement('div');
+      subLabel.style.cssText = `display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;color:${labelColor};background:${labelBg};border:1.5px solid ${labelBorde};margin-top:6px;width:fit-content;`;
+      subLabel.innerHTML = `<span class="material-icons" style="font-size:14px;">${labelIcono}</span> ${labelTexto}`;
+      tabla.parentNode.insertBefore(subLabel, divResumen.nextSibling);
+    }
   }
 }
 
@@ -17142,6 +17158,28 @@ function aplicarRespuestaIA(aiData, fechasClase) {
 // SOBRESCRIBIR generarPlanificacion PARA USAR IA
 // ─────────────────────────────────────────────────────────────
 
+// ── Label de generación IA ───────────────────────────────────────────
+let _iaProveedorLabel = null; // null = no generado aún
+
+function _mostrarLabelGeneracion(proveedor) {
+  _iaProveedorLabel = proveedor;
+  const el = document.getElementById('ia-gen-label');
+  if (!el) return;
+  if (!proveedor) { el.style.display = 'none'; return; }
+
+  const esIA = proveedor !== 'local';
+  const icono  = esIA ? 'smart_toy' : 'code';
+  const color  = esIA ? '#1565C0' : '#546E7A';
+  const bg     = esIA ? '#E3F2FD' : '#ECEFF1';
+  const borde  = esIA ? '#90CAF9' : '#CFD8DC';
+  const texto  = esIA
+    ? `Generado con IA — <strong>${proveedor}</strong>`
+    : 'Generado localmente (sin IA)';
+
+  el.style.cssText = `display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;color:${color};background:${bg};border:1.5px solid ${borde};`;
+  el.innerHTML = `<span class="material-icons" style="font-size:14px;">${icono}</span> ${texto}`;
+}
+
 // Guardar referencia al generador local original
 const _generarPlanificacionLocal = generarPlanificacion;
 
@@ -17180,6 +17218,7 @@ generarPlanificacion = async function () {
   if (!groqKey && !openrouterKey) {
     mostrarToast('💡 Sin claves de IA: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
     _generarPlanificacionLocal();
+    _mostrarLabelGeneracion('local');
     return;
   }
 
@@ -17246,6 +17285,7 @@ generarPlanificacion = async function () {
     }
 
     console.log(`[IA] 🎯 Planificación generada con ${proveedorUsado} — ${aiData.elementosCapacidad.length} ECs, ${aiData.actividades.length} actividades`);
+    _mostrarLabelGeneracion(proveedorUsado);
 
     // Aplicar resultados
     aplicarRespuestaIA(aiData, fechasClase);
@@ -17297,6 +17337,7 @@ generarPlanificacion = async function () {
     }
     // Siempre usar generacion local como fallback
     console.log('[IA] 🔄 Fallback: usando generación LOCAL');
+    _mostrarLabelGeneracion('local');
     _generarPlanificacionLocal();
   } finally {
     // Restaurar botón
