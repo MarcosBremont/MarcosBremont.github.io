@@ -4445,7 +4445,7 @@ async function _exportarConPlantillaCentro() {
         ec_enunciado: i === 0 ? `${ec.codigo}\n${ec.enunciado || ''}` : '',
         ec_nivel: i === 0 ? (ec.nivel || ec.nivelBloom || '') : '',
         act_numero: _getActNumero(ec.codigo, i),
-        act_enunciado: a.enunciado || '',
+        act_enunciado: `${_getActNumero(ec.codigo, i)}: ${a.enunciado || ''}`,
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
         act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || ''
       });
