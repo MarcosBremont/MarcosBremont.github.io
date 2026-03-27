@@ -494,38 +494,45 @@ function _getInstrColor(tipo) { return INSTRUMENTOS[tipo]?.color || '#616161'; }
 function _criteriosContextualizados(nivel, actividad) {
   // Extraer tema de la actividad (quitar prefijo "Act X.X.X: ")
   const enunciado = (actividad?.enunciado || '').replace(/^Act\s*\d+[\.\d]*:\s*/i, '').trim();
-  const tema = enunciado || 'la actividad';
-  // Versión corta del tema (máx 60 chars)
-  const temaCorto = tema.length > 60 ? tema.substring(0, 57) + '...' : tema;
+  if (!enunciado) return criteriosInstrumento[nivel] || criteriosInstrumento.conocimiento;
+
+  // Extraer el verbo principal y el objeto/tema
+  // Ej: "Investigar y enumerar los elementos de programación front-end necesarios para crear una página web dinámica"
+  // → verbo: "Investigar y enumerar", objeto: "los elementos de programación front-end"
+  const palabras = enunciado.split(/\s+/);
+  // Tomar las primeras ~8 palabras significativas como "tema corto"
+  const stopwords = new Set(['los','las','el','la','de','del','en','un','una','y','o','para','por','que','con','al','a','su','sus','se','como','es','son','lo','le','más','esta','este','estos','estas','pero','sin','sobre','entre','desde','hasta','hacia','según','durante','mediante','necesarios','necesarias','necesario','necesaria']);
+  const significativas = palabras.filter(p => !stopwords.has(p.toLowerCase()) && p.length > 2);
+  const tema = significativas.slice(0, 6).join(' ');
 
   const plantillas = {
     conocimiento: [
-      `Identifica correctamente los elementos clave de: ${temaCorto}`,
-      `Nombra y define los términos técnicos relacionados con: ${temaCorto}`,
-      `Enumera los componentes principales involucrados en: ${temaCorto}`,
-      `Reconoce las características esenciales de: ${temaCorto}`,
-      `Organiza la información recopilada sobre: ${temaCorto}`
+      `Identifica los ${tema} solicitados en la actividad`,
+      `Define con precisión los conceptos de ${tema}`,
+      `Enumera de forma completa los ${tema} requeridos`,
+      `Clasifica correctamente los ${tema} según sus características`,
+      `Presenta la información sobre ${tema} de forma organizada`
     ],
     comprension: [
-      `Explica con sus propias palabras el proceso de: ${temaCorto}`,
-      `Establece relaciones entre los elementos de: ${temaCorto}`,
-      `Distingue las diferencias entre los conceptos de: ${temaCorto}`,
-      `Interpreta correctamente los resultados de: ${temaCorto}`,
-      `Resume las ideas principales sobre: ${temaCorto}`
+      `Explica con sus palabras los ${tema} estudiados`,
+      `Compara y relaciona los ${tema} entre sí`,
+      `Interpreta correctamente los ${tema} presentados`,
+      `Distingue las características principales de ${tema}`,
+      `Sintetiza la información sobre ${tema} conservando lo esencial`
     ],
     aplicacion: [
-      `Ejecuta correctamente los pasos para: ${temaCorto}`,
-      `Aplica los conceptos teóricos en la práctica de: ${temaCorto}`,
-      `Utiliza las herramientas adecuadas para: ${temaCorto}`,
-      `Resuelve la situación planteada sobre: ${temaCorto}`,
-      `Produce un resultado que cumple con lo requerido en: ${temaCorto}`
+      `Aplica correctamente los ${tema} en la práctica`,
+      `Ejecuta los procedimientos de ${tema} paso a paso`,
+      `Utiliza las herramientas adecuadas para ${tema}`,
+      `Resuelve situaciones prácticas relacionadas con ${tema}`,
+      `Produce resultados funcionales aplicando ${tema}`
     ],
     actitudinal: [
-      `Muestra disposición positiva al realizar: ${temaCorto}`,
-      `Colabora con sus compañeros durante: ${temaCorto}`,
-      `Respeta las normas de trabajo al ejecutar: ${temaCorto}`,
-      `Demuestra responsabilidad en la entrega de: ${temaCorto}`,
-      `Reflexiona sobre su desempeño en: ${temaCorto}`
+      `Muestra interés y participación activa en ${tema}`,
+      `Colabora con sus compañeros en actividades de ${tema}`,
+      `Cumple con las normas establecidas para ${tema}`,
+      `Entrega puntualmente los trabajos de ${tema}`,
+      `Reflexiona sobre su aprendizaje en ${tema}`
     ]
   };
   return plantillas[nivel] || plantillas.conocimiento;
