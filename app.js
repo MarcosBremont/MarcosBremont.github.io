@@ -4435,15 +4435,20 @@ async function _exportarConPlantillaCentro() {
 
   // Construir tabla de EC + Actividades
   // Construir filas para loop de docxtemplater (tabla en Word)
+  // Usamos marcadores __VMERGE__ para celdas que deben fusionarse verticalmente
+  // y __VSTART__ para la primera celda del grupo (restart del merge)
   const nivelLabelTpl = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
   const actividades = [];
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
+    const needsMerge = actsEC.length > 1;
     actsEC.forEach((a, i) => {
+      const ecText = `${ec.codigo}\n${ec.enunciado || ''}`;
+      const ecNivel = nivelLabelTpl[ec.nivel] || ec.nivel || ec.nivelBloom || '';
       actividades.push({
         ec_codigo: ec.codigo || '',
-        ec_enunciado: i === 0 ? `${ec.codigo}\n${ec.enunciado || ''}` : '',
-        ec_nivel: i === 0 ? (nivelLabelTpl[ec.nivel] || ec.nivel || ec.nivelBloom || '') : '',
+        ec_enunciado: i === 0 ? (needsMerge ? '__VSTART__' + ecText : ecText) : '__VMERGE__',
+        ec_nivel: i === 0 ? (needsMerge ? '__VSTART__' + ecNivel : ecNivel) : '__VMERGE__',
         act_numero: _getActNumero(ec.codigo, i),
         act_enunciado: `${_getActNumero(ec.codigo, i)}: ${a.enunciado || ''}`,
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
@@ -4506,6 +4511,50 @@ async function _exportarConPlantillaCentro() {
     nullGetter: () => ''
   });
   doc.render(data);
+
+  // Post-procesar XML para fusionar celdas verticalmente (vMerge)
+  try {
+    const docXml = doc.getZip().file('word/document.xml');
+    if (docXml) {
+      let xml = docXml.asText();
+
+      // __VSTART__ → primera celda del merge: agregar vMerge restart y quitar marcador
+      xml = xml.replace(/<w:tc>([\s\S]*?)<\/w:tc>/g, function(match) {
+        if (match.indexOf('__VSTART__') === -1 && match.indexOf('__VMERGE__') === -1) return match;
+
+        if (match.indexOf('__VSTART__') !== -1) {
+          // Primera celda del grupo: agregar vMerge restart
+          let cell = match.replace(/__VSTART__/g, '');
+          if (cell.indexOf('<w:tcPr>') !== -1) {
+            cell = cell.replace('<w:tcPr>', '<w:tcPr><w:vMerge w:val="restart"/>');
+          } else {
+            cell = cell.replace('<w:tc>', '<w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr>');
+          }
+          return cell;
+        }
+
+        if (match.indexOf('__VMERGE__') !== -1) {
+          // Celda de continuación: agregar vMerge (sin val) y vaciar contenido
+          let cell = match;
+          // Quitar todo el contenido de texto de la celda
+          cell = cell.replace(/<w:r>[\s\S]*?<\/w:r>/g, '');
+          cell = cell.replace(/__VMERGE__/g, '');
+          if (cell.indexOf('<w:tcPr>') !== -1) {
+            cell = cell.replace('<w:tcPr>', '<w:tcPr><w:vMerge/>');
+          } else {
+            cell = cell.replace('<w:tc>', '<w:tc><w:tcPr><w:vMerge/></w:tcPr>');
+          }
+          return cell;
+        }
+
+        return match;
+      });
+
+      doc.getZip().file('word/document.xml', xml);
+    }
+  } catch (e) {
+    console.warn('[Plantilla] Error post-procesando vMerge:', e);
+  }
 
   const out = doc.getZip().generate({
     type: 'blob',
