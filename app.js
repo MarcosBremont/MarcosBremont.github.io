@@ -490,62 +490,62 @@ function _getInstrColor(tipo) { return INSTRUMENTOS[tipo]?.color || '#616161'; }
 
 
 
+// Genera criterios contextualizados al enunciado de la actividad
+function _criteriosContextualizados(nivel, actividad) {
+  // Extraer tema de la actividad (quitar prefijo "Act X.X.X: ")
+  const enunciado = (actividad?.enunciado || '').replace(/^Act\s*\d+[\.\d]*:\s*/i, '').trim();
+  const tema = enunciado || 'la actividad';
+  // Versión corta del tema (máx 60 chars)
+  const temaCorto = tema.length > 60 ? tema.substring(0, 57) + '...' : tema;
+
+  const plantillas = {
+    conocimiento: [
+      `Identifica correctamente los elementos clave de: ${temaCorto}`,
+      `Nombra y define los términos técnicos relacionados con: ${temaCorto}`,
+      `Enumera los componentes principales involucrados en: ${temaCorto}`,
+      `Reconoce las características esenciales de: ${temaCorto}`,
+      `Organiza la información recopilada sobre: ${temaCorto}`
+    ],
+    comprension: [
+      `Explica con sus propias palabras el proceso de: ${temaCorto}`,
+      `Establece relaciones entre los elementos de: ${temaCorto}`,
+      `Distingue las diferencias entre los conceptos de: ${temaCorto}`,
+      `Interpreta correctamente los resultados de: ${temaCorto}`,
+      `Resume las ideas principales sobre: ${temaCorto}`
+    ],
+    aplicacion: [
+      `Ejecuta correctamente los pasos para: ${temaCorto}`,
+      `Aplica los conceptos teóricos en la práctica de: ${temaCorto}`,
+      `Utiliza las herramientas adecuadas para: ${temaCorto}`,
+      `Resuelve la situación planteada sobre: ${temaCorto}`,
+      `Produce un resultado que cumple con lo requerido en: ${temaCorto}`
+    ],
+    actitudinal: [
+      `Muestra disposición positiva al realizar: ${temaCorto}`,
+      `Colabora con sus compañeros durante: ${temaCorto}`,
+      `Respeta las normas de trabajo al ejecutar: ${temaCorto}`,
+      `Demuestra responsabilidad en la entrega de: ${temaCorto}`,
+      `Reflexiona sobre su desempeño en: ${temaCorto}`
+    ]
+  };
+  return plantillas[nivel] || plantillas.conocimiento;
+}
+
+// Criterios genéricos (fallback si no hay actividad)
 const criteriosInstrumento = {
-
-
-
   conocimiento: [
-
-
-
     "Identifica correctamente los conceptos fundamentales del tema",
-
-
-
     "Nombra y define los términos técnicos con precisión",
-
-
-
     "Enumera los elementos principales según el contenido estudiado",
-
-
-
     "Reconoce las características esenciales del objeto de estudio",
-
-
-
     "Recuerda y reproduce la información de manera organizada"
-
-
-
   ],
-
-
-
   comprension: [
-
-
-
     "Explica con sus propias palabras el concepto o proceso",
-
-
-
     "Establece relaciones entre los elementos del tema",
-
-
-
     "Distingue las diferencias y similitudes entre conceptos",
-
-
-
     "Interpreta correctamente la información presentada",
-
-
-
     "Resume el contenido conservando las ideas principales"
-
-
-
   ],
 
 
@@ -1560,7 +1560,7 @@ function generarInstrumento(actividad, nivelEC, tipoForzado) {
 }
 
 function _generarEscalaValoracion(actividad, nivel) {
-  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const criterios = _criteriosContextualizados(nivel, actividad);
   const niveles = [
     { nombre: 'Excelente', puntos: 5, clase: 'nivel-excelente' },
     { nombre: 'Muy Bueno', puntos: 4, clase: 'nivel-bueno' },
@@ -1582,7 +1582,7 @@ function _generarEscalaValoracion(actividad, nivel) {
 }
 
 function _generarEscalaEstimativa(actividad, nivel) {
-  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const criterios = _criteriosContextualizados(nivel, actividad);
   const frecuencias = [
     { nombre: 'Siempre', puntos: 4, clase: 'nivel-excelente' },
     { nombre: 'Frecuentemente', puntos: 3, clase: 'nivel-bueno' },
@@ -1603,7 +1603,7 @@ function _generarEscalaEstimativa(actividad, nivel) {
 }
 
 function _generarEscalaRango(actividad, nivel) {
-  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const criterios = _criteriosContextualizados(nivel, actividad);
   const rangos = [
     { nombre: 'Avanzado (9-10)', puntos: 10, clase: 'nivel-excelente' },
     { nombre: 'Satisfactorio (7-8)', puntos: 8, clase: 'nivel-bueno' },
@@ -1666,7 +1666,7 @@ function generarListaCotejo(actividad, nivel) {
 
 
 
-  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.conocimiento;
+  const criterios = _criteriosContextualizados(nivel, actividad);
 
 
 
@@ -1762,7 +1762,7 @@ function generarRubrica(actividad, nivel) {
 
 
 
-  const criterios = criteriosInstrumento[nivel] || criteriosInstrumento.aplicacion;
+  const criterios = _criteriosContextualizados(nivel, actividad);
 
 
 
