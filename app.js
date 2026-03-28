@@ -2779,14 +2779,14 @@ function renderizarActividades(listaActividades) {
     if (esComp) {
       tr.style.background = 'rgba(230,81,0,0.04)';
       tr.innerHTML = `
-      <td style="text-align:center;">
+      <td data-label="Fecha" style="text-align:center;">
         <span class="material-icons" style="font-size:20px;color:#E65100;">${act.complementarioIcono || 'star'}</span>
       </td>
-      <td><span style="font-size:0.75rem;font-weight:700;color:#E65100;background:#FFF3E0;padding:2px 8px;border-radius:10px;">COMP</span></td>
-      <td style="text-align:center;font-size:0.75rem;color:#9E9E9E;">—</td>
-      <td style="max-width:280px;font-weight:600;color:#E65100;">${escapeHTML(act.enunciado)}</td>
-      <td><span style="font-size:0.78rem;color:#78909C;">—</span></td>
-      <td style="text-align:center;">
+      <td data-label="EC"><span style="font-size:0.75rem;font-weight:700;color:#E65100;background:#FFF3E0;padding:2px 8px;border-radius:10px;">COMP</span></td>
+      <td data-label="N°" style="text-align:center;font-size:0.75rem;color:#9E9E9E;">—</td>
+      <td data-label="Actividad" style="max-width:280px;font-weight:600;color:#E65100;">${escapeHTML(act.enunciado)}</td>
+      <td data-label="Instrumento"><span style="font-size:0.78rem;color:#78909C;">—</span></td>
+      <td data-label="Valor" style="text-align:center;">
         <input type="number" class="act-valor-input" data-idx="${idx}"
           value="${act.valor != null ? act.valor : ''}"
           min="0" max="100" step="0.5" placeholder="—"
@@ -2795,7 +2795,7 @@ function renderizarActividades(listaActividades) {
                  font-size:0.88rem;text-align:center;background:transparent;
                  color:inherit;font-weight:700;">
       </td>
-      <td style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
+      <td data-label="Acciones" style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
         <div style="display:flex;gap:3px;margin-bottom:2px;">
           <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
             <span class="material-icons" style="font-size:16px;">arrow_upward</span>
@@ -2811,7 +2811,7 @@ function renderizarActividades(listaActividades) {
       `;
     } else {
     tr.innerHTML = `
-      <td>
+      <td data-label="Fecha">
         <input type="date" class="act-fecha-input" data-idx="${idx}"
           value="${(() => {
         if (!act.fecha) return '';
@@ -2826,16 +2826,16 @@ function renderizarActividades(listaActividades) {
                  font-size:0.82rem;font-family:inherit;background:transparent;
                  color:inherit;cursor:pointer;min-width:145px;">
       </td>
-      <td><code style="font-size:0.8rem;color:#1565C0;font-weight:600;">${act.ecCodigo}</code></td>
-      <td style="text-align:center;">
+      <td data-label="EC"><code style="font-size:0.8rem;color:#1565C0;font-weight:600;">${act.ecCodigo}</code></td>
+      <td data-label="N°" style="text-align:center;">
         <span style="font-size:0.75rem;font-weight:700;color:#546E7A;background:#ECEFF1;padding:2px 8px;border-radius:10px;white-space:nowrap;">${actNumero}</span>
       </td>
-      <td style="max-width:280px;">${act.enunciado}</td>
-      <td><span class="instrumento-badge ${badgeClass}">
+      <td data-label="Actividad" style="max-width:280px;">${act.enunciado}</td>
+      <td data-label="Instrumento"><span class="instrumento-badge ${badgeClass}">
         <span class="material-icons" style="font-size:14px;">${icono}</span>
         ${tipoLabel}
       </span></td>
-      <td style="text-align:center;">
+      <td data-label="Valor" style="text-align:center;">
         <input type="number" class="act-valor-input" data-idx="${idx}"
           value="${act.valor != null ? act.valor : ''}"
           min="0" max="100" step="0.5" placeholder="—"
@@ -2844,7 +2844,7 @@ function renderizarActividades(listaActividades) {
                  font-size:0.88rem;text-align:center;background:transparent;
                  color:inherit;font-weight:700;">
       </td>
-      <td style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
+      <td data-label="Acciones" style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
         <div style="display:flex;gap:3px;margin-bottom:2px;">
           <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
             <span class="material-icons" style="font-size:16px;">arrow_upward</span>

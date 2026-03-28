@@ -1688,6 +1688,90 @@ body {
   }
 }
 
+/* ---- Tabla actividades: Card layout en pantallas pequeñas ---- */
+@media (max-width: 860px) {
+  .tabla-responsiva {
+    overflow-x: visible;
+    box-shadow: none;
+  }
+
+  .tabla-actividades thead {
+    display: none;
+  }
+
+  .tabla-actividades,
+  .tabla-actividades tbody,
+  .tabla-actividades tr,
+  .tabla-actividades td {
+    display: block;
+    width: 100%;
+  }
+
+  .tabla-actividades tbody tr {
+    background: var(--color-superficie);
+    border: 1.5px solid var(--color-borde);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    box-shadow: var(--sombra-1);
+  }
+
+  .tabla-actividades tbody tr:hover {
+    background: var(--color-superficie);
+  }
+
+  .tabla-actividades td {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: none;
+  }
+
+  .tabla-actividades td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 0.72rem;
+    color: #546E7A;
+    min-width: 75px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* Hide label for actions row — it spans full width */
+  .tabla-actividades td[data-label="Acciones"]::before {
+    display: none;
+  }
+
+  .tabla-actividades td[data-label="Acciones"] {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-borde);
+    margin-top: 4px;
+  }
+
+  /* Make date input smaller in card mode */
+  .tabla-actividades .act-fecha-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 180px;
+  }
+
+  /* Valor input full width within its flex row */
+  .tabla-actividades .act-valor-input {
+    width: 70px !important;
+  }
+
+  /* Action buttons: horizontal row */
+  .tabla-actividades td[data-label="Acciones"] > div {
+    display: flex;
+    gap: 3px;
+  }
+}
+
 /* =====================================================
    @MEDIA PRINT – Impresión limpia
    ===================================================== */
