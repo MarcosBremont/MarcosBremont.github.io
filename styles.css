@@ -1049,6 +1049,14 @@ body {
   font-size: 16px;
 }
 
+.td-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  padding: 8px 6px;
+}
+
 /* ---------- Botones de Navegación ---------- */
 .nav-buttons {
   display: flex;
@@ -1689,7 +1697,7 @@ body {
 }
 
 /* ---- Tabla actividades: Card layout en pantallas pequeñas ---- */
-@media (max-width: 860px) {
+@media (max-width: 1100px) {
   .tabla-responsiva {
     overflow-x: visible;
     box-shadow: none;
@@ -1740,15 +1748,15 @@ body {
   }
 
   /* Hide label for actions row — it spans full width */
-  .tabla-actividades td[data-label="Acciones"]::before {
-    display: none;
+  .tabla-actividades .td-acciones::before {
+    display: none !important;
   }
 
-  .tabla-actividades td[data-label="Acciones"] {
+  .tabla-actividades .td-acciones {
     flex-wrap: wrap;
     justify-content: flex-start;
     gap: 6px;
-    padding-top: 6px;
+    padding-top: 8px;
     border-top: 1px solid var(--color-borde);
     margin-top: 4px;
   }
@@ -1763,12 +1771,6 @@ body {
   /* Valor input full width within its flex row */
   .tabla-actividades .act-valor-input {
     width: 70px !important;
-  }
-
-  /* Action buttons: horizontal row */
-  .tabla-actividades td[data-label="Acciones"] > div {
-    display: flex;
-    gap: 3px;
   }
 }
 

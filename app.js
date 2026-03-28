@@ -2795,8 +2795,8 @@ function renderizarActividades(listaActividades) {
                  font-size:0.88rem;text-align:center;background:transparent;
                  color:inherit;font-weight:700;">
       </td>
-      <td data-label="Acciones" style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
-        <div style="display:flex;gap:3px;margin-bottom:2px;">
+      <td data-label="Acciones" class="td-acciones">
+        <div style="display:flex;gap:3px;">
           <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
             <span class="material-icons" style="font-size:16px;">arrow_upward</span>
           </button>
@@ -2824,7 +2824,7 @@ function renderizarActividades(listaActividades) {
           title="${act.fechaStr || ''}"
           style="border:1.5px solid #90CAF9;border-radius:8px;padding:5px 8px;
                  font-size:0.82rem;font-family:inherit;background:transparent;
-                 color:inherit;cursor:pointer;min-width:145px;">
+                 color:inherit;cursor:pointer;">
       </td>
       <td data-label="EC"><code style="font-size:0.8rem;color:#1565C0;font-weight:600;">${act.ecCodigo}</code></td>
       <td data-label="N°" style="text-align:center;">
@@ -2844,8 +2844,8 @@ function renderizarActividades(listaActividades) {
                  font-size:0.88rem;text-align:center;background:transparent;
                  color:inherit;font-weight:700;">
       </td>
-      <td data-label="Acciones" style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;padding:8px 6px;">
-        <div style="display:flex;gap:3px;margin-bottom:2px;">
+      <td data-label="Acciones" class="td-acciones">
+        <div style="display:flex;gap:3px;">
           <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
             <span class="material-icons" style="font-size:16px;">arrow_upward</span>
           </button>
