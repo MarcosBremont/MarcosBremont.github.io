@@ -4754,7 +4754,12 @@ async function _exportarDiariaConPlantillaCentro() {
       proximopaso: cierre.proximopaso || '',
       estrategias: s.estrategias || '',
       recursos: s.recursos || '',
-      instrumento_evaluacion: instTextoTpl(act.instrumento)
+      instrumento_evaluacion: instTextoTpl(act.instrumento),
+      instrumento_tipo: act.instrumento?.tipoLabel || '',
+      instrumento_criterios: (act.instrumento?.criterios || []).map((c, i) => ({
+        num: String(i + 1),
+        criterio: c.indicador || c.criterio || c.texto || (typeof c === 'string' ? c : '')
+      }))
     };
 
     const zip = new PizZip(templateBuffer.slice(0));
