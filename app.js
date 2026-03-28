@@ -16111,6 +16111,86 @@ async function exportarDiariasWord() {
     return txt;
   }
 
+  // Genera tabla Word para el instrumento de evaluación
+  function _instTablaDocx(inst) {
+    if (!inst || !inst.criterios || !inst.criterios.length) return textParas(instTexto(inst));
+
+    const bdrInst = { style: BorderStyle.SINGLE, size: 3, color: '999999' };
+    const BDRS_I = { top: bdrInst, bottom: bdrInst, left: bdrInst, right: bdrInst };
+    const margI = { top: 40, bottom: 40, left: 80, right: 80 };
+
+    const mkCellI = (text, opts) => new TableCell({
+      borders: BDRS_I, margins: margI,
+      width: opts?.width ? { size: opts.width, type: WidthType.DXA } : undefined,
+      shading: opts?.bg ? { fill: opts.bg, type: ShadingType.CLEAR } : undefined,
+      verticalAlign: VerticalAlign.CENTER,
+      children: [new Paragraph({
+        alignment: opts?.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+        children: [new TextRun({ text: String(text || ''), font: 'Arial', size: opts?.size || 18, bold: !!opts?.bold, color: opts?.color || '000000' })]
+      })]
+    });
+
+    const titulo = [new Paragraph({
+      spacing: { after: 80 },
+      children: [new TextRun({ text: (inst.tipoLabel || '') + ': ' + (inst.titulo || ''), font: 'Arial', size: 20, bold: true, color: '1F3864' })]
+    })];
+
+    if (inst.tipo === 'cotejo') {
+      // Header: #, Indicador/Criterio, Logrado, No Logrado
+      const headerRow = new TableRow({ children: [
+        mkCellI('#', { bg: 'D9E1F2', bold: true, center: true, width: 500 }),
+        mkCellI('Indicador / Criterio', { bg: 'D9E1F2', bold: true }),
+        mkCellI('Logrado', { bg: 'D9E1F2', bold: true, center: true, width: 1100 }),
+        mkCellI('No Logrado', { bg: 'D9E1F2', bold: true, center: true, width: 1100 })
+      ]});
+      const rows = (inst.criterios || []).map((c, i) => new TableRow({ children: [
+        mkCellI(String(i + 1), { center: true, width: 500 }),
+        mkCellI(c.indicador || c.criterio || c),
+        mkCellI('', { center: true, width: 1100 }),
+        mkCellI('', { center: true, width: 1100 })
+      ]}));
+      return [...titulo, new Table({ rows: [headerRow, ...rows] })];
+    }
+
+    if (inst.tipo === 'rubrica') {
+      const niveles = inst.niveles || [
+        { nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }
+      ];
+      const headerRow = new TableRow({ children: [
+        mkCellI('#', { bg: 'D9E1F2', bold: true, center: true, width: 400 }),
+        mkCellI('Criterio', { bg: 'D9E1F2', bold: true }),
+        ...niveles.map(n => mkCellI(n.nombre, { bg: 'D9E1F2', bold: true, center: true, width: 1400 }))
+      ]});
+      const rows = (inst.criterios || []).map((c, i) => {
+        const descs = c.descriptores || [];
+        return new TableRow({ children: [
+          mkCellI(String(i + 1), { center: true, width: 400 }),
+          mkCellI(c.criterio || c),
+          ...niveles.map((_, ni) => mkCellI(descs[ni] || '', { size: 16, width: 1400 }))
+        ]});
+      });
+      return [...titulo, new Table({ rows: [headerRow, ...rows] })];
+    }
+
+    // Otros tipos: escala de valoración, estimativa, rango
+    if (inst.niveles && inst.niveles.length) {
+      const headerRow = new TableRow({ children: [
+        mkCellI('#', { bg: 'D9E1F2', bold: true, center: true, width: 400 }),
+        mkCellI('Criterio', { bg: 'D9E1F2', bold: true }),
+        ...inst.niveles.map(n => mkCellI(n.nombre, { bg: 'D9E1F2', bold: true, center: true, width: 1200 }))
+      ]});
+      const rows = (inst.criterios || []).map((c, i) => new TableRow({ children: [
+        mkCellI(String(i + 1), { center: true, width: 400 }),
+        mkCellI(c.criterio || c),
+        ...inst.niveles.map(() => mkCellI('', { center: true, width: 1200 }))
+      ]}));
+      return [...titulo, new Table({ rows: [headerRow, ...rows] })];
+    }
+
+    // Fallback: texto plano
+    return textParas(instTexto(inst));
+  }
+
   // Constantes de layout (landscape A4)
   const PAGE_W = 16838, PAGE_H = 11906, MARGIN = 720;
   const TABLE_W = PAGE_W - MARGIN * 2;
@@ -16220,7 +16300,7 @@ async function exportarDiariasWord() {
           }),
           new TableRow({ children: [mkLabel('Estrategia(s) utilizada(s):'), mkContent(textParas(s.estrategias), COL2)] }),
           new TableRow({ children: [mkLabel('Recursos:'), mkContent(textParas(s.recursos), COL2)] }),
-          new TableRow({ children: [mkLabel('Instrumentos de evaluaci\u00f3n'), mkContent(textParas(instTexto(act.instrumento)), COL2)] }),
+          new TableRow({ children: [mkLabel('Instrumentos de evaluaci\u00f3n'), mkContent(_instTablaDocx(act.instrumento), COL2)] }),
         ]
       });
 
