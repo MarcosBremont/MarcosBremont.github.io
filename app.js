@@ -4754,7 +4754,7 @@ async function _exportarDiariaConPlantillaCentro() {
       proximopaso: cierre.proximopaso || '',
       estrategias: s.estrategias || '',
       recursos: s.recursos || '',
-      instrumento_evaluacion: '___INST_REPL___',
+      instrumento_evaluacion: 'XREPL',
       instrumento_tipo: '',
       instrumento_criterios: []
     };
@@ -4773,25 +4773,22 @@ async function _exportarDiariaConPlantillaCentro() {
       const dxf = doc.getZip().file('word/document.xml');
       if (dxf) {
         let xml = dxf.asText();
-        if (xml.indexOf('___INST_REPL___') !== -1) {
-          const instXml = _generarInstTablaXml(act.instrumento);
-          // Encontrar la celda <w:tc> que contiene el marcador y reemplazar su contenido
-          const markerIdx = xml.indexOf('___INST_REPL___');
-          // Buscar el <w:tc> que lo contiene (hacia atrás)
-          let tcStart = xml.lastIndexOf('<w:tc>', markerIdx);
-          if (tcStart === -1) tcStart = xml.lastIndexOf('<w:tc ', markerIdx);
-          const tcEnd = xml.indexOf('</w:tc>', markerIdx);
-          if (tcStart !== -1 && tcEnd !== -1) {
-            // Extraer tcPr (propiedades de la celda) si existe
-            const tcContent = xml.substring(tcStart, tcEnd + 7);
-            const tcPrMatch = tcContent.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
-            const tcPr = tcPrMatch ? tcPrMatch[0] : '';
-            // Reemplazar celda completa: mantener tcPr + insertar tabla + párrafo vacío requerido
-            const newTc = '<w:tc>' + tcPr + instXml + '<w:p/></w:tc>';
-            xml = xml.substring(0, tcStart) + newTc + xml.substring(tcEnd + 7);
-            doc.getZip().file('word/document.xml', xml);
-          }
-        }
+        // Buscar 'XREPL' teniendo en cuenta que puede estar dividido en múltiples <w:t>
+        // Concatenar todos los <w:t> dentro de cada <w:tc> para buscar
+        const instXml = _generarInstTablaXml(act.instrumento);
+        // Buscar cada <w:tc>...</w:tc> y ver si contiene 'XREPL' en su texto
+        xml = xml.replace(/<w:tc\b[^>]*>[\s\S]*?<\/w:tc>/g, function(tcMatch) {
+          // Extraer todo el texto de esta celda
+          const textos = [];
+          tcMatch.replace(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g, function(_, t) { textos.push(t); });
+          const textoCompleto = textos.join('');
+          if (textoCompleto.indexOf('XREPL') === -1) return tcMatch;
+          // Esta celda contiene el marcador: reemplazar contenido con la tabla
+          const tcPrMatch = tcMatch.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
+          const tcPr = tcPrMatch ? tcPrMatch[0] : '';
+          return '<w:tc>' + tcPr + instXml + '<w:p/></w:tc>';
+        });
+        doc.getZip().file('word/document.xml', xml);
       }
     } catch (e) {
       console.warn('[PlantillaDiaria] Error insertando tabla instrumento:', e);
