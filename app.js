@@ -3083,7 +3083,11 @@ function abrirEditarActividad(idx) {
           <select id="edit-act-instrumento"
             style="width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;">
             <option value="cotejo" ${tipoInst === 'cotejo' ? 'selected' : ''}>Lista de Cotejo</option>
-            <option value="rubrica" ${tipoInst === 'rubrica' ? 'selected' : ''}>Rúbrica</option>
+            <option value="rubrica" ${tipoInst === 'rubrica' ? 'selected' : ''}>Rúbrica de Evaluación</option>
+            <option value="valoracion" ${tipoInst === 'valoracion' ? 'selected' : ''}>Escala de Valoración</option>
+            <option value="estimativa" ${tipoInst === 'estimativa' ? 'selected' : ''}>Escala Estimativa</option>
+            <option value="rango" ${tipoInst === 'rango' ? 'selected' : ''}>Escala de Rango</option>
+            <option value="diario" ${tipoInst === 'diario' ? 'selected' : ''}>Diario de Doble Entrada</option>
           </select>
         </div>
       </div>
