@@ -2777,96 +2777,110 @@ function renderizarActividades(listaActividades) {
     const actNumero = esComp ? '—' : _getActNumero(act.ecCodigo, _actIndexInEC(listaActividades, idx));
 
     if (esComp) {
-      tr.style.background = 'rgba(230,81,0,0.04)';
-      tr.innerHTML = `
-      <td data-label="Fecha" style="text-align:center;">
-        <span class="material-icons" style="font-size:20px;color:#E65100;">${act.complementarioIcono || 'star'}</span>
-      </td>
-      <td data-label="EC"><span style="font-size:0.75rem;font-weight:700;color:#E65100;background:#FFF3E0;padding:2px 8px;border-radius:10px;">COMP</span></td>
-      <td data-label="N°" style="text-align:center;font-size:0.75rem;color:#9E9E9E;">—</td>
-      <td data-label="Actividad" style="max-width:280px;font-weight:600;color:#E65100;">${escapeHTML(act.enunciado)}</td>
-      <td data-label="Instrumento"><span style="font-size:0.78rem;color:#78909C;">—</span></td>
-      <td data-label="Valor" style="text-align:center;">
-        <input type="number" class="act-valor-input" data-idx="${idx}"
-          value="${act.valor != null ? act.valor : ''}"
-          min="0" max="100" step="0.5" placeholder="—"
-          title="Valor en puntos de este ítem complementario"
-          style="width:65px;padding:5px 6px;border:1.5px solid #FFCC80;border-radius:8px;
-                 font-size:0.88rem;text-align:center;background:transparent;
-                 color:inherit;font-weight:700;">
-      </td>
-      <td data-label="Acciones" class="td-acciones">
-        <div style="display:flex;gap:3px;">
-          <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
-            <span class="material-icons" style="font-size:16px;">arrow_upward</span>
-          </button>
-          <button class="ec-move-btn" onclick="_moverActividad(${idx}, 1)" title="Mover abajo" ${idx === listaActividades.length - 1 ? 'disabled' : ''}>
-            <span class="material-icons" style="font-size:16px;">arrow_downward</span>
-          </button>
+      tr.className = 'act-card act-card--comp';
+      tr.innerHTML = `<td colspan="7">
+        <div class="act-card-inner">
+          <!-- Header -->
+          <div class="act-card-header">
+            <div class="act-card-badges">
+              <span class="act-badge act-badge--comp"><span class="material-icons" style="font-size:14px;">${act.complementarioIcono || 'star'}</span> Complementario</span>
+            </div>
+            <div class="act-card-move">
+              <button class="act-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
+                <span class="material-icons">arrow_upward</span>
+              </button>
+              <button class="act-move-btn" onclick="_moverActividad(${idx}, 1)" title="Mover abajo" ${idx === listaActividades.length - 1 ? 'disabled' : ''}>
+                <span class="material-icons">arrow_downward</span>
+              </button>
+            </div>
+          </div>
+          <!-- Body -->
+          <div class="act-card-body">
+            <p class="act-card-text" style="color:#E65100;font-weight:600;">${escapeHTML(act.enunciado)}</p>
+          </div>
+          <!-- Footer -->
+          <div class="act-card-footer">
+            <div class="act-card-meta">
+              <div class="act-meta-item">
+                <span class="act-meta-label">Valor</span>
+                <input type="number" class="act-valor-input" data-idx="${idx}"
+                  value="${act.valor != null ? act.valor : ''}"
+                  min="0" max="100" step="0.5" placeholder="—">
+              </div>
+            </div>
+            <div class="act-card-actions">
+              <button class="act-action-btn act-action--delete" onclick="_eliminarActividad(${idx})">
+                <span class="material-icons">delete_outline</span> Eliminar
+              </button>
+            </div>
+          </div>
         </div>
-        <button class="btn-ver-instrumento" onclick="_eliminarActividad(${idx})" style="background:#FFEBEE;color:#C62828;border-color:#FFCDD2;">
-          <span class="material-icons">delete_outline</span> Eliminar
-        </button>
-      </td>
-      `;
+      </td>`;
     } else {
-    tr.innerHTML = `
-      <td data-label="Fecha">
-        <input type="date" class="act-fecha-input" data-idx="${idx}"
-          value="${(() => {
+      const fechaVal = (() => {
         if (!act.fecha) return '';
         if (act.fecha instanceof Date) return act.fecha.toISOString().split('T')[0];
         const s = String(act.fecha);
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
         if (s.includes('T')) return s.split('T')[0];
         const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
-      })()}"
-          title="${act.fechaStr || ''}"
-          style="border:1.5px solid #90CAF9;border-radius:8px;padding:5px 8px;
-                 font-size:0.82rem;font-family:inherit;background:transparent;
-                 color:inherit;cursor:pointer;">
-      </td>
-      <td data-label="EC"><code style="font-size:0.8rem;color:#1565C0;font-weight:600;">${act.ecCodigo}</code></td>
-      <td data-label="N°" style="text-align:center;">
-        <span style="font-size:0.75rem;font-weight:700;color:#546E7A;background:#ECEFF1;padding:2px 8px;border-radius:10px;white-space:nowrap;">${actNumero}</span>
-      </td>
-      <td data-label="Actividad" style="max-width:280px;">${act.enunciado}</td>
-      <td data-label="Instrumento"><span class="instrumento-badge ${badgeClass}">
-        <span class="material-icons" style="font-size:14px;">${icono}</span>
-        ${tipoLabel}
-      </span></td>
-      <td data-label="Valor" style="text-align:center;">
-        <input type="number" class="act-valor-input" data-idx="${idx}"
-          value="${act.valor != null ? act.valor : ''}"
-          min="0" max="100" step="0.5" placeholder="—"
-          title="Valor en puntos de esta actividad"
-          style="width:65px;padding:5px 6px;border:1.5px solid #90CAF9;border-radius:8px;
-                 font-size:0.88rem;text-align:center;background:transparent;
-                 color:inherit;font-weight:700;">
-      </td>
-      <td data-label="Acciones" class="td-acciones">
-        <div style="display:flex;gap:3px;">
-          <button class="ec-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
-            <span class="material-icons" style="font-size:16px;">arrow_upward</span>
-          </button>
-          <button class="ec-move-btn" onclick="_moverActividad(${idx}, 1)" title="Mover abajo" ${idx === listaActividades.length - 1 ? 'disabled' : ''}>
-            <span class="material-icons" style="font-size:16px;">arrow_downward</span>
-          </button>
+      })();
+      tr.className = 'act-card';
+      tr.innerHTML = `<td colspan="7">
+        <div class="act-card-inner">
+          <!-- Header -->
+          <div class="act-card-header">
+            <div class="act-card-badges">
+              <span class="act-badge act-badge--ec">${act.ecCodigo}</span>
+              <span class="act-badge act-badge--num">${actNumero}</span>
+              <span class="act-badge act-badge--inst ${instTipo === 'rubrica' ? 'act-badge--rubrica' : ''}">
+                <span class="material-icons" style="font-size:13px;">${icono}</span> ${tipoLabel}
+              </span>
+            </div>
+            <div class="act-card-move">
+              <button class="act-move-btn" onclick="_moverActividad(${idx}, -1)" title="Mover arriba" ${idx === 0 ? 'disabled' : ''}>
+                <span class="material-icons">arrow_upward</span>
+              </button>
+              <button class="act-move-btn" onclick="_moverActividad(${idx}, 1)" title="Mover abajo" ${idx === listaActividades.length - 1 ? 'disabled' : ''}>
+                <span class="material-icons">arrow_downward</span>
+              </button>
+            </div>
+          </div>
+          <!-- Body -->
+          <div class="act-card-body">
+            <p class="act-card-text">${act.enunciado}</p>
+          </div>
+          <!-- Footer -->
+          <div class="act-card-footer">
+            <div class="act-card-meta">
+              <div class="act-meta-item">
+                <span class="act-meta-label">Fecha</span>
+                <input type="date" class="act-fecha-input" data-idx="${idx}" value="${fechaVal}" title="${act.fechaStr || ''}">
+              </div>
+              <div class="act-meta-item">
+                <span class="act-meta-label">Valor (pts)</span>
+                <input type="number" class="act-valor-input" data-idx="${idx}"
+                  value="${act.valor != null ? act.valor : ''}"
+                  min="0" max="100" step="0.5" placeholder="—">
+              </div>
+            </div>
+            <div class="act-card-actions">
+              <button class="act-action-btn act-action--edit" onclick="abrirEditarActividad(${idx})">
+                <span class="material-icons">edit</span> Editar
+              </button>
+              <button class="act-action-btn act-action--view" onclick="abrirModalInstrumento(${idx})">
+                <span class="material-icons">visibility</span> Ver
+              </button>
+              <button class="act-action-btn act-action--change" onclick="_editarInstrumentoActividad(${idx})">
+                <span class="material-icons">swap_horiz</span> Cambiar
+              </button>
+              <button class="act-action-btn act-action--delete" onclick="_eliminarActividad(${idx})">
+                <span class="material-icons">delete_outline</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <button class="btn-ver-instrumento" onclick="abrirEditarActividad(${idx})" style="background:#E8F5E9;color:#2E7D32;border-color:#A5D6A7;">
-          <span class="material-icons">edit</span> Editar
-        </button>
-        <button class="btn-ver-instrumento" onclick="abrirModalInstrumento(${idx})">
-          <span class="material-icons">visibility</span> Ver
-        </button>
-        <button class="btn-ver-instrumento" onclick="_editarInstrumentoActividad(${idx})" style="background:#FFF3E0;color:#E65100;border-color:#FFCC80;">
-          <span class="material-icons">swap_horiz</span> Cambiar
-        </button>
-        <button class="btn-ver-instrumento" onclick="_eliminarActividad(${idx})" style="background:#FFEBEE;color:#C62828;border-color:#FFCDD2;">
-          <span class="material-icons">delete_outline</span> Eliminar
-        </button>
-      </td>
-    `;
+      </td>`;
     }
 
 
