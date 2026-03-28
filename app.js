@@ -492,44 +492,49 @@ function _getInstrColor(tipo) { return INSTRUMENTOS[tipo]?.color || '#616161'; }
 
 // Genera criterios contextualizados al enunciado de la actividad
 function _criteriosContextualizados(nivel, actividad) {
-  // Extraer tema de la actividad (quitar prefijo "Act X.X.X: ")
   const enunciado = (actividad?.enunciado || '').replace(/^Act\s*\d+[\.\d]*:\s*/i, '').trim();
   if (!enunciado) return criteriosInstrumento[nivel] || criteriosInstrumento.conocimiento;
 
-  // Extraer el verbo principal y el objeto/tema
-  // Ej: "Investigar y enumerar los elementos de programación front-end necesarios para crear una página web dinámica"
-  // → verbo: "Investigar y enumerar", objeto: "los elementos de programación front-end"
-  const palabras = enunciado.split(/\s+/);
-  // Tomar las primeras ~8 palabras significativas como "tema corto"
-  const stopwords = new Set(['los','las','el','la','de','del','en','un','una','y','o','para','por','que','con','al','a','su','sus','se','como','es','son','lo','le','más','esta','este','estos','estas','pero','sin','sobre','entre','desde','hasta','hacia','según','durante','mediante','necesarios','necesarias','necesario','necesaria']);
-  const significativas = palabras.filter(p => !stopwords.has(p.toLowerCase()) && p.length > 2);
-  const tema = significativas.slice(0, 6).join(' ');
+  // Quitar verbos iniciales para extraer solo el objeto/tema
+  // "Investigar y enumerar los elementos de programación front-end necesarios..."
+  // → "los elementos de programación front-end necesarios..."
+  let tema = enunciado.replace(/^\w+(?:ar|er|ir)\b(?:\s+y\s+\w+(?:ar|er|ir)\b)*\s*/i, '').trim();
+  if (!tema || tema === enunciado) tema = enunciado; // fallback si no matchea
+
+  // Acortar a algo legible (máx 70 chars), cortar en palabra completa
+  if (tema.length > 70) {
+    tema = tema.substring(0, 70);
+    const lastSpace = tema.lastIndexOf(' ');
+    if (lastSpace > 40) tema = tema.substring(0, lastSpace);
+  }
+  // Minúscula inicial
+  tema = tema.charAt(0).toLowerCase() + tema.slice(1);
 
   const plantillas = {
     conocimiento: [
-      `Identifica los ${tema} solicitados en la actividad`,
-      `Define con precisión los conceptos de ${tema}`,
-      `Enumera de forma completa los ${tema} requeridos`,
-      `Clasifica correctamente los ${tema} según sus características`,
-      `Presenta la información sobre ${tema} de forma organizada`
+      `Identifica correctamente ${tema}`,
+      `Define los conceptos técnicos involucrados en ${tema}`,
+      `Enumera de forma completa ${tema}`,
+      `Clasifica ${tema} según sus características`,
+      `Organiza y presenta ${tema} de forma clara`
     ],
     comprension: [
-      `Explica con sus palabras los ${tema} estudiados`,
-      `Compara y relaciona los ${tema} entre sí`,
-      `Interpreta correctamente los ${tema} presentados`,
-      `Distingue las características principales de ${tema}`,
-      `Sintetiza la información sobre ${tema} conservando lo esencial`
+      `Explica con sus propias palabras ${tema}`,
+      `Compara y relaciona los aspectos de ${tema}`,
+      `Interpreta correctamente la información sobre ${tema}`,
+      `Distingue las diferencias clave en ${tema}`,
+      `Sintetiza ${tema} conservando las ideas principales`
     ],
     aplicacion: [
-      `Aplica correctamente los ${tema} en la práctica`,
-      `Ejecuta los procedimientos de ${tema} paso a paso`,
+      `Aplica correctamente los procedimientos de ${tema}`,
+      `Ejecuta paso a paso ${tema}`,
       `Utiliza las herramientas adecuadas para ${tema}`,
-      `Resuelve situaciones prácticas relacionadas con ${tema}`,
-      `Produce resultados funcionales aplicando ${tema}`
+      `Resuelve situaciones prácticas sobre ${tema}`,
+      `Produce resultados funcionales relacionados con ${tema}`
     ],
     actitudinal: [
       `Muestra interés y participación activa en ${tema}`,
-      `Colabora con sus compañeros en actividades de ${tema}`,
+      `Colabora con sus compañeros durante ${tema}`,
       `Cumple con las normas establecidas para ${tema}`,
       `Entrega puntualmente los trabajos de ${tema}`,
       `Reflexiona sobre su aprendizaje en ${tema}`
