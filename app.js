@@ -4637,7 +4637,7 @@ function _generarInstTablaXml(inst) {
   // Título
   let xml = '<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/><w:b/><w:color w:val="1F3864"/></w:rPr><w:t xml:space="preserve">' + esc(inst.tipoLabel || '') + '</w:t></w:r></w:p>';
 
-  xml += '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="999999"/><w:bottom w:val="single" w:sz="4" w:color="999999"/><w:left w:val="single" w:sz="4" w:color="999999"/><w:right w:val="single" w:sz="4" w:color="999999"/><w:insideH w:val="single" w:sz="4" w:color="999999"/><w:insideV w:val="single" w:sz="4" w:color="999999"/></w:tblBorders></w:tblPr>';
+  xml += '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="999999"/><w:bottom w:val="single" w:sz="4" w:color="999999"/><w:left w:val="single" w:sz="4" w:color="999999"/><w:right w:val="single" w:sz="4" w:color="999999"/><w:insideH w:val="single" w:sz="4" w:color="999999"/><w:insideV w:val="single" w:sz="4" w:color="999999"/></w:tblBorders><w:tblLook w:val="04A0"/></w:tblPr>';
 
   if (inst.tipo === 'cotejo') {
     xml += mkRow(mkCell('#', 500, true, true) + mkCell('Indicador / Criterio', null, true) + mkCell('Logrado', 1100, true, true) + mkCell('No Logrado', 1100, true, true));
@@ -4754,12 +4754,9 @@ async function _exportarDiariaConPlantillaCentro() {
       proximopaso: cierre.proximopaso || '',
       estrategias: s.estrategias || '',
       recursos: s.recursos || '',
-      instrumento_evaluacion: instTextoTpl(act.instrumento),
-      instrumento_tipo: act.instrumento?.tipoLabel || '',
-      instrumento_criterios: (act.instrumento?.criterios || []).map((c, i) => ({
-        num: String(i + 1),
-        criterio: c.indicador || c.criterio || c.texto || (typeof c === 'string' ? c : '')
-      }))
+      instrumento_evaluacion: '___INST_REPL___',
+      instrumento_tipo: '',
+      instrumento_criterios: []
     };
 
     const zip = new PizZip(templateBuffer.slice(0));
@@ -4770,6 +4767,36 @@ async function _exportarDiariaConPlantillaCentro() {
       nullGetter: () => ''
     });
     doc.render(data);
+
+    // Post-procesar: insertar tabla real del instrumento
+    try {
+      const dxf = doc.getZip().file('word/document.xml');
+      if (dxf) {
+        let xml = dxf.asText();
+        if (xml.indexOf('___INST_REPL___') !== -1) {
+          const instXml = _generarInstTablaXml(act.instrumento);
+          // Encontrar la celda <w:tc> que contiene el marcador y reemplazar su contenido
+          const markerIdx = xml.indexOf('___INST_REPL___');
+          // Buscar el <w:tc> que lo contiene (hacia atrás)
+          let tcStart = xml.lastIndexOf('<w:tc>', markerIdx);
+          if (tcStart === -1) tcStart = xml.lastIndexOf('<w:tc ', markerIdx);
+          const tcEnd = xml.indexOf('</w:tc>', markerIdx);
+          if (tcStart !== -1 && tcEnd !== -1) {
+            // Extraer tcPr (propiedades de la celda) si existe
+            const tcContent = xml.substring(tcStart, tcEnd + 7);
+            const tcPrMatch = tcContent.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
+            const tcPr = tcPrMatch ? tcPrMatch[0] : '';
+            // Reemplazar celda completa: mantener tcPr + insertar tabla + párrafo vacío requerido
+            const newTc = '<w:tc>' + tcPr + instXml + '<w:p/></w:tc>';
+            xml = xml.substring(0, tcStart) + newTc + xml.substring(tcEnd + 7);
+            doc.getZip().file('word/document.xml', xml);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[PlantillaDiaria] Error insertando tabla instrumento:', e);
+    }
+
     allBlobs.push(doc.getZip().generate({ type: 'uint8array' }));
   }
 
