@@ -4661,13 +4661,33 @@ async function _exportarDiariaConPlantillaCentro() {
 
     function instTextoTpl(inst) {
       if (!inst) return '\u2014';
-      var txt = (inst.tipoLabel || '') + ': ' + (inst.titulo || '');
+      var txt = (inst.tipoLabel || '');
       if (inst.tipo === 'cotejo') {
-        (inst.criterios || []).forEach(function (c, i) { txt += '\n' + (i + 1) + '. ' + (c.indicador || c); });
-      } else if (inst.tipo === 'rubrica') {
+        txt += '\n\nIndicadores / Criterios:\n';
         (inst.criterios || []).forEach(function (c, i) {
-          txt += '\n' + (i + 1) + '. ' + c.criterio;
-          (c.descriptores || []).forEach(function (d) { txt += '\n   \u2022 ' + d; });
+          txt += '\n' + (i + 1) + '. ' + (c.indicador || c) + '     [  ] Logrado   [  ] No Logrado';
+        });
+      } else if (inst.tipo === 'rubrica') {
+        var niveles = inst.niveles || [{ nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }];
+        txt += '\nNiveles: ' + niveles.map(function(n) { return n.nombre; }).join(' | ') + '\n';
+        (inst.criterios || []).forEach(function (c, i) {
+          txt += '\n' + (i + 1) + '. ' + (c.criterio || c);
+          if (c.descriptores && c.descriptores.length) {
+            c.descriptores.forEach(function (d, di) {
+              txt += '\n   ' + (niveles[di] ? niveles[di].nombre : '') + ': ' + d;
+            });
+          }
+        });
+      } else if (inst.niveles && inst.niveles.length) {
+        // Escalas de valoración, estimativa, rango
+        txt += '\nNiveles: ' + inst.niveles.map(function(n) { return n.nombre; }).join(' | ') + '\n';
+        (inst.criterios || []).forEach(function (c, i) {
+          txt += '\n' + (i + 1) + '. ' + (c.criterio || c);
+        });
+      } else if (inst.tipo === 'diario') {
+        txt += '\n\nAspectos a reflexionar:\n';
+        (inst.criterios || []).forEach(function (c, i) {
+          txt += '\n' + (i + 1) + '. ' + (c.criterio || c.texto || c);
         });
       }
       return txt;
@@ -4698,7 +4718,13 @@ async function _exportarDiariaConPlantillaCentro() {
       proximopaso: cierre.proximopaso || '',
       estrategias: s.estrategias || '',
       recursos: s.recursos || '',
-      instrumento_evaluacion: instTextoTpl(act.instrumento)
+      instrumento_evaluacion: instTextoTpl(act.instrumento),
+      instrumento_tipo: act.instrumento?.tipoLabel || '',
+      instrumento_titulo: act.instrumento?.titulo || '',
+      instrumento_criterios: (act.instrumento?.criterios || []).map((c, i) => ({
+        num: String(i + 1),
+        criterio: c.indicador || c.criterio || (typeof c === 'string' ? c : '')
+      }))
     };
 
     const zip = new PizZip(templateBuffer.slice(0));
