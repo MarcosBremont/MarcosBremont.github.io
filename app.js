@@ -5582,8 +5582,9 @@ function irAlPaso(nuevoPaso, validar = true) {
 
   pasoActual = nuevoPaso;
 
-
-
+  // Autoguardar borrador al cambiar de paso
+  guardarDatosFormulario();
+  guardarBorrador();
 
 
 
@@ -14113,7 +14114,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   }
 
-
+  // ── Autoguardado: guardar borrador al cambiar cualquier input/select/textarea en los pasos ──
+  let _autoguardadoTimer = null;
+  const stepper = document.querySelector('.stepper-container')?.parentElement;
+  if (stepper) {
+    stepper.addEventListener('change', () => {
+      guardarDatosFormulario();
+      guardarBorrador();
+    });
+    stepper.addEventListener('input', () => {
+      clearTimeout(_autoguardadoTimer);
+      _autoguardadoTimer = setTimeout(() => {
+        guardarDatosFormulario();
+        guardarBorrador();
+      }, 1500);
+    });
+  }
 
 });
 
