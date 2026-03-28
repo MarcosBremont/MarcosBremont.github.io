@@ -4616,6 +4616,57 @@ async function _getPlantillaDiariaCentro() {
   }
 }
 
+/** Genera XML de tabla Word para un instrumento de evaluación */
+function _generarInstTablaXml(inst) {
+  if (!inst || !inst.criterios || !inst.criterios.length) return '<w:p><w:r><w:t>\u2014</w:t></w:r></w:p>';
+
+  const esc = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Estilos de celda
+  const bdr = '<w:tcBorders><w:top w:val="single" w:sz="4" w:color="999999"/><w:bottom w:val="single" w:sz="4" w:color="999999"/><w:left w:val="single" w:sz="4" w:color="999999"/><w:right w:val="single" w:sz="4" w:color="999999"/></w:tcBorders>';
+  const headerShd = '<w:shd w:val="clear" w:fill="D9E1F2"/>';
+  const cellMarg = '<w:tcMar><w:top w:w="40" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tcMar>';
+  const mkCell = (text, width, isHeader, center) => {
+    const tcPr = '<w:tcPr>' + (width ? '<w:tcW w:w="' + width + '" w:type="dxa"/>' : '') + bdr + cellMarg + (isHeader ? headerShd : '') + '</w:tcPr>';
+    const rPr = '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="18"/>' + (isHeader ? '<w:b/>' : '') + '</w:rPr>';
+    const pPr = center ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : '';
+    return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + esc(text) + '</w:t></w:r></w:p></w:tc>';
+  };
+  const mkRow = (cells) => '<w:tr>' + cells + '</w:tr>';
+
+  // Título
+  let xml = '<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/><w:b/><w:color w:val="1F3864"/></w:rPr><w:t xml:space="preserve">' + esc(inst.tipoLabel || '') + '</w:t></w:r></w:p>';
+
+  xml += '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="999999"/><w:bottom w:val="single" w:sz="4" w:color="999999"/><w:left w:val="single" w:sz="4" w:color="999999"/><w:right w:val="single" w:sz="4" w:color="999999"/><w:insideH w:val="single" w:sz="4" w:color="999999"/><w:insideV w:val="single" w:sz="4" w:color="999999"/></w:tblBorders></w:tblPr>';
+
+  if (inst.tipo === 'cotejo') {
+    xml += mkRow(mkCell('#', 500, true, true) + mkCell('Indicador / Criterio', null, true) + mkCell('Logrado', 1100, true, true) + mkCell('No Logrado', 1100, true, true));
+    (inst.criterios || []).forEach((c, i) => {
+      xml += mkRow(mkCell(String(i + 1), 500, false, true) + mkCell(c.indicador || c.criterio || c) + mkCell('', 1100, false, true) + mkCell('', 1100, false, true));
+    });
+  } else if (inst.tipo === 'rubrica') {
+    const niveles = inst.niveles || [{ nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }];
+    xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + niveles.map(n => mkCell(n.nombre, 1400, true, true)).join(''));
+    (inst.criterios || []).forEach((c, i) => {
+      const descs = c.descriptores || [];
+      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + niveles.map((_, ni) => mkCell(descs[ni] || '', 1400)).join(''));
+    });
+  } else if (inst.niveles && inst.niveles.length) {
+    xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + inst.niveles.map(n => mkCell(n.nombre, 1200, true, true)).join(''));
+    (inst.criterios || []).forEach((c, i) => {
+      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + inst.niveles.map(() => mkCell('', 1200, false, true)).join(''));
+    });
+  } else {
+    // Fallback: solo lista
+    (inst.criterios || []).forEach((c, i) => {
+      xml += mkRow(mkCell(String(i + 1), 500, false, true) + mkCell(c.criterio || c.indicador || c.texto || c));
+    });
+  }
+
+  xml += '</w:tbl>';
+  return xml;
+}
+
 /** Exporta planificaciones diarias usando la plantilla .docx del centro con docxtemplater */
 async function _exportarDiariaConPlantillaCentro() {
   const DocxModule = window.docxtemplater || window.Docxtemplater;
@@ -4647,6 +4698,7 @@ async function _exportarDiariaConPlantillaCentro() {
   // Generar un documento por sesión y combinar en un solo archivo
   // Usamos docxtemplater para cada sesión con la misma plantilla
   const allBlobs = [];
+  const _instTableData = {};
 
   for (const act of actividades) {
     const s = estadoDiarias.sesiones[act.id] || {};
@@ -4718,14 +4770,11 @@ async function _exportarDiariaConPlantillaCentro() {
       proximopaso: cierre.proximopaso || '',
       estrategias: s.estrategias || '',
       recursos: s.recursos || '',
-      instrumento_evaluacion: instTextoTpl(act.instrumento),
-      instrumento_tipo: act.instrumento?.tipoLabel || '',
-      instrumento_titulo: act.instrumento?.titulo || '',
-      instrumento_criterios: (act.instrumento?.criterios || []).map((c, i) => ({
-        num: String(i + 1),
-        criterio: c.indicador || c.criterio || (typeof c === 'string' ? c : '')
-      }))
+      instrumento_evaluacion: '__INST_TABLE_' + act.id + '__'
     };
+
+    // Guardar datos del instrumento para post-procesamiento
+    _instTableData['__INST_TABLE_' + act.id + '__'] = act.instrumento;
 
     const zip = new PizZip(templateBuffer.slice(0));
     const doc = new Docxtemplater(zip, {
@@ -4735,6 +4784,28 @@ async function _exportarDiariaConPlantillaCentro() {
       nullGetter: () => ''
     });
     doc.render(data);
+
+    // Post-procesar: reemplazar marcadores __INST_TABLE_xxx__ con tablas XML reales
+    try {
+      const docXmlFile = doc.getZip().file('word/document.xml');
+      if (docXmlFile) {
+        let xml = docXmlFile.asText();
+        Object.keys(_instTableData).forEach(marker => {
+          if (xml.indexOf(marker) === -1) return;
+          const inst = _instTableData[marker];
+          const tablaXml = _generarInstTablaXml(inst);
+          // Reemplazar el párrafo que contiene el marcador con la tabla XML
+          // El marcador está dentro de un <w:t>...</w:t> dentro de un <w:p>
+          const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp('<w:p\\b[^>]*>(?:[\\s\\S]*?)' + escapedMarker + '(?:[\\s\\S]*?)<\\/w:p>', 'g');
+          xml = xml.replace(regex, tablaXml);
+        });
+        doc.getZip().file('word/document.xml', xml);
+      }
+    } catch (e) {
+      console.warn('[PlantillaDiaria] Error post-procesando instrumento:', e);
+    }
+
     allBlobs.push(doc.getZip().generate({ type: 'uint8array' }));
   }
 
