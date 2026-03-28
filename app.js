@@ -4698,7 +4698,6 @@ async function _exportarDiariaConPlantillaCentro() {
   // Generar un documento por sesión y combinar en un solo archivo
   // Usamos docxtemplater para cada sesión con la misma plantilla
   const allBlobs = [];
-  const _instTableData = {};
 
   for (const act of actividades) {
     const s = estadoDiarias.sesiones[act.id] || {};
@@ -4713,33 +4712,18 @@ async function _exportarDiariaConPlantillaCentro() {
 
     function instTextoTpl(inst) {
       if (!inst) return '\u2014';
-      var txt = (inst.tipoLabel || '');
+      var txt = inst.tipoLabel || '';
       if (inst.tipo === 'cotejo') {
-        txt += '\n\nIndicadores / Criterios:\n';
         (inst.criterios || []).forEach(function (c, i) {
-          txt += '\n' + (i + 1) + '. ' + (c.indicador || c) + '     [  ] Logrado   [  ] No Logrado';
+          txt += '\n' + (i + 1) + '. ' + (c.indicador || c);
         });
       } else if (inst.tipo === 'rubrica') {
-        var niveles = inst.niveles || [{ nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }];
-        txt += '\nNiveles: ' + niveles.map(function(n) { return n.nombre; }).join(' | ') + '\n';
-        (inst.criterios || []).forEach(function (c, i) {
-          txt += '\n' + (i + 1) + '. ' + (c.criterio || c);
-          if (c.descriptores && c.descriptores.length) {
-            c.descriptores.forEach(function (d, di) {
-              txt += '\n   ' + (niveles[di] ? niveles[di].nombre : '') + ': ' + d;
-            });
-          }
-        });
-      } else if (inst.niveles && inst.niveles.length) {
-        // Escalas de valoración, estimativa, rango
-        txt += '\nNiveles: ' + inst.niveles.map(function(n) { return n.nombre; }).join(' | ') + '\n';
         (inst.criterios || []).forEach(function (c, i) {
           txt += '\n' + (i + 1) + '. ' + (c.criterio || c);
         });
-      } else if (inst.tipo === 'diario') {
-        txt += '\n\nAspectos a reflexionar:\n';
+      } else {
         (inst.criterios || []).forEach(function (c, i) {
-          txt += '\n' + (i + 1) + '. ' + (c.criterio || c.texto || c);
+          txt += '\n' + (i + 1) + '. ' + (c.criterio || c.indicador || c.texto || c);
         });
       }
       return txt;
@@ -4770,11 +4754,8 @@ async function _exportarDiariaConPlantillaCentro() {
       proximopaso: cierre.proximopaso || '',
       estrategias: s.estrategias || '',
       recursos: s.recursos || '',
-      instrumento_evaluacion: '__INST_TABLE_' + act.id + '__'
+      instrumento_evaluacion: instTextoTpl(act.instrumento)
     };
-
-    // Guardar datos del instrumento para post-procesamiento
-    _instTableData['__INST_TABLE_' + act.id + '__'] = act.instrumento;
 
     const zip = new PizZip(templateBuffer.slice(0));
     const doc = new Docxtemplater(zip, {
@@ -4784,28 +4765,6 @@ async function _exportarDiariaConPlantillaCentro() {
       nullGetter: () => ''
     });
     doc.render(data);
-
-    // Post-procesar: reemplazar marcadores __INST_TABLE_xxx__ con tablas XML reales
-    try {
-      const docXmlFile = doc.getZip().file('word/document.xml');
-      if (docXmlFile) {
-        let xml = docXmlFile.asText();
-        Object.keys(_instTableData).forEach(marker => {
-          if (xml.indexOf(marker) === -1) return;
-          const inst = _instTableData[marker];
-          const tablaXml = _generarInstTablaXml(inst);
-          // Reemplazar el párrafo que contiene el marcador con la tabla XML
-          // El marcador está dentro de un <w:t>...</w:t> dentro de un <w:p>
-          const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp('<w:p\\b[^>]*>(?:[\\s\\S]*?)' + escapedMarker + '(?:[\\s\\S]*?)<\\/w:p>', 'g');
-          xml = xml.replace(regex, tablaXml);
-        });
-        doc.getZip().file('word/document.xml', xml);
-      }
-    } catch (e) {
-      console.warn('[PlantillaDiaria] Error post-procesando instrumento:', e);
-    }
-
     allBlobs.push(doc.getZip().generate({ type: 'uint8array' }));
   }
 
