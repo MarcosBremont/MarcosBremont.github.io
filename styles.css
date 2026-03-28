@@ -365,6 +365,7 @@ body {
   box-shadow: var(--sombra-2);
   padding: var(--espacio-xl);
   margin-bottom: var(--espacio-lg);
+  overflow: hidden;
 }
 
 .section-header {
@@ -949,6 +950,8 @@ body {
   overflow-x: auto;
   border-radius: var(--radio-lg);
   box-shadow: var(--sombra-1);
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tabla-actividades {
