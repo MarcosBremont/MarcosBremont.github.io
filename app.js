@@ -10286,22 +10286,57 @@ function abrirTutorial() {
         <h3 style="margin:0 0 12px;color:#0288D1;display:flex;align-items:center;gap:8px;">
           <span class="material-icons">list</span> Contenido
         </h3>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <a href="#tut-nueva" onclick="event.preventDefault();document.getElementById('tut-nueva').scrollIntoView({behavior:'smooth'})"
-            style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E3F2FD;border-radius:10px;text-decoration:none;color:#1565C0;font-weight:600;transition:transform 0.2s;">
-            <span style="background:#1565C0;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">1</span>
-            Nueva Planificaci\u00f3n por RA
-          </a>
-          <a href="#tut-mis" onclick="event.preventDefault();document.getElementById('tut-mis').scrollIntoView({behavior:'smooth'})"
-            style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#EDE7F6;border-radius:10px;text-decoration:none;color:#4527A0;font-weight:600;transition:transform 0.2s;">
-            <span style="background:#4527A0;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">2</span>
-            Mis Planificaciones
-          </a>
-          <a href="#tut-diarias" onclick="event.preventDefault();document.getElementById('tut-diarias').scrollIntoView({behavior:'smooth'})"
-            style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E0F2F1;border-radius:10px;text-decoration:none;color:#00695C;font-weight:600;transition:transform 0.2s;">
-            <span style="background:#00695C;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">3</span>
-            Planificaciones Diarias
-          </a>
+        <!-- Grupo: Planificación -->
+        <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Planificaci\u00f3n</p>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          ${[
+            {id:'tut-nueva',n:1,label:'Nueva Planificaci\u00f3n por RA',bg:'#E3F2FD',c:'#1565C0'},
+            {id:'tut-mis',n:2,label:'Mis Planificaciones',bg:'#EDE7F6',c:'#4527A0'},
+            {id:'tut-diarias',n:3,label:'Planificaciones Diarias',bg:'#E0F2F1',c:'#00695C'},
+          ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
+        </div>
+
+        <!-- Grupo: Calificaciones y Seguimiento -->
+        <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Calificaciones y Seguimiento</p>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          ${[
+            {id:'tut-calificaciones',n:4,label:'Libro de Calificaciones',bg:'#FFF3E0',c:'#E65100'},
+            {id:'tut-rendimiento',n:5,label:'Rendimiento',bg:'#F3E5F5',c:'#6A1B9A'},
+            {id:'tut-asistencia',n:6,label:'Calculadora de Asistencia',bg:'#E0F2F1',c:'#00796B'},
+          ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
+        </div>
+
+        <!-- Grupo: Organización -->
+        <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Organizaci\u00f3n</p>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          ${[
+            {id:'tut-horario',n:7,label:'Mi Horario',bg:'#E3F2FD',c:'#0277BD'},
+            {id:'tut-tareas',n:8,label:'Tareas',bg:'#FFF3E0',c:'#E65100'},
+            {id:'tut-calendario',n:9,label:'Calendario Escolar',bg:'#E3F2FD',c:'#1565C0'},
+            {id:'tut-notas',n:10,label:'Mis Notas',bg:'#EFEBE9',c:'#5D4037'},
+            {id:'tut-libreta',n:11,label:'Mi Libreta',bg:'#E0F2F1',c:'#00695C'},
+          ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
+        </div>
+
+        <!-- Grupo: Comunicación -->
+        <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Comunicaci\u00f3n y Reportes</p>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          ${[
+            {id:'tut-blog',n:12,label:'Blog',bg:'#E0F7FA',c:'#006064'},
+            {id:'tut-reportes',n:13,label:'Reportes Estudiantes',bg:'#FFEBEE',c:'#C62828'},
+            {id:'tut-denuncias',n:14,label:'Buz\u00f3n de Denuncias',bg:'#F3E5F5',c:'#6A1B9A'},
+          ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
+        </div>
+
+        <!-- Grupo: Herramientas -->
+        <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Herramientas y Configuraci\u00f3n</p>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${[
+            {id:'tut-ia',n:15,label:'Configurar IA',bg:'#FCE4EC',c:'#AD1457'},
+            {id:'tut-presentacion',n:16,label:'Modo Presentaci\u00f3n',bg:'#FFF3E0',c:'#E65100'},
+            {id:'tut-backup',n:17,label:'Mis Datos / Backup',bg:'#FBE9E7',c:'#BF360C'},
+            {id:'tut-auditoria',n:18,label:'Auditor\u00eda',bg:'#EDE7F6',c:'#4A148C'},
+          ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
       </div>
 
@@ -10586,10 +10621,527 @@ function abrirTutorial() {
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 4: LIBRO DE CALIFICACIONES -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-calificaciones" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #E65100;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#E65100;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">grade</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#E65100;font-size:1.25rem;">Libro de Calificaciones</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Registra y gestiona las notas de tus estudiantes</p>
+            </div>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 1</div>
+            <h4 class="tut-step-title">Crear un curso</h4>
+            <p class="tut-step-desc">Primero necesitas crear un curso (ej: "4to A - Inform\u00e1tica"). Cada curso tiene su propia lista de estudiantes y calificaciones.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 2</div>
+            <h4 class="tut-step-title">Agregar estudiantes</h4>
+            <p class="tut-step-desc">Agrega tus estudiantes uno por uno, o importa una lista completa desde un archivo CSV. Tambi\u00e9n puedes copiar y pegar una lista de nombres.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 3</div>
+            <h4 class="tut-step-title">Asignar una planificaci\u00f3n</h4>
+            <p class="tut-step-desc">Vincula una planificaci\u00f3n guardada al curso. Esto cargar\u00e1 autom\u00e1ticamente las actividades y sus valores en puntos para que puedas calificar.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 4</div>
+            <h4 class="tut-step-title">Registrar calificaciones</h4>
+            <p class="tut-step-desc">Haz clic en cada celda de la tabla para ingresar la nota del estudiante en cada actividad. El sistema calcula autom\u00e1ticamente:</p>
+            <ul class="tut-list">
+              <li><strong style="color:#4CAF50;">Verde (A):</strong> Aprobado — 70 puntos o m\u00e1s</li>
+              <li><strong style="color:#FF9800;">Amarillo (B):</strong> Regular — entre 60 y 69 puntos</li>
+              <li><strong style="color:#F44336;">Rojo (C/D):</strong> Reprobado — menos de 60 puntos</li>
+            </ul>
+          </div>
+
+          <h4 style="color:#E65100;margin:16px 0 10px;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:20px;">build</span> Herramientas adicionales
+          </h4>
+          <div class="tut-action-grid">
+            <div class="tut-action-item" style="border-left:3px solid #0277BD;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#0277BD;font-size:18px;">how_to_reg</span>
+                <strong style="color:#0277BD;">Asistencia</strong>
+              </div>
+              <p>Activa el m\u00f3dulo de asistencia para llevar el registro diario de cada estudiante.</p>
+            </div>
+            <div class="tut-action-item" style="border-left:3px solid #00695C;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#00695C;font-size:18px;">emoji_events</span>
+                <strong style="color:#00695C;">Participaci\u00f3n</strong>
+              </div>
+              <p>Activa el seguimiento de participaci\u00f3n para registrar intervenciones en clase.</p>
+            </div>
+            <div class="tut-action-item" style="border-left:3px solid #6A1B9A;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#6A1B9A;font-size:18px;">casino</span>
+                <strong style="color:#6A1B9A;">Estudiante aleatorio</strong>
+              </div>
+              <p>Selecciona un estudiante al azar para participar en clase.</p>
+            </div>
+            <div class="tut-action-item" style="border-left:3px solid #1565C0;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#1565C0;font-size:18px;">description</span>
+                <strong style="color:#1565C0;">Exportar a Word</strong>
+              </div>
+              <p>Descarga las calificaciones del curso en formato Word para imprimir o entregar.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 5: RENDIMIENTO -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-rendimiento" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #6A1B9A;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#6A1B9A;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">insights</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#6A1B9A;font-size:1.25rem;">Rendimiento</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Anal\u00edticas visuales del desempe\u00f1o estudiantil</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Esta herramienta muestra gr\u00e1ficos y estad\u00edsticas sobre el rendimiento de tus estudiantes en cada curso. Selecciona un curso para ver:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Gr\u00e1fico de dona:</strong> Distribuci\u00f3n de estudiantes por nivel (Aprobados, Regulares, Reprobados).</li>
+            <li><strong>Barras por RA:</strong> Promedio de desempe\u00f1o en cada Resultado de Aprendizaje.</li>
+            <li><strong>Desglose por actividad:</strong> Rendimiento individual por cada actividad evaluada.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Necesitas tener estudiantes registrados y calificados en el Libro de Calificaciones para que aparezcan los gr\u00e1ficos.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 6: CALCULADORA ASISTENCIA -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-asistencia" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #00796B;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#00796B;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">calculate</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#00796B;font-size:1.25rem;">Calculadora de Asistencia</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Calcula el porcentaje de asistencia r\u00e1pidamente</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Herramienta r\u00e1pida para calcular el porcentaje de asistencia de un estudiante:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Total de d\u00edas de clase:</strong> Ingresa la cantidad total de d\u00edas que se han impartido clases.</li>
+            <li><strong>D\u00edas asistidos:</strong> Ingresa cu\u00e1ntos d\u00edas asisti\u00f3 el estudiante.</li>
+            <li><strong>Resultado:</strong> El sistema calcula autom\u00e1ticamente el porcentaje y lo muestra con colores:
+              <ul>
+                <li><strong style="color:#4CAF50;">Verde:</strong> 90% o m\u00e1s (Excelente)</li>
+                <li><strong style="color:#FF9800;">Amarillo:</strong> 80-89% (Aceptable)</li>
+                <li><strong style="color:#F44336;">Rojo:</strong> Menos de 80% (Por debajo del umbral)</li>
+              </ul>
+            </li>
+            <li><strong>Tabla de referencia:</strong> Se genera autom\u00e1ticamente una tabla con todos los porcentajes posibles.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 7: MI HORARIO -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-horario" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #0277BD;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#0277BD;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">calendar_view_week</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#0277BD;font-size:1.25rem;">Mi Horario</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Organiza tu horario semanal de clases</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Editor visual de horario semanal. Muestra una cuadr\u00edcula de lunes a viernes con los per\u00edodos de clase.
+          </p>
+          <ul class="tut-list">
+            <li><strong>Agregar clase:</strong> Haz clic en cualquier celda vac\u00eda para asignar una materia a ese d\u00eda y per\u00edodo.</li>
+            <li><strong>Datos por clase:</strong> Nombre de la materia/m\u00f3dulo, secci\u00f3n (ej: "4to B"), aula/laboratorio y notas opcionales.</li>
+            <li><strong>Colores autom\u00e1ticos:</strong> Cada materia recibe un color diferente para f\u00e1cil identificaci\u00f3n visual.</li>
+            <li><strong>Leyenda:</strong> En la parte inferior se muestra la lista de materias con sus colores.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>El horario se usa tambi\u00e9n en el Dashboard para mostrarte las clases de hoy, ma\u00f1ana y pasado ma\u00f1ana, y en el Modo Presentaci\u00f3n para detectar autom\u00e1ticamente qu\u00e9 clase est\u00e1s dando.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 8: TAREAS -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-tareas" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #E65100;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#E65100;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">assignment</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#E65100;font-size:1.25rem;">Tareas</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Gestiona las asignaciones y entregas</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Sistema de gesti\u00f3n de tareas y asignaciones con seguimiento de fechas de entrega:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Crear tarea:</strong> T\u00edtulo, descripci\u00f3n, fecha l\u00edmite y secci\u00f3n/curso.</li>
+            <li><strong>Estados:</strong> Pendiente (amarillo), Entregada (verde), Vencida (rojo), No entregada (gris).</li>
+            <li><strong>Filtros:</strong> Filtra por estado o por secci\u00f3n/curso para organizar las tareas.</li>
+            <li><strong>Conteo regresivo:</strong> Muestra autom\u00e1ticamente cu\u00e1ntos d\u00edas faltan para la entrega ("Hoy", "Ma\u00f1ana", "3 d\u00edas").</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Las tareas m\u00e1s pr\u00f3ximas a vencer aparecen primero. En el Dashboard tambi\u00e9n ver\u00e1s un resumen de tareas pendientes y vencidas.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 9: CALENDARIO ESCOLAR -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-calendario" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #1565C0;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#1565C0;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">event_note</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#1565C0;font-size:1.25rem;">Calendario Escolar</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Gestiona fechas importantes y d\u00edas no laborables</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            El calendario escolar tiene tres modos de funcionamiento:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Calendario Oficial (Admin):</strong> Solo los administradores del centro pueden editarlo. Se comparte con todos los docentes del centro.</li>
+            <li><strong>Ver Calendario Oficial:</strong> Los docentes pueden ver el calendario publicado por su centro.</li>
+            <li><strong>Calendario Personal:</strong> Cada docente puede crear su propio calendario con fechas adicionales.</li>
+          </ul>
+          <p style="color:#455A64;line-height:1.6;margin-top:8px;">
+            Incluye d\u00edas festivos, feriados, actividades especiales y fechas importantes organizadas por mes.
+          </p>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 10: MIS NOTAS -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-notas" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #5D4037;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#5D4037;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">sticky_note_2</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#5D4037;font-size:1.25rem;">Mis Notas</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Bloc de notas r\u00e1pido para recordatorios</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Un bloc de notas sencillo para escribir recordatorios, ideas o pendientes. Es texto libre \u2014 escribe lo que necesites.
+          </p>
+          <ul class="tut-list">
+            <li><strong>Autoguardado:</strong> Se guarda autom\u00e1ticamente mientras escribes, sin necesidad de presionar ning\u00fan bot\u00f3n.</li>
+            <li><strong>Sincronizado:</strong> Tus notas se guardan en la nube y estar\u00e1n disponibles desde cualquier dispositivo.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 11: MI LIBRETA -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-libreta" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #00695C;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#00695C;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">menu_book</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#00695C;font-size:1.25rem;">Mi Libreta</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Agenda digital organizada por fechas</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            A diferencia de "Mis Notas" (que es texto libre), la Libreta est\u00e1 organizada como una agenda:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Entradas por fecha:</strong> Cada anotaci\u00f3n se guarda con fecha y hora, organizadas por d\u00eda.</li>
+            <li><strong>Panel doble:</strong> A la izquierda ves la lista de fechas con entradas, a la derecha el contenido del d\u00eda seleccionado.</li>
+            <li><strong>T\u00edtulo y contenido:</strong> Cada entrada tiene un t\u00edtulo y texto descriptivo.</li>
+            <li><strong>Ideal para:</strong> Notas de clase, reflexiones diarias, seguimiento de actividades, bit\u00e1cora docente.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 12: BLOG -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-blog" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #006064;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#006064;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">article</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#006064;font-size:1.25rem;">Blog</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Publica tareas e informaci\u00f3n para tus estudiantes</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            El Blog te permite publicar contenido visible para tus estudiantes a trav\u00e9s de un enlace compartido:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Tipos de publicaci\u00f3n:</strong>
+              <ul>
+                <li><strong style="color:#1565C0;">Tarea de PC:</strong> Asignaciones que los estudiantes realizan en computadora.</li>
+                <li><strong style="color:#2E7D32;">Tarea de Cuaderno:</strong> Asignaciones para realizar en cuaderno f\u00edsico.</li>
+                <li><strong style="color:#E65100;">Informaci\u00f3n:</strong> Avisos generales, materiales de apoyo, recordatorios.</li>
+              </ul>
+            </li>
+            <li><strong>Filtro por curso:</strong> Cada publicaci\u00f3n se asocia a un curso espec\u00edfico.</li>
+            <li><strong>Enlace para estudiantes:</strong> Genera un link que puedes compartir con tu secci\u00f3n para que vean las publicaciones.</li>
+            <li><strong>Fecha l\u00edmite:</strong> Opcional. Para tareas con fecha de entrega.</li>
+            <li><strong>Publicar / Borrador:</strong> Puedes guardar como borrador antes de publicar.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Comparte el enlace del blog con tus estudiantes por WhatsApp o correo. Ellos podr\u00e1n ver las tareas y publicaciones sin necesidad de tener cuenta.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 13: REPORTES ESTUDIANTES -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-reportes" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #C62828;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#C62828;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">assignment_late</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#C62828;font-size:1.25rem;">Reportes Estudiantes</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Recibe reportes de comportamiento de tus estudiantes</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Los estudiantes pueden enviarte reportes sobre el comportamiento de sus compa\u00f1eros a trav\u00e9s de un formulario compartido:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Tipos de reporte:</strong>
+              <ul>
+                <li><strong style="color:#4CAF50;">Positivo:</strong> Reconocimientos de buen comportamiento.</li>
+                <li><strong style="color:#F44336;">Negativo:</strong> Reportes de comportamiento inadecuado.</li>
+                <li><strong style="color:#FF9800;">Observaci\u00f3n:</strong> Comentarios neutrales o sugerencias.</li>
+              </ul>
+            </li>
+            <li><strong>An\u00f3nimo:</strong> Los estudiantes pueden enviar reportes sin dar su nombre.</li>
+            <li><strong>Enlace compartido:</strong> Genera un link para que los estudiantes env\u00eden sus reportes.</li>
+            <li><strong>Filtro por curso:</strong> Organiza los reportes recibidos por secci\u00f3n.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 14: BUZÓN DENUNCIAS -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-denuncias" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #6A1B9A;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#6A1B9A;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">campaign</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#6A1B9A;font-size:1.25rem;">Buz\u00f3n de Denuncias</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Canal seguro para reportar situaciones graves</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Sistema de denuncias para situaciones serias. Los estudiantes pueden reportar de forma an\u00f3nima:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Categor\u00edas:</strong> Acoso/Bullying, Peleas, Robos, Discriminaci\u00f3n, Sustancias, Vandalismo, Amenazas y Otros.</li>
+            <li><strong>Anonimato:</strong> Los reportes pueden ser completamente an\u00f3nimos para proteger al denunciante.</li>
+            <li><strong>Enlace seguro:</strong> Comparte el enlace con tus estudiantes para que puedan denunciar.</li>
+            <li><strong>Gesti\u00f3n:</strong> Visualiza, filtra por curso y gestiona las denuncias recibidas.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Este buz\u00f3n es diferente a los Reportes de Comportamiento. Aqu\u00ed se manejan situaciones graves que requieren atenci\u00f3n inmediata del docente o la administraci\u00f3n.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 15: CONFIGURAR IA -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-ia" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #AD1457;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#AD1457;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">auto_awesome</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#AD1457;font-size:1.25rem;">Configurar IA</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Conecta servicios de IA para mejorar la generaci\u00f3n</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            TinClass puede usar inteligencia artificial para generar planificaciones diarias, instrumentos de evaluaci\u00f3n y actividades m\u00e1s completas y contextualizadas. Para esto necesitas una clave de API:
+          </p>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FCE4EC;color:#AD1457;">Opci\u00f3n 1</div>
+            <h4 class="tut-step-title">Groq (Recomendado)</h4>
+            <p class="tut-step-desc">Obt\u00e9n tu clave gratuita en <strong>console.groq.com</strong>. Crea una cuenta, ve a "API Keys" y genera una nueva clave. La clave comienza con <code>gsk_</code>.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FCE4EC;color:#AD1457;">Opci\u00f3n 2</div>
+            <h4 class="tut-step-title">OpenRouter (Respaldo)</h4>
+            <p class="tut-step-desc">Alternativa en <strong>openrouter.ai</strong>. Crea una cuenta, genera una clave en "Keys". La clave comienza con <code>sk-or-</code>. Se usa como respaldo cuando Groq no est\u00e1 disponible.</p>
+          </div>
+
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Ambos servicios ofrecen modelos gratuitos. Sin claves de IA, el sistema sigue funcionando con generaci\u00f3n local (m\u00e1s b\u00e1sica pero funcional). Las claves se guardan en la nube y estar\u00e1n disponibles en cualquier dispositivo.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 16: MODO PRESENTACIÓN -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-presentacion" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #E65100;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#E65100;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">cast_for_education</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#E65100;font-size:1.25rem;">Modo Presentaci\u00f3n</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Pantalla de clase para proyectar en el aula</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Pantalla especial dise\u00f1ada para proyectar en el aula. Muestra la informaci\u00f3n de la clase actual en formato grande y legible:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Detecci\u00f3n autom\u00e1tica:</strong> Si tienes configurado tu horario, detecta autom\u00e1ticamente qu\u00e9 clase est\u00e1s dando seg\u00fan el d\u00eda y la hora.</li>
+            <li><strong>Objetivo de aprendizaje:</strong> Muestra el RA y las actividades del d\u00eda.</li>
+            <li><strong>Lista de estudiantes:</strong> Muestra la lista del curso para control de participaci\u00f3n.</li>
+            <li><strong>Temporizador:</strong> Cron\u00f3metro configurable para gestionar el tiempo de las actividades.</li>
+            <li><strong>Reloj en vivo:</strong> Muestra la hora actual en pantalla.</li>
+            <li><strong>Pantalla completa:</strong> Bot\u00f3n para entrar en modo de pantalla completa.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Para que la detecci\u00f3n autom\u00e1tica funcione, primero configura tu horario semanal en "Mi Horario" con los nombres de las materias que coincidan con los nombres de tus cursos.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 17: MIS DATOS / BACKUP -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-backup" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #BF360C;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#BF360C;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">backup</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#BF360C;font-size:1.25rem;">Mis Datos / Backup</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Exporta e importa toda tu informaci\u00f3n</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            Herramienta de respaldo para proteger toda tu informaci\u00f3n:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Exportar backup:</strong> Descarga un archivo JSON con <em>todos</em> tus datos: planificaciones, cursos, calificaciones, sesiones diarias, notas, claves de IA y m\u00e1s.</li>
+            <li><strong>Importar backup:</strong> Restaura tus datos desde un archivo JSON previamente exportado. \u00datil para cambiar de dispositivo o recuperar informaci\u00f3n.</li>
+            <li><strong>Resumen:</strong> Muestra un conteo de cu\u00e1ntas planificaciones, cursos y sesiones tienes actualmente.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Aunque tus datos se sincronizan con la nube, es recomendable hacer un backup local peri\u00f3dicamente como medida de seguridad adicional.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 18: AUDITORÍA -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-auditoria" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #4A148C;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#4A148C;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">security</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#4A148C;font-size:1.25rem;">Auditor\u00eda</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Registro de todas las acciones realizadas en el sistema</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
+            La bit\u00e1cora de auditor\u00eda registra autom\u00e1ticamente todas las acciones importantes que realizas en el sistema:
+          </p>
+          <ul class="tut-list">
+            <li><strong>Acciones registradas:</strong> Inicios y cierres de sesi\u00f3n, cambios en planificaciones, calificaciones, creaci\u00f3n de cursos, etc.</li>
+            <li><strong>Filtro por fecha:</strong> Selecciona un rango de fechas para ver las acciones de un per\u00edodo espec\u00edfico.</li>
+            <li><strong>B\u00fasqueda:</strong> Busca acciones espec\u00edficas por texto.</li>
+            <li><strong>Exportar:</strong> Descarga el registro de auditor\u00eda como archivo.</li>
+            <li><strong>Agrupado por d\u00eda:</strong> Las acciones se organizan cronol\u00f3gicamente y por d\u00eda.</li>
+          </ul>
+        </div>
+      </div>
+
       <!-- Footer -->
-      <div style="text-align:center;padding:20px 16px 32px;color:#90A4AE;font-size:0.85rem;">
+      <div style="text-align:center;padding:20px 16px 40px;color:#90A4AE;font-size:0.85rem;">
         <span class="material-icons" style="font-size:18px;vertical-align:middle;">info</span>
-        Este tutorial cubre las funciones principales. El sistema se ir\u00e1 actualizando con nuevas funcionalidades.
+        Tutorial completo de TinClass v14.0 \u2014 \u00bfNecesitas ayuda adicional? Contacta a tu administrador.
       </div>
 
     </div>
