@@ -7790,7 +7790,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -7806,7 +7806,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -10262,6 +10262,321 @@ function _statsAsistencia(cursoId, estudianteId) {
 }
 
 // ─── Calculadora de Asistencia (herramienta independiente) ───────
+// ================================================================
+// TUTORIAL / MANUAL DE USO
+// ================================================================
+
+function abrirTutorial() {
+  _mostrarPanel('panel-tutorial');
+  const el = document.getElementById('tutorial-contenido');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div style="max-width:900px;margin:0 auto;">
+
+      <!-- Header -->
+      <div style="text-align:center;padding:32px 20px 16px;">
+        <span class="material-icons" style="font-size:56px;color:#0288D1;">school</span>
+        <h1 style="margin:8px 0 4px;font-size:1.6rem;color:#0D47A1;">Tutorial de TinClass</h1>
+        <p style="color:#546E7A;font-size:0.95rem;">Aprende a usar las herramientas principales del sistema paso a paso</p>
+      </div>
+
+      <!-- Índice -->
+      <div class="section-card" style="margin:0 16px 20px;border-left:4px solid #0288D1;">
+        <h3 style="margin:0 0 12px;color:#0288D1;display:flex;align-items:center;gap:8px;">
+          <span class="material-icons">list</span> Contenido
+        </h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <a href="#tut-nueva" onclick="event.preventDefault();document.getElementById('tut-nueva').scrollIntoView({behavior:'smooth'})"
+            style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E3F2FD;border-radius:10px;text-decoration:none;color:#1565C0;font-weight:600;transition:transform 0.2s;">
+            <span style="background:#1565C0;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">1</span>
+            Nueva Planificaci\u00f3n por RA
+          </a>
+          <a href="#tut-mis" onclick="event.preventDefault();document.getElementById('tut-mis').scrollIntoView({behavior:'smooth'})"
+            style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#EDE7F6;border-radius:10px;text-decoration:none;color:#4527A0;font-weight:600;transition:transform 0.2s;">
+            <span style="background:#4527A0;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">2</span>
+            Mis Planificaciones
+          </a>
+          <a href="#tut-diarias" onclick="event.preventDefault();document.getElementById('tut-diarias').scrollIntoView({behavior:'smooth'})"
+            style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E0F2F1;border-radius:10px;text-decoration:none;color:#00695C;font-weight:600;transition:transform 0.2s;">
+            <span style="background:#00695C;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">3</span>
+            Planificaciones Diarias
+          </a>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 1: NUEVA PLANIFICACIÓN -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-nueva" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #1565C0;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#1565C0;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">add_circle_outline</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#1565C0;font-size:1.25rem;">Nueva Planificaci\u00f3n por RA</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Crea tu planificaci\u00f3n siguiendo 6 pasos guiados</p>
+            </div>
+          </div>
+
+          <!-- Paso 1 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E3F2FD;color:#1565C0;">Paso 1</div>
+            <h4 class="tut-step-title">Datos Generales</h4>
+            <p class="tut-step-desc">Aqu\u00ed completas la informaci\u00f3n b\u00e1sica de tu planificaci\u00f3n:</p>
+            <ul class="tut-list">
+              <li><strong>Familia profesional:</strong> Selecciona la familia a la que pertenece tu m\u00f3dulo (ej: Inform\u00e1tica y Comunicaci\u00f3n).</li>
+              <li><strong>T\u00edtulo / Bachillerato:</strong> El bachillerato t\u00e9cnico espec\u00edfico.</li>
+              <li><strong>M\u00f3dulo formativo:</strong> El m\u00f3dulo que vas a planificar.</li>
+              <li><strong>Datos del docente:</strong> Tu nombre, centro educativo, a\u00f1o escolar, trimestre.</li>
+              <li><strong>D\u00edas de clase:</strong> Marca qu\u00e9 d\u00edas de la semana impartes este m\u00f3dulo y cu\u00e1ntas horas cada d\u00eda.</li>
+              <li><strong>Fecha de inicio:</strong> A partir de cu\u00e1ndo empiezas a impartir este RA.</li>
+            </ul>
+            <div class="tut-tip">
+              <span class="material-icons">lightbulb</span>
+              <span>El sistema calcula autom\u00e1ticamente las fechas de cada actividad seg\u00fan los d\u00edas de clase que configures.</span>
+            </div>
+          </div>
+
+          <!-- Paso 2 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Paso 2</div>
+            <h4 class="tut-step-title">Resultado de Aprendizaje (RA)</h4>
+            <p class="tut-step-desc">Selecciona o configura el RA que vas a trabajar:</p>
+            <ul class="tut-list">
+              <li><strong>Selecci\u00f3n del RA:</strong> Si el m\u00f3dulo fue seleccionado de la biblioteca, los RA aparecen precargados. Solo elige el que corresponde.</li>
+              <li><strong>Enunciado del RA:</strong> Se muestra autom\u00e1ticamente. Puedes editarlo si necesitas ajustarlo.</li>
+              <li><strong>Nivel de dominio:</strong> Indica si es Conocimiento, Comprensi\u00f3n, Aplicaci\u00f3n, etc.</li>
+            </ul>
+            <div class="tut-tip">
+              <span class="material-icons">lightbulb</span>
+              <span>Si tu m\u00f3dulo no est\u00e1 en la biblioteca, puedes escribir los datos manualmente.</span>
+            </div>
+          </div>
+
+          <!-- Paso 3 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 3</div>
+            <h4 class="tut-step-title">Elementos de Capacidad (EC)</h4>
+            <p class="tut-step-desc">Los EC son las sub-competencias del RA:</p>
+            <ul class="tut-list">
+              <li><strong>EC precargados:</strong> Si seleccionaste un RA de la biblioteca, los EC aparecen autom\u00e1ticamente.</li>
+              <li><strong>Agregar EC manual:</strong> Puedes agregar nuevos EC con su c\u00f3digo, nivel y enunciado.</li>
+              <li><strong>Horas por EC:</strong> Asigna las horas dedicadas a cada EC para que el sistema distribuya las actividades.</li>
+            </ul>
+          </div>
+
+          <!-- Paso 4 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FCE4EC;color:#C62828;">Paso 4</div>
+            <h4 class="tut-step-title">Actividades e Instrumentos de Evaluaci\u00f3n</h4>
+            <p class="tut-step-desc">Aqu\u00ed defines las actividades y c\u00f3mo las vas a evaluar:</p>
+            <ul class="tut-list">
+              <li><strong>Actividades autom\u00e1ticas:</strong> El sistema genera actividades basadas en los EC. Puedes editarlas o agregar m\u00e1s.</li>
+              <li><strong>Instrumento de evaluaci\u00f3n:</strong> Cada actividad tiene un instrumento asignado (Lista de Cotejo, R\u00fabrica, Escala de Valoraci\u00f3n, etc.).</li>
+              <li><strong>Cambiar instrumento:</strong> Haz clic en "Cambiar" para seleccionar otro tipo de instrumento.</li>
+              <li><strong>Ver instrumento:</strong> Haz clic en "Ver" para visualizar los criterios del instrumento generado.</li>
+              <li><strong>Valor en puntos:</strong> Asigna la puntuaci\u00f3n de cada actividad. El total debe sumar los puntos del RA.</li>
+              <li><strong>Editar actividad:</strong> Modifica el enunciado, fecha, EC asociado o instrumento.</li>
+            </ul>
+            <div class="tut-tip">
+              <span class="material-icons">auto_awesome</span>
+              <span>Si tienes la IA configurada, los instrumentos se generan con criterios contextualizados seg\u00fan el enunciado de cada actividad.</span>
+            </div>
+          </div>
+
+          <!-- Paso 5 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8EAF6;color:#283593;">Paso 5</div>
+            <h4 class="tut-step-title">Planificaci\u00f3n Diaria</h4>
+            <p class="tut-step-desc">Genera la planificaci\u00f3n sesi\u00f3n por sesi\u00f3n:</p>
+            <ul class="tut-list">
+              <li><strong>Generaci\u00f3n con IA:</strong> Si tienes una clave de IA configurada, puedes generar todas las sesiones autom\u00e1ticamente con un solo clic.</li>
+              <li><strong>Generaci\u00f3n local:</strong> Sin IA, el sistema genera una estructura b\u00e1sica con inicio, desarrollo y cierre.</li>
+              <li><strong>Editar sesiones:</strong> Cada sesi\u00f3n incluye inicio, desarrollo y cierre que puedes personalizar.</li>
+              <li><strong>Tiempo por fase:</strong> Cada fase (inicio, desarrollo, cierre) tiene un tiempo asignado en minutos.</li>
+            </ul>
+          </div>
+
+          <!-- Paso 6 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#F3E5F5;color:#6A1B9A;">Paso 6</div>
+            <h4 class="tut-step-title">Vista Previa y Exportaci\u00f3n</h4>
+            <p class="tut-step-desc">Revisa y exporta tu planificaci\u00f3n:</p>
+            <ul class="tut-list">
+              <li><strong>Vista previa:</strong> Visualiza c\u00f3mo quedar\u00e1 tu planificaci\u00f3n en formato tabla.</li>
+              <li><strong>Exportar a Word:</strong> Descarga la planificaci\u00f3n en formato .docx listo para imprimir o entregar.</li>
+              <li><strong>Guardar:</strong> Guarda la planificaci\u00f3n en "Mis Planificaciones" para retomarla despu\u00e9s.</li>
+            </ul>
+            <div class="tut-tip">
+              <span class="material-icons">lightbulb</span>
+              <span>Si tu centro educativo tiene una plantilla Word cargada, la exportaci\u00f3n usar\u00e1 autom\u00e1ticamente esa plantilla con el logo del centro.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 2: MIS PLANIFICACIONES -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-mis" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #4527A0;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#4527A0;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">folder_special</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#4527A0;font-size:1.25rem;">Mis Planificaciones</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Gestiona todas tus planificaciones guardadas</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:16px;">
+            En esta secci\u00f3n encontrar\u00e1s todas las planificaciones que hayas guardado. Cada planificaci\u00f3n aparece como una tarjeta con la informaci\u00f3n principal del m\u00f3dulo, docente y bachillerato.
+          </p>
+
+          <h4 style="color:#4527A0;margin:16px 0 10px;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:20px;">touch_app</span> Acciones disponibles
+          </h4>
+
+          <div class="tut-action-grid">
+            <div class="tut-action-item" style="border-left:3px solid #4527A0;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#4527A0;font-size:18px;">open_in_new</span>
+                <strong style="color:#4527A0;">Cargar</strong>
+              </div>
+              <p>Abre la planificaci\u00f3n en el editor para continuar trabaj\u00e1ndola o hacer cambios.</p>
+            </div>
+
+            <div class="tut-action-item" style="border-left:3px solid #00695C;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#00695C;font-size:18px;">group_add</span>
+                <strong style="color:#00695C;">Asignar curso</strong>
+              </div>
+              <p>Vincula la planificaci\u00f3n a un curso del Libro de Calificaciones para sincronizar las actividades y valores.</p>
+            </div>
+
+            <div class="tut-action-item" style="border-left:3px solid #E65100;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#E65100;font-size:18px;">content_copy</span>
+                <strong style="color:#E65100;">Duplicar</strong>
+              </div>
+              <p>Crea una copia de la planificaci\u00f3n. \u00datil si quieres adaptar el mismo m\u00f3dulo para otro grupo o trimestre.</p>
+            </div>
+
+            <div class="tut-action-item" style="border-left:3px solid #1565C0;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#1565C0;font-size:18px;">description</span>
+                <strong style="color:#1565C0;">Word RA</strong>
+              </div>
+              <p>Exporta la planificaci\u00f3n por Resultado de Aprendizaje directamente a un archivo Word (.docx).</p>
+            </div>
+
+            <div class="tut-action-item" style="border-left:3px solid #E65100;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#E65100;font-size:18px;">view_day</span>
+                <strong style="color:#E65100;">Word Diarias</strong>
+              </div>
+              <p>Exporta todas las planificaciones diarias de este m\u00f3dulo a Word, incluyendo los instrumentos de evaluaci\u00f3n.</p>
+            </div>
+
+            <div class="tut-action-item" style="border-left:3px solid #C62828;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#C62828;font-size:18px;">delete</span>
+                <strong style="color:#C62828;">Eliminar</strong>
+              </div>
+              <p>Borra la planificaci\u00f3n permanentemente. Esta acci\u00f3n no se puede deshacer.</p>
+            </div>
+          </div>
+
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Usa el buscador en la parte superior para encontrar r\u00e1pidamente una planificaci\u00f3n por nombre del m\u00f3dulo, docente o bachillerato.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN 3: PLANIFICACIONES DIARIAS -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="tut-diarias" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #00695C;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#00695C;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">today</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#00695C;font-size:1.25rem;">Planificaciones Diarias</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Detalla el desarrollo de cada sesi\u00f3n de clase</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:16px;">
+            Las Planificaciones Diarias te permiten detallar exactamente qu\u00e9 vas a hacer en cada sesi\u00f3n de clase. Se generan a partir de las actividades de tu planificaci\u00f3n por RA.
+          </p>
+
+          <h4 style="color:#00695C;margin:16px 0 10px;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:20px;">route</span> \u00bfC\u00f3mo funciona?
+          </h4>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 1</div>
+            <h4 class="tut-step-title">Selecciona una planificaci\u00f3n</h4>
+            <p class="tut-step-desc">Primero debes tener al menos una planificaci\u00f3n guardada en "Mis Planificaciones". Al abrir Planificaciones Diarias, selecciona cu\u00e1l planificaci\u00f3n quieres detallar.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 2</div>
+            <h4 class="tut-step-title">Visualiza las sesiones</h4>
+            <p class="tut-step-desc">El sistema muestra una lista de sesiones basadas en las fechas de clase calculadas. Cada sesi\u00f3n corresponde a un d\u00eda de clase con sus actividades asignadas.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 3</div>
+            <h4 class="tut-step-title">Genera o edita cada sesi\u00f3n</h4>
+            <p class="tut-step-desc">Para cada sesi\u00f3n puedes:</p>
+            <ul class="tut-list">
+              <li><strong>Generar con IA:</strong> La IA crear\u00e1 autom\u00e1ticamente las fases de inicio, desarrollo y cierre con actividades contextualizadas.</li>
+              <li><strong>Generar localmente:</strong> Sin IA, se crea una estructura b\u00e1sica que puedes personalizar.</li>
+              <li><strong>Editar manualmente:</strong> Escribe directamente lo que har\u00e1s en cada fase de la sesi\u00f3n.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 4</div>
+            <h4 class="tut-step-title">Estructura de cada sesi\u00f3n</h4>
+            <p class="tut-step-desc">Cada planificaci\u00f3n diaria tiene tres fases:</p>
+            <ul class="tut-list">
+              <li><strong>Inicio:</strong> Actividad de apertura, motivaci\u00f3n, repaso de la clase anterior, presentaci\u00f3n del tema.</li>
+              <li><strong>Desarrollo:</strong> Actividades principales de ense\u00f1anza-aprendizaje, pr\u00e1cticas, trabajos en grupo, etc.</li>
+              <li><strong>Cierre:</strong> Resumen, evaluaci\u00f3n formativa, retroalimentaci\u00f3n, asignaci\u00f3n de tareas.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 5</div>
+            <h4 class="tut-step-title">Exportar a Word</h4>
+            <p class="tut-step-desc">Una vez completadas las sesiones, puedes exportar todas las planificaciones diarias a Word. El archivo incluir\u00e1 cada sesi\u00f3n con su fecha, actividades, fases, recursos e instrumentos de evaluaci\u00f3n.</p>
+          </div>
+
+          <div class="tut-tip">
+            <span class="material-icons">auto_awesome</span>
+            <span>Consejo: Configura tu clave de IA desde el bot\u00f3n <strong>Configurar IA</strong> en el Dashboard para obtener planificaciones diarias m\u00e1s completas y contextualizadas autom\u00e1ticamente.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align:center;padding:20px 16px 32px;color:#90A4AE;font-size:0.85rem;">
+        <span class="material-icons" style="font-size:18px;vertical-align:middle;">info</span>
+        Este tutorial cubre las funciones principales. El sistema se ir\u00e1 actualizando con nuevas funcionalidades.
+      </div>
+
+    </div>
+  `;
+}
+
 function abrirCalculadoraAsistencia() {
   const body = document.getElementById('modal-body');
   if (!body) return;

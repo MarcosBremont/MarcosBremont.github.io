@@ -394,6 +394,11 @@
           <span class="material-icons">calculate</span>
           <span>Calc. Asistencia</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-tutorial" onclick="abrirTutorial()"
+          style="--accent:#0288D1;">
+          <span class="material-icons">help_outline</span>
+          <span>Tutorial</span>
+        </button>
       </div>
 
       <!-- ── Grid principal: Hoy | Mañana | Pasado mañana | Tareas ── -->
@@ -1047,6 +1052,16 @@
 
 
   <!-- ===== PANEL PLANIFICACIONES (Biblioteca) ===== -->
+  <!-- ===== PANEL TUTORIAL ===== -->
+  <div id="panel-tutorial" class="hidden">
+    <div id="tutorial-contenido"></div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver al inicio
+      </button>
+    </div>
+  </div>
+
   <div id="panel-planificaciones" class="pln-panel hidden">
     <div class="section-card">
       <div class="section-header">
