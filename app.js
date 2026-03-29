@@ -10276,30 +10276,134 @@ function exportarTutorialPDF() {
 <head>
   <meta charset="UTF-8"/>
   <title>Manual de Usuario – TinClass</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #212121; background: #fff; padding: 24px 32px; }
-    h1 { font-size: 22px; color: #1565C0; margin-bottom: 4px; }
-    h2 { font-size: 16px; color: #1565C0; margin: 18px 0 6px; }
-    h3 { font-size: 13px; color: #37474F; margin: 12px 0 4px; }
-    p  { margin-bottom: 6px; line-height: 1.5; }
-    ul, ol { padding-left: 18px; margin-bottom: 8px; }
-    li { margin-bottom: 3px; line-height: 1.5; }
-    .tut-section { page-break-inside: avoid; margin-bottom: 20px; padding: 14px 16px; border: 1px solid #E0E0E0; border-radius: 8px; }
-    .tut-step-card { page-break-inside: avoid; margin-bottom: 10px; padding: 10px 14px; border-left: 4px solid #1565C0; background: #F5F9FF; border-radius: 0 6px 6px 0; }
-    .tut-step-title { font-weight: 700; color: #1565C0; margin-bottom: 4px; }
-    .tut-tip { background: #FFF8E1; border-left: 4px solid #F9A825; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-top: 8px; font-size: 12px; }
-    .tut-action-item { display: inline-block; background: #F5F5F5; border: 1px solid #E0E0E0; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin: 2px; }
-    .material-icons { display: none; }
+
+    body {
+      font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      color: #212121;
+      background: #fff;
+      padding: 40px 48px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    /* Ocultar botones y elementos de navegación */
+    button, .btn-anterior, .btn-nueva, [onclick] { display: none !important; }
+
+    /* Header */
+    .tut-pdf-header {
+      text-align: center;
+      padding: 24px 0 32px;
+      border-bottom: 3px solid #1565C0;
+      margin-bottom: 28px;
+    }
+    .tut-pdf-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #0D47A1;
+      margin-bottom: 6px;
+    }
+    .tut-pdf-header p { color: #546E7A; font-size: 13px; }
+    .tut-pdf-logo {
+      font-size: 13px;
+      color: #90A4AE;
+      margin-top: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Índice */
+    .section-card {
+      margin-bottom: 20px;
+      padding: 16px 20px;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      page-break-inside: avoid;
+    }
+    .section-card h3 { font-size: 14px; color: #0288D1; margin-bottom: 10px; font-weight: 700; }
+
+    /* Secciones del tutorial */
+    .tut-section {
+      page-break-inside: avoid;
+      margin-bottom: 24px;
+      padding: 18px 20px;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      border-top: 4px solid #1565C0;
+    }
+    .tut-section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0D47A1;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #E3F2FD;
+    }
+
+    /* Pasos */
+    .tut-step-card {
+      page-break-inside: avoid;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-left: 4px solid #1565C0;
+      background: #F5F9FF;
+      border-radius: 0 6px 6px 0;
+    }
+    .tut-step-title { font-weight: 700; color: #1565C0; margin-bottom: 4px; font-size: 13px; }
+    .tut-step-desc { color: #37474F; font-size: 12px; line-height: 1.6; }
+
+    /* Tip */
+    .tut-tip {
+      background: #FFFDE7;
+      border-left: 4px solid #F9A825;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #5D4037;
+      line-height: 1.5;
+    }
+
+    /* Acciones */
+    .tut-action-item {
+      display: inline-block;
+      background: #EEF2FF;
+      border: 1px solid #C5CAE9;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      margin: 2px;
+      color: #283593;
+      font-weight: 500;
+    }
+
+    /* Listas */
+    .tut-list { padding-left: 18px; margin: 8px 0; }
+    .tut-list li { margin-bottom: 5px; line-height: 1.6; color: #424242; font-size: 12px; }
+    .tut-list li strong { color: #1565C0; }
+
+    /* Índice del contenido */
+    p { margin-bottom: 6px; line-height: 1.5; }
+
+    /* Material Icons — ocultar */
+    .material-icons { display: none !important; }
+    span[class="material-icons"] { display: none !important; }
+
+    /* Pie de página */
+    @page { margin: 20mm 15mm; }
     @media print {
       body { padding: 0; }
-      .tut-section { border-color: #BDBDBD; }
+      .tut-section { page-break-inside: avoid; }
+      .tut-step-card { page-break-inside: avoid; }
     }
   </style>
 </head>
 <body>
 ${contenido.innerHTML}
-<script>window.onload=function(){window.print();}<\/script>
+<script>window.onload=function(){ window.print(); }<\/script>
 </body>
 </html>`);
   win.document.close();
