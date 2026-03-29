@@ -97,7 +97,7 @@
     <div class="auth-card">
       <div class="auth-header">
         <img src="LogoTinClass.svg" alt="Logo" class="auth-logo" onerror="this.style.display='none'">
-        <div class="auth-app-name">TinClass</div>
+        <!-- <div class="auth-app-name">TinClass</div> -->
         <div class="auth-app-sub">Sistema de Planificación Educativa · Educación Técnico Profesional</div>
       </div>
 
@@ -250,9 +250,11 @@
         <span class="material-icons" style="color:#1565C0;">school</span>
         <span style="font-size:1rem;font-weight:800;color:#212121;">Selecciona tu centro</span>
       </div>
-      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Elige el centro educativo donde trabajas para completar el registro.</p>
+      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Elige el centro educativo donde trabajas para
+        completar el registro.</p>
       <div style="margin-bottom:10px;">
-        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo *</label>
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo
+          *</label>
         <select id="auth-centro-google"
           style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
           <option value="">Cargando centros...</option>
@@ -295,7 +297,8 @@
           <span class="material-icons">add_circle_outline</span>
           <span>Nueva Planificación</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-planificaciones" onclick="abrirPlanificaciones()" style="--accent:#4527A0;">
+        <button class="dash-nav-btn" id="btn-dash-planificaciones" onclick="abrirPlanificaciones()"
+          style="--accent:#4527A0;">
           <span class="material-icons">folder_special</span>
           <span>Mis Planificaciones</span>
         </button>
@@ -303,7 +306,8 @@
           <span class="material-icons">today</span>
           <span>Planificaciones Diarias</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-calificaciones" onclick="abrirCalificaciones()" style="--accent:#E65100;">
+        <button class="dash-nav-btn" id="btn-dash-calificaciones" onclick="abrirCalificaciones()"
+          style="--accent:#E65100;">
           <span class="material-icons">grade</span>
           <span>Libro de Calificaciones</span>
         </button>
@@ -331,7 +335,8 @@
           <span class="material-icons">auto_awesome</span>
           <span>Configurar IA</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-importar" onclick="abrirImportarPlanificacion()" style="--accent:#1B5E20;">
+        <button class="dash-nav-btn" id="btn-dash-importar" onclick="abrirImportarPlanificacion()"
+          style="--accent:#1B5E20;">
           <span class="material-icons">upload_file</span>
           <span>Importar Planificación</span>
         </button>
@@ -380,8 +385,7 @@
           <span class="material-icons">groups</span>
           <span>Gestión Docentes</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-pagos" onclick="abrirPagos()"
-          style="--accent:#1565C0;display:none;">
+        <button class="dash-nav-btn" id="btn-dash-pagos" onclick="abrirPagos()" style="--accent:#1565C0;display:none;">
           <span class="material-icons">payments</span>
           <span>Pagos</span>
         </button>
@@ -395,8 +399,7 @@
           <span class="material-icons">calculate</span>
           <span>Calc. Asistencia</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-tutorial" onclick="abrirTutorial()"
-          style="--accent:#0288D1;">
+        <button class="dash-nav-btn" id="btn-dash-tutorial" onclick="abrirTutorial()" style="--accent:#0288D1;">
           <span class="material-icons">help_outline</span>
           <span>Tutorial</span>
         </button>
@@ -606,7 +609,8 @@
           <!-- Unidad de Competencia Asociada -->
           <div class="form-group form-group--full">
             <label for="unidad-competencia">Unidad de Competencia Asociada</label>
-            <input type="text" id="unidad-competencia" placeholder="Ej: Desarrollar aplicaciones web con tecnologías del lado del cliente" />
+            <input type="text" id="unidad-competencia"
+              placeholder="Ej: Desarrollar aplicaciones web con tecnologías del lado del cliente" />
           </div>
 
           <!-- Código UC -->
@@ -792,31 +796,36 @@
 
           <!-- Contenidos (opcional, colapsable) -->
           <div class="form-group form-group--full">
-            <div onclick="document.getElementById('contenidos-wrap').classList.toggle('hidden');this.querySelector('.material-icons:last-child').textContent=document.getElementById('contenidos-wrap').classList.contains('hidden')?'expand_more':'expand_less';"
+            <div
+              onclick="document.getElementById('contenidos-wrap').classList.toggle('hidden');this.querySelector('.material-icons:last-child').textContent=document.getElementById('contenidos-wrap').classList.contains('hidden')?'expand_more':'expand_less';"
               style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 0;user-select:none;">
               <span class="material-icons" style="font-size:20px;color:#7C4DFF;">menu_book</span>
               <strong style="font-size:0.88rem;flex:1;">Contenidos del RA</strong>
               <span class="label-optional">(opcional — mejora la generación con IA)</span>
               <span class="material-icons" style="font-size:20px;color:#9E9E9E;">expand_more</span>
             </div>
-            <div id="contenidos-wrap" class="hidden" style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
+            <div id="contenidos-wrap" class="hidden"
+              style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
               <div>
                 <label for="contenidos-conceptuales" style="font-size:0.82rem;font-weight:600;color:#1565C0;">
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">lightbulb</span> Conceptuales
+                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">lightbulb</span>
+                  Conceptuales
                 </label>
                 <textarea id="contenidos-conceptuales" rows="3"
                   placeholder="Ej: Estructura organizacional.&#10;Niveles y funciones de directivos en una organización.&#10;Funciones del analista de sistemas."></textarea>
               </div>
               <div>
                 <label for="contenidos-procedimentales" style="font-size:0.82rem;font-weight:600;color:#E65100;">
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">build</span> Procedimentales
+                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">build</span>
+                  Procedimentales
                 </label>
                 <textarea id="contenidos-procedimentales" rows="3"
                   placeholder="Ej: Identificación de la estructura interna y los procesos de una organización.&#10;Relación de los niveles directivos y su función."></textarea>
               </div>
               <div>
                 <label for="contenidos-actitudinales" style="font-size:0.82rem;font-weight:600;color:#2E7D32;">
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">favorite</span> Actitudinales
+                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">favorite</span>
+                  Actitudinales
                 </label>
                 <textarea id="contenidos-actitudinales" rows="3"
                   placeholder="Ej: Valoración de normas de seguridad y prevención de riesgos laborales.&#10;Disposición al desarrollo de la capacidad de análisis y de síntesis."></textarea>
@@ -910,7 +919,9 @@
         </div>
 
         <!-- Nota de festivos excluidos -->
-        <div id="festivos-excluidos-note" style="display:none;margin-top:10px;padding:8px 14px;background:#FFF8E1;border:1.5px solid #FFD54F;border-radius:10px;font-size:0.8rem;color:#E65100;align-items:center;gap:6px;"></div>
+        <div id="festivos-excluidos-note"
+          style="display:none;margin-top:10px;padding:8px 14px;background:#FFF8E1;border:1.5px solid #FFD54F;border-radius:10px;font-size:0.8rem;color:#E65100;align-items:center;gap:6px;">
+        </div>
 
         <!-- Tarjetas de EC -->
         <div id="ec-container" class="ec-container">
@@ -1756,7 +1767,8 @@
 
       <!-- Selector de centro -->
       <div id="pagos-selector-centro" style="display:none;margin-bottom:16px;">
-        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro educativo:</label>
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro
+          educativo:</label>
         <select id="pagos-centro-sel" onchange="_pagosRefreshTab()"
           style="width:100%;max-width:400px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;background:#fff;">
         </select>
@@ -1814,7 +1826,8 @@
         </button>
         <button class="ra-tab" id="tab-sa-opciones-coord" onclick="switchTabSuperadmin('opciones_coord')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
-          <span class="material-icons" style="font-size:14px;vertical-align:middle;">supervisor_account</span> Opciones Coordinadora
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">supervisor_account</span> Opciones
+          Coordinadora
         </button>
         <button class="ra-tab" id="tab-sa-prompts" onclick="switchTabSuperadmin('prompts')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -2126,13 +2139,20 @@
             <div>
               <div class="about-ver-titulo">Plantillas Word, Editor de Prompts IA y nuevos instrumentos</div>
               <ul class="about-ver-items">
-                <li><strong>Plantilla Word por centro:</strong> cada centro educativo puede subir su plantilla .docx con placeholders que se reemplazan con los datos de la planificación al exportar</li>
-                <li><strong>Editor de Prompts IA:</strong> nueva pestaña en Superadmin para ver y editar los 4 prompts que usa la IA, sin tocar código</li>
-                <li><strong>Contenidos del RA:</strong> campos opcionales para conceptuales, procedimentales y actitudinales que mejoran la generación con IA</li>
-                <li><strong>Nuevos instrumentos de evaluación:</strong> Escala de Valoración, Estimativa, Rango y Diario de Doble Entrada con generación automática de contenido</li>
-                <li><strong>Chip de instrumento:</strong> nombre del instrumento visible en cada tarjeta de planificación diaria</li>
-                <li><strong>Puntaje correcto:</strong> el instrumento ahora usa el valor real de la actividad como puntaje máximo</li>
-                <li><strong>Navegación por pasos:</strong> clic directo en los números del stepper para moverse entre secciones</li>
+                <li><strong>Plantilla Word por centro:</strong> cada centro educativo puede subir su plantilla .docx con
+                  placeholders que se reemplazan con los datos de la planificación al exportar</li>
+                <li><strong>Editor de Prompts IA:</strong> nueva pestaña en Superadmin para ver y editar los 4 prompts
+                  que usa la IA, sin tocar código</li>
+                <li><strong>Contenidos del RA:</strong> campos opcionales para conceptuales, procedimentales y
+                  actitudinales que mejoran la generación con IA</li>
+                <li><strong>Nuevos instrumentos de evaluación:</strong> Escala de Valoración, Estimativa, Rango y Diario
+                  de Doble Entrada con generación automática de contenido</li>
+                <li><strong>Chip de instrumento:</strong> nombre del instrumento visible en cada tarjeta de
+                  planificación diaria</li>
+                <li><strong>Puntaje correcto:</strong> el instrumento ahora usa el valor real de la actividad como
+                  puntaje máximo</li>
+                <li><strong>Navegación por pasos:</strong> clic directo en los números del stepper para moverse entre
+                  secciones</li>
               </ul>
             </div>
           </div>
