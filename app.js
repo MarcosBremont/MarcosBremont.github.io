@@ -16925,6 +16925,12 @@ function guardarApiKey() {
   if (openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, openrouterKey);
   else localStorage.removeItem(OPENROUTER_KEY_STORAGE);
 
+  // Sincronizar claves con Firebase
+  if (window._syncFirebase) {
+    window._syncFirebase('groqKey', groqKey || '');
+    window._syncFirebase('openrouterKey', openrouterKey || '');
+  }
+
   actualizarBtnConfigIA();
   cerrarModalBtn();
   const proveedores = [groqKey && 'Groq', openrouterKey && 'OpenRouter'].filter(Boolean).join(' + ');
@@ -16934,6 +16940,10 @@ function guardarApiKey() {
 function borrarApiKey() {
   localStorage.removeItem(GROQ_KEY_STORAGE);
   localStorage.removeItem(OPENROUTER_KEY_STORAGE);
+  if (window._syncFirebase) {
+    window._syncFirebase('groqKey', '');
+    window._syncFirebase('openrouterKey', '');
+  }
   actualizarBtnConfigIA();
   cerrarModalBtn();
   mostrarToast('Claves eliminadas. Se usará generación local.', 'info');
