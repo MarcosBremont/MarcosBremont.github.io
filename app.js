@@ -10313,21 +10313,19 @@ function abrirTutorial() {
   el.innerHTML = `
     <div style="max-width:900px;margin:0 auto;">
 
-      <!-- Botones de acción -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:16px 16px 0;">
-        <button class="btn-anterior" onclick="abrirDashboard()">
-          <span class="material-icons">arrow_back</span> Volver al inicio
-        </button>
-        <button class="btn-nueva" style="background:#C62828;color:#fff;border-color:#C62828;" onclick="exportarTutorialPDF()">
-          <span class="material-icons">picture_as_pdf</span> Exportar como PDF
-        </button>
-      </div>
-
       <!-- Header -->
       <div style="text-align:center;padding:32px 20px 16px;">
         <span class="material-icons" style="font-size:56px;color:#0288D1;">school</span>
         <h1 style="margin:8px 0 4px;font-size:1.6rem;color:#0D47A1;">Tutorial de TinClass</h1>
         <p style="color:#546E7A;font-size:0.95rem;">Aprende a usar las herramientas principales del sistema paso a paso</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:16px;">
+          <button class="btn-anterior" onclick="abrirDashboard()">
+            <span class="material-icons">arrow_back</span> Volver al inicio
+          </button>
+          <button class="btn-nueva" style="background:#C62828;color:#fff;border-color:#C62828;" onclick="exportarTutorialPDF()">
+            <span class="material-icons">picture_as_pdf</span> Exportar como PDF
+          </button>
+        </div>
       </div>
 
       <!-- Índice -->
