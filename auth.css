@@ -52,9 +52,9 @@
 }
 
 .auth-logo {
-  width: 220px;
-  height: 220px;
-  border-radius: 0px;
+  width: 180px;
+  height: auto;
+  display: block;
 }
 
 .auth-app-name {
