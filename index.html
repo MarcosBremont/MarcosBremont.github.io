@@ -1067,9 +1067,12 @@
   <!-- ===== PANEL TUTORIAL ===== -->
   <div id="panel-tutorial" class="hidden">
     <div id="tutorial-contenido"></div>
-    <div class="nav-buttons">
+    <div class="nav-buttons" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <button class="btn-anterior" onclick="abrirDashboard()">
         <span class="material-icons">arrow_back</span> Volver al inicio
+      </button>
+      <button class="btn-nueva" style="background:#C62828;color:#fff;border-color:#C62828;" onclick="exportarTutorialPDF()">
+        <span class="material-icons">picture_as_pdf</span> Exportar como PDF
       </button>
     </div>
   </div>

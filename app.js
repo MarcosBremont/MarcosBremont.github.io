@@ -10266,6 +10266,45 @@ function _statsAsistencia(cursoId, estudianteId) {
 // TUTORIAL / MANUAL DE USO
 // ================================================================
 
+function exportarTutorialPDF() {
+  const contenido = document.getElementById('tutorial-contenido');
+  if (!contenido) return;
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Manual de Usuario – TinClass</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #212121; background: #fff; padding: 24px 32px; }
+    h1 { font-size: 22px; color: #1565C0; margin-bottom: 4px; }
+    h2 { font-size: 16px; color: #1565C0; margin: 18px 0 6px; }
+    h3 { font-size: 13px; color: #37474F; margin: 12px 0 4px; }
+    p  { margin-bottom: 6px; line-height: 1.5; }
+    ul, ol { padding-left: 18px; margin-bottom: 8px; }
+    li { margin-bottom: 3px; line-height: 1.5; }
+    .tut-section { page-break-inside: avoid; margin-bottom: 20px; padding: 14px 16px; border: 1px solid #E0E0E0; border-radius: 8px; }
+    .tut-step-card { page-break-inside: avoid; margin-bottom: 10px; padding: 10px 14px; border-left: 4px solid #1565C0; background: #F5F9FF; border-radius: 0 6px 6px 0; }
+    .tut-step-title { font-weight: 700; color: #1565C0; margin-bottom: 4px; }
+    .tut-tip { background: #FFF8E1; border-left: 4px solid #F9A825; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-top: 8px; font-size: 12px; }
+    .tut-action-item { display: inline-block; background: #F5F5F5; border: 1px solid #E0E0E0; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin: 2px; }
+    .material-icons { display: none; }
+    @media print {
+      body { padding: 0; }
+      .tut-section { border-color: #BDBDBD; }
+    }
+  </style>
+</head>
+<body>
+${contenido.innerHTML}
+<script>window.onload=function(){window.print();}<\/script>
+</body>
+</html>`);
+  win.document.close();
+}
+
 function abrirTutorial() {
   _mostrarPanel('panel-tutorial');
   const el = document.getElementById('tutorial-contenido');
