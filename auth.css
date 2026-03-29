@@ -44,7 +44,10 @@
 
 /* Logo + nombre */
 .auth-header {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 28px;
 }
 
@@ -52,7 +55,6 @@
   width: 220px;
   height: 220px;
   border-radius: 0px;
-  margin-bottom: 0px;
 }
 
 .auth-app-name {
@@ -65,7 +67,6 @@
 .auth-app-sub {
   font-size: 0.78rem;
   color: #78909C;
-  margin-top: -6px;
 }
 
 /* Tabs Entrar / Registrarse */
