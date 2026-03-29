@@ -607,24 +607,12 @@ function authMostrarCodigoGoogle() {
 }
 
 async function _confirmarCodigoGoogle() {
-  const input = document.getElementById('auth-codigo-google');
   const errEl = document.getElementById('auth-codigo-google-error');
-  const codigo = (input?.value || '').trim();
   const centroId = document.getElementById('auth-centro-google')?.value;
   const centroNombre = document.getElementById('auth-centro-google')?.selectedOptions[0]?.textContent || '';
 
   if (!centroId) {
     if (errEl) { errEl.textContent = 'Selecciona tu centro educativo.'; errEl.classList.add('visible'); }
-    return;
-  }
-  if (!codigo) {
-    if (errEl) { errEl.textContent = 'Ingresa el código de invitación.'; errEl.classList.add('visible'); }
-    return;
-  }
-  if (codigo.toUpperCase() !== _getCodigoInvitacion().toUpperCase()) {
-    if (errEl) { errEl.textContent = 'Código incorrecto. Acceso denegado.'; errEl.classList.add('visible'); }
-    if (input) input.value = '';
-    setTimeout(() => input?.focus(), 50);
     return;
   }
 

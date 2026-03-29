@@ -241,32 +241,33 @@
     </div>
   </div>
 
-  <!-- ===== MODAL: CÓDIGO PARA GOOGLE REGISTRO ===== -->
+  <!-- ===== MODAL: SELECCIONAR CENTRO PARA GOOGLE REGISTRO ===== -->
   <div id="auth-google-code-overlay" class="hidden"
     style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;">
     <div
       style="background:#fff;border-radius:16px;padding:28px 24px;width:min(340px,calc(100vw - 32px));box-shadow:0 8px 40px rgba(0,0,0,0.28);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span class="material-icons" style="color:#6A1B9A;">vpn_key</span>
-        <span style="font-size:1rem;font-weight:800;color:#212121;">Código de invitación</span>
+        <span class="material-icons" style="color:#1565C0;">school</span>
+        <span style="font-size:1rem;font-weight:800;color:#212121;">Selecciona tu centro</span>
       </div>
-      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Ingresa el código secreto para completar el registro
-        con Google.</p>
+      <p style="font-size:0.82rem;color:#546E7A;margin:0 0 16px;">Elige el centro educativo donde trabajas para completar el registro.</p>
       <div style="margin-bottom:10px;">
-        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo
-          *</label>
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo *</label>
         <select id="auth-centro-google"
           style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
           <option value="">Cargando centros...</option>
         </select>
       </div>
-      <input type="text" id="auth-codigo-google" placeholder="Código secreto"
-        style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;box-sizing:border-box;letter-spacing:0.1em;"
-        onkeydown="if(event.key==='Enter') _confirmarCodigoGoogle()" />
       <div class="auth-error" id="auth-codigo-google-error" style="margin-top:6px;min-height:18px;"></div>
-      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+      <div style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:10px 12px;margin-bottom:14px;">
+        <span style="font-size:0.78rem;color:#1565C0;line-height:1.4;display:block;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">info</span>
+          Tu cuenta quedar&aacute; pendiente de aprobaci&oacute;n por el administrador de tu centro.
+        </span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button
-          onclick="document.getElementById('auth-google-code-overlay').classList.add('hidden');document.getElementById('auth-codigo-google').value='';document.getElementById('auth-codigo-google-error').textContent='';"
+          onclick="document.getElementById('auth-google-code-overlay').classList.add('hidden');document.getElementById('auth-codigo-google-error').textContent='';"
           style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">
           Cancelar
         </button>
