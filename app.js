@@ -10342,16 +10342,31 @@ function abrirTutorial() {
           <!-- Paso 2 -->
           <div class="tut-step-card">
             <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Paso 2</div>
-            <h4 class="tut-step-title">Resultado de Aprendizaje (RA)</h4>
-            <p class="tut-step-desc">Selecciona o configura el RA que vas a trabajar:</p>
+            <h4 class="tut-step-title">Resultado de Aprendizaje y Criterios</h4>
+            <p class="tut-step-desc">En este paso configuras el RA, los criterios y los contenidos. Toda esta informaci\u00f3n la encuentras en el curr\u00edculo de tu m\u00f3dulo formativo:</p>
             <ul class="tut-list">
-              <li><strong>Selecci\u00f3n del RA:</strong> Si el m\u00f3dulo fue seleccionado de la biblioteca, los RA aparecen precargados. Solo elige el que corresponde.</li>
-              <li><strong>Enunciado del RA:</strong> Se muestra autom\u00e1ticamente. Puedes editarlo si necesitas ajustarlo.</li>
-              <li><strong>Nivel de dominio:</strong> Indica si es Conocimiento, Comprensi\u00f3n, Aplicaci\u00f3n, etc.</li>
+              <li><strong>Descripci\u00f3n del RA:</strong> Busca el Resultado de Aprendizaje en tu curr\u00edculo, c\u00f3pialo y p\u00e9galo en este campo. Es el texto completo del RA que vas a trabajar en este trimestre.</li>
+              <li><strong>Criterios de Evaluaci\u00f3n:</strong> Tambi\u00e9n los copias del curr\u00edculo. Son los criterios de evaluaci\u00f3n de referencia asociados a ese RA. Col\u00f3calos uno por l\u00ednea.</li>
+              <li><strong>Recursos Did\u00e1cticos:</strong> Estos <strong>NO</strong> est\u00e1n en el curr\u00edculo. Debes escribirlos t\u00fa: son los recursos que vas a necesitar o usar en tus clases (computadoras, proyector, pizarr\u00f3n digital, plataformas, herramientas, materiales, etc.).</li>
             </ul>
+
+            <h4 class="tut-step-title" style="margin-top:14px;">Contenidos del RA <span style="font-weight:400;color:#78909C;font-size:0.85rem;">(opcional)</span></h4>
+            <p class="tut-step-desc">Esta secci\u00f3n es opcional pero <strong>mejora significativamente la generaci\u00f3n con IA</strong>. Los tres tipos de contenidos los copias directamente del curr\u00edculo:</p>
+            <ul class="tut-list">
+              <li><strong>Conceptuales:</strong> Los conocimientos te\u00f3ricos que el estudiante debe aprender (definiciones, conceptos, teor\u00edas).</li>
+              <li><strong>Procedimentales:</strong> Las habilidades pr\u00e1cticas y procesos que el estudiante debe dominar (t\u00e9cnicas, procedimientos, m\u00e9todos).</li>
+              <li><strong>Actitudinales:</strong> Los valores y actitudes que se espera desarrollar (responsabilidad, trabajo en equipo, normas de seguridad).</li>
+            </ul>
+
+            <h4 class="tut-step-title" style="margin-top:14px;">Configuraci\u00f3n de EC y Actividades</h4>
+            <ul class="tut-list">
+              <li><strong>Cantidad de Elementos de Capacidad (EC):</strong> Indica cu\u00e1ntos EC (sub-competencias) quieres que tenga este RA. El sistema generar\u00e1 esa cantidad de EC autom\u00e1ticamente en el siguiente paso.</li>
+              <li><strong>Actividades por EC:</strong> Cu\u00e1ntas actividades de evaluaci\u00f3n quieres asignar a cada EC. Por ejemplo, si pones 2 actividades y tienes 4 EC, se generar\u00e1n 8 actividades en total.</li>
+            </ul>
+
             <div class="tut-tip">
               <span class="material-icons">lightbulb</span>
-              <span>Si tu m\u00f3dulo no est\u00e1 en la biblioteca, puedes escribir los datos manualmente.</span>
+              <span>Si seleccionaste el m\u00f3dulo de la biblioteca del sistema, algunos campos ya vendr\u00e1n precargados. Si no est\u00e1 en la biblioteca, busca toda la informaci\u00f3n en tu curr\u00edculo f\u00edsico o digital y c\u00f3piala manualmente.</span>
             </div>
           </div>
 
@@ -10359,12 +10374,16 @@ function abrirTutorial() {
           <div class="tut-step-card">
             <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 3</div>
             <h4 class="tut-step-title">Elementos de Capacidad (EC)</h4>
-            <p class="tut-step-desc">Los EC son las sub-competencias del RA:</p>
+            <p class="tut-step-desc">Los EC son las sub-competencias del RA. Representan lo que el estudiante debe ser capaz de hacer al completar el aprendizaje:</p>
             <ul class="tut-list">
-              <li><strong>EC precargados:</strong> Si seleccionaste un RA de la biblioteca, los EC aparecen autom\u00e1ticamente.</li>
-              <li><strong>Agregar EC manual:</strong> Puedes agregar nuevos EC con su c\u00f3digo, nivel y enunciado.</li>
-              <li><strong>Horas por EC:</strong> Asigna las horas dedicadas a cada EC para que el sistema distribuya las actividades.</li>
+              <li><strong>EC precargados:</strong> Si seleccionaste un RA de la biblioteca, los EC aparecen autom\u00e1ticamente con su c\u00f3digo, nivel y enunciado.</li>
+              <li><strong>Agregar EC manual:</strong> Puedes agregar nuevos EC escribiendo su c\u00f3digo (ej: E.C.1.1.1), nivel de dominio y enunciado.</li>
+              <li><strong>Horas por EC:</strong> Asigna las horas dedicadas a cada EC. El sistema usa esto para distribuir las fechas de las actividades seg\u00fan los d\u00edas de clase.</li>
             </ul>
+            <div class="tut-tip">
+              <span class="material-icons">lightbulb</span>
+              <span>Los EC tambi\u00e9n los encuentras en el curr\u00edculo, dentro de cada Resultado de Aprendizaje. Si los generaste autom\u00e1ticamente, rev\u00edsalos y ajusta seg\u00fan tu curr\u00edculo.</span>
+            </div>
           </div>
 
           <!-- Paso 4 -->
