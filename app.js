@@ -2984,10 +2984,14 @@ function _actualizarResumenValores(listaActividades) {
     mensaje = `Total asignado: ${sumRedondeada} / ${valorRA} pts — Faltan ${Math.abs(diff)} pts`;
   }
 
+  const totalActs = listaActividades.filter(a => !a.esComplementario).length;
+  const totalComp = listaActividades.filter(a => a.esComplementario).length;
+  const conteoLabel = `${totalActs} actividad${totalActs !== 1 ? 'es' : ''}${totalComp > 0 ? ` + ${totalComp} complementaria${totalComp !== 1 ? 's' : ''}` : ''}`;
+
   const divResumen = document.createElement('div');
   divResumen.id = 'resumen-valores-act';
-  divResumen.style.cssText = `display:flex;align-items:center;gap:8px;padding:12px 16px;margin-top:12px;border-radius:10px;font-size:0.88rem;font-weight:600;background:${bgColor};color:${color};border:1.5px solid ${borderColor};`;
-  divResumen.innerHTML = `<span class="material-icons" style="font-size:20px;">${icon}</span> ${mensaje}`;
+  divResumen.style.cssText = `display:flex;align-items:center;gap:8px;padding:12px 16px;margin-top:12px;border-radius:10px;font-size:0.88rem;font-weight:600;background:${bgColor};color:${color};border:1.5px solid ${borderColor};flex-wrap:wrap;`;
+  divResumen.innerHTML = `<span class="material-icons" style="font-size:20px;">${icon}</span> ${mensaje} <span style="margin-left:auto;font-size:0.8rem;font-weight:500;opacity:0.8;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">assignment</span> ${conteoLabel}</span>`;
 
   // Insertar después de la tabla
   const tabla = tbody.closest('table');
