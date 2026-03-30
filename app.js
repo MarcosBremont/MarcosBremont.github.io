@@ -16144,6 +16144,31 @@ async function _generarSesionConIA(actId, act, ec) {
   }
 }
 
+async function generarTodasLasSesiones() {
+  const acts = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  if (acts.length === 0) { mostrarToast('No hay actividades para generar.', 'warning'); return; }
+
+  const btn = document.getElementById('btn-generar-todas');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:17px;animation:spin 1s linear infinite;">sync</span> Generando...'; }
+
+  let generadas = 0;
+  for (const act of acts) {
+    if (act.sesion && (act.sesion.inicio || act.sesion.desarrollo || act.sesion.cierre)) {
+      generadas++;
+      continue; // Ya tiene contenido, saltar
+    }
+    await new Promise(resolve => {
+      generarSesion(act.id);
+      setTimeout(resolve, getGroqKey() || getOpenRouterKey() ? 1800 : 200);
+    });
+    generadas++;
+    if (btn) btn.innerHTML = `<span class="material-icons" style="font-size:17px;">sync</span> ${generadas}/${acts.length}`;
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:17px;">auto_awesome</span> Generar todas'; }
+  mostrarToast(`✓ ${generadas} sesiones generadas`, 'success');
+}
+
 function generarSesion(actId) {
   const act = (planificacion.actividades || []).find(a => a.id === actId);
   if (!act) return;
