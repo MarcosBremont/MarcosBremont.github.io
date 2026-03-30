@@ -2702,6 +2702,27 @@ function _confirmarItemComplementario() {
   mostrarToast(`Ítem "${label}" agregado ✓ — Asígnale un valor en puntos`, 'success');
 }
 
+function distribuirPuntosAutomatico() {
+  const acts = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  if (acts.length === 0) { mostrarToast('No hay actividades para distribuir.', 'warning'); return; }
+
+  const valorRA = parseFloat(planificacion?.datosGenerales?.valorRA) || 0;
+  if (valorRA <= 0) { mostrarToast('Define primero el valor del RA en los datos generales.', 'warning'); return; }
+
+  // Distribución equitativa con ajuste del último para cuadrar exacto
+  const base = Math.floor((valorRA / acts.length) * 100) / 100;
+  let restante = Math.round((valorRA - base * (acts.length - 1)) * 100) / 100;
+
+  acts.forEach((a, i) => {
+    a.valor = i === acts.length - 1 ? restante : base;
+  });
+
+  renderizarActividades(planificacion.actividades);
+  actualizarResumenPuntos(planificacion.actividades);
+  guardarBorrador();
+  mostrarToast(`${valorRA} pts distribuidos entre ${acts.length} actividades (${base} pts c/u)`, 'success');
+}
+
 function renderizarActividades(listaActividades) {
   // Mostrar alerta si hay ECs sin actividades
   const _ecsSinActs = (planificacion.elementosCapacidad || []).filter(ec =>
