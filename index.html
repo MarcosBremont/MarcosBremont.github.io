@@ -774,7 +774,21 @@
             <textarea id="descripcion-ra" rows="5"
               placeholder="Escribe aquí la descripción completa del RA. Ej: El/la estudiante será capaz de desarrollar aplicaciones web usando JavaScript moderno, aplicando principios de diseño responsivo y buenas prácticas de programación, demostrando compromiso con la calidad del código..."
               required></textarea>
-            <div id="nivel-bloom-detectado" class="bloom-badge hidden"></div>
+            <div id="bloom-badge-wrap" class="hidden" style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+              <div id="nivel-bloom-detectado" class="bloom-badge"></div>
+              <button type="button" onclick="toggleBloomSelector()" style="background:none;border:1px solid #90A4AE;border-radius:6px;padding:2px 8px;font-size:0.75rem;color:#546E7A;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                <span class="material-icons" style="font-size:14px;">edit</span> Cambiar
+              </button>
+              <select id="bloom-selector" onchange="cambiarNivelBloomManual(this.value)" style="display:none;border:1px solid #1565C0;border-radius:6px;padding:3px 8px;font-size:0.82rem;color:#1565C0;background:#E3F2FD;cursor:pointer;">
+                <option value="conocimiento">Conocimiento</option>
+                <option value="comprension">Comprensión</option>
+                <option value="aplicacion">Aplicación</option>
+                <option value="analisis">Análisis</option>
+                <option value="sintesis">Síntesis</option>
+                <option value="evaluacion">Evaluación</option>
+                <option value="actitudinal">Actitudinal</option>
+              </select>
+            </div>
           </div>
 
           <!-- Criterios de Evaluación de Referencia -->

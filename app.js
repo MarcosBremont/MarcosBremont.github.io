@@ -6688,7 +6688,8 @@ function actualizarBloomBadge(textoRA) {
 
 
 
-  if (!textoRA || textoRA.length < 5) { badge.classList.add('hidden'); return; }
+  const wrap = document.getElementById('bloom-badge-wrap');
+  if (!textoRA || textoRA.length < 5) { if (wrap) wrap.classList.add('hidden'); badge.classList.add('hidden'); return; }
 
 
 
@@ -6733,21 +6734,39 @@ function actualizarBloomBadge(textoRA) {
 
 
   badge.style.color = info.color;
-
-
-
   badge.style.background = info.bg;
-
-
-
   badge.style.border = `1px solid ${info.color}33`;
-
-
-
   badge.classList.remove('hidden');
+  const wrap2 = document.getElementById('bloom-badge-wrap');
+  if (wrap2) { wrap2.classList.remove('hidden'); wrap2.style.display = 'flex'; }
+  const sel = document.getElementById('bloom-selector');
+  if (sel) sel.value = nivel;
+  planificacion.ra.nivelBloom = nivel;
+}
 
+function toggleBloomSelector() {
+  const sel = document.getElementById('bloom-selector');
+  if (!sel) return;
+  sel.style.display = sel.style.display === 'none' ? 'inline-block' : 'none';
+}
 
-
+function cambiarNivelBloomManual(nivel) {
+  const colores = {
+    conocimiento: { label: 'Nivel Bloom: Conocimiento', color: '#1565C0', bg: '#E3F2FD' },
+    comprension:  { label: 'Nivel Bloom: Comprensión',  color: '#2E7D32', bg: '#E8F5E9' },
+    aplicacion:   { label: 'Nivel Bloom: Aplicación',   color: '#E65100', bg: '#FFF3E0' },
+    analisis:     { label: 'Nivel Bloom: Análisis',     color: '#00695C', bg: '#E0F2F1' },
+    sintesis:     { label: 'Nivel Bloom: Síntesis',     color: '#4527A0', bg: '#EDE7F6' },
+    evaluacion:   { label: 'Nivel Bloom: Evaluación',   color: '#AD1457', bg: '#FCE4EC' },
+    actitudinal:  { label: 'Nivel Bloom: Actitudinal',  color: '#6A1B9A', bg: '#F3E5F5' }
+  };
+  const inf = colores[nivel]; if (!inf) return;
+  const b = document.getElementById('nivel-bloom-detectado');
+  if (b) { b.textContent = inf.label; b.style.color = inf.color; b.style.background = inf.bg; b.style.border = `1px solid ${inf.color}33`; }
+  planificacion.ra.nivelBloom = nivel;
+  const sel = document.getElementById('bloom-selector');
+  if (sel) sel.style.display = 'none';
+  guardarBorrador();
 }
 
 
