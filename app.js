@@ -2148,7 +2148,7 @@ function renderizarEC(listaEC) {
 
 
 
-          <span class="momento-label">?? Anticipación (${secuencia.anticipacion.pct}%):</span>
+          <span class="momento-label">&#128269; Anticipación (${secuencia.anticipacion.pct}%):</span>
 
 
 
@@ -2164,7 +2164,7 @@ function renderizarEC(listaEC) {
 
 
 
-          <span class="momento-label">?? Construcción (${secuencia.construccion.pct}%):</span>
+          <span class="momento-label">&#9881; Construcción (${secuencia.construccion.pct}%):</span>
 
 
 
@@ -2180,7 +2180,7 @@ function renderizarEC(listaEC) {
 
 
 
-          <span class="momento-label">? Consolidación (${secuencia.consolidacion.pct}%):</span>
+          <span class="momento-label">&#10003; Consolidación (${secuencia.consolidacion.pct}%):</span>
 
 
 
