@@ -14147,6 +14147,75 @@ function cargarBiblioteca() {
 
 
 
+/** Abre modal para copiar datos generales de otra planificación guardada */
+function abrirModalCopiarDatosGenerales() {
+  const biblio = cargarBiblioteca();
+  const items = biblio.items || [];
+
+  if (items.length === 0) {
+    mostrarToast('No hay planificaciones guardadas en la biblioteca.', 'error');
+    return;
+  }
+
+  const listaHTML = items.map((item, idx) => {
+    const dg = item.planificacion?.datosGenerales || {};
+    const modulo = dg.moduloFormativo || dg.codigoModulo || '(sin nombre)';
+    const docente = dg.nombreDocente ? ` · ${dg.nombreDocente}` : '';
+    const fecha = item.fechaGuardadoLabel || '';
+    return `
+      <div onclick="_confirmarCopiarDatosGenerales(${idx})" style="
+        padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;
+        margin-bottom:8px;transition:border-color .15s,background .15s;"
+        onmouseover="this.style.borderColor='#1565C0';this.style.background='#E3F2FD';"
+        onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
+        <div style="font-weight:700;color:#1A237E;font-size:0.9rem;">${modulo}${docente}</div>
+        <div style="font-size:0.78rem;color:#757575;margin-top:3px;">${fecha}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('modal-title').textContent = 'Copiar datos generales de otra planificación';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:0.85rem;color:#555;margin-bottom:12px;">
+      Selecciona una planificación guardada. Se copiarán: Familia Profesional, Código FP,
+      Nombre del Bachillerato Técnico, Código del Título, Módulo Formativo, Código del Módulo,
+      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA y Horas por Semana.
+    </p>
+    <div style="max-height:400px;overflow-y:auto;">${listaHTML}</div>`;
+  _usarFooterDinamico(`<button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`);
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Guardar items en variable temporal para acceso desde el confirm
+  window._copiarDGItems = items;
+}
+
+function _confirmarCopiarDatosGenerales(idx) {
+  const item = (window._copiarDGItems || [])[idx];
+  if (!item) return;
+  const dg = item.planificacion?.datosGenerales || {};
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+
+  setVal('familia-profesional', dg.familiaProfesional);
+  setVal('codigo-fp', dg.codigoFP);
+  setVal('nombre-bachillerato', dg.nombreBachillerato);
+  setVal('codigo-titulo', dg.codigoTitulo);
+  setVal('modulo-formativo', dg.moduloFormativo);
+  setVal('codigo-modulo', dg.codigoModulo);
+  setVal('nombre-docente', dg.nombreDocente);
+  setVal('unidad-competencia', dg.unidadCompetencia);
+  setVal('codigo-uc', dg.codigoUC);
+  setVal('cantidad-ra', dg.cantidadRA);
+  setVal('horas-semana', dg.horasSemana);
+
+  cerrarModalBtn();
+  mostrarToast('Datos generales copiados correctamente ✓', 'success');
+  window._copiarDGItems = null;
+}
+
 /** Guarda el estado de la biblioteca */
 
 
