@@ -18281,7 +18281,7 @@ const MODELOS_GROQ = [
 ];
 
 /** Llama a la API de Groq con un modelo especifico */
-async function _llamarModeloGroq(modelo, groqKey, prompt) {
+async function _llamarModeloGroq(modelo, groqKey, prompt, maxTokens = 8192) {
   const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   const body = {
     model: modelo,
@@ -18290,7 +18290,7 @@ async function _llamarModeloGroq(modelo, groqKey, prompt) {
       { role: 'user', content: prompt }
     ],
     temperature: 0.40,
-    max_tokens: 8192
+    max_tokens: maxTokens
   };
 
   const resp = await fetch(endpoint, {
@@ -18320,14 +18320,14 @@ async function _llamarModeloGroq(modelo, groqKey, prompt) {
 }
 
 /** Llama a Groq con fallback entre modelos. Devuelve datos parseados o lanza error. */
-async function _llamarGroqConFallback(prompt, mensajeToast) {
+async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
   const groqKey = getGroqKey();
   let ultimoError = '';
   let algunoDisponible = false;
   for (let m = 0; m < MODELOS_GROQ.length; m++) {
     const modelo = MODELOS_GROQ[m];
     mostrarToast(`🟢 ${mensajeToast} (${modelo})…`, 'info');
-    const resultado = await _llamarModeloGroq(modelo, groqKey, prompt);
+    const resultado = await _llamarModeloGroq(modelo, groqKey, prompt, maxTokens);
     if (resultado.ok) return resultado.data;
     ultimoError = resultado.error;
     const errMsg = resultado.error || '';
@@ -18421,7 +18421,7 @@ async function generarConGroq(dg, ra, fechasClase) {
   try {
     mostrarToast('🟢 Generando instrumentos y sesiones (Groq)…', 'info');
     const promptInst = await construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
-    const instData = await _llamarGroqConFallback(promptInst, 'Instrumentos');
+    const instData = await _llamarGroqConFallback(promptInst, 'Instrumentos', 2048);
     if (instData && instData.detalles && Array.isArray(instData.detalles)) {
       console.log(`[IA] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
       instData.detalles.forEach((det, i) => {
@@ -18439,7 +18439,7 @@ async function generarConGroq(dg, ra, fechasClase) {
       try {
         mostrarToast('🔵 Generando instrumentos (OpenRouter)…', 'info');
         const promptInst = await construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
-        const instData = await _llamarOpenRouterConFallback(promptInst, openrouterKey, 'Instrumentos');
+        const instData = await _llamarOpenRouterConFallback(promptInst, openrouterKey, 'Instrumentos', 2048);
         if (instData && instData.detalles && Array.isArray(instData.detalles)) {
           console.log(`[IA-OpenRouter] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
           instData.detalles.forEach((det, i) => {
@@ -18482,7 +18482,7 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
   try {
     mostrarToast('🔵 Generando instrumentos y sesiones (OpenRouter)…', 'info');
     const promptInst = construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
-    const instData = await _llamarOpenRouterConFallback(promptInst, apiKey, 'Instrumentos');
+    const instData = await _llamarOpenRouterConFallback(promptInst, apiKey, 'Instrumentos', 2048);
     if (instData && instData.detalles && Array.isArray(instData.detalles)) {
       console.log(`[IA-OpenRouter] ✅ Instrumentos batch: ${instData.detalles.length} recibidos`);
       instData.detalles.forEach((det, i) => {
@@ -18501,7 +18501,7 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
 }
 
 /** Llama a OpenRouter con fallback entre modelos + 1 reintento tras espera. Devuelve datos parseados o lanza error. */
-async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
+async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTokens = 4096) {
   let ultimoError = '';
 
   // Ronda 1: intentar cada modelo una vez
@@ -18510,7 +18510,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
     const nombreCorto = modelo.split('/').pop().replace(':free', '');
     console.log(`[IA-OpenRouter] Intentando modelo: ${modelo}`);
     mostrarToast(`🔵 ${mensajeToast} — ${nombreCorto}… (máx 30s)`, 'info');
-    const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt);
+    const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens);
     if (resultado.ok) {
       console.log(`[IA-OpenRouter] ✅ ${modelo} respondió OK`);
       return resultado.data;
@@ -18531,7 +18531,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast) {
   const nombreRetry = modeloRetry.split('/').pop().replace(':free', '');
   console.log(`[IA-OpenRouter] Reintento final: ${modeloRetry}`);
   mostrarToast(`🔵 Reintento: ${nombreRetry}…`, 'info');
-  const resultado2 = await _llamarModeloOpenRouter(modeloRetry, apiKey, prompt);
+  const resultado2 = await _llamarModeloOpenRouter(modeloRetry, apiKey, prompt, maxTokens);
   if (resultado2.ok) {
     console.log(`[IA-OpenRouter] ✅ Reintento exitoso con ${modeloRetry}`);
     return resultado2.data;
@@ -18605,7 +18605,7 @@ function _intentarParsearJSON(cleaned, origen) {
 }
 
 /** Llama a UN modelo específico de OpenRouter. Devuelve {ok, data, esRateLimit, error} */
-async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
+async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096) {
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
   const body = {
@@ -18615,7 +18615,7 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt) {
       { role: 'user', content: prompt }
     ],
     temperature: 0.40,
-    max_tokens: 4096
+    max_tokens: maxTokens
   };
 
   // Timeout de 30 segundos para evitar que se congele
@@ -24361,24 +24361,23 @@ JSON requerido (respetar esta estructura exacta):
   ]
 }`;
 
-const _DEFAULT_PROMPT_INSTRUMENTOS = `Docente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown. Sé BREVE y COMPACTO.
+const _DEFAULT_PROMPT_INSTRUMENTOS = `Docente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown. MUY COMPACTO.
 
 MÓDULO: {{moduloFormativo}} | RA: {{raDescripcion}}
 
-ACTIVIDADES (genera un instrumento por cada una):
+ACTIVIDADES:
 {{actividadesLista}}
 
-REGLAS OBLIGATORIAS:
-- Cada criterio debe ser ESPECÍFICO al contenido de esa actividad (menciona el tema real, no términos genéricos).
-- PROHIBIDO usar frases genéricas como "Identifica correctamente los conceptos", "Nombra y define términos", "Enumera los elementos principales", "Recuerda y reproduce información". Eso está MAL.
-- CORRECTO: criterios que nombren el tema exacto de la actividad. Ejemplo si la actividad es sobre JavaScript: "Identifica las funciones de JavaScript utilizadas en la actividad", "Enumera los eventos DOM empleados en el ejercicio".
-- El título del instrumento debe incluir el tema de la actividad.
-- Máx 12 palabras por criterio.
+REGLAS:
+- 3 criterios por instrumento. Máx 10 palabras c/u. ESPECÍFICOS al tema real de la actividad.
+- Título debe incluir el tema de la actividad.
+- Para rúbrica: descriptores en formato "E:|B:|P:|I:" + frase corta (máx 6 palabras).
+- PROHIBIDO criterios genéricos ("Identifica correctamente los conceptos", etc.).
 
-JSON (exactamente este formato, SIN campos extra):
-{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título específico al tema","instrucciones":"Instrucción breve.","criterios":["Criterio específico 1","Criterio específico 2","Criterio específico 3","Criterio específico 4","Criterio específico 5"]}}]}
-Para rúbrica: {"criterio":"Criterio específico al tema","descriptores":["Excelente: descripción concreta","Bueno: descripción concreta","En proceso: descripción concreta","Insuficiente: descripción concreta"]}
-IMPORTANTE: Responde COMPACTO. No incluyas sesionDiaria. Solo instrumentoDetalle.`;
+JSON exacto (sin campos extra):
+{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título concreto","instrucciones":"Instrucción breve.","criterios":["Criterio 1","Criterio 2","Criterio 3"]}}]}
+Rúbrica: {"criterio":"Criterio","descriptores":["E: frase corta","B: frase corta","P: frase corta","I: frase corta"]}
+NO incluyas sesionDiaria.`;
 
 const _DEFAULT_PROMPT_DETALLE_UNO = `Eres docente experto en educación técnico-profesional. Responde SOLO con JSON válido, sin markdown.
 
