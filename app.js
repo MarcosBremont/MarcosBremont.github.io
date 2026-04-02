@@ -14157,11 +14157,26 @@ function abrirModalCopiarDatosGenerales() {
     return;
   }
 
+  // Construir mapa planId → nombre del curso
+  let planIdACurso = {};
+  try {
+    const cal = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}');
+    Object.values(cal.cursos || {}).forEach(curso => {
+      (curso.planIds || []).forEach(pid => { planIdACurso[pid] = curso.nombre; });
+    });
+  } catch(e) {}
+
   const listaHTML = items.map((item, idx) => {
     const dg = item.planificacion?.datosGenerales || {};
     const modulo = dg.moduloFormativo || dg.codigoModulo || '(sin nombre)';
     const docente = dg.nombreDocente ? ` · ${dg.nombreDocente}` : '';
     const fecha = item.fechaGuardadoLabel || '';
+    const cursoNombre = planIdACurso[item.id];
+    const cursoTag = cursoNombre
+      ? `<span style="display:inline-block;margin-top:4px;padding:2px 8px;background:#E8F5E9;color:#2E7D32;border-radius:12px;font-size:0.75rem;font-weight:600;">
+           <span class="material-icons" style="font-size:0.75rem;vertical-align:middle;">school</span> ${cursoNombre}
+         </span>`
+      : `<span style="display:inline-block;margin-top:4px;padding:2px 8px;background:#F5F5F5;color:#9E9E9E;border-radius:12px;font-size:0.75rem;">Sin curso asignado</span>`;
     return `
       <div onclick="_confirmarCopiarDatosGenerales(${idx})" style="
         padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;
@@ -14169,7 +14184,8 @@ function abrirModalCopiarDatosGenerales() {
         onmouseover="this.style.borderColor='#1565C0';this.style.background='#E3F2FD';"
         onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
         <div style="font-weight:700;color:#1A237E;font-size:0.9rem;">${modulo}${docente}</div>
-        <div style="font-size:0.78rem;color:#757575;margin-top:3px;">${fecha}</div>
+        <div style="margin-top:2px;">${cursoTag}</div>
+        <div style="font-size:0.78rem;color:#757575;margin-top:4px;">${fecha}</div>
       </div>`;
   }).join('');
 
