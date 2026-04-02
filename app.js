@@ -14178,7 +14178,7 @@ function abrirModalCopiarDatosGenerales() {
     <p style="font-size:0.85rem;color:#555;margin-bottom:12px;">
       Selecciona una planificación guardada. Se copiarán: Familia Profesional, Código FP,
       Nombre del Bachillerato Técnico, Código del Título, Módulo Formativo, Código del Módulo,
-      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA y Horas por Semana.
+      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana y Días de Clase por Semana.
     </p>
     <div style="max-height:400px;overflow-y:auto;">${listaHTML}</div>`;
   _usarFooterDinamico(`<button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`);
@@ -14210,6 +14210,26 @@ function _confirmarCopiarDatosGenerales(idx) {
   setVal('codigo-uc', dg.codigoUC);
   setVal('cantidad-ra', dg.cantidadRA);
   setVal('horas-semana', dg.horasSemana);
+
+  // Copiar días de clase
+  if (dg.diasClase) {
+    Object.entries(dg.diasClase).forEach(([dia, cfg]) => {
+      const checkbox = document.getElementById('dia-' + dia);
+      if (!checkbox) return;
+      checkbox.checked = cfg.activo;
+      const wrap = document.getElementById('horas-' + dia + '-wrap');
+      const horasInput = document.getElementById('horas-' + dia);
+      const card = document.getElementById('dia-card-' + dia);
+      if (cfg.activo) {
+        if (wrap) wrap.classList.remove('hidden');
+        if (horasInput) horasInput.value = cfg.horas;
+        if (card) card.classList.add('seleccionado');
+      } else {
+        if (wrap) wrap.classList.add('hidden');
+        if (card) card.classList.remove('seleccionado');
+      }
+    });
+  }
 
   cerrarModalBtn();
   mostrarToast('Datos generales copiados correctamente ✓', 'success');
