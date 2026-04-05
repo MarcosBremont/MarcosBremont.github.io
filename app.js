@@ -18114,7 +18114,7 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   if (!apiKey) throw new Error('Sin clave de Gemini');
 
   const modelo = 'gemini-1.5-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
