@@ -4463,6 +4463,21 @@ async function _getPlantillaFromCentro(centroId) {
   return { base64: centro.plantillaBase64, centroId, centroNombre: centro.nombre || '' };
 }
 
+/**
+ * Genera el nombre de archivo para exportar una planificación.
+ * Formato: "Planificacion RA0208 Nombre Del Modulo"
+ * El código del RA se extrae del inicio de ra.descripcion (ej: "RA0208: texto...")
+ */
+function _nombreArchivoRA(ext) {
+  const dg = planificacion.datosGenerales || {};
+  const raDesc = (planificacion.ra || {}).descripcion || '';
+  // Extraer código del RA: cualquier prefijo antes del primer ":" o espacio (ej: RA0208, RAE3.6, RA3)
+  const codigoMatch = raDesc.match(/^([A-Za-z]{1,4}[\w.]+)/);
+  const codigoRA = codigoMatch ? codigoMatch[1] : 'RA';
+  const modulo = dg.moduloFormativo || 'Modulo';
+  return `Planificacion ${codigoRA} ${modulo}.${ext}`;
+}
+
 /** Exporta usando la plantilla .docx del centro con docxtemplater */
 async function _exportarConPlantillaCentro() {
   const DocxModule = window.docxtemplater || window.Docxtemplater;
@@ -4617,7 +4632,7 @@ async function _exportarConPlantillaCentro() {
   });
 
   // Descargar
-  const nombre = `Planificacion_RA_${(dg.moduloFormativo || 'modulo').replace(/\s+/g, '_')}.docx`;
+  const nombre = _nombreArchivoRA('docx');
   const link = document.createElement('a');
   link.href = URL.createObjectURL(out);
   link.download = nombre;
@@ -4907,7 +4922,7 @@ async function exportarWord() {
 
 
 
-  const nombreArchivo = `Planificacion_RA_${(dg.moduloFormativo || 'modulo').replace(/\s+/g, '_')}.doc`;
+  const nombreArchivo = _nombreArchivoRA('doc');
 
 
 
@@ -14724,7 +14739,7 @@ function _exportarWordHTML() {
 
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"/><style>body{font-family:Calibri,Arial;font-size:11pt;margin:2cm;}table{width:100%;border-collapse:collapse;}th,td{border:1pt solid #999;padding:6pt;font-size:10pt;}th{background:#1565C0;color:#fff;}</style></head><body>' + contenido + '</body></html>';
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-  const nombre = 'Planificacion_RA_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.doc';
+  const nombre = _nombreArchivoRA('doc');
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = nombre;
