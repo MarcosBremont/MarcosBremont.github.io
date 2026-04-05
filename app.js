@@ -18419,14 +18419,17 @@ function _esperarConCountdown(ms, mensajeBase) {
 
 /** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
 const MODELOS_OPENROUTER = [
-  'meta-llama/llama-3.2-3b-instruct:free',
-  'meta-llama/llama-3.1-8b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'openrouter/free',
-  'qwen/qwen3-coder:free',
+  'meta-llama/llama-3.3-70b-instruct:free',   // Llama 70B — mejor calidad JSON
+  'openai/gpt-oss-20b:free',                   // OpenAI OSS 20B
+  'openai/gpt-oss-120b:free',                  // OpenAI OSS 120B
+  'qwen/qwen3-coder:free',                     // Qwen3 coder
+  'nousresearch/hermes-3-llama-3.1-405b:free', // Hermes 405B
+  'meta-llama/llama-3.2-3b-instruct:free',     // Llama 3B — rápido
+  'nvidia/nemotron-nano-9b-v2:free',           // Nemotron 9B
+  'stepfun/step-3.5-flash:free',               // Step Flash
   'z-ai/glm-4.5-air:free',
   'google/gemma-3-27b-it:free',
-  'google/gemma-3-12b-it:free'
+  'google/gemma-3-4b-it:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
