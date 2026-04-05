@@ -25,6 +25,7 @@ const FIREBASE_STORES = [
   { store: 'calendario_escolar',    key: 'planificadorRA_calendario_escolar_v1' },
   { store: 'cuentas_estudiantes',  key: 'planificadorRA_cuentas_estudiantes_v1' },
   { store: 'groqKey',              key: 'planificadorRA_groqKey' },
+  { store: 'geminiKey',            key: 'planificadorRA_geminiKey' },
   { store: 'openrouterKey',        key: 'planificadorRA_openrouterKey' },
 ];
 

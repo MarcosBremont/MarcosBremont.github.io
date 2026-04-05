@@ -16115,7 +16115,18 @@ async function _generarSesionConIA(actId, act, ec) {
         mostrarToast('⚠️ Groq con límite de uso. Probando OpenRouter...', 'warning');
       }
     }
-    // Si Groq falló, intentar con OpenRouter
+    // Si Groq falló, intentar con Gemini
+    if (!data && getGeminiKey()) {
+      try {
+        _setBtnEstado('hourglass_top', 'Gemini...');
+        mostrarToast('🟡 Generando sesión con Gemini...', 'info');
+        data = await _llamarGemini(prompt);
+      } catch (eGemini) {
+        console.warn('[IA] Sesión falló en Gemini:', eGemini.message);
+        _setBtnEstado('hourglass_top', 'Gemini ocupado, usando alternativa...');
+      }
+    }
+    // Si Gemini también falló, intentar con OpenRouter
     if (!data && getOpenRouterKey()) {
       _setBtnEstado('hourglass_top', 'Buscando modelo disponible...');
       mostrarToast('🔵 Generando sesión con OpenRouter...', 'info');
@@ -18065,6 +18076,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const GROQ_KEY_STORAGE = 'planificadorRA_groqKey';
 const OPENROUTER_KEY_STORAGE = 'planificadorRA_openrouterKey';
+const GEMINI_KEY_STORAGE = 'planificadorRA_geminiKey';
 
 /** Retorna la API key de Groq guardada o null */
 function getGroqKey() {
@@ -18076,11 +18088,105 @@ function getOpenRouterKey() {
   return localStorage.getItem(OPENROUTER_KEY_STORAGE) || null;
 }
 
+/** Retorna la API key de Gemini guardada o null */
+function getGeminiKey() {
+  return localStorage.getItem(GEMINI_KEY_STORAGE) || null;
+}
+
+/** Llama a la API de Google Gemini */
+async function _llamarGemini(prompt, maxTokens = 8192) {
+  const apiKey = getGeminiKey();
+  if (!apiKey) throw new Error('Sin clave de Gemini');
+
+  const modelo = 'gemini-2.0-flash';
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.40,
+      maxOutputTokens: maxTokens,
+      responseMimeType: 'application/json'
+    },
+    systemInstruction: {
+      parts: [{ text: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' }]
+    }
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  let resp;
+  try {
+    resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('Gemini timeout (30s)');
+    throw new Error('Gemini error de red: ' + e.message);
+  }
+  clearTimeout(timeoutId);
+
+  if (resp.ok) {
+    const data = await resp.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) throw new Error('Gemini: respuesta vacía');
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    const parsed = _intentarParsearJSON(cleaned, 'Gemini');
+    if (parsed !== null) return parsed;
+    throw new Error('Gemini: JSON inválido en respuesta');
+  }
+
+  const errJson = await resp.json().catch(() => ({}));
+  const msg = errJson?.error?.message || resp.statusText;
+  const esRateLimit = resp.status === 429;
+  console.error('Gemini error detalle:', resp.status, JSON.stringify(errJson));
+  if (esRateLimit) throw new Error('rate_limit: Gemini cuota agotada. ' + msg);
+  throw new Error(`Gemini error ${resp.status}: ${msg}`);
+}
+
+/** Genera planificación completa con Gemini */
+async function generarConGemini(dg, ra, fechasClase) {
+  if (!getGeminiKey()) return null;
+
+  mostrarToast('🟡 Consultando Gemini...', 'info');
+  const promptBase = await construirPromptBase(dg, ra);
+  const datosBase = await _llamarGemini(promptBase);
+
+  if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
+    throw new Error('Gemini no devolvió la estructura esperada de EC y actividades');
+  }
+
+  // Instrumentos batch
+  try {
+    mostrarToast('🟡 Generando instrumentos (Gemini)…', 'info');
+    const promptInst = await construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+    const instData = await _llamarGemini(promptInst, 2048);
+    if (instData && instData.detalles && Array.isArray(instData.detalles)) {
+      instData.detalles.forEach((det, i) => {
+        if (i < datosBase.actividades.length) {
+          datosBase.actividades[i].instrumentoDetalle = det.instrumentoDetalle || null;
+          datosBase.actividades[i].sesionDiaria = det.sesionDiaria || null;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[IA-Gemini] Instrumentos batch falló:', e.message);
+  }
+
+  return datosBase;
+}
+
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
   const groqKeyActual = getGroqKey();
+  const geminiKeyActual = getGeminiKey();
   const openrouterKeyActual = getOpenRouterKey();
-  const tieneAlguna = groqKeyActual || openrouterKeyActual;
+  const tieneAlguna = groqKeyActual || geminiKeyActual || openrouterKeyActual;
   const estado = tieneAlguna
     ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> IA configurada</span>'
     : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin claves configuradas</span>';
@@ -18091,7 +18197,7 @@ function abrirConfigIA() {
       <div>${estado}</div>
 
       <div style="background:#E8F5E9;border-radius:8px;padding:12px;margin:8px 0;">
-        <label for="input-groq-key" style="margin:0;font-weight:600;">🟢 Groq (principal)</label>
+        <label for="input-groq-key" style="margin:0;font-weight:600;">🟢 Groq (1º — más rápido)</label>
         <input type="password" id="input-groq-key"
                placeholder="gsk_..."
                value="${groqKeyActual || ''}"
@@ -18101,8 +18207,19 @@ function abrirConfigIA() {
         </p>
       </div>
 
+      <div style="background:#FFFDE7;border-radius:8px;padding:12px;margin:8px 0;">
+        <label for="input-gemini-key" style="margin:0;font-weight:600;">🟡 Google Gemini (2º — 1M tokens/min gratis)</label>
+        <input type="password" id="input-gemini-key"
+               placeholder="AIza..."
+               value="${geminiKeyActual || ''}"
+               autocomplete="off" style="margin-top:6px;" />
+        <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
+          Obtén tu clave en <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#F57F17;font-weight:600;">aistudio.google.com</a> (gratis, sin tarjeta)
+        </p>
+      </div>
+
       <div style="background:#E3F2FD;border-radius:8px;padding:12px;margin:8px 0;">
-        <label for="input-openrouter-key" style="margin:0;font-weight:600;">🔵 OpenRouter (respaldo)</label>
+        <label for="input-openrouter-key" style="margin:0;font-weight:600;">🔵 OpenRouter (3º — red de seguridad)</label>
         <input type="password" id="input-openrouter-key"
                placeholder="sk-or-..."
                value="${openrouterKeyActual || ''}"
@@ -18115,7 +18232,7 @@ function abrirConfigIA() {
       <div class="info-tip" style="margin:0;">
         <span class="material-icons" style="color:#1565C0;font-size:16px;">info</span>
         <p style="margin:0;font-size:0.8rem;color:#757575;">
-          Se intenta primero con Groq. Si la cuota se agota, se usa OpenRouter automáticamente. Las claves se guardan solo en tu navegador.
+          Se intenta en orden: Groq → Gemini → OpenRouter. Si uno falla por cuota, pasa al siguiente automáticamente. Las claves se guardan solo en tu navegador.
         </p>
       </div>
       ${tieneAlguna ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar claves</button>' : ''}
@@ -18135,14 +18252,19 @@ function abrirConfigIA() {
 
 function guardarApiKey() {
   const groqKey = document.getElementById('input-groq-key')?.value?.trim();
+  const geminiKey = document.getElementById('input-gemini-key')?.value?.trim();
   const openrouterKey = document.getElementById('input-openrouter-key')?.value?.trim();
 
-  if (!groqKey && !openrouterKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
+  if (!groqKey && !geminiKey && !openrouterKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
   if (groqKey && !groqKey.startsWith('gsk_')) { mostrarToast('La clave de Groq debe comenzar con "gsk_..."', 'error'); return; }
+  if (geminiKey && !geminiKey.startsWith('AIza')) { mostrarToast('La clave de Gemini debe comenzar con "AIza..."', 'error'); return; }
   if (openrouterKey && !openrouterKey.startsWith('sk-or-')) { mostrarToast('La clave de OpenRouter debe comenzar con "sk-or-..."', 'error'); return; }
 
   if (groqKey) localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
   else localStorage.removeItem(GROQ_KEY_STORAGE);
+
+  if (geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, geminiKey);
+  else localStorage.removeItem(GEMINI_KEY_STORAGE);
 
   if (openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, openrouterKey);
   else localStorage.removeItem(OPENROUTER_KEY_STORAGE);
@@ -18150,20 +18272,23 @@ function guardarApiKey() {
   // Sincronizar claves con Firebase
   if (window._syncFirebase) {
     window._syncFirebase('groqKey', groqKey || '');
+    window._syncFirebase('geminiKey', geminiKey || '');
     window._syncFirebase('openrouterKey', openrouterKey || '');
   }
 
   actualizarBtnConfigIA();
   cerrarModalBtn();
-  const proveedores = [groqKey && 'Groq', openrouterKey && 'OpenRouter'].filter(Boolean).join(' + ');
+  const proveedores = [groqKey && 'Groq', geminiKey && 'Gemini', openrouterKey && 'OpenRouter'].filter(Boolean).join(' + ');
   mostrarToast(`Claves guardadas (${proveedores}). La IA está lista.`, 'success');
 }
 
 function borrarApiKey() {
   localStorage.removeItem(GROQ_KEY_STORAGE);
+  localStorage.removeItem(GEMINI_KEY_STORAGE);
   localStorage.removeItem(OPENROUTER_KEY_STORAGE);
   if (window._syncFirebase) {
     window._syncFirebase('groqKey', '');
+    window._syncFirebase('geminiKey', '');
     window._syncFirebase('openrouterKey', '');
   }
   actualizarBtnConfigIA();
@@ -18174,7 +18299,7 @@ function borrarApiKey() {
 function actualizarBtnConfigIA() {
   const btn = document.getElementById('btn-config-ia');
   if (!btn) return;
-  if (getGroqKey() || getOpenRouterKey()) {
+  if (getGroqKey() || getGeminiKey() || getOpenRouterKey()) {
     btn.classList.add('ia-activa');
     btn.title = 'IA configurada ✓ — clic para cambiar las claves';
   } else {
@@ -18870,7 +18995,7 @@ generarPlanificacion = async function () {
   const groqKey = getGroqKey();
   const openrouterKey = getOpenRouterKey();
 
-  if (!groqKey && !openrouterKey) {
+  if (!groqKey && !getGeminiKey() && !openrouterKey) {
     mostrarToast('💡 Sin claves de IA: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
     _generarPlanificacionLocal();
     _mostrarLabelGeneracion('local');
@@ -18890,7 +19015,7 @@ generarPlanificacion = async function () {
     let aiData = null;
     let proveedorUsado = 'local';
 
-    console.log('[IA] Claves disponibles — Groq:', !!groqKey, '| OpenRouter:', !!openrouterKey);
+    console.log('[IA] Claves disponibles — Groq:', !!groqKey, '| Gemini:', !!getGeminiKey(), '| OpenRouter:', !!openrouterKey);
 
     // 1. Intentar con Groq primero
     if (groqKey) {
@@ -18917,7 +19042,23 @@ generarPlanificacion = async function () {
       }
     }
 
-    // 2. Si Groq no devolvió datos, intentar con OpenRouter
+    // 2. Si Groq no devolvió datos, intentar con Gemini
+    if (!aiData && getGeminiKey()) {
+      try {
+        console.log('[IA] Intentando generar con GEMINI...');
+        if (btnTexto) btnTexto.textContent = 'Generando con Gemini...';
+        aiData = await generarConGemini(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        if (aiData) {
+          proveedorUsado = 'Gemini';
+          console.log('[IA] ✅ Generado exitosamente con GEMINI — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+        }
+      } catch (errGemini) {
+        console.warn('[IA] ❌ Gemini falló:', errGemini.message);
+        mostrarToast('⏳ Gemini no respondió. Probando OpenRouter...', 'warning');
+      }
+    }
+
+    // 3. Si Gemini no devolvió datos, intentar con OpenRouter
     if (!aiData && openrouterKey) {
       try {
         console.log('[IA] Intentando generar con OPENROUTER...');
