@@ -24369,14 +24369,15 @@ ACTIVIDADES:
 {{actividadesLista}}
 
 REGLAS:
-- 3 criterios por instrumento. Máx 10 palabras c/u. ESPECÍFICOS al tema real de la actividad.
-- Título debe incluir el tema de la actividad.
-- Para rúbrica: descriptores en formato "E:|B:|P:|I:" + frase corta (máx 6 palabras).
-- PROHIBIDO criterios genéricos ("Identifica correctamente los conceptos", etc.).
+- 3 criterios por instrumento. Cada criterio es una oración COMPLETA y AUTÓNOMA (sujeto + verbo + objeto).
+- PROHIBIDO copiar o parafrasear el enunciado de la actividad. El criterio evalúa UN aspecto concreto.
+- PROHIBIDO criterios genéricos o que terminen con "sus", "los", "las" sin completar la frase.
+- Título concreto al tema de la actividad.
+- Para rúbrica: descriptores "E: frase|B: frase|P: frase|I: frase" (cada frase completa, máx 6 palabras).
 
 JSON exacto (sin campos extra):
-{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título concreto","instrucciones":"Instrucción breve.","criterios":["Criterio 1","Criterio 2","Criterio 3"]}}]}
-Rúbrica: {"criterio":"Criterio","descriptores":["E: frase corta","B: frase corta","P: frase corta","I: frase corta"]}
+{"detalles":[{"ecCodigo":"E.C.1.1.1","instrumentoDetalle":{"titulo":"Título","instrucciones":"Instrucción breve.","criterios":["Oración completa 1.","Oración completa 2.","Oración completa 3."]}}]}
+Rúbrica: {"criterio":"Criterio completo.","descriptores":["E: logro pleno","B: logro parcial","P: en desarrollo","I: no logrado"]}
 NO incluyas sesionDiaria.`;
 
 const _DEFAULT_PROMPT_DETALLE_UNO = `Eres docente experto en educación técnico-profesional. Responde SOLO con JSON válido, sin markdown.
