@@ -16145,7 +16145,7 @@ async function _generarSesionConIA(actId, act, ec) {
     if (!data && getOpenRouterKey()) {
       _setBtnEstado('hourglass_top', 'Buscando modelo disponible...');
       mostrarToast('🔵 Generando sesión con OpenRouter...', 'info');
-      data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando sesión');
+      data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando sesión', 4096, 60000);
     }
     if (!data) throw new Error('Sin respuesta de IA');
 
@@ -18113,16 +18113,14 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   const apiKey = getGeminiKey();
   if (!apiKey) throw new Error('Sin clave de Gemini');
 
-  const modelo = 'gemini-1.5-flash-latest';
+  const modelo = 'gemini-1.5-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
+  const instruccion = 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.\n\n';
   const body = {
     contents: [
-      { parts: [{ text: prompt }] }
+      { parts: [{ text: instruccion + prompt }] }
     ],
-    systemInstruction: {
-      parts: [{ text: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' }]
-    },
     generationConfig: {
       temperature: 0.40,
       maxOutputTokens: maxTokens
@@ -18672,16 +18670,17 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
 }
 
 /** Llama a OpenRouter con fallback entre modelos + 1 reintento tras espera. Devuelve datos parseados o lanza error. */
-async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTokens = 4096) {
+async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTokens = 4096, timeoutMs = 60000) {
   let ultimoError = '';
 
   // Ronda 1: intentar cada modelo una vez
   for (let m = 0; m < MODELOS_OPENROUTER.length; m++) {
     const modelo = MODELOS_OPENROUTER[m];
     const nombreCorto = modelo.split('/').pop().replace(':free', '');
+    const segs = Math.round(timeoutMs / 1000);
     console.log(`[IA-OpenRouter] Intentando modelo: ${modelo}`);
-    mostrarToast(`🔵 ${mensajeToast} — ${nombreCorto}… (máx 30s)`, 'info');
-    const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens);
+    mostrarToast(`🔵 ${mensajeToast} — ${nombreCorto}… (máx ${segs}s)`, 'info');
+    const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens, timeoutMs);
     if (resultado.ok) {
       console.log(`[IA-OpenRouter] ✅ ${modelo} respondió OK`);
       return resultado.data;
@@ -18701,7 +18700,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTok
   const nombreRetry = modeloRetry.split('/').pop().replace(':free', '');
   console.log(`[IA-OpenRouter] Reintento final: ${modeloRetry}`);
   mostrarToast(`🔵 Reintento: ${nombreRetry}…`, 'info');
-  const resultado2 = await _llamarModeloOpenRouter(modeloRetry, apiKey, prompt, maxTokens);
+  const resultado2 = await _llamarModeloOpenRouter(modeloRetry, apiKey, prompt, maxTokens, timeoutMs);
   if (resultado2.ok) {
     console.log(`[IA-OpenRouter] ✅ Reintento exitoso con ${modeloRetry}`);
     return resultado2.data;
@@ -18775,7 +18774,7 @@ function _intentarParsearJSON(cleaned, origen) {
 }
 
 /** Llama a UN modelo específico de OpenRouter. Devuelve {ok, data, esRateLimit, error} */
-async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096) {
+async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096, timeoutMs = 60000) {
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
   const body = {
@@ -18788,9 +18787,9 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096)
     max_tokens: maxTokens
   };
 
-  // Timeout de 30 segundos para evitar que se congele
+  // Timeout configurable para evitar que se congele
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let resp;
   try {
@@ -18808,8 +18807,8 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096)
   } catch (e) {
     clearTimeout(timeoutId);
     if (e.name === 'AbortError') {
-      console.warn(`[IA-OpenRouter] Timeout de 30s alcanzado para ${modelo}`);
-      return { ok: false, esRateLimit: true, error: `OpenRouter (${modelo}) timeout: el modelo tardó más de 30 segundos` };
+      console.warn(`[IA-OpenRouter] Timeout de ${timeoutMs/1000}s alcanzado para ${modelo}`);
+      return { ok: false, esRateLimit: true, error: `OpenRouter (${modelo}) timeout: el modelo tardó más de ${timeoutMs/1000} segundos` };
     }
     return { ok: false, esRateLimit: false, error: `OpenRouter (${modelo}) error de red: ${e.message}` };
   }
