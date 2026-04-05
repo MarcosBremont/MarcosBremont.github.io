@@ -16085,7 +16085,11 @@ async function _generarSesionConIA(actId, act, ec) {
 
   // Botón: estado cargando
   const btn = document.querySelector(`[onclick*="generarSesion('${actId}')"]`);
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
+  const _setBtnEstado = (icono, texto) => {
+    if (btn) btn.innerHTML = `<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">${icono}</span> ${texto}`;
+  };
+  if (btn) btn.disabled = true;
+  _setBtnEstado('hourglass_top', 'Conectando...');
   mostrarToast('🧠 Generando sesión personalizada con IA...', 'info');
 
   const prompt = await _getPromptResuelto('prompt_sesion', {
@@ -16102,13 +16106,18 @@ async function _generarSesionConIA(actId, act, ec) {
     // Intentar con Groq primero
     if (getGroqKey()) {
       try {
+        _setBtnEstado('hourglass_top', 'Groq...');
         data = await _llamarGroqConFallback(prompt, 'Generando sesión');
       } catch (eGroq) {
         console.warn('[IA] Sesión falló en Groq:', eGroq.message);
+        const esLimite = eGroq.message?.includes('rate_limit') || eGroq.message?.includes('cuota');
+        _setBtnEstado('hourglass_top', esLimite ? 'Groq ocupado, usando alternativa...' : 'Groq falló, usando alternativa...');
+        mostrarToast('⚠️ Groq con límite de uso. Probando OpenRouter...', 'warning');
       }
     }
     // Si Groq falló, intentar con OpenRouter
     if (!data && getOpenRouterKey()) {
+      _setBtnEstado('hourglass_top', 'Buscando modelo disponible...');
       mostrarToast('🔵 Generando sesión con OpenRouter...', 'info');
       data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando sesión');
     }
@@ -16221,9 +16230,11 @@ async function _generarSesionConIA(actId, act, ec) {
     set(`pd-recursos-${actId}`, gen.recursos);
     _regenerarInstrumentoEnCard(act, ec);
 
+    _setBtnEstado('check_circle', '¡Listo!');
     mostrarToast('✅ Sesión generada con IA', 'success');
   } catch (e) {
     console.error('_generarSesionConIA error:', e);
+    _setBtnEstado('warning', 'Sin IA, generando local...');
     mostrarToast('⚠️ Error con IA, usando generación local', 'warning');
     // Fallback a generación local
     const ec2 = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
@@ -18524,8 +18535,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTok
 
   // Ronda 2: esperar 8 segundos y reintentar el primer modelo (openrouter/free)
   console.log('[IA-OpenRouter] Todos los modelos fallaron. Esperando 8s para reintentar...');
-  mostrarToast('⏳ Todos los modelos ocupados. Reintentando en 8 segundos...', 'warning');
-  await new Promise(r => setTimeout(r, 8000));
+  await _esperarConCountdown(8000, '⏳ Todos los modelos ocupados. Reintentando');
 
   const modeloRetry = MODELOS_OPENROUTER[0];
   const nombreRetry = modeloRetry.split('/').pop().replace(':free', '');
