@@ -16107,7 +16107,7 @@ async function _generarSesionConIA(actId, act, ec) {
     if (getGroqKey()) {
       try {
         _setBtnEstado('hourglass_top', 'Groq...');
-        data = await _llamarGroqConFallback(prompt, 'Generando sesión');
+        data = await _llamarGroqConFallback(prompt, 'Generando sesión', 3000);
       } catch (eGroq) {
         console.warn('[IA] Sesión falló en Groq:', eGroq.message);
         const esLimite = eGroq.message?.includes('rate_limit') || eGroq.message?.includes('cuota');
@@ -16120,7 +16120,7 @@ async function _generarSesionConIA(actId, act, ec) {
       try {
         _setBtnEstado('hourglass_top', 'Gemini...');
         mostrarToast('🟡 Generando sesión con Gemini...', 'info');
-        data = await _llamarGemini(prompt);
+        data = await _llamarGemini(prompt, 3000);
       } catch (eGemini) {
         console.warn('[IA] Sesión falló en Gemini:', eGemini.message);
         _setBtnEstado('hourglass_top', 'Gemini ocupado, usando alternativa...');
@@ -18098,7 +18098,7 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   const apiKey = getGeminiKey();
   if (!apiKey) throw new Error('Sin clave de Gemini');
 
-  const modelo = 'gemini-2.0-flash';
+  const modelo = 'gemini-1.5-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
   const body = {
@@ -18450,9 +18450,12 @@ async function _llamarModeloGroq(modelo, groqKey, prompt, maxTokens = 8192) {
 
   const errJson = await resp.json().catch(() => ({}));
   const msg = errJson?.error?.message || errJson?.error?.code || resp.statusText;
-  const esRateLimit = resp.status === 429;
+  const esRateLimit = resp.status === 429 || resp.status === 413;
+  // Extraer tiempo de espera sugerido del mensaje de Groq ("Please try again in 29.22s")
+  const retryMatch = (msg || '').match(/try again in ([0-9.]+)s/i);
+  const retryDelaySeg = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 0;
   console.error('Groq error detalle:', resp.status, JSON.stringify(errJson));
-  return { ok: false, esRateLimit, error: `Groq (${modelo}) error ${resp.status}: ${msg}` };
+  return { ok: false, esRateLimit, retryDelaySeg, error: `Groq (${modelo}) error ${resp.status}: ${msg}` };
 }
 
 /** Llama a Groq con fallback entre modelos. Devuelve datos parseados o lanza error. */
@@ -18460,6 +18463,8 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
   const groqKey = getGroqKey();
   let ultimoError = '';
   let algunoDisponible = false;
+  let maxRetryDelay = 0;
+
   for (let m = 0; m < MODELOS_GROQ.length; m++) {
     const modelo = MODELOS_GROQ[m];
     mostrarToast(`🟢 ${mensajeToast} (${modelo})…`, 'info');
@@ -18468,19 +18473,27 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
     ultimoError = resultado.error;
     const errMsg = resultado.error || '';
     if (errMsg.includes('model_not_found') || errMsg.includes('decommissioned')) {
-      // Modelo no existe o descontinuado, saltar silenciosamente
       continue;
     }
     if (resultado.esRateLimit) {
-      // Si es rate limit diario (TPD), no tiene sentido probar otros modelos
       if ((resultado.error || '').includes('TPD') || (resultado.error || '').includes('tokens per day')) {
         throw new Error('rate_limit: Cuota diaria de Groq agotada (100k tokens/día). Se reestablece mañana.');
       }
+      if (resultado.retryDelaySeg) maxRetryDelay = Math.max(maxRetryDelay, resultado.retryDelaySeg);
       algunoDisponible = true;
       continue;
     }
     algunoDisponible = true;
   }
+
+  // Si el tiempo de espera es razonable (≤35s), esperar y reintentar una vez con el mejor modelo
+  if (maxRetryDelay > 0 && maxRetryDelay <= 35) {
+    await _esperarConCountdown(maxRetryDelay * 1000, `🟢 Groq disponible`);
+    const resultado = await _llamarModeloGroq(MODELOS_GROQ[0], groqKey, prompt, maxTokens);
+    if (resultado.ok) return resultado.data;
+    ultimoError = resultado.error;
+  }
+
   if (!algunoDisponible) {
     throw new Error('Groq: todos los modelos no están disponibles. Verifica tu cuenta en console.groq.com');
   }
