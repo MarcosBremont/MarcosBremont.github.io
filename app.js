@@ -18113,13 +18113,16 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   const apiKey = getGeminiKey();
   if (!apiKey) throw new Error('Sin clave de Gemini');
 
-  const modelo = 'gemini-1.5-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
+  const modelo = 'gemini-1.5-flash-latest';
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [
-      { role: 'user', parts: [{ text: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.\n\n' + prompt }] }
+      { parts: [{ text: prompt }] }
     ],
+    systemInstruction: {
+      parts: [{ text: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' }]
+    },
     generationConfig: {
       temperature: 0.40,
       maxOutputTokens: maxTokens
@@ -18416,11 +18419,14 @@ function _esperarConCountdown(ms, mensajeBase) {
 
 /** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
 const MODELOS_OPENROUTER = [
+  'meta-llama/llama-3.2-3b-instruct:free',
+  'meta-llama/llama-3.1-8b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
   'openrouter/free',
-  'google/gemma-3-27b-it:free',
-  'google/gemma-3-12b-it:free',
   'qwen/qwen3-coder:free',
-  'z-ai/glm-4.5-air:free'
+  'z-ai/glm-4.5-air:free',
+  'google/gemma-3-27b-it:free',
+  'google/gemma-3-12b-it:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
