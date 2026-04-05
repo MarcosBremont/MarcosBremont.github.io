@@ -18117,14 +18117,12 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   const endpoint = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
 
   const body = {
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [
+      { role: 'user', parts: [{ text: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.\n\n' + prompt }] }
+    ],
     generationConfig: {
       temperature: 0.40,
-      maxOutputTokens: maxTokens,
-      responseMimeType: 'application/json'
-    },
-    systemInstruction: {
-      parts: [{ text: 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.' }]
+      maxOutputTokens: maxTokens
     }
   };
 
