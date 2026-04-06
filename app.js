@@ -14782,7 +14782,10 @@ function abrirDuplicarPlan(id) {
       ).join('');
     // Pre-seleccionar el curso activo si existe
     if (calState.cursoActivoId) sel.value = calState.cursoActivoId;
+    sel.addEventListener('change', () => _actualizarAvisHorarioCurso(reg));
   }
+  // Mostrar aviso de horario inicial
+  _actualizarAvisHorarioCurso(reg);
 
   // Calcular fechas de actividades del original (normalizar a ISO string)
   const actividades = reg.planificacion?.actividades || [];
@@ -14860,6 +14863,40 @@ function _actualizarPreviewDupFechas(primeraOriginal, ultimaOriginal, totalActs)
     Nueva fecha de cierre: <strong>${nuevaFin}</strong>.`;
 }
 
+function _actualizarAvisHorarioCurso(regOriginal) {
+  const aviso = document.getElementById('dup-plan-aviso-horario');
+  if (!aviso) return;
+  const cursoId = document.getElementById('dup-plan-curso')?.value;
+  if (!cursoId) { aviso.style.display = 'none'; return; }
+
+  const cursoDest = calState.cursos[cursoId];
+  const planActivaId = cursoDest?.planActivaId;
+  const biblio = cargarBiblioteca();
+  const planActiva = planActivaId ? (biblio.items || []).find(i => i.id === planActivaId) : null;
+  const diasDestino = planActiva?.planificacion?.datosGenerales?.diasClase;
+  const diasOrigen = regOriginal?.planificacion?.datosGenerales?.diasClase;
+
+  if (!diasDestino) { aviso.style.display = 'none'; return; }
+
+  const resumen = (dias) => Object.entries(dias)
+    .filter(([, v]) => v.activo)
+    .map(([d, v]) => `${d.charAt(0).toUpperCase() + d.slice(1)} (${v.horas}h)`)
+    .join(', ');
+
+  const strDestino = resumen(diasDestino);
+  const strOrigen = diasOrigen ? resumen(diasOrigen) : '';
+  const esDiferente = strDestino !== strOrigen;
+
+  if (esDiferente) {
+    aviso.style.display = 'block';
+    aviso.innerHTML = `<span class="material-icons" style="font-size:14px;vertical-align:middle;color:#E65100;">swap_horiz</span>
+      <strong>Horario diferente detectado.</strong> Las fechas se recalcularán según el horario de <strong>${escHTML(cursoDest.nombre)}</strong>:
+      <br><span style="color:#1565C0;">${escHTML(strDestino)}</span>`;
+  } else {
+    aviso.style.display = 'none';
+  }
+}
+
 function confirmarDuplicarPlan() {
   if (!_dupPlanId) return;
   const biblio = cargarBiblioteca();
@@ -14886,45 +14923,80 @@ function confirmarDuplicarPlan() {
   // Ajustar fechas de actividades
   const ajustar = document.getElementById('dup-plan-ajustar-fechas')?.checked;
   const inputFecha = document.getElementById('dup-plan-fecha-inicio');
-  const primeraOriginal = inputFecha?.dataset.primeraOriginal;
+  const cursoId = document.getElementById('dup-plan-curso')?.value;
 
-  const _primeraOrig = inputFecha?.dataset?.primeraOriginal || primeraOriginal || '';
-  if (ajustar && inputFecha?.value && _primeraOrig && _primeraOrig.length === 10) {
-    const orig = new Date(_primeraOrig + 'T12:00:00');
-    const nueva = new Date(inputFecha.value + 'T12:00:00');
-    if (isNaN(orig.getTime()) || isNaN(nueva.getTime())) {
-      mostrarToast('Fecha inválida, se copiarán las fechas originales', 'warning');
-    }
-    const diffMs = isNaN(orig.getTime()) ? 0 : (nueva - orig);
+  if (ajustar && inputFecha?.value) {
+    const nuevaFechaInicio = inputFecha.value; // YYYY-MM-DD
+
+    // Obtener horario del curso destino (de su planificación activa)
+    const cursoDest = cursoId ? calState.cursos[cursoId] : null;
+    const planActivaId = cursoDest?.planActivaId;
+    const biblio2 = cargarBiblioteca();
+    const planActiva = planActivaId ? (biblio2.items || []).find(i => i.id === planActivaId) : null;
+    const diasClaseCurso = planActiva?.planificacion?.datosGenerales?.diasClase;
+    const diasClaseOrigen = copia.planificacion?.datosGenerales?.diasClase;
+
+    // Verificar si el curso destino tiene un horario diferente al origen
+    const diasDestino = diasClaseCurso
+      ? Object.entries(diasClaseCurso).filter(([, v]) => v.activo).map(([d]) => d).sort().join(',')
+      : null;
+    const diasOrigen = diasClaseOrigen
+      ? Object.entries(diasClaseOrigen).filter(([, v]) => v.activo).map(([d]) => d).sort().join(',')
+      : null;
+    const horarioDiferente = diasDestino && diasDestino !== diasOrigen;
+
     const acts = copia.planificacion?.actividades || [];
-    acts.forEach(act => {
-      if (act.fecha) {
-        try {
-          // Normalizar a ISO string primero
-          let fechaISO;
-          if (act.fecha instanceof Date) {
-            fechaISO = act.fecha.toISOString().split('T')[0];
-          } else {
-            const s = String(act.fecha);
-            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) fechaISO = s;
-            else if (s.includes('T')) fechaISO = s.split('T')[0];
-            else { const d = new Date(s); fechaISO = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]; }
+
+    if (horarioDiferente && diasClaseCurso) {
+      // Recalcular fechas usando el horario del curso destino
+      const dgCopia = copia.planificacion.datosGenerales;
+      const fechaFin = dgCopia.fechaTermino || null;
+
+      // Actualizar diasClase y fechaInicio en la copia
+      dgCopia.diasClase = diasClaseCurso;
+      dgCopia.fechaInicio = nuevaFechaInicio;
+
+      const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
+      const nuevasFechas = calcularFechasClase(diasClaseCurso, nuevaFechaInicio, fechaFin || nuevaFechaInicio, festivosAdmin);
+
+      // Asignar nueva fecha a cada actividad en orden
+      acts.forEach((act, i) => {
+        const fechaObj = nuevasFechas[i] || nuevasFechas[nuevasFechas.length - 1] || null;
+        if (fechaObj) {
+          act.fecha = fechaObj.fecha;
+          act.fechaStr = fechaObj.fechaStr;
+        }
+      });
+
+      mostrarToast('📅 Fechas recalculadas según el horario del curso destino.', 'info');
+    } else {
+      // Mismo horario o sin horario destino: desplazar fechas proporcionalmente
+      const primeraOriginal = inputFecha?.dataset?.primeraOriginal || '';
+      if (primeraOriginal.length === 10) {
+        const orig = new Date(primeraOriginal + 'T12:00:00');
+        const nueva = new Date(nuevaFechaInicio + 'T12:00:00');
+        const diffMs = nueva - orig;
+        acts.forEach(act => {
+          if (act.fecha) {
+            try {
+              const s = String(act.fecha);
+              let fechaISO = /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : s.includes('T') ? s.split('T')[0] : null;
+              if (!fechaISO) { const d = new Date(s); fechaISO = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]; }
+              if (fechaISO) {
+                const nuevaFecha = new Date(new Date(fechaISO + 'T12:00:00').getTime() + diffMs);
+                if (!isNaN(nuevaFecha.getTime())) {
+                  act.fecha = nuevaFecha.toISOString().split('T')[0];
+                  act.fechaStr = nuevaFecha.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+                }
+              }
+            } catch (e) { /* conservar fecha original */ }
           }
-          if (fechaISO) {
-            const fechaAct = new Date(fechaISO + 'T12:00:00');
-            const nuevaFecha = new Date(fechaAct.getTime() + diffMs);
-            if (!isNaN(nuevaFecha.getTime())) {
-              act.fecha = nuevaFecha.toISOString().split('T')[0];
-              act.fechaStr = nuevaFecha.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-            }
-          }
-        } catch (e) { /* conservar fecha original */ }
+        });
       }
-    });
+    }
   }
 
   // Asignar a curso si se seleccionó
-  const cursoId = document.getElementById('dup-plan-curso')?.value;
   if (cursoId && calState.cursos[cursoId]) {
     const curso = calState.cursos[cursoId];
     if (!curso.planIds) curso.planIds = [];
