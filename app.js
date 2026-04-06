@@ -4903,6 +4903,13 @@ async function _exportarDiariaConPlantillaCentro() {
 
 
 async function exportarWord() {
+  // Auto-guardar en biblioteca antes de exportar
+  const dgEx = planificacion.datosGenerales || {};
+  const raEx = planificacion.ra || {};
+  if (dgEx.moduloFormativo || raEx.descripcion) {
+    guardarPlanificacionActual(true); // silencioso: sin modal de curso
+  }
+
   // Intentar exportar con plantilla del centro si existe
   try {
     console.log('[Exportar] Intentando con plantilla del centro...');
@@ -5715,7 +5722,15 @@ function irAlPaso(nuevoPaso, validar = true) {
 
   // Acciones al entrar en pasos específicos
   if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
-  if (nuevoPaso === 6) renderizarVistaPrevia();
+  if (nuevoPaso === 6) {
+    renderizarVistaPrevia();
+    // Auto-guardar en biblioteca al llegar a Vista Previa
+    const dgCheck = planificacion.datosGenerales || {};
+    const raCheck = planificacion.ra || {};
+    if (dgCheck.moduloFormativo || raCheck.descripcion) {
+      guardarPlanificacionActual(true); // silencioso: sin modal de curso
+    }
+  }
 
 
 
@@ -14292,7 +14307,7 @@ function persistirBiblioteca(biblio) {
 
 
 
-function guardarPlanificacionActual() {
+function guardarPlanificacionActual(silencioso = false) {
 
 
 
@@ -14419,9 +14434,9 @@ function guardarPlanificacionActual() {
   planificacion._id = registro.id;
   persistirBiblioteca(biblio);
 
-  // Asignar al curso si hay cursos creados y no está ya asignada
+  // Asignar al curso si hay cursos creados y no está ya asignada (no mostrar si es guardado silencioso)
   const cursosExist = Object.values(calState.cursos);
-  if (cursosExist.length > 0) {
+  if (!silencioso && cursosExist.length > 0) {
     // Usar registro.id (el ID final guardado), no el 'id' temporal inicial
     const finalId = registro.id;
     const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
