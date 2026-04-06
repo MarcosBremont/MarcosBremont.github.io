@@ -5306,29 +5306,43 @@ function restaurarBorrador() {
 
 
 
-/** Muestra el curso asignado a la planificación actual en Datos Generales */
+/** Rellena el selector de curso en Paso 1 y pre-selecciona el curso asignado */
 function _mostrarCursoAsignado() {
   const grupo = document.getElementById('grupo-curso-asignado');
-  const display = document.getElementById('curso-asignado-display');
-  if (!grupo || !display) return;
+  const sel = document.getElementById('sel-curso-paso1');
+  if (!grupo || !sel) return;
 
+  const cursos = Object.values(calState.cursos || {});
+
+  // Ocultar si no hay cursos creados
+  if (cursos.length === 0) {
+    grupo.style.display = 'none';
+    return;
+  }
+  grupo.style.display = '';
+
+  // Reconstruir opciones
+  const valorActual = sel.value;
+  sel.innerHTML = '<option value="">— Selecciona un curso —</option>';
+  cursos.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.nombre;
+    sel.appendChild(opt);
+  });
+
+  // Pre-seleccionar el curso que ya tiene asignada esta planificación
   const planId = planificacion._id;
-  if (!planId) { grupo.style.display = 'none'; return; }
-
-  // Buscar cursos que tienen esta planificación asignada
-  const cursosAsignados = Object.values(calState.cursos || {})
-    .filter(c => (c.planIds || []).includes(planId))
-    .map(c => c.nombre);
-
-  if (cursosAsignados.length > 0) {
-    display.value = cursosAsignados.join(', ');
-    grupo.style.display = '';
-  } else {
-    display.value = 'Sin curso asignado';
-    display.style.background = '#FFF3E0';
-    display.style.borderColor = '#FFE0B2';
-    display.style.color = '#E65100';
-    grupo.style.display = '';
+  if (planId) {
+    const cursoAsignado = cursos.find(c => (c.planIds || []).includes(planId));
+    if (cursoAsignado) {
+      sel.value = cursoAsignado.id;
+      return;
+    }
+  }
+  // Restaurar selección previa si sigue siendo válida
+  if (valorActual && cursos.some(c => c.id === valorActual)) {
+    sel.value = valorActual;
   }
 }
 
@@ -5721,6 +5735,7 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
   // Acciones al entrar en pasos específicos
+  if (nuevoPaso === 1) _mostrarCursoAsignado();
   if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
   if (nuevoPaso === 6) {
     renderizarVistaPrevia();
@@ -14434,36 +14449,35 @@ function guardarPlanificacionActual(silencioso = false) {
   planificacion._id = registro.id;
   persistirBiblioteca(biblio);
 
-  // Asignar al curso si hay cursos creados y no está ya asignada (no mostrar si es guardado silencioso)
+  // Asignar al curso seleccionado en Paso 1
+  const finalId = registro.id;
   const cursosExist = Object.values(calState.cursos);
-  if (!silencioso && cursosExist.length > 0) {
-    // Usar registro.id (el ID final guardado), no el 'id' temporal inicial
-    const finalId = registro.id;
+  const selCurso = document.getElementById('sel-curso-paso1');
+  const cursoIdSel = selCurso ? selCurso.value : '';
+
+  if (cursosExist.length > 0) {
     const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
     if (!yaAsignada) {
-      const opsCursos = cursosExist.map(c => `<option value="${c.id}">${escapeHTML(c.nombre)}</option>`).join('');
-      document.getElementById('modal-title').textContent = 'Asignar al libro de calificaciones';
-      document.getElementById('modal-body').innerHTML = `
-        <div class="modal-curso-content">
-          <p style="margin-bottom:12px;font-size:0.9rem;color:#37474F;">
-            ¿A qué curso pertenece esta planificación?
-          </p>
-          <label for="modal-sel-curso-guardar">Curso</label>
-          <select id="modal-sel-curso-guardar" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;margin-top:4px;">
-            <option value="">— No asignar ahora —</option>
-            ${opsCursos}
-          </select>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
-            <button class="btn-secundario" onclick="cerrarModalBtn()">Omitir</button>
-            <button class="btn-siguiente" onclick="_asignarDesdeGuardar('${finalId}')">
-              <span class="material-icons">link</span> Asignar
-            </button>
-          </div>
-        </div>`;
-      // botones en el body
-      _usarFooterDinamico('');
-      document.getElementById('modal-overlay').classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
+      if (!silencioso && !cursoIdSel) {
+        // Advertir que falta seleccionar curso (sin bloquear el guardado)
+        const aviso = document.getElementById('aviso-curso-paso1');
+        if (aviso) {
+          aviso.style.display = '';
+          setTimeout(() => { aviso.style.display = 'none'; }, 5000);
+        }
+        selCurso?.focus();
+      } else if (cursoIdSel && calState.cursos[cursoIdSel]) {
+        const curso = calState.cursos[cursoIdSel];
+        if (!curso.planIds) curso.planIds = [];
+        if (!curso.planIds.includes(finalId)) {
+          curso.planIds.push(finalId);
+          if (!curso.planActivaId) curso.planActivaId = finalId;
+          guardarCalificaciones();
+          if (!silencioso) mostrarToast('Planificación guardada y asignada al curso "' + curso.nombre + '"', 'success');
+        }
+        const aviso = document.getElementById('aviso-curso-paso1');
+        if (aviso) aviso.style.display = 'none';
+      }
     }
   }
 }

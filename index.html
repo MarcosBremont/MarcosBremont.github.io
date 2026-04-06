@@ -623,12 +623,15 @@
             <input type="text" id="codigo-uc" placeholder="Ej: UC-INCO002_3" />
           </div>
 
-          <!-- Curso asignado (solo lectura, informativo) -->
-          <div class="form-group" id="grupo-curso-asignado" style="display:none;">
-            <label for="curso-asignado-display">Curso Asignado</label>
-            <input type="text" id="curso-asignado-display" readonly
-              style="background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32;font-weight:600;cursor:default;"
-              placeholder="Sin curso asignado" />
+          <!-- Curso asignado -->
+          <div class="form-group" id="grupo-curso-asignado">
+            <label for="sel-curso-paso1">Curso *</label>
+            <select id="sel-curso-paso1" style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;">
+              <option value="">— Selecciona un curso —</option>
+            </select>
+            <span id="aviso-curso-paso1" style="display:none;font-size:0.78rem;color:#E65100;margin-top:4px;">
+              Debes seleccionar un curso para guardar la planificación.
+            </span>
           </div>
 
           <!-- Cantidad de RA del Módulo -->
