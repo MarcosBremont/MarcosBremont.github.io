@@ -14926,11 +14926,24 @@ function _actualizarAvisHorarioCurso(regOriginal) {
     .map(pid => (biblio.items || []).find(i => i.id === pid))
     .filter(p => p && p.planificacion?.datosGenerales?.diasClase);
 
-  // Construir selector solo si hay múltiples planes (y aún no está construido para este curso)
-  if (planesCurso.length > 1 && horarioWrap && horarioSel) {
-    // Solo reconstruir si el curso cambió (evitar resetear selección al cambiar horario)
+  // Agrupar por horario único (evitar opciones duplicadas por mismo módulo con mismo horario)
+  const resumenDiasKey = (dias) => Object.entries(dias)
+    .filter(([, v]) => v.activo)
+    .map(([d, v]) => `${d}:${v.horas}`)
+    .sort().join('|');
+
+  const vistosHorario = new Set();
+  const planesCursoUnicos = planesCurso.filter(p => {
+    const key = resumenDiasKey(p.planificacion.datosGenerales.diasClase);
+    if (vistosHorario.has(key)) return false;
+    vistosHorario.add(key);
+    return true;
+  });
+
+  // Construir selector solo si hay múltiples horarios distintos
+  if (planesCursoUnicos.length > 1 && horarioWrap && horarioSel) {
     if (horarioSel.dataset.cursoId !== cursoId) {
-      horarioSel.innerHTML = planesCurso.map(p => {
+      horarioSel.innerHTML = planesCursoUnicos.map(p => {
         const dg = p.planificacion.datosGenerales;
         const resumen = Object.entries(dg.diasClase)
           .filter(([, v]) => v.activo)
@@ -14940,8 +14953,9 @@ function _actualizarAvisHorarioCurso(regOriginal) {
         return `<option value="${p.id}">${escHTML(modulo)} — ${escHTML(resumen)}</option>`;
       }).join('');
       horarioSel.dataset.cursoId = cursoId;
-      // Preseleccionar la activa
       if (cursoDest.planActivaId) horarioSel.value = cursoDest.planActivaId;
+      // Si planActivaId no está en los únicos, usar el primero
+      if (!horarioSel.value) horarioSel.value = planesCursoUnicos[0].id;
     }
     horarioWrap.style.display = 'block';
   } else {
