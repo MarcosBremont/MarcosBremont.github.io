@@ -14306,46 +14306,12 @@ function persistirBiblioteca(biblio) {
 }
 
 async function _syncBibliotecaFirebase(biblio) {
-  if (!window._syncFirebaseAwait && !window._syncFirebase) return;
-
-  const payload = JSON.stringify(biblio);
-  const MAX_BYTES = 900000; // 900KB — margen antes del límite de 1MB de Firestore
-
-  if (new Blob([payload]).size <= MAX_BYTES) {
-    // Tamaño OK — guardar todo
-    try {
-      if (window._syncFirebaseAwait) await window._syncFirebaseAwait('biblioteca', biblio);
-      else await window._syncFirebase('biblioteca', biblio);
-    } catch (e) {
-      console.warn('Error sync biblioteca:', e);
-      mostrarToast('⚠ Biblioteca guardada localmente. Error al sincronizar con la nube.', 'warning');
-    }
-    return;
-  }
-
-  // Demasiado grande: guardar solo las más recientes hasta caber en 900KB
-  const items = [...(biblio.items || [])].sort((a, b) =>
-    new Date(b.fechaGuardado || 0) - new Date(a.fechaGuardado || 0)
-  );
-  const biblioReducida = { ...biblio, items: [] };
-  for (const item of items) {
-    biblioReducida.items.push(item);
-    if (new Blob([JSON.stringify(biblioReducida)]).size > MAX_BYTES) {
-      biblioReducida.items.pop();
-      break;
-    }
-  }
-
+  if (!window._guardarBibliotecaChunks) return;
   try {
-    if (window._syncFirebaseAwait) await window._syncFirebaseAwait('biblioteca', biblioReducida);
-    else await window._syncFirebase('biblioteca', biblioReducida);
-    const omitidas = (biblio.items || []).length - biblioReducida.items.length;
-    if (omitidas > 0) {
-      mostrarToast(`Nube: ${biblioReducida.items.length} planificaciones sincronizadas (${omitidas} antiguas solo en este dispositivo por límite de almacenamiento).`, 'info');
-    }
+    await window._guardarBibliotecaChunks(biblio);
   } catch (e) {
-    console.warn('Error sync biblioteca reducida:', e);
-    mostrarToast('⚠ Biblioteca guardada localmente. Error al sincronizar con la nube.', 'warning');
+    console.warn('Error sync biblioteca chunks:', e);
+    mostrarToast('⚠ Error al sincronizar biblioteca con la nube.', 'warning');
   }
 }
 

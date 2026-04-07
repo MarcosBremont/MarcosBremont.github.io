@@ -303,31 +303,18 @@ async function _cargarDesdeFirestore(uid) {
     const base = db.collection('users').doc(uid).collection('data');
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
       try {
-        const doc = await base.doc(store).get();
-        if (!doc.exists || !doc.data().payload) return;
-
-        const payloadFirebase = doc.data().payload;
-
-        // Para la biblioteca: comparar cuál versión tiene más ítems / es más reciente
+        // Biblioteca: sistema de chunks
         if (store === 'biblioteca') {
-          const localRaw = localStorage.getItem(key);
-          if (localRaw) {
-            try {
-              const localData  = JSON.parse(localRaw);
-              const fireData   = JSON.parse(payloadFirebase);
-              const localCount = (localData.items || []).length;
-              const fireCount  = (fireData.items  || []).length;
-              // Usar la versión con más planificaciones
-              if (localCount >= fireCount) {
-                // Local tiene igual o más datos — subir local a Firebase para sincronizar
-                base.doc(store).set({ payload: localRaw }).catch(() => {});
-                return; // No sobreescribir local
-              }
-            } catch (e) { /* si falla el parse, usar Firebase */ }
+          const payload = await _cargarBibliotecaChunks(base);
+          if (payload) {
+            localStorage.setItem(key, payload);
           }
+          return;
         }
 
-        localStorage.setItem(key, payloadFirebase);
+        const doc = await base.doc(store).get();
+        if (!doc.exists || !doc.data().payload) return;
+        localStorage.setItem(key, doc.data().payload);
       } catch (e) {
         console.warn('Error cargando store:', store, e);
       }
@@ -337,6 +324,90 @@ async function _cargarDesdeFirestore(uid) {
     console.error('Error al cargar desde Firestore:', e);
   }
 }
+
+async function _cargarBibliotecaChunks(base) {
+  // Intentar cargar desde chunks
+  const metaDoc = await base.doc('biblioteca_meta').get();
+  if (metaDoc.exists && metaDoc.data().payload) {
+    const meta = JSON.parse(metaDoc.data().payload);
+    const totalChunks = meta.totalChunks || 0;
+    const allItems = [];
+    for (let i = 0; i < totalChunks; i++) {
+      const chunkDoc = await base.doc(`biblioteca_chunk_${i}`).get();
+      if (chunkDoc.exists && chunkDoc.data().payload) {
+        const chunk = JSON.parse(chunkDoc.data().payload);
+        allItems.push(...(chunk.items || []));
+      }
+    }
+    return JSON.stringify({ items: allItems });
+  }
+
+  // Fallback: doc único antiguo (migración)
+  const oldDoc = await base.doc('biblioteca').get();
+  if (oldDoc.exists && oldDoc.data().payload) {
+    const payload = oldDoc.data().payload;
+    // Migrar automáticamente a chunks
+    try {
+      const biblio = JSON.parse(payload);
+      await _guardarBibliotecaChunks(base, biblio);
+      await base.doc('biblioteca').delete();
+    } catch(e) { console.warn('Error migrando biblioteca a chunks:', e); }
+    return payload;
+  }
+  return null;
+}
+
+async function _guardarBibliotecaChunks(base, biblio) {
+  const MAX_BYTES = 850000;
+  const items = biblio.items || [];
+  const chunks = [];
+  let currentChunk = [];
+  let currentSize = 50;
+
+  for (const item of items) {
+    const itemSize = JSON.stringify(item).length;
+    if (currentSize + itemSize > MAX_BYTES && currentChunk.length > 0) {
+      chunks.push([...currentChunk]);
+      currentChunk = [];
+      currentSize = 50;
+    }
+    currentChunk.push(item);
+    currentSize += itemSize;
+  }
+  if (currentChunk.length > 0) chunks.push(currentChunk);
+  if (chunks.length === 0) chunks.push([]);
+
+  // Leer cuántos chunks había antes para borrar los sobrantes
+  let prevChunks = 0;
+  try {
+    const metaOld = await base.doc('biblioteca_meta').get();
+    if (metaOld.exists) prevChunks = JSON.parse(metaOld.data().payload || '{}').totalChunks || 0;
+  } catch(e) {}
+
+  // Guardar chunks nuevos
+  for (let i = 0; i < chunks.length; i++) {
+    await base.doc(`biblioteca_chunk_${i}`).set({
+      payload: JSON.stringify({ items: chunks[i] })
+    });
+  }
+
+  // Borrar chunks sobrantes del save anterior
+  for (let i = chunks.length; i < prevChunks; i++) {
+    await base.doc(`biblioteca_chunk_${i}`).delete().catch(() => {});
+  }
+
+  // Guardar meta
+  await base.doc('biblioteca_meta').set({
+    payload: JSON.stringify({ totalChunks: chunks.length, updatedAt: new Date().toISOString() })
+  });
+}
+
+// Exponer para uso desde app.js
+window._guardarBibliotecaChunks = async function(biblio) {
+  if (!window.currentUser) return;
+  const base = db.collection('users').doc(window.currentUser.uid).collection('data');
+  await _guardarBibliotecaChunks(base, biblio);
+};
 
 // ── Migrar datos locales a Firestore (primer login) ──────────────
 async function _migrarDatosLocales(uid) {
