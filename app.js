@@ -8574,14 +8574,13 @@ function cargarCalificaciones() {
 
 
 function guardarCalificaciones() {
-
-
+  // Limpiar planIds duplicados en todos los cursos antes de guardar
+  Object.values(calState.cursos || {}).forEach(curso => {
+    if (curso.planIds) curso.planIds = [...new Set(curso.planIds)];
+  });
 
   localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState));
   if (window._syncFirebase) _syncFirebase('calificaciones', calState);
-
-
-
 }
 
 
@@ -19587,6 +19586,17 @@ function _tourFin() {
 function _arrancarApp() {
   if (window._appArranada) return;
   window._appArranada = true;
+
+  // Limpiar planIds duplicados al arrancar (limpia datos existentes en Firebase)
+  let hayCambios = false;
+  Object.values(calState.cursos || {}).forEach(curso => {
+    if (curso.planIds) {
+      const antes = curso.planIds.length;
+      curso.planIds = [...new Set(curso.planIds)];
+      if (curso.planIds.length !== antes) hayCambios = true;
+    }
+  });
+  if (hayCambios) guardarCalificaciones();
   if (sessionStorage.getItem('planificador_goto') === 'step1') {
     sessionStorage.removeItem('planificador_goto');
     irAlHomeBase();
