@@ -16782,45 +16782,26 @@ function filtrarSesionesEC(btn, ecCodigo) {
 
 
 
-function _editarTituloDiaria(el, idx) {
-  const act = (planificacion.actividades || [])[idx];
-  if (!act) return;
-  const actual = act.enunciado || '';
-  const nuevo = prompt('Editar nombre de la actividad:', actual);
-  if (nuevo === null || nuevo.trim() === '' || nuevo.trim() === actual) return;
-  const nuevoTrimmed = nuevo.trim();
-  act.enunciado = nuevoTrimmed;
-  guardarBorrador();
 
-  // Actualizar en TODAS las planificaciones de la biblioteca que contengan esta actividad
+function _guardarNombreDiaria(input, actId, idx) {
+  const nuevo = (input.value || '').trim();
+  const act = (planificacion.actividades || [])[idx];
+  if (!act || !nuevo || nuevo === act.enunciado) return;
+  const anterior = act.enunciado;
+  act.enunciado = nuevo;
+  guardarBorrador();
+  // Sincronizar en biblioteca
   const biblio = cargarBiblioteca();
   let guardado = false;
   (biblio.items || []).forEach(item => {
     if (!item.planificacion?.actividades) return;
-    // Buscar por ID si existe, o por índice + enunciado anterior como fallback
-    let biblioAct = act.id
+    const biblioAct = act.id
       ? item.planificacion.actividades.find(a => a.id === act.id)
-      : null;
-    if (!biblioAct) {
-      // Fallback: buscar por enunciado anterior exacto en la misma posición
-      const candidato = item.planificacion.actividades[idx];
-      if (candidato && candidato.enunciado === actual) {
-        biblioAct = candidato;
-      }
-    }
-    if (biblioAct) {
-      biblioAct.enunciado = nuevoTrimmed;
-      guardado = true;
-    }
+      : (item.planificacion.actividades[idx]?.enunciado === anterior ? item.planificacion.actividades[idx] : null);
+    if (biblioAct) { biblioAct.enunciado = nuevo; guardado = true; }
   });
-  if (guardado) {
-    persistirBiblioteca(biblio);
-  }
-
-  // Actualizar el texto visible sin re-renderizar todo
-  const corto = nuevoTrimmed.substring(0, 80) + (nuevoTrimmed.length > 80 ? '…' : '');
-  el.textContent = corto;
-  mostrarToast('Nombre de actividad actualizado', 'success');
+  if (guardado) persistirBiblioteca(biblio);
+  mostrarToast('Nombre actualizado', 'success');
 }
 
 function toggleSesion(actId) {
@@ -17068,7 +17049,14 @@ function renderizarDiarias() {
 
 
 
-          <div class="pd-sesion-titulo" ondblclick="event.stopPropagation();_editarTituloDiaria(this,${idx})" title="Doble clic para editar el nombre">${enunciadoCorto}</div>
+          <input class="pd-sesion-titulo" type="text" value="${escapeHTML(act.enunciado || '')}"
+            style="background:none;border:none;border-bottom:1.5px solid transparent;outline:none;font:inherit;width:100%;cursor:text;min-width:0;"
+            onfocus="this.style.borderBottomColor='#00897B';event.stopPropagation()"
+            onblur="this.style.borderBottomColor='transparent';_guardarNombreDiaria(this,'${act.id}',${idx})"
+            onkeydown="if(event.key==='Enter')this.blur();event.stopPropagation()"
+            onclick="event.stopPropagation()"
+            title="Haz clic para editar el nombre"
+            placeholder="Nombre de la actividad">
 
 
 
@@ -17113,13 +17101,7 @@ function renderizarDiarias() {
 
 
         <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
-
-
-
                 onclick="event.stopPropagation();toggleSesion('${act.id}')">
-
-
-
           <span class="material-icons" style="font-size:16px;">expand_more</span> Ver / Editar
 
 
@@ -21408,12 +21390,12 @@ function _guardarRecursoDesdeModal(actId, url) {
 }
 
 // ── Guía HTML adjunta a actividad (Firebase Storage) ───────────────────────
-// Metadatos en Firestore: users/{uid}/guias/{actId} → { nombre, url, fecha }
+// Metadatos en Firestore: users/{uid}/data/guias_meta → { [actId]: { nombre, url, fecha } }
 // Archivo real en Storage: guias/{uid}/{actId}.html
 
-function _guiasColRef() {
+function _guiasDataRef() {
   if (!window.currentUser) return null;
-  return db.collection('users').doc(window.currentUser.uid).collection('guias');
+  return db.collection('users').doc(window.currentUser.uid).collection('data').doc('guias_meta');
 }
 
 function _guiaStorageRef(actId) {
@@ -21425,10 +21407,19 @@ function _guiaStorageRef(actId) {
 const _guiasCache = {};
 
 async function _cargarGuiasMeta() {
-  const col = _guiasColRef();
-  if (!col) return;
-  const snap = await col.get();
-  snap.forEach(doc => { _guiasCache[doc.id] = doc.data(); });
+  const ref = _guiasDataRef();
+  if (!ref) return;
+  const doc = await ref.get();
+  if (doc.exists && doc.data().payload) {
+    const data = JSON.parse(doc.data().payload);
+    Object.assign(_guiasCache, data);
+  }
+}
+
+async function _persistirGuiasMeta() {
+  const ref = _guiasDataRef();
+  if (!ref) return;
+  await ref.set({ payload: JSON.stringify(_guiasCache) });
 }
 
 function _renderBtnGuiaHtml(actId) {
@@ -21482,8 +21473,8 @@ async function _subirGuiaHtml(actId, input) {
     const url = await ref.getDownloadURL();
 
     const meta = { nombre: file.name, url, fecha: new Date().toISOString() };
-    await _guiasColRef().doc(actId).set(meta);
     _guiasCache[actId] = meta;
+    await _persistirGuiasMeta();
 
     _refrescarBtnGuia(actId);
     mostrarToast('Guía guardada en Firebase', 'success');
@@ -21512,13 +21503,9 @@ async function _abrirGuiaHtml(actId) {
 
 async function _eliminarGuiaHtml(actId) {
   if (!confirm('¿Quitar la guía HTML adjunta? Se eliminará de Firebase.')) return;
-  try {
-    await _guiaStorageRef(actId).delete();
-  } catch(e) { /* ya no existía en Storage */ }
-  try {
-    await _guiasColRef().doc(actId).delete();
-  } catch(e) { /* ignorar */ }
+  try { await _guiaStorageRef(actId).delete(); } catch(e) { /* ya no existía en Storage */ }
   delete _guiasCache[actId];
+  try { await _persistirGuiasMeta(); } catch(e) { /* ignorar */ }
   _refrescarBtnGuia(actId);
   mostrarToast('Guía eliminada', 'success');
 }
