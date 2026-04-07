@@ -303,12 +303,36 @@ async function _cargarDesdeFirestore(uid) {
     const base = db.collection('users').doc(uid).collection('data');
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
       try {
-        // Biblioteca: sistema de chunks
+        // Biblioteca: sistema de chunks con fusión local
         if (store === 'biblioteca') {
           const payload = await _cargarBibliotecaChunks(base);
-          if (payload) {
+          const localRaw = localStorage.getItem(key);
+
+          // Fusionar Firebase + localStorage para no perder planes
+          let firebaseItems = [];
+          let localItems = [];
+          try { firebaseItems = JSON.parse(payload || '{"items":[]}').items || []; } catch(e) {}
+          try { localItems = JSON.parse(localRaw || '{"items":[]}').items || []; } catch(e) {}
+
+          // Índice de IDs en Firebase
+          const fbIds = new Set(firebaseItems.map(i => i.id));
+          // Planes que están en local pero NO en Firebase (no llegaron a sincronizarse)
+          const soloEnLocal = localItems.filter(i => i.id && !fbIds.has(i.id));
+
+          if (soloEnLocal.length > 0) {
+            // Hay planes locales que Firebase no tiene → fusionar y subir
+            console.warn(`[Biblioteca] ${soloEnLocal.length} plan(es) encontrado(s) en local pero no en Firebase. Fusionando y subiendo...`);
+            const merged = { items: [...firebaseItems, ...soloEnLocal] };
+            localStorage.setItem(key, JSON.stringify(merged));
+            // Subir fusión a Firebase (sin await para no bloquear la carga)
+            if (typeof _escribirChunksBiblioteca === 'function') {
+              _escribirChunksBiblioteca(base, merged).catch(e => console.warn('Error subiendo fusión:', e));
+            }
+          } else if (payload) {
+            // Firebase está al día → usar datos de Firebase
             localStorage.setItem(key, payload);
           }
+          // Si ni Firebase ni local tienen datos, no tocar localStorage
           return;
         }
 
