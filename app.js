@@ -14926,7 +14926,7 @@ function _actualizarAvisHorarioCurso(regOriginal) {
   }
 }
 
-function confirmarDuplicarPlan() {
+async function confirmarDuplicarPlan() {
   if (!_dupPlanId) return;
   const biblio = cargarBiblioteca();
   const original = (biblio.items || []).find(i => i.id === _dupPlanId);
@@ -15038,11 +15038,24 @@ function confirmarDuplicarPlan() {
 
   // Guardar la copia en la biblioteca (al inicio de la lista)
   biblio.items.unshift(copia);
-  persistirBiblioteca(biblio);
+
+  // Guardar localmente primero
+  localStorage.setItem('planificadorRA_biblioteca_v1', JSON.stringify(biblio));
+
+  // Mostrar indicador mientras guarda en Firebase
+  const btnConfirmar = document.getElementById('btn-confirmar-duplicar');
+  if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Guardando…'; }
+
+  // Esperar confirmación de Firebase antes de cerrar
+  if (window._syncFirebaseAwait) {
+    await window._syncFirebaseAwait('biblioteca', biblio);
+  } else if (window._syncFirebase) {
+    await window._syncFirebase('biblioteca', biblio);
+  }
 
   cerrarDuplicarPlan();
   renderizarBiblioteca();
-  mostrarToast(`✅ Planificación duplicada: "${copia.nombre}"`, 'success');
+  mostrarToast(`✅ Planificación duplicada y guardada: "${copia.nombre}"`, 'success');
 }
 
 function eliminarPlanificacionGuardada(id) {

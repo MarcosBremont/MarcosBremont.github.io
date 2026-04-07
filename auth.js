@@ -341,10 +341,23 @@ async function _migrarDatosLocales(uid) {
 window._syncFirebase = function(store, data) {
   if (!window.currentUser) return;
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
-  db.collection('users').doc(window.currentUser.uid)
+  return db.collection('users').doc(window.currentUser.uid)
     .collection('data').doc(store)
     .set({ payload })
     .catch(e => console.warn('Sync Firebase error [' + store + ']:', e));
+};
+
+// Versión async que garantiza el guardado antes de continuar
+window._syncFirebaseAwait = async function(store, data) {
+  if (!window.currentUser) return;
+  const payload = typeof data === 'string' ? data : JSON.stringify(data);
+  try {
+    await db.collection('users').doc(window.currentUser.uid)
+      .collection('data').doc(store)
+      .set({ payload });
+  } catch (e) {
+    console.warn('Sync Firebase error [' + store + ']:', e);
+  }
 };
 
 // ================================================================
