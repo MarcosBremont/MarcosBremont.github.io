@@ -21256,6 +21256,7 @@ function abrirModalClase(encodedData) {
             <span class="material-icons" style="font-size:14px;">link</span> Recurso
           </a>` : ''}
         </div>
+        ${_renderBtnGuiaHtml(si.actId)}
       </div>`;
       }).join('') : `
       <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
@@ -21404,6 +21405,81 @@ function _guardarRecursoDesdeModal(actId, url) {
       }
     } else if (oldLink) { oldLink.remove(); }
   }
+}
+
+// ── Guía HTML adjunta a actividad ──────────────────────────────────────────
+function _guiaKey(actId) { return `guia_html_${actId}`; }
+function _guiaNombreKey(actId) { return `guia_nombre_${actId}`; }
+
+function _renderBtnGuiaHtml(actId) {
+  const nombre = localStorage.getItem(_guiaNombreKey(actId));
+  const tiene = !!localStorage.getItem(_guiaKey(actId));
+  if (tiene) {
+    return `<div data-guia-act="${actId}" style="display:flex;align-items:center;gap:6px;margin-top:6px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:8px;padding:7px 10px;">
+      <span class="material-icons" style="font-size:16px;color:#2E7D32;">html</span>
+      <span style="flex:1;font-size:0.78rem;color:#2E7D32;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(nombre || 'Guía HTML')}">${escapeHTML(nombre || 'Guía HTML')}</span>
+      <button onclick="_abrirGuiaHtml('${actId}')" title="Abrir guía en nueva pestaña"
+        style="background:#2E7D32;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;font-family:inherit;">
+        <span class="material-icons" style="font-size:13px;">open_in_new</span> Abrir
+      </button>
+      <button onclick="_eliminarGuiaHtml('${actId}',this)" title="Quitar guía"
+        style="background:none;border:none;color:#C62828;cursor:pointer;padding:2px;border-radius:4px;display:flex;align-items:center;">
+        <span class="material-icons" style="font-size:16px;">close</span>
+      </button>
+    </div>`;
+  }
+  return `<div data-guia-act="${actId}" style="margin-top:6px;">
+    <label style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:600;color:#546E7A;cursor:pointer;
+      background:#FAFAFA;border:1.5px dashed #B0BEC5;border-radius:8px;padding:6px 12px;transition:background 0.15s;"
+      onmouseover="this.style.background='#ECEFF1'" onmouseout="this.style.background='#FAFAFA'">
+      <span class="material-icons" style="font-size:15px;">attach_file</span> Adjuntar guía HTML
+      <input type="file" accept=".html,.htm" style="display:none;" onchange="_subirGuiaHtml('${actId}',this)">
+    </label>
+  </div>`;
+}
+
+function _subirGuiaHtml(actId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { mostrarToast('El archivo es demasiado grande (máx. 5 MB)', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      localStorage.setItem(_guiaKey(actId), e.target.result);
+      localStorage.setItem(_guiaNombreKey(actId), file.name);
+      _refrescarBtnGuia(actId);
+      mostrarToast('Guía adjuntada correctamente', 'success');
+    } catch(err) {
+      mostrarToast('No se pudo guardar la guía (espacio insuficiente)', 'error');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function _abrirGuiaHtml(actId) {
+  const html = localStorage.getItem(_guiaKey(actId));
+  if (!html) { mostrarToast('Guía no encontrada', 'error'); return; }
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  // Revocar URL después de que cargue
+  if (win) win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(url), 1000));
+}
+
+function _eliminarGuiaHtml(actId, btn) {
+  if (!confirm('¿Quitar la guía HTML adjunta?')) return;
+  localStorage.removeItem(_guiaKey(actId));
+  localStorage.removeItem(_guiaNombreKey(actId));
+  _refrescarBtnGuia(actId);
+  mostrarToast('Guía eliminada', 'success');
+}
+
+function _refrescarBtnGuia(actId) {
+  const el = document.querySelector(`[data-guia-act="${actId}"]`);
+  if (!el) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = _renderBtnGuiaHtml(actId);
+  el.replaceWith(tmp.firstElementChild);
 }
 
 function toggleFormaEval(evalKey, formaId, color, btn) {
