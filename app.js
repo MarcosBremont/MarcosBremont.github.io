@@ -14302,14 +14302,11 @@ function _confirmarCopiarDatosGenerales(idx) {
 
 
 function persistirBiblioteca(biblio) {
-
-
-
   localStorage.setItem(BIBLIO_KEY, JSON.stringify(biblio));
-  if (window._syncFirebase) _syncFirebase('biblioteca', biblio);
-
-
-
+  // Retornar la promise para que los llamadores puedan awaitar si necesitan
+  if (window._syncFirebaseAwait) return window._syncFirebaseAwait('biblioteca', biblio);
+  if (window._syncFirebase) return window._syncFirebase('biblioteca', biblio);
+  return Promise.resolve();
 }
 
 
@@ -14322,7 +14319,7 @@ function persistirBiblioteca(biblio) {
 
 
 
-function guardarPlanificacionActual(silencioso = false) {
+async function guardarPlanificacionActual(silencioso = false) {
 
 
 
@@ -14447,7 +14444,22 @@ function guardarPlanificacionActual(silencioso = false) {
     mostrarToast('Planificación guardada correctamente', 'success');
   }
   planificacion._id = registro.id;
-  persistirBiblioteca(biblio);
+
+  // Guardar localmente primero (síncrono)
+  localStorage.setItem('planificadorRA_biblioteca_v1', JSON.stringify(biblio));
+
+  // Mostrar indicador de guardado en Firebase
+  const btnGuardar = document.querySelector('[onclick*="guardarPlanificacionActual"]');
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.dataset._origText = btnGuardar.textContent; btnGuardar.textContent = 'Guardando…'; }
+
+  // Esperar confirmación de Firebase
+  if (window._syncFirebaseAwait) {
+    await window._syncFirebaseAwait('biblioteca', biblio);
+  } else if (window._syncFirebase) {
+    await window._syncFirebase('biblioteca', biblio);
+  }
+
+  if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardar.dataset._origText) btnGuardar.textContent = btnGuardar.dataset._origText; }
 
   // Asignar al curso seleccionado en Paso 1
   const finalId = registro.id;

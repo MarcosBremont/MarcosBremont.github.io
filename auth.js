@@ -304,9 +304,30 @@ async function _cargarDesdeFirestore(uid) {
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
       try {
         const doc = await base.doc(store).get();
-        if (doc.exists && doc.data().payload) {
-          localStorage.setItem(key, doc.data().payload);
+        if (!doc.exists || !doc.data().payload) return;
+
+        const payloadFirebase = doc.data().payload;
+
+        // Para la biblioteca: comparar cuál versión tiene más ítems / es más reciente
+        if (store === 'biblioteca') {
+          const localRaw = localStorage.getItem(key);
+          if (localRaw) {
+            try {
+              const localData  = JSON.parse(localRaw);
+              const fireData   = JSON.parse(payloadFirebase);
+              const localCount = (localData.items || []).length;
+              const fireCount  = (fireData.items  || []).length;
+              // Usar la versión con más planificaciones
+              if (localCount >= fireCount) {
+                // Local tiene igual o más datos — subir local a Firebase para sincronizar
+                base.doc(store).set({ payload: localRaw }).catch(() => {});
+                return; // No sobreescribir local
+              }
+            } catch (e) { /* si falla el parse, usar Firebase */ }
+          }
         }
+
+        localStorage.setItem(key, payloadFirebase);
       } catch (e) {
         console.warn('Error cargando store:', store, e);
       }
