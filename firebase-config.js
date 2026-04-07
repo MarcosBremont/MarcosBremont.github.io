@@ -87,6 +87,9 @@
 //          allow write: if request.auth != null
 //                       && request.resource.size < 5 * 1024 * 1024;
 //        }
+//        match /guias/{uid}/{allPaths=**} {
+//          allow read, write, delete: if request.auth != null && request.auth.uid == uid;
+//        }
 //      }
 //    }
 // ================================================================

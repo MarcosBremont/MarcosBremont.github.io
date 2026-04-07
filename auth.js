@@ -320,6 +320,10 @@ async function _cargarDesdeFirestore(uid) {
       }
     });
     await Promise.all(promesas);
+    // Cargar metadatos de guías HTML adjuntas
+    if (typeof _cargarGuiasMeta === 'function') {
+      try { await _cargarGuiasMeta(); } catch(e) { console.warn('Error cargando guías:', e); }
+    }
   } catch (e) {
     console.error('Error al cargar desde Firestore:', e);
   }
