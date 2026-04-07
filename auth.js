@@ -349,7 +349,7 @@ async function _cargarBibliotecaChunks(base) {
     // Migrar automáticamente a chunks
     try {
       const biblio = JSON.parse(payload);
-      await _guardarBibliotecaChunks(base, biblio);
+      await _escribirChunksBiblioteca(base, biblio);
       await base.doc('biblioteca').delete();
     } catch(e) { console.warn('Error migrando biblioteca a chunks:', e); }
     return payload;
@@ -357,7 +357,7 @@ async function _cargarBibliotecaChunks(base) {
   return null;
 }
 
-async function _guardarBibliotecaChunks(base, biblio) {
+async function _escribirChunksBiblioteca(base, biblio) {
   const MAX_BYTES = 850000;
   const items = biblio.items || [];
   const chunks = [];
@@ -406,7 +406,7 @@ async function _guardarBibliotecaChunks(base, biblio) {
 window._guardarBibliotecaChunks = async function(biblio) {
   if (!window.currentUser) return;
   const base = db.collection('users').doc(window.currentUser.uid).collection('data');
-  await _guardarBibliotecaChunks(base, biblio);
+  await _escribirChunksBiblioteca(base, biblio);
 };
 
 // ── Migrar datos locales a Firestore (primer login) ──────────────
