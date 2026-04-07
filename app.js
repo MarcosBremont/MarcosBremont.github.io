@@ -14302,10 +14302,51 @@ function _confirmarCopiarDatosGenerales(idx) {
 
 function persistirBiblioteca(biblio) {
   localStorage.setItem(BIBLIO_KEY, JSON.stringify(biblio));
-  // Retornar la promise para que los llamadores puedan awaitar si necesitan
-  if (window._syncFirebaseAwait) return window._syncFirebaseAwait('biblioteca', biblio);
-  if (window._syncFirebase) return window._syncFirebase('biblioteca', biblio);
-  return Promise.resolve();
+  return _syncBibliotecaFirebase(biblio);
+}
+
+async function _syncBibliotecaFirebase(biblio) {
+  if (!window._syncFirebaseAwait && !window._syncFirebase) return;
+
+  const payload = JSON.stringify(biblio);
+  const MAX_BYTES = 900000; // 900KB — margen antes del límite de 1MB de Firestore
+
+  if (new Blob([payload]).size <= MAX_BYTES) {
+    // Tamaño OK — guardar todo
+    try {
+      if (window._syncFirebaseAwait) await window._syncFirebaseAwait('biblioteca', biblio);
+      else await window._syncFirebase('biblioteca', biblio);
+    } catch (e) {
+      console.warn('Error sync biblioteca:', e);
+      mostrarToast('⚠ Biblioteca guardada localmente. Error al sincronizar con la nube.', 'warning');
+    }
+    return;
+  }
+
+  // Demasiado grande: guardar solo las más recientes hasta caber en 900KB
+  const items = [...(biblio.items || [])].sort((a, b) =>
+    new Date(b.fechaGuardado || 0) - new Date(a.fechaGuardado || 0)
+  );
+  const biblioReducida = { ...biblio, items: [] };
+  for (const item of items) {
+    biblioReducida.items.push(item);
+    if (new Blob([JSON.stringify(biblioReducida)]).size > MAX_BYTES) {
+      biblioReducida.items.pop();
+      break;
+    }
+  }
+
+  try {
+    if (window._syncFirebaseAwait) await window._syncFirebaseAwait('biblioteca', biblioReducida);
+    else await window._syncFirebase('biblioteca', biblioReducida);
+    const omitidas = (biblio.items || []).length - biblioReducida.items.length;
+    if (omitidas > 0) {
+      mostrarToast(`Nube: ${biblioReducida.items.length} planificaciones sincronizadas (${omitidas} antiguas solo en este dispositivo por límite de almacenamiento).`, 'info');
+    }
+  } catch (e) {
+    console.warn('Error sync biblioteca reducida:', e);
+    mostrarToast('⚠ Biblioteca guardada localmente. Error al sincronizar con la nube.', 'warning');
+  }
 }
 
 
@@ -14449,16 +14490,13 @@ async function guardarPlanificacionActual(silencioso = false) {
 
   // Mostrar indicador de guardado en Firebase
   const btnGuardar = document.querySelector('[onclick*="guardarPlanificacionActual"]');
-  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.dataset._origText = btnGuardar.textContent; btnGuardar.textContent = 'Guardando…'; }
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.dataset._origText = btnGuardar.innerHTML; btnGuardar.textContent = 'Guardando…'; }
 
-  // Esperar confirmación de Firebase
-  if (window._syncFirebaseAwait) {
-    await window._syncFirebaseAwait('biblioteca', biblio);
-  } else if (window._syncFirebase) {
-    await window._syncFirebase('biblioteca', biblio);
+  try {
+    await _syncBibliotecaFirebase(biblio);
+  } finally {
+    if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardar.dataset._origText) btnGuardar.innerHTML = btnGuardar.dataset._origText; }
   }
-
-  if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardar.dataset._origText) btnGuardar.textContent = btnGuardar.dataset._origText; }
 
   // Asignar al curso seleccionado en Paso 1
   const finalId = registro.id;
@@ -15158,11 +15196,10 @@ async function confirmarDuplicarPlan() {
   const btnConfirmar = document.getElementById('btn-confirmar-duplicar');
   if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Guardando…'; }
 
-  // Esperar confirmación de Firebase antes de cerrar
-  if (window._syncFirebaseAwait) {
-    await window._syncFirebaseAwait('biblioteca', biblio);
-  } else if (window._syncFirebase) {
-    await window._syncFirebase('biblioteca', biblio);
+  try {
+    await _syncBibliotecaFirebase(biblio);
+  } finally {
+    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.innerHTML = '<span class="material-icons" style="font-size:16px;">content_copy</span> Duplicar'; }
   }
 
   cerrarDuplicarPlan();
