@@ -14987,13 +14987,40 @@ function _actualizarAvisoDesdeSel(regOriginal, cursoDest, biblio, planesCurso) {
 }
 
 function _actualizarAvisHorarioCursoConSel() {
-  // Llamado al cambiar la selección del horario — solo actualiza el aviso, NO reconstruye el selector
+  // Llamado al cambiar la selección del horario — solo actualiza el aviso
+  const aviso = document.getElementById('dup-plan-aviso-horario');
+  if (!aviso) return;
+
   const biblio = cargarBiblioteca();
   const regOrig = _dupPlanId ? (biblio.items || []).find(i => i.id === _dupPlanId) : null;
   const cursoId = document.getElementById('dup-plan-curso')?.value;
   const cursoDest = cursoId ? calState.cursos[cursoId] : null;
-  if (!regOrig || !cursoDest) return;
-  _actualizarAvisoDesdeSel(regOrig, cursoDest, biblio, []);
+  const horarioSelId = document.getElementById('dup-plan-horario-origen')?.value;
+
+  if (!regOrig || !cursoDest || !horarioSelId) return;
+
+  const planSel = (biblio.items || []).find(i => i.id === horarioSelId);
+  const diasDestino = planSel?.planificacion?.datosGenerales?.diasClase;
+  const diasOrigen  = regOrig?.planificacion?.datosGenerales?.diasClase;
+
+  if (!diasDestino) { aviso.style.display = 'none'; return; }
+
+  const resumenDias = (dias) => Object.entries(dias)
+    .filter(([, v]) => v.activo)
+    .map(([d, v]) => `${d.charAt(0).toUpperCase() + d.slice(1)} (${v.horas}h)`)
+    .join(', ');
+
+  const strDestino = resumenDias(diasDestino);
+  const strOrigen  = diasOrigen ? resumenDias(diasOrigen) : '';
+
+  if (strDestino !== strOrigen) {
+    aviso.style.display = 'block';
+    aviso.innerHTML = `<span class="material-icons" style="font-size:14px;vertical-align:middle;color:#E65100;">swap_horiz</span>
+      <strong>Horario diferente detectado.</strong> Las fechas se recalcularán con este horario:
+      <br><span style="color:#1565C0;">${escHTML(strDestino)}</span>`;
+  } else {
+    aviso.style.display = 'none';
+  }
 }
 
 async function confirmarDuplicarPlan() {
