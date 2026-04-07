@@ -14906,29 +14906,63 @@ function _actualizarPreviewDupFechas(primeraOriginal, ultimaOriginal, totalActs)
 
 function _actualizarAvisHorarioCurso(regOriginal) {
   const aviso = document.getElementById('dup-plan-aviso-horario');
+  const horarioWrap = document.getElementById('dup-plan-horario-wrap');
+  const horarioSel = document.getElementById('dup-plan-horario-origen');
   if (!aviso) return;
+
   const cursoId = document.getElementById('dup-plan-curso')?.value;
-  if (!cursoId) { aviso.style.display = 'none'; return; }
+  if (!cursoId) {
+    aviso.style.display = 'none';
+    if (horarioWrap) horarioWrap.style.display = 'none';
+    return;
+  }
 
   const cursoDest = calState.cursos[cursoId];
-  const planActivaId = cursoDest?.planActivaId;
   const biblio = cargarBiblioteca();
-  const planActiva = planActivaId ? (biblio.items || []).find(i => i.id === planActivaId) : null;
-  const diasDestino = planActiva?.planificacion?.datosGenerales?.diasClase;
-  const diasOrigen = regOriginal?.planificacion?.datosGenerales?.diasClase;
+  const planIds = cursoDest?.planIds || [];
+
+  // Obtener todas las planificaciones del curso que tengan diasClase
+  const planesCurso = planIds
+    .map(pid => (biblio.items || []).find(i => i.id === pid))
+    .filter(p => p && p.planificacion?.datosGenerales?.diasClase);
+
+  // Si el curso tiene múltiples planificaciones con horarios → mostrar selector
+  if (planesCurso.length > 1 && horarioWrap && horarioSel) {
+    horarioSel.innerHTML = planesCurso.map(p => {
+      const dg = p.planificacion.datosGenerales;
+      const resumen = Object.entries(dg.diasClase)
+        .filter(([, v]) => v.activo)
+        .map(([d, v]) => `${d.charAt(0).toUpperCase() + d.slice(1)} (${v.horas}h)`)
+        .join(', ');
+      const modulo = dg.moduloFormativo || p.nombre || p.id;
+      return `<option value="${p.id}">${escHTML(modulo)} — ${escHTML(resumen)}</option>`;
+    }).join('');
+    horarioWrap.style.display = 'block';
+    // Preseleccionar la activa
+    if (cursoDest.planActivaId) horarioSel.value = cursoDest.planActivaId;
+  } else {
+    if (horarioWrap) horarioWrap.style.display = 'none';
+  }
+
+  // Mostrar aviso de horario con la planificación seleccionada (o la activa)
+  const refPlanId = (horarioSel && horarioWrap?.style.display !== 'none')
+    ? horarioSel.value
+    : cursoDest?.planActivaId;
+  const planRef = refPlanId ? (biblio.items || []).find(i => i.id === refPlanId) : planesCurso[0];
+  const diasDestino = planRef?.planificacion?.datosGenerales?.diasClase;
+  const diasOrigen  = regOriginal?.planificacion?.datosGenerales?.diasClase;
 
   if (!diasDestino) { aviso.style.display = 'none'; return; }
 
-  const resumen = (dias) => Object.entries(dias)
+  const resumenDias = (dias) => Object.entries(dias)
     .filter(([, v]) => v.activo)
     .map(([d, v]) => `${d.charAt(0).toUpperCase() + d.slice(1)} (${v.horas}h)`)
     .join(', ');
 
-  const strDestino = resumen(diasDestino);
-  const strOrigen = diasOrigen ? resumen(diasOrigen) : '';
-  const esDiferente = strDestino !== strOrigen;
+  const strDestino = resumenDias(diasDestino);
+  const strOrigen  = diasOrigen ? resumenDias(diasOrigen) : '';
 
-  if (esDiferente) {
+  if (strDestino !== strOrigen) {
     aviso.style.display = 'block';
     aviso.innerHTML = `<span class="material-icons" style="font-size:14px;vertical-align:middle;color:#E65100;">swap_horiz</span>
       <strong>Horario diferente detectado.</strong> Las fechas se recalcularán según el horario de <strong>${escHTML(cursoDest.nombre)}</strong>:
@@ -14936,6 +14970,16 @@ function _actualizarAvisHorarioCurso(regOriginal) {
   } else {
     aviso.style.display = 'none';
   }
+}
+
+function _actualizarAvisHorarioCursoConSel() {
+  // Llamado cuando el usuario cambia el selector de horario
+  const biblio = cargarBiblioteca();
+  const dupId = document.getElementById('dup-plan-horario-origen')?.value;
+  const regRef = dupId ? (biblio.items || []).find(i => i.id === dupId) : null;
+  const regOrigId = _dupPlanId;
+  const regOrig = regOrigId ? (biblio.items || []).find(i => i.id === regOrigId) : null;
+  if (regRef && regOrig) _actualizarAvisHorarioCurso(regOrig);
 }
 
 async function confirmarDuplicarPlan() {
@@ -14969,11 +15013,13 @@ async function confirmarDuplicarPlan() {
   if (ajustar && inputFecha?.value) {
     const nuevaFechaInicio = inputFecha.value; // YYYY-MM-DD
 
-    // Obtener horario del curso destino (de su planificación activa)
+    // Obtener horario del curso destino: usar el selector si hay múltiples, si no la activa
     const cursoDest = cursoId ? calState.cursos[cursoId] : null;
-    const planActivaId = cursoDest?.planActivaId;
     const biblio2 = cargarBiblioteca();
-    const planActiva = planActivaId ? (biblio2.items || []).find(i => i.id === planActivaId) : null;
+    const horarioSelId = document.getElementById('dup-plan-horario-origen')?.value;
+    const horarioWrapVisible = document.getElementById('dup-plan-horario-wrap')?.style.display !== 'none';
+    const planRefId = (horarioWrapVisible && horarioSelId) ? horarioSelId : cursoDest?.planActivaId;
+    const planActiva = planRefId ? (biblio2.items || []).find(i => i.id === planRefId) : null;
     const diasClaseCurso = planActiva?.planificacion?.datosGenerales?.diasClase;
     const diasClaseOrigen = copia.planificacion?.datosGenerales?.diasClase;
 

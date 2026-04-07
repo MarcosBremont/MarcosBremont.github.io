@@ -2842,6 +2842,18 @@
             style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;font-family:inherit;">
             <option value="">Sin asignar (puedo hacerlo después)</option>
           </select>
+          <!-- Selector de horario cuando hay varias planificaciones en el curso -->
+          <div id="dup-plan-horario-wrap" style="display:none;margin-top:10px;">
+            <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:4px;">
+              <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#1565C0;">schedule</span>
+              ¿Usar el horario de cuál planificación?
+            </label>
+            <select id="dup-plan-horario-origen"
+              style="width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#1565C0;background:#E3F2FD;"
+              onchange="_actualizarAvisHorarioCursoConSel()">
+            </select>
+            <p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Cada materia puede tener un horario diferente. Selecciona el que corresponde a esta nueva planificación.</p>
+          </div>
           <div id="dup-plan-aviso-horario" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;font-size:0.8rem;color:#E65100;line-height:1.5;"></div>
         </div>
 
