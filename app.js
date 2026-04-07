@@ -8020,6 +8020,16 @@ function _renderizarListaDiasLibreta() {
   }).join('');
 }
 
+const _LIBRETA_TIPOS = [
+  { value: 'general',        label: 'General',               icon: 'edit_note',         color: '#546E7A' },
+  { value: 'comportamiento', label: 'Comportamiento',         icon: 'warning',           color: '#E65100' },
+  { value: 'academico',      label: 'Académico',              icon: 'school',            color: '#1565C0' },
+  { value: 'asistencia',     label: 'Asistencia',             icon: 'event_busy',        color: '#6A1B9A' },
+  { value: 'logro',          label: 'Logro / Reconocimiento', icon: 'emoji_events',      color: '#2E7D32' },
+  { value: 'comunicacion',   label: 'Comunicación con padres',icon: 'forum',             color: '#00695C' },
+  { value: 'otro',           label: 'Otro',                   icon: 'more_horiz',        color: '#78909C' },
+];
+
 function _renderizarEntradasDia(fecha) {
   const cont = document.getElementById('libreta-panel-dia');
   if (!cont) return;
@@ -8038,10 +8048,20 @@ function _renderizarEntradasDia(fecha) {
         <p style="margin-top:8px;font-size:0.85rem;">Sin anotaciones para este día.<br>
           Haz clic en <strong>+ Nueva anotación</strong> para comenzar.</p>
       </div>` :
-      entries.map(e => `
-        <div style="background:#fff;border:1.5px solid #B2DFDB;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+      entries.map(e => {
+        const tipoInfo = _LIBRETA_TIPOS.find(t => t.value === (e.tipo || 'general')) || _LIBRETA_TIPOS[0];
+        return `
+        <div style="background:#fff;border:1.5px solid #B2DFDB;border-left:4px solid ${tipoInfo.color};border-radius:10px;padding:14px 16px;margin-bottom:12px;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
             <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;font-weight:700;color:${tipoInfo.color};background:${tipoInfo.color}18;border-radius:20px;padding:2px 8px;">
+                  <span class="material-icons" style="font-size:12px;">${tipoInfo.icon}</span>${tipoInfo.label}
+                </span>
+                ${e.cursoNombre ? `<span style="font-size:0.7rem;color:#546E7A;background:#ECEFF1;border-radius:20px;padding:2px 8px;">
+                  <span class="material-icons" style="font-size:11px;vertical-align:middle;">class</span> ${escapeHTML(e.cursoNombre)}
+                </span>` : ''}
+              </div>
               ${e.titulo ? `<div style="font-weight:700;color:#00695C;font-size:0.92rem;margin-bottom:6px;">${escapeHTML(e.titulo)}</div>` : ''}
               <div style="font-size:0.85rem;color:#37474F;line-height:1.6;white-space:pre-wrap;">${escapeHTML(e.texto || '')}</div>
             </div>
@@ -8059,7 +8079,8 @@ function _renderizarEntradasDia(fecha) {
               </div>
             </div>
           </div>
-        </div>`).join('')
+        </div>`;
+      }).join('')
     }`;
 }
 
@@ -8068,25 +8089,43 @@ function _abrirFormLibreta(entryId) {
   const entry = entryId ? data.entries.find(e => e.id === entryId) : null;
   const fechaDefault = _libretaDiaSeleccionado || new Date().toISOString().split('T')[0];
 
+  const cursos = Object.values(calState.cursos || {}).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  const cursosOpts = `<option value="">— Sin curso específico —</option>` +
+    cursos.map(c => `<option value="${c.id}" ${entry?.cursoId === c.id ? 'selected' : ''}>${escapeHTML(c.nombre)}</option>`).join('');
+
+  const tiposOpts = _LIBRETA_TIPOS.map(t =>
+    `<option value="${t.value}" ${(entry?.tipo || 'general') === t.value ? 'selected' : ''}>${t.label}</option>`
+  ).join('');
+
+  const inputStyle = 'width:100%;padding:8px 10px;border:1.5px solid #B2DFDB;border-radius:8px;font-size:0.9rem;background:#fff;font-family:inherit;box-sizing:border-box;';
+
   document.getElementById('modal-title').textContent = entry ? 'Editar anotación' : 'Nueva anotación';
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:#546E7A;display:block;margin-bottom:4px;">Fecha</label>
+          <input type="date" id="lib-fecha" value="${entry ? entry.fecha : fechaDefault}" style="${inputStyle}">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:#546E7A;display:block;margin-bottom:4px;">Tipo de anotación</label>
+          <select id="lib-tipo" style="${inputStyle}">${tiposOpts}</select>
+        </div>
+      </div>
       <div>
-        <label style="font-size:0.78rem;font-weight:600;color:#546E7A;display:block;margin-bottom:4px;">Fecha</label>
-        <input type="date" id="lib-fecha" value="${entry ? entry.fecha : fechaDefault}"
-          style="width:100%;padding:8px 10px;border:1.5px solid #B2DFDB;border-radius:8px;font-size:0.9rem;">
+        <label style="font-size:0.78rem;font-weight:600;color:#546E7A;display:block;margin-bottom:4px;">Curso relacionado</label>
+        <select id="lib-curso" style="${inputStyle}">${cursosOpts}</select>
       </div>
       <div>
         <label style="font-size:0.78rem;font-weight:600;color:#546E7A;display:block;margin-bottom:4px;">Título / Asunto</label>
         <input type="text" id="lib-titulo" value="${escapeHTML(entry?.titulo || '')}"
           placeholder="Ej: Reunión de departamento, Idea para clase..."
-          maxlength="80"
-          style="width:100%;padding:8px 10px;border:1.5px solid #B2DFDB;border-radius:8px;font-size:0.9rem;">
+          maxlength="80" style="${inputStyle}">
       </div>
       <div>
         <label style="font-size:0.78rem;font-weight:600;color:#546E7A;display:block;margin-bottom:4px;">Anotación</label>
-        <textarea id="lib-texto" rows="6" placeholder="Escribe tu anotación aquí..."
-          style="width:100%;padding:10px;border:1.5px solid #B2DFDB;border-radius:8px;font-size:0.88rem;line-height:1.6;resize:vertical;">${escapeHTML(entry?.texto || '')}</textarea>
+        <textarea id="lib-texto" rows="5" placeholder="Escribe tu anotación aquí..."
+          style="width:100%;padding:10px;border:1.5px solid #B2DFDB;border-radius:8px;font-size:0.88rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;">${escapeHTML(entry?.texto || '')}</textarea>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
@@ -8102,19 +8141,22 @@ function _abrirFormLibreta(entryId) {
 }
 
 function _guardarEntradaLibreta(entryId) {
-  const titulo = (document.getElementById('lib-titulo')?.value || '').trim();
-  const texto  = (document.getElementById('lib-texto')?.value || '').trim();
-  const fecha  = document.getElementById('lib-fecha')?.value || new Date().toISOString().split('T')[0];
+  const titulo   = (document.getElementById('lib-titulo')?.value || '').trim();
+  const texto    = (document.getElementById('lib-texto')?.value || '').trim();
+  const fecha    = document.getElementById('lib-fecha')?.value || new Date().toISOString().split('T')[0];
+  const tipo     = document.getElementById('lib-tipo')?.value || 'general';
+  const cursoId  = document.getElementById('lib-curso')?.value || '';
   if (!titulo && !texto) { mostrarToast('Escribe un título o anotación', 'error'); return; }
 
   const data = cargarLibreta();
   const hora = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+  const cursoNombre = cursoId ? (calState.cursos?.[cursoId]?.nombre || '') : '';
 
   if (entryId) {
     const idx = data.entries.findIndex(e => e.id === entryId);
-    if (idx >= 0) data.entries[idx] = { ...data.entries[idx], titulo, texto, fecha };
+    if (idx >= 0) data.entries[idx] = { ...data.entries[idx], titulo, texto, fecha, tipo, cursoId, cursoNombre };
   } else {
-    data.entries.push({ id: uid(), fecha, titulo, texto, hora });
+    data.entries.push({ id: uid(), fecha, titulo, texto, hora, tipo, cursoId, cursoNombre });
   }
 
   _guardarLibreta(data);
