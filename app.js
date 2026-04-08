@@ -1384,7 +1384,7 @@ function generarActividades(listaEC, fechasClase, actsPorEC) {
 
 
 
-        id: `ACT-${idxEC + 1}-${i + 1}`,
+        id: `ACT-${idxEC + 1}-${i + 1}-${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`,
 
 
 
@@ -14409,6 +14409,17 @@ async function guardarPlanificacionActual(silencioso = false) {
 
 
 
+
+  // Asegurar que todas las actividades tienen IDs únicos (fix bug IDs genéricos ACT-X-X)
+  const _idsExistentes = new Set(
+    (cargarBiblioteca().items || []).flatMap(it => (it.planificacion?.actividades || []).map(a => a.id))
+  );
+  (planificacion.actividades || []).forEach(a => {
+    if (!a.id || _idsExistentes.has(a.id)) {
+      a.id = 'act-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      _idsExistentes.add(a.id);
+    }
+  });
 
   const biblio = cargarBiblioteca();
 
