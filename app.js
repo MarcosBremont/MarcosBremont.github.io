@@ -22792,6 +22792,7 @@ let _presState = {
 
 function abrirModoPresent() {
   document.getElementById('pres-overlay')?.classList.remove('hidden');
+  cargarCalificaciones(); // Asegura que calState.cursos esté poblado antes de detectar
   const detectado = _presDetectarClase();
   if (detectado) {
     _presCargarCurso(detectado.cursoId, detectado.periodoId, detectado.slot);
