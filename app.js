@@ -17050,8 +17050,8 @@ function renderizarDiarias() {
 
 
           <input class="pd-sesion-titulo" type="text" value="${escapeHTML(act.enunciado || '')}"
-            style="background:none;border:none;border-bottom:1.5px solid transparent;outline:none;font:inherit;width:100%;cursor:text;min-width:0;"
-            onfocus="this.style.borderBottomColor='#00897B';event.stopPropagation()"
+            style="background:none;border:none;border-bottom:1.5px solid transparent;outline:none;font:inherit;width:100%;cursor:text;min-width:0;color:inherit;"
+            onfocus="this.style.borderBottomColor='rgba(255,255,255,0.6)';event.stopPropagation()"
             onblur="this.style.borderBottomColor='transparent';_guardarNombreDiaria(this,'${act.id}',${idx})"
             onkeydown="if(event.key==='Enter')this.blur();event.stopPropagation()"
             onclick="event.stopPropagation()"
