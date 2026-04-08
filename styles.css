@@ -947,7 +947,8 @@ body {
 
 /* ---------- Tabla de Actividades ---------- */
 .tabla-responsiva {
-  overflow-x: visible;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radio-lg);
   max-width: 100%;
 }
