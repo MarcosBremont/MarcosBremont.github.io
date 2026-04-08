@@ -22784,9 +22784,9 @@ function abrirModoPresent() {
   document.getElementById('pres-overlay')?.classList.remove('hidden');
   const detectado = _presDetectarClase();
   if (detectado) {
-    _presCargarCurso(detectado.cursoId, detectado.periodoId);
+    _presCargarCurso(detectado.cursoId, detectado.periodoId, detectado.slot);
   } else {
-    _presCargarCurso(null, null);
+    _presCargarCurso(null, null, null);
     abrirPresPicker();
   }
   _presIniciarReloj();
@@ -22810,22 +22810,35 @@ function _presDetectarClase() {
   if (diaSem < 0 || diaSem > 4) return null;
   const minActual = now.getHours() * 60 + now.getMinutes();
 
-  const slot = horario.find(e => {
+  // Recopilar todos los slots activos ahora (puede haber varios períodos en la misma hora)
+  const slotsActivos = horario.filter(e => {
     if (e.dia !== diaSem) return false;
     const ini = _PRES_HORAS[e.periodo];
+    // Duraciones reales: P3 y P5 tienen 60 min de pausa antes, períodos duran 50 min
     return ini !== undefined && minActual >= ini && minActual < ini + 50;
   });
-  if (!slot) return null;
+  if (!slotsActivos.length) return null;
 
-  // Buscar curso que coincida por nombre (case-insensitive)
-  const materiaLow = (slot.materia || '').toLowerCase().trim();
-  const cursoId = Object.keys(calState.cursos || {}).find(id => {
-    const c = calState.cursos[id];
-    return (c.nombre || '').toLowerCase().includes(materiaLow) ||
-           materiaLow.includes((c.nombre || '').toLowerCase().trim());
-  });
-  if (!cursoId) return null;
-  return { cursoId, periodoId: slot.periodo, slot };
+  const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+  // Para cada slot, buscar el curso que coincida
+  for (const slot of slotsActivos) {
+    const materiaNorm = _norm(slot.materia);
+    const seccionNorm = _norm(slot.seccion);
+
+    const cursoId = Object.keys(calState.cursos || {}).find(id => {
+      const c = calState.cursos[id];
+      const nombreNorm = _norm(c.nombre);
+      const seccionCursoNorm = _norm(c.seccion);
+      // Coincidencia por nombre
+      if (nombreNorm && materiaNorm && (nombreNorm.includes(materiaNorm) || materiaNorm.includes(nombreNorm))) return true;
+      // Coincidencia por sección si hay
+      if (seccionNorm && seccionCursoNorm && seccionNorm === seccionCursoNorm) return true;
+      return false;
+    });
+    if (cursoId) return { cursoId, periodoId: slot.periodo, slot };
+  }
+  return null;
 }
 
 function _presGetPlanDeCurso(cursoId) {
@@ -22836,7 +22849,7 @@ function _presGetPlanDeCurso(cursoId) {
   return reg ? reg.planificacion : null;
 }
 
-function _presCargarCurso(cursoId, periodoId) {
+function _presCargarCurso(cursoId, periodoId, slotForzado) {
   _presState.cursoId = cursoId;
   _presState.periodoId = periodoId;
 
@@ -22847,16 +22860,40 @@ function _presCargarCurso(cursoId, periodoId) {
     _presState.periodFinMin = null;
   }
 
-  if (!cursoId) { _presRenderizarVacio(); return; }
+  // Si no hay cursoId pero sí hay un slot activo en el horario, mostrar info básica del horario
+  if (!cursoId) {
+    if (slotForzado) {
+      const elNombre = document.getElementById('pres-curso-nombre');
+      const elPer    = document.getElementById('pres-periodo-info');
+      if (elNombre) elNombre.textContent = slotForzado.materia || 'Clase activa';
+      if (elPer) {
+        const partes = [];
+        if (slotForzado.periodo) partes.push('Período ' + slotForzado.periodo + ' · ' + (_PRES_PERIODOS_LABEL[slotForzado.periodo] || ''));
+        if (slotForzado.aula) partes.push('Aula ' + slotForzado.aula);
+        if (slotForzado.seccion) partes.push(slotForzado.seccion);
+        elPer.textContent = partes.join('  ·  ') || 'Sin curso vinculado — ve a Cursos para asignar esta materia';
+      }
+      const objWrap = document.getElementById('pres-objetivo-wrap');
+      if (objWrap) objWrap.innerHTML = '<div class="pres-section-label">Objetivo de aprendizaje</div>' +
+        '<p style="opacity:0.4;font-style:italic;font-size:0.9rem;">Este horario no tiene un curso vinculado. Asigna el curso desde el panel de Calificaciones.</p>';
+      const seqWrap = document.getElementById('pres-secuencia-wrap');
+      if (seqWrap) seqWrap.innerHTML = '';
+      const actWrap = document.getElementById('pres-actividades-wrap');
+      if (actWrap) actWrap.innerHTML = '';
+      _presRenderizarTimer();
+      return;
+    }
+    _presRenderizarVacio(); return;
+  }
 
   const curso = calState.cursos[cursoId];
   const plan  = _presGetPlanDeCurso(cursoId);
 
   // Header
   const horario = cargarHorario();
-  const slot = periodoId
+  const slot = slotForzado || (periodoId
     ? horario.find(e => e.dia === (new Date().getDay()-1) && e.periodo === periodoId)
-    : null;
+    : null);
 
   const elNombre = document.getElementById('pres-curso-nombre');
   const elPer    = document.getElementById('pres-periodo-info');
