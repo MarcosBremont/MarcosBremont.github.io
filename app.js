@@ -9522,15 +9522,14 @@ function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
   const sumaAnterior = sumaOtras + valorAnterior;
   const valorTotal = raInfo.valorTotal;
 
-  // Bloquear solo si el cambio EMPEORA la situación (excede Y es mayor que antes)
-  if (nuevaSuma > valorTotal && nuevaSuma > sumaAnterior) {
+  // Solo bloquear si excede el total del RA (advertencia, no bloqueo duro)
+  if (nuevaSuma > valorTotal) {
     const disponible = Math.max(0, valorTotal - sumaOtras);
     mostrarToast(
-      'Excede el total del RA (' + valorTotal + ' pts). '
-      + 'Máximo disponible: ' + disponible.toFixed(1) + ' pts', 'error'
+      '⚠ La suma excede el total del RA (' + valorTotal + ' pts). '
+      + 'Ajusta los demás valores.', 'warning'
     );
-    if (inputEl) inputEl.value = valorAnterior || '';
-    return;
+    // No revertir — permitir el cambio para que el docente pueda reorganizar
   }
 
   raInfo.valores[actividadId] = num;
