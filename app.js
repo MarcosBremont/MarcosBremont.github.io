@@ -16537,6 +16537,7 @@ async function _generarSesionConIA(actId, act, ec) {
     set(`pd-recursos-${actId}`, gen.recursos);
     _regenerarInstrumentoEnCard(act, ec);
 
+    guardarTodasDiarias();
     _setBtnEstado('check_circle', '¡Listo!');
     mostrarToast('✅ Sesión generada con IA', 'success');
   } catch (e) {
@@ -16548,6 +16549,7 @@ async function _generarSesionConIA(actId, act, ec) {
     const gen = generarContenidoSesion(act, ec2, horasAct);
     estadoDiarias.sesiones[actId] = gen;
     persistirDiarias();
+    guardarTodasDiarias();
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     const s = gen;
     set(`pd-inicio-apertura-${actId}`, s.inicio.apertura);
@@ -16731,6 +16733,7 @@ function generarSesion(actId) {
 
 
 
+  guardarTodasDiarias();
   registrarCambio(`Sesión diaria generada: "${act.enunciado?.substring(0, 60) || actId}"`);
   mostrarToast('Sesión generada automáticamente', 'info');
 
