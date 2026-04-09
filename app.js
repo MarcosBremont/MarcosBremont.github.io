@@ -18104,10 +18104,40 @@ function _diasHorarioDeSeccion(seccion) {
   return [...new Set(dias)];
 }
 
+// Devuelve los días del horario filtrando por materia Y sección a la vez
+function _diasHorarioDeMateriaYSeccion(materia, seccion) {
+  const horario = cargarHorario().filter(e => e.materia);
+  const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const matNorm = _norm(materia);
+  const secNorm = _norm(seccion);
+  const _palabras = str => str.split(' ').filter(w => w.length > 3);
+  const dias = horario.filter(e => {
+    const eMat = _norm(e.materia);
+    const eSec = _norm(e.seccion || '');
+    // Coincidencia de sección exacta
+    const secOk = !secNorm || eSec === secNorm;
+    // Coincidencia de materia: substring o ≥50% palabras clave en común
+    let matOk = false;
+    if (!matNorm) { matOk = true; }
+    else if (eMat.includes(matNorm) || matNorm.includes(eMat)) { matOk = true; }
+    else {
+      const wa = _palabras(matNorm), wb = _palabras(eMat);
+      const wbSet = new Set(wb);
+      const shared = wa.filter(w => wbSet.has(w)).length;
+      matOk = Math.min(wa.length, wb.length) > 0 && shared / Math.min(wa.length, wb.length) >= 0.5;
+    }
+    return secOk && matOk;
+  }).map(e => e.dia);
+  return [...new Set(dias)];
+}
+
 // Próxima fecha después de fechaISO donde la sección tiene clase según el horario
+// Si se provee materia, filtra por materia+sección para no confundir materias distintas del mismo grupo
 // Si no hay datos de horario, usa mismo día de semana +7 días
-function _proximaFechaHorario(fechaISO, seccion) {
-  const diasSec = _diasHorarioDeSeccion(seccion);
+function _proximaFechaHorario(fechaISO, seccion, materia) {
+  const diasSec = materia
+    ? _diasHorarioDeMateriaYSeccion(materia, seccion)
+    : _diasHorarioDeSeccion(seccion);
   const base = new Date(fechaISO + 'T12:00:00');
   const next = new Date(base);
   next.setDate(next.getDate() + 1);
@@ -18258,12 +18288,24 @@ function _ejecutarMoverDia() {
 
 // ── Mover clase individual al próximo día programado ─────────────
 
-function _actsDeSeccionEnFecha(fecha, seccion) {
+function _actsDeSeccionEnFecha(fecha, seccion, materia) {
   const resultado = [];
   const biblio = cargarBiblioteca();
   const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const _palabras = str => str.split(' ').filter(w => w.length > 3);
   const secNorm = _norm(seccion);
+  const matNorm = _norm(materia || '');
   (biblio.items || []).forEach(reg => {
+    // Filtrar por materia si se provee (compara con moduloFormativo de la planificación)
+    if (matNorm) {
+      const modNorm = _norm(reg.planificacion?.datosGenerales?.moduloFormativo || '');
+      const wa = _palabras(matNorm), wb = _palabras(modNorm);
+      const wbSet = new Set(wb);
+      const shared = wa.filter(w => wbSet.has(w)).length;
+      const coincide = modNorm.includes(matNorm) || matNorm.includes(modNorm) ||
+        (Math.min(wa.length, wb.length) > 0 && shared / Math.min(wa.length, wb.length) >= 0.5);
+      if (!coincide) return;
+    }
     (reg.planificacion?.actividades || []).forEach(act => {
       if (_actFechaISO(act) !== fecha) return;
       if (!secNorm) { resultado.push({ act, planId: reg.id }); return; }
@@ -18281,7 +18323,7 @@ function abrirMoverClaseIndividual(encodedSlot) {
   try { slot = JSON.parse(decodeURIComponent(encodedSlot)); } catch { return; }
 
   cargarCalificaciones();
-  const acts = _actsDeSeccionEnFecha(slot.fecha, slot.seccion);
+  const acts = _actsDeSeccionEnFecha(slot.fecha, slot.seccion, slot.materia);
 
   if (acts.length === 0) {
     mostrarToast('No hay actividades planificadas para esta clase en esta fecha', 'info');
@@ -18289,11 +18331,15 @@ function abrirMoverClaseIndividual(encodedSlot) {
   }
 
   const fechaStr = new Date(slot.fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long' });
-  const sugerida = _proximaFechaHorario(slot.fecha, slot.seccion);
-  const tieneHorario = _diasHorarioDeSeccion(slot.seccion).length > 0;
+  // Filtrar por materia+sección para no confundir distintas materias del mismo grupo
+  const sugerida = _proximaFechaHorario(slot.fecha, slot.seccion, slot.materia);
+  const tieneHorario = _diasHorarioDeMateriaYSeccion(slot.materia, slot.seccion).length > 0;
   const fuenteTag = tieneHorario
     ? `<span style="font-size:0.7rem;background:#E3F2FD;color:#1565C0;border-radius:6px;padding:1px 7px;">📅 según horario</span>`
     : `<span style="font-size:0.7rem;background:#FFF3E0;color:#E65100;border-radius:6px;padding:1px 7px;">+7 días</span>`;
+
+  const matEsc = (slot.materia || '').replace(/'/g, "\\'");
+  const secEsc = (slot.seccion || '').replace(/'/g, "\\'");
 
   const overlay = document.createElement('div');
   overlay.id = 'mover-clase-ind-overlay';
@@ -18321,7 +18367,7 @@ function abrirMoverClaseIndividual(encodedSlot) {
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="document.getElementById('mover-clase-ind-overlay').remove()"
           style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-family:inherit;">Cancelar</button>
-        <button onclick="_ejecutarMoverClaseIndividual('${slot.fecha}','${(slot.seccion||'').replace(/'/g,"\\'")}',document.getElementById('mover-clase-ind-fecha').value)"
+        <button onclick="_ejecutarMoverClaseIndividual('${slot.fecha}','${secEsc}','${matEsc}',document.getElementById('mover-clase-ind-fecha').value)"
           style="background:${slot.color};color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;">
           <span class="material-icons" style="font-size:16px;">check</span> Confirmar y mover
         </button>
@@ -18330,7 +18376,7 @@ function abrirMoverClaseIndividual(encodedSlot) {
   document.body.appendChild(overlay);
 }
 
-function _ejecutarMoverClaseIndividual(fechaOrigen, seccion, nuevaFecha) {
+function _ejecutarMoverClaseIndividual(fechaOrigen, seccion, materia, nuevaFecha) {
   if (!nuevaFecha || nuevaFecha === fechaOrigen) {
     mostrarToast('La fecha de destino debe ser diferente a la original', 'warning');
     return;
@@ -18338,12 +18384,25 @@ function _ejecutarMoverClaseIndividual(fechaOrigen, seccion, nuevaFecha) {
   cargarCalificaciones();
   const biblio = cargarBiblioteca();
   const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const _palabras = str => str.split(' ').filter(w => w.length > 3);
   const secNorm = _norm(seccion);
+  const matNorm = _norm(materia || '');
   let movidas = 0;
 
   (biblio.items || []).forEach(reg => {
+    // Filtrar por sección
     const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
     if (secNorm && !cursosConPlan.some(c => _norm(c.nombre) === secNorm)) return;
+    // Filtrar por materia
+    if (matNorm) {
+      const modNorm = _norm(reg.planificacion?.datosGenerales?.moduloFormativo || '');
+      const wa = _palabras(matNorm), wb = _palabras(modNorm);
+      const wbSet = new Set(wb);
+      const shared = wa.filter(w => wbSet.has(w)).length;
+      const coincide = modNorm.includes(matNorm) || matNorm.includes(modNorm) ||
+        (Math.min(wa.length, wb.length) > 0 && shared / Math.min(wa.length, wb.length) >= 0.5);
+      if (!coincide) return;
+    }
     (reg.planificacion?.actividades || []).forEach(act => {
       if (_actFechaISO(act) !== fechaOrigen) return;
       act.fecha = nuevaFecha;
