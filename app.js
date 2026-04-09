@@ -157,12 +157,15 @@ function _clsProm(prom) {
   return 'prom-reprobado';
 }
 
-function _calcNotaRA(curso, estudianteId, raKey) {
+function _calcNotaRA(curso, estudianteId, raKey, actividadesVisibles) {
   const raInfo = curso.ras?.[raKey];
   if (!raInfo) return null;
   const notasEst = curso.notas?.[estudianteId]?.[raKey] || {};
+  // Si se proveen las actividades visibles, usar solo esas IDs para evitar
+  // contar notas huérfanas de actividades viejas/duplicadas que ya no existen
+  const idsAUsar = actividadesVisibles ? actividadesVisibles.map(a => a.id) : raInfo.actividades;
   let total = 0, hayNotas = false;
-  raInfo.actividades.forEach(actId => {
+  idsAUsar.forEach(actId => {
     const n = notasEst[actId];
     if (n !== undefined && n !== null) { total += n; hayNotas = true; }
   });
@@ -201,7 +204,10 @@ function _promedioFinal(curso) {
 function _actualizarFilaRA(estudianteId, raKey) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
-  const notaRA = _calcNotaRA(curso, estudianteId, raKey);
+  // Usar las actividades de la planificación activa para no contar notas huérfanas
+  const planActiva = _getPlanActivaDeCurso();
+  const actsVisibles = (planActiva?.actividades?.length ? planActiva.actividades : null);
+  const notaRA = _calcNotaRA(curso, estudianteId, raKey, actsVisibles);
   const raInfo = curso.ras?.[raKey];
   const el = document.getElementById(`total-ra-${estudianteId}-${raKey}`);
   if (el) {
@@ -9305,7 +9311,7 @@ function renderizarTablaCalificaciones() {
         + '/>' + recupDot + '</td>';
     });
 
-    const notaRA = _calcNotaRA(curso, est.id, raKey);
+    const notaRA = _calcNotaRA(curso, est.id, raKey, actividades);
     cells += '<td class="td-total-ra ' + _clsNota(notaRA, raInfo.valorTotal) + '" id="total-ra-' + est.id + '-' + raKey + '">'
       + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</td>';
 
