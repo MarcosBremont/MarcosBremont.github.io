@@ -14290,10 +14290,18 @@ async function guardarPlanificacionActual(silencioso = false) {
   );
   (planificacion.actividades || []).forEach(a => {
     if (!a.id || _idsExistentes.has(a.id)) {
+      const oldId = a.id;
       a.id = 'act-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       _idsExistentes.add(a.id);
+      // Migrar la sesión diaria al nuevo ID para no perder el contenido generado
+      if (oldId && estadoDiarias.sesiones[oldId]) {
+        estadoDiarias.sesiones[a.id] = estadoDiarias.sesiones[oldId];
+        delete estadoDiarias.sesiones[oldId];
+      }
     }
   });
+  // Si hubo migraciones, persistir diarias con los nuevos IDs
+  persistirDiarias();
 
   const biblio = cargarBiblioteca();
 
