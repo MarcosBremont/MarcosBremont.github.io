@@ -5143,48 +5143,7 @@ const STORAGE_KEY = 'planificadorRA_borrador_v1';
 
 
 
-function guardarBorrador() {
-
-
-
-  try {
-
-
-
-    // Convertir fechas a strings para JSON
-
-
-
-    const copia = JSON.parse(JSON.stringify(planificacion, (k, v) =>
-
-
-
-      v instanceof Date ? v.toISOString() : v
-
-
-
-    ));
-
-
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(copia));
-    if (window._syncFirebase) _syncFirebase('planificacion', copia);
-
-
-
-  } catch (e) {
-
-
-
-    console.warn('No se pudo guardar el borrador:', e);
-
-
-
-  }
-
-
-
-}
+function guardarBorrador() { /* eliminado */ }
 
 
 
@@ -5193,32 +5152,14 @@ function guardarBorrador() {
 
 
 /** Restaura el borrador desde localStorage */
+function restaurarBorrador() { return false; /* eliminado */ }
 
-
-
-function restaurarBorrador() {
-
-
-
+function _restaurarBorrador_UNUSED() {
   try {
-
-
-
     const raw = localStorage.getItem(STORAGE_KEY);
-
-
-
     if (!raw) return false;
-
-
-
     const datos = JSON.parse(raw);
-
-
-
     planificacion = datos;
-
-
 
 
 
@@ -7601,70 +7542,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // --- Botón restaurar borrador ---
-
-
-
-  document.getElementById('btn-restaurar')?.addEventListener('click', () => {
-
-
-
-    const ok = restaurarBorrador();
-
-
-
-    document.getElementById('banner-borrador').classList.add('hidden');
-
-
-
-    if (ok && planificacion.elementosCapacidad?.length) {
-
-
-
-      renderizarEC(planificacion.elementosCapacidad);
-
-
-
-      renderizarActividades(planificacion.actividades);
-
-
-
-    }
-
-
-
-  });
-
-
-
-
-
-
-
-  // --- Botón descartar borrador ---
-
-
-
-  document.getElementById('btn-descartar-borrador')?.addEventListener('click', () => {
-
-
-
-    localStorage.removeItem(STORAGE_KEY);
-
-
-
-    document.getElementById('banner-borrador').classList.add('hidden');
-
-
-
-  });
-
-
-
-
-
-
-
+  // (borrador eliminado)
   // --- Botón nueva planificación ---
 
 
@@ -7729,23 +7607,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // --- Verificar si hay borrador guardado al iniciar ---
-
-
-
-  const hayBorrador = localStorage.getItem(STORAGE_KEY);
-
-
-
-  if (hayBorrador) {
-
-
-
-    document.getElementById('banner-borrador')?.classList.remove('hidden');
-
-
-
-  }
+  localStorage.removeItem("planificadorRA_borrador_v1"); // limpiar borrador antiguo
 
 
 
