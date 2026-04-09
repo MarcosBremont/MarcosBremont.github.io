@@ -14278,9 +14278,15 @@ async function guardarPlanificacionActual(silencioso = false) {
 
 
 
+  // Guardar diarias desde el DOM antes de persistir (para no perder contenido editado)
+  guardarTodasDiarias();
+
   // Asegurar que todas las actividades tienen IDs únicos (fix bug IDs genéricos ACT-X-X)
+  // Excluir el plan actual (_id) para que sus propios IDs no se consideren duplicados
   const _idsExistentes = new Set(
-    (cargarBiblioteca().items || []).flatMap(it => (it.planificacion?.actividades || []).map(a => a.id))
+    (cargarBiblioteca().items || [])
+      .filter(it => it.id !== planificacion._id)
+      .flatMap(it => (it.planificacion?.actividades || []).map(a => a.id))
   );
   (planificacion.actividades || []).forEach(a => {
     if (!a.id || _idsExistentes.has(a.id)) {
