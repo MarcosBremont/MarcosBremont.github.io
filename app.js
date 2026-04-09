@@ -15453,6 +15453,9 @@ function renderizarBiblioteca() {
         <button class="btn-pln-export" onclick="exportarDiariasDesdeListado('${reg.id}')" title="Exportar planificaciones diarias a Word" style="width:100%;justify-content:center;background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:15px;">event_note</span> Word Diarias
         </button>
+        <button onclick="abrirPlanificaciones();setTimeout(()=>abrirDiariasConPlan('${reg.id}'),200)" title="Ver planificaciones diarias de esta planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#E0F2F1;color:#00695C;border:1.5px solid #80CBC4;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
+          <span class="material-icons" style="font-size:15px;">today</span> Ver Planificaciones Diarias
+        </button>
         <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar" style="width:100%;justify-content:center;grid-column:1/-1;">
           <span class="material-icons">delete_outline</span>
         </button>
@@ -18454,7 +18457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  if (!headerInner || document.getElementById('btn-diarias')) return;
+  if (true || !headerInner || document.getElementById('btn-diarias')) return; // botón Plan. Diarias oculto
 
 
 
