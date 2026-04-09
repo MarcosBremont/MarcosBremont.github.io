@@ -2154,7 +2154,22 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1565C0;">v15.3<span class="about-ver-fecha">Abr
+              <div class="about-ver-badge" style="background:#1565C0;">v15.4<span class="about-ver-fecha">Abr
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fixes críticos: planificaciones diarias y calificaciones</div>
+              <ul class="about-ver-items">
+                <li><strong>Fix crítico — planificaciones diarias se perdían al recargar:</strong> al iniciar sesión, el sistema ya no sobreescribe los datos locales con la versión de Firebase; ahora fusiona ambos (local tiene prioridad), evitando pérdida de sesiones generadas antes de que se completara la sincronización</li>
+                <li><strong>Fix calificaciones — totales incorrectos por IDs huérfanos:</strong> actividades eliminadas o con IDs duplicados del pasado ya no se suman al total; el cálculo de notas usa únicamente las actividades visibles en pantalla</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1976D2;">v15.3<span class="about-ver-fecha">Abr
                   2026</span>
               </div>
             </div>
