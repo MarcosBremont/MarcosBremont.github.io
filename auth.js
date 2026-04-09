@@ -338,6 +338,27 @@ async function _cargarDesdeFirestore(uid) {
 
         const doc = await base.doc(store).get();
         if (!doc.exists || !doc.data().payload) return;
+
+        // Diarias: fusionar sesiones locales + Firebase, local tiene prioridad
+        // (evita perder sesiones guardadas si la página se cerró antes del sync)
+        if (store === 'diarias') {
+          const localRaw = localStorage.getItem(key);
+          let fbSesiones = {};
+          let localSesiones = {};
+          try { fbSesiones = JSON.parse(doc.data().payload).sesiones || {}; } catch(e) {}
+          try { localSesiones = JSON.parse(localRaw || '{}').sesiones || {}; } catch(e) {}
+          // Unión: Firebase como base, local sobreescribe (local es más reciente)
+          const merged = { sesiones: { ...fbSesiones, ...localSesiones } };
+          localStorage.setItem(key, JSON.stringify(merged));
+          // Si local tiene más sesiones que Firebase, sincronizar de vuelta
+          const fbCount = Object.keys(fbSesiones).length;
+          const mergedCount = Object.keys(merged.sesiones).length;
+          if (mergedCount > fbCount && window._syncFirebase) {
+            window._syncFirebase('diarias', merged);
+          }
+          return;
+        }
+
         localStorage.setItem(key, doc.data().payload);
       } catch (e) {
         console.warn('Error cargando store:', store, e);
