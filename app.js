@@ -18256,6 +18256,116 @@ function _ejecutarMoverDia() {
   cerrarMoverDia();
 }
 
+// ── Mover clase individual al próximo día programado ─────────────
+
+function _actsDeSeccionEnFecha(fecha, seccion) {
+  const resultado = [];
+  const biblio = cargarBiblioteca();
+  const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const secNorm = _norm(seccion);
+  (biblio.items || []).forEach(reg => {
+    (reg.planificacion?.actividades || []).forEach(act => {
+      if (_actFechaISO(act) !== fecha) return;
+      if (!secNorm) { resultado.push({ act, planId: reg.id }); return; }
+      const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
+      if (cursosConPlan.some(c => _norm(c.nombre) === secNorm)) {
+        resultado.push({ act, planId: reg.id });
+      }
+    });
+  });
+  return resultado;
+}
+
+function abrirMoverClaseIndividual(encodedSlot) {
+  let slot;
+  try { slot = JSON.parse(decodeURIComponent(encodedSlot)); } catch { return; }
+
+  cargarCalificaciones();
+  const acts = _actsDeSeccionEnFecha(slot.fecha, slot.seccion);
+
+  if (acts.length === 0) {
+    mostrarToast('No hay actividades planificadas para esta clase en esta fecha', 'info');
+    return;
+  }
+
+  const fechaStr = new Date(slot.fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long' });
+  const sugerida = _proximaFechaHorario(slot.fecha, slot.seccion);
+  const tieneHorario = _diasHorarioDeSeccion(slot.seccion).length > 0;
+  const fuenteTag = tieneHorario
+    ? `<span style="font-size:0.7rem;background:#E3F2FD;color:#1565C0;border-radius:6px;padding:1px 7px;">📅 según horario</span>`
+    : `<span style="font-size:0.7rem;background:#FFF3E0;color:#E65100;border-radius:6px;padding:1px 7px;">+7 días</span>`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'mover-clase-ind-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9100;display:flex;align-items:center;justify-content:center;padding:24px 16px;';
+  overlay.onclick = () => overlay.remove();
+  overlay.innerHTML = `
+    <div style="background:var(--color-superficie,#fff);border-radius:16px;padding:22px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.22);" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span class="material-icons" style="color:${slot.color};font-size:22px;">swap_horiz</span>
+        <h3 style="margin:0;font-size:0.95rem;font-weight:800;color:var(--color-texto-primario,#212121);">Mover clase al próximo día</h3>
+      </div>
+      <div style="background:var(--color-fondo,#F5F5F5);border-left:3px solid ${slot.color};border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;">
+        <div style="font-size:0.87rem;font-weight:700;color:${slot.color};">${escapeHTML(slot.materia)}</div>
+        ${slot.seccion ? `<div style="font-size:0.78rem;color:#546E7A;margin-top:3px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">group</span>${escapeHTML(slot.seccion)}</div>` : ''}
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-texto-secundario,#757575);margin:0 0 14px;">
+        Se moverán <strong>${acts.length} actividad(es)</strong> del <strong>${fechaStr}</strong> a:
+      </p>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+        <label style="font-size:0.8rem;font-weight:700;color:var(--color-texto-primario,#212121);white-space:nowrap;">Nueva fecha:</label>
+        <input type="date" id="mover-clase-ind-fecha" value="${sugerida}"
+          style="flex:1;min-width:140px;padding:7px 12px;border:1.5px solid #B3E5FC;border-radius:8px;font-size:0.88rem;font-family:inherit;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);" />
+      </div>
+      <div style="margin-bottom:18px;padding-left:2px;">${fuenteTag}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('mover-clase-ind-overlay').remove()"
+          style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="_ejecutarMoverClaseIndividual('${slot.fecha}','${(slot.seccion||'').replace(/'/g,"\\'")}',document.getElementById('mover-clase-ind-fecha').value)"
+          style="background:${slot.color};color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;">
+          <span class="material-icons" style="font-size:16px;">check</span> Confirmar y mover
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _ejecutarMoverClaseIndividual(fechaOrigen, seccion, nuevaFecha) {
+  if (!nuevaFecha || nuevaFecha === fechaOrigen) {
+    mostrarToast('La fecha de destino debe ser diferente a la original', 'warning');
+    return;
+  }
+  cargarCalificaciones();
+  const biblio = cargarBiblioteca();
+  const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const secNorm = _norm(seccion);
+  let movidas = 0;
+
+  (biblio.items || []).forEach(reg => {
+    const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
+    if (secNorm && !cursosConPlan.some(c => _norm(c.nombre) === secNorm)) return;
+    (reg.planificacion?.actividades || []).forEach(act => {
+      if (_actFechaISO(act) !== fechaOrigen) return;
+      act.fecha = nuevaFecha;
+      act.fechaStr = _fecStr(nuevaFecha);
+      movidas++;
+    });
+  });
+
+  document.getElementById('mover-clase-ind-overlay')?.remove();
+
+  if (movidas > 0) {
+    persistirBiblioteca(biblio);
+    guardarBorrador();
+    guardarTodasDiarias();
+    renderizarDiarias();
+    renderizarDashboard();
+    registrarCambio(`${movidas} actividad(es) de ${seccion} movidas al ${nuevaFecha}`);
+    mostrarToast(`${movidas} actividad(es) movidas correctamente`, 'success');
+  } else {
+    mostrarToast('No se encontraron actividades para mover', 'info');
+  }
+}
 
 
 
@@ -21101,6 +21211,14 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
       fecha: target.toISOString().split('T')[0]
     }).replace(/'/g, '&apos;');
 
+    const slotMover = encodeURIComponent(JSON.stringify({
+      fecha: target.toISOString().split('T')[0],
+      seccion: e.seccion || '',
+      materia: e.materia,
+      color,
+      periodo: e.periodo
+    }));
+
     return `<div class="dash-clase-card" style="--clase-color:${color};opacity:${estado === 'pasada' ? '0.65' : '1'};"
       onclick="abrirModalClase('${encodeURIComponent(dataClase)}')" title="Ver detalles de la clase">
       <div class="dash-clase-barra" style="background:${color};"></div>
@@ -21109,6 +21227,9 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
           <span class="dash-clase-periodo">P${e.periodo} · ${per?.hora || ''}</span>
           ${estado === 'ahora' ? '<span class="dash-clase-ahora"><span class="material-icons" style="font-size:12px;">fiber_manual_record</span>Ahora</span>' : ''}
           ${estado === 'pasada' ? '<span class="dash-clase-pasada">Finalizada</span>' : ''}
+          <button class="dash-clase-mover-btn" onclick="event.stopPropagation();abrirMoverClaseIndividual('${slotMover}')" title="Mover esta clase al próximo día programado">
+            <span class="material-icons" style="font-size:12px;">swap_horiz</span> Mover
+          </button>
         </div>
         <div class="dash-clase-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
         ${e.seccion ? `<div class="dash-clase-seccion"><span class="material-icons" style="font-size:13px;">group</span>${escapeHTML(e.seccion)}</div>` : ''}

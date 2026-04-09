@@ -5123,6 +5123,31 @@ body.dark-mode .imp-resumen-row span {
   padding: 2px 7px;
 }
 
+.dash-clase-mover-btn {
+  margin-left: auto;
+  background: none;
+  border: 1.5px solid #CFD8DC;
+  border-radius: 10px;
+  color: #78909C;
+  padding: 1px 7px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dash-clase-mover-btn:hover {
+  background: #E3F2FD;
+  border-color: #90CAF9;
+  color: #1565C0;
+}
+
 .dash-clase-materia {
   font-size: 0.88rem;
   font-weight: 800;
