@@ -7819,6 +7819,99 @@ function limpiarNotasDocente() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// MÓDULO: STICKY NOTES (dashboard)
+// ════════════════════════════════════════════════════════════════════
+const STICKIES_KEY = 'planificadorRA_stickies_v1';
+const STICKY_COLORS = ['#FFF9C4','#C8E6C9','#B3E5FC','#F8BBD0','#E1BEE7','#FFE0B2','#CFD8DC'];
+const STICKY_DOT_COLORS = ['#F9A825','#388E3C','#0288D1','#C2185B','#7B1FA2','#E64A19','#546E7A'];
+
+function _cargarStickies() {
+  try { return JSON.parse(localStorage.getItem(STICKIES_KEY) || '[]'); } catch(e) { return []; }
+}
+function _guardarStickies(arr) {
+  localStorage.setItem(STICKIES_KEY, JSON.stringify(arr));
+  if (window._syncFirebase) _syncFirebase('stickies', arr);
+}
+
+function stickyAgregar() {
+  const arr = _cargarStickies();
+  arr.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), texto: '', colorIdx: 0 });
+  _guardarStickies(arr);
+  _renderizarStickies();
+  // Enfocar el textarea de la nueva nota
+  setTimeout(() => {
+    const first = document.querySelector('.sticky-textarea');
+    if (first) first.focus();
+  }, 50);
+}
+
+function stickyEliminar(id) {
+  const arr = _cargarStickies().filter(s => s.id !== id);
+  _guardarStickies(arr);
+  _renderizarStickies();
+}
+
+function stickyGuardar(id, texto) {
+  const arr = _cargarStickies();
+  const s = arr.find(s => s.id === id);
+  if (s) { s.texto = texto; _guardarStickies(arr); }
+}
+
+function stickyColor(id, colorIdx) {
+  const arr = _cargarStickies();
+  const s = arr.find(s => s.id === id);
+  if (s) { s.colorIdx = colorIdx; _guardarStickies(arr); _renderizarStickies(); }
+}
+
+function _renderizarStickies() {
+  const el = document.getElementById('dash-stickies');
+  if (!el) return;
+  const arr = _cargarStickies();
+  if (arr.length === 0) {
+    el.innerHTML = `<div style="color:#9E9E9E;font-size:0.85rem;padding:8px 0 12px 2px;">Sin notas. Pulsa "+ Nueva nota" para agregar una.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="dash-stickies-grid">${arr.map(s => {
+    const ci = s.colorIdx ?? 0;
+    const bg = STICKY_COLORS[ci] || STICKY_COLORS[0];
+    const dot = STICKY_DOT_COLORS[ci] || STICKY_DOT_COLORS[0];
+    const escaped = (s.texto || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return `<div class="sticky-card" style="background:${bg};">
+      <div class="sticky-header" style="background:${bg};">
+        <div class="sticky-color-dot" style="background:${dot};" onclick="_stickyTogglePicker('${s.id}',this)" title="Cambiar color"></div>
+        <div class="sticky-color-picker" id="sticky-picker-${s.id}">
+          ${STICKY_DOT_COLORS.map((c,i) => `<div class="sticky-color-opt" style="background:${c};" onclick="stickyColor('${s.id}',${i});event.stopPropagation();"></div>`).join('')}
+        </div>
+        <button class="sticky-del-btn" onclick="stickyEliminar('${s.id}')" title="Eliminar nota"><span class="material-icons" style="font-size:16px;">delete</span></button>
+      </div>
+      <textarea class="sticky-textarea" placeholder="Escribe aquí..." oninput="stickyGuardar('${s.id}',this.value)">${escaped}</textarea>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function _stickyTogglePicker(id, dotEl) {
+  // Cerrar otros
+  document.querySelectorAll('.sticky-color-picker.open').forEach(p => {
+    if (p.id !== 'sticky-picker-' + id) p.classList.remove('open');
+  });
+  const picker = document.getElementById('sticky-picker-' + id);
+  if (!picker) return;
+  picker.classList.toggle('open');
+  // Posicionar relativo al dot
+  if (picker.classList.contains('open')) {
+    const rect = dotEl.getBoundingClientRect();
+    picker.style.position = 'fixed';
+    picker.style.top = (rect.bottom + 4) + 'px';
+    picker.style.left = rect.left + 'px';
+  }
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.sticky-color-dot') && !e.target.closest('.sticky-color-picker')) {
+    document.querySelectorAll('.sticky-color-picker.open').forEach(p => p.classList.remove('open'));
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════
 // MÓDULO: LIBRETA / AGENDA VIRTUAL
 // ════════════════════════════════════════════════════════════════════
 const LIBRETA_KEY = 'planificadorRA_libreta_v1';
@@ -20888,6 +20981,7 @@ function renderizarDashboard() {
   _renderizarTareasProximas();
   _renderizarResumenCursos();
   _renderizarEstadisticasDashboard();
+  _renderizarStickies();
 }
 
 // ── Saludo + estadísticas ────────────────────────────────────────

@@ -5148,6 +5148,89 @@ body.dark-mode .imp-resumen-row span {
   color: #1565C0;
 }
 
+/* ── Sticky Notes Dashboard ──────────────────────────────────── */
+.dash-stickies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.sticky-card {
+  border-radius: 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  transition: box-shadow 0.15s, transform 0.15s;
+  min-height: 160px;
+  overflow: hidden;
+}
+.sticky-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.16);
+  transform: translateY(-2px);
+}
+.sticky-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 6px 10px;
+  border-bottom: 1.5px solid rgba(0,0,0,0.08);
+}
+.sticky-color-dot {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 2px solid rgba(0,0,0,0.15);
+}
+.sticky-color-picker {
+  display: none;
+  position: absolute;
+  z-index: 999;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  padding: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 122px;
+}
+.sticky-color-picker.open { display: flex; }
+.sticky-color-opt {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(0,0,0,0.1);
+  transition: transform 0.1s;
+}
+.sticky-color-opt:hover { transform: scale(1.2); }
+.sticky-del-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(0,0,0,0.3);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  transition: color 0.15s;
+}
+.sticky-del-btn:hover { color: #c0392b; }
+.sticky-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #333;
+  min-height: 120px;
+}
+
 .dash-clase-materia {
   font-size: 0.88rem;
   font-weight: 800;

@@ -310,7 +310,7 @@
           <span class="material-icons">assignment</span>
           <span>Tareas</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-notas" onclick="abrirNotas()" style="--accent:#5D4037;">
+        <button class="dash-nav-btn" id="btn-dash-notas" onclick="abrirNotas()" style="--accent:#5D4037;display:none;">
           <span class="material-icons">sticky_note_2</span>
           <span>Mis Notas</span>
         </button>
@@ -468,6 +468,15 @@
         <span class="material-icons">bar_chart</span>Estadísticas de rendimiento
       </div>
       <div id="dash-estadisticas"></div>
+
+      <!-- ── Sticky Notes ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">sticky_note_2</span>Mis Notas
+        <button onclick="stickyAgregar()" style="margin-left:auto;background:none;border:none;color:#1565C0;font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:3px;">
+          <span class="material-icons" style="font-size:15px;">add</span> Nueva nota
+        </button>
+      </div>
+      <div id="dash-stickies"></div>
 
       <!-- ── Apoya el proyecto ── -->
       <div class="kofi-banner">

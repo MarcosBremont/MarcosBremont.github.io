@@ -27,6 +27,7 @@ const FIREBASE_STORES = [
   { store: 'groqKey',              key: 'planificadorRA_groqKey' },
   { store: 'geminiKey',            key: 'planificadorRA_geminiKey' },
   { store: 'openrouterKey',        key: 'planificadorRA_openrouterKey' },
+  { store: 'stickies',             key: 'planificadorRA_stickies_v1' },
 ];
 
 const MIGRATION_FLAG = 'planificadorRA_migrated_v1';
