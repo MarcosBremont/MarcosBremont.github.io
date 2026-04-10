@@ -9161,7 +9161,7 @@ function renderizarTablaCalificaciones() {
     if (esComp) {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
-      const compLabel = (a.enunciado || '').substring(0, 18);
+      const compLabel = (a.enunciado || '').substring(0, 20);
       h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:rgba(230,81,0,0.08);">'
         + '<div style="font-size:0.72rem;font-weight:600;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
         + '<div style="font-size:0.68rem;opacity:0.65;margin:1px 0;">Complementario</div>'
