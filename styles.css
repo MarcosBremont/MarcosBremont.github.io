@@ -6380,10 +6380,11 @@ body.dark-mode .sticky-card {
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 body.dark-mode .sticky-textarea {
-  color: #1a1a1a;
+  background: #fff !important;
+  color: #1a1a1a !important;
 }
 body.dark-mode .sticky-textarea::placeholder {
-  color: #888;
+  color: #999 !important;
 }
 body.dark-mode .sticky-del-btn {
   color: rgba(0,0,0,0.4);
