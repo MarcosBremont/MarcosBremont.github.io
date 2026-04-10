@@ -9161,14 +9161,14 @@ function renderizarTablaCalificaciones() {
     if (esComp) {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
-      const compLabel = (a.enunciado || '').substring(0, 12);
-      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;background:rgba(230,81,0,0.08);">'
-        + '<div style="font-size:0.72rem;font-weight:600;color:#212121;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
-        + '<div style="font-size:0.68rem;color:#616161;margin:1px 0;">Complementario</div>'
+      const compLabel = (a.enunciado || '').substring(0, 18);
+      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:rgba(230,81,0,0.08);">'
+        + '<div style="font-size:0.72rem;font-weight:600;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
+        + '<div style="font-size:0.68rem;opacity:0.65;margin:1px 0;">Complementario</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
         + ' title="Valor máximo de este ítem" placeholder="pts"'
         + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
-        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;color:#212121;background:#fff;">'
+        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
         + '</th>';
     } else {
       // Columna de actividad normal
