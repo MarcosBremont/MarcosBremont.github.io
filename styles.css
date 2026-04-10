@@ -6377,18 +6377,16 @@ body.dark-mode .dash-section-label {
 
 /* ── Sticky notes dark mode ── */
 body.dark-mode .sticky-card {
-  filter: brightness(0.35) saturate(0.7);
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-body.dark-mode .sticky-card:hover {
-  filter: brightness(0.45) saturate(0.8);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-}
 body.dark-mode .sticky-textarea {
-  color: #E0E0E0;
+  color: #1a1a1a;
 }
 body.dark-mode .sticky-textarea::placeholder {
-  color: #666;
+  color: #888;
+}
+body.dark-mode .sticky-del-btn {
+  color: rgba(0,0,0,0.4);
 }
 
 body.dark-mode .dash-greeting {
