@@ -359,6 +359,26 @@ async function _cargarDesdeFirestore(uid) {
           return;
         }
 
+        // Calificaciones: fusionar cursos locales + Firebase, local tiene prioridad
+        // (evita perder notas ingresadas si la página se cerró antes del sync)
+        if (store === 'calificaciones') {
+          const localRaw = localStorage.getItem(key);
+          let fbCursos = {};
+          let localCursos = {};
+          try { fbCursos = JSON.parse(doc.data().payload).cursos || {}; } catch(e) {}
+          try { localCursos = JSON.parse(localRaw || '{}').cursos || {}; } catch(e) {}
+          // Unión: Firebase como base, local sobreescribe curso a curso (local es más reciente)
+          const merged = { cursos: { ...fbCursos, ...localCursos } };
+          localStorage.setItem(key, JSON.stringify(merged));
+          // Si local tiene cursos que Firebase no tiene, sincronizar de vuelta
+          const fbCount = Object.keys(fbCursos).length;
+          const mergedCount = Object.keys(merged.cursos).length;
+          if (mergedCount > fbCount && window._syncFirebase) {
+            window._syncFirebase('calificaciones', merged);
+          }
+          return;
+        }
+
         localStorage.setItem(key, doc.data().payload);
       } catch (e) {
         console.warn('Error cargando store:', store, e);
