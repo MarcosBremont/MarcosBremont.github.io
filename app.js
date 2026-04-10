@@ -7863,6 +7863,8 @@ function stickyColor(id, colorIdx) {
   if (s) { s.colorIdx = colorIdx; _guardarStickies(arr); _renderizarStickies(); }
 }
 
+let _stickyPickerOpenId = null;
+
 function _renderizarStickies() {
   const el = document.getElementById('dash-stickies');
   if (!el) return;
@@ -7878,10 +7880,7 @@ function _renderizarStickies() {
     const escaped = (s.texto || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     return `<div class="sticky-card" style="background:${bg};">
       <div class="sticky-header" style="background:${bg};">
-        <div class="sticky-color-dot" style="background:${dot};" onclick="_stickyTogglePicker('${s.id}',this)" title="Cambiar color"></div>
-        <div class="sticky-color-picker" id="sticky-picker-${s.id}">
-          ${STICKY_DOT_COLORS.map((c,i) => `<div class="sticky-color-opt" style="background:${c};" onclick="stickyColor('${s.id}',${i});event.stopPropagation();"></div>`).join('')}
-        </div>
+        <div class="sticky-color-dot" style="background:${dot};" data-stickyid="${s.id}" onclick="_stickyTogglePicker('${s.id}',this)" title="Cambiar color"></div>
         <button class="sticky-del-btn" onclick="stickyEliminar('${s.id}')" title="Eliminar nota"><span class="material-icons" style="font-size:16px;">delete</span></button>
       </div>
       <textarea class="sticky-textarea" placeholder="Escribe aquí..." oninput="stickyGuardar('${s.id}',this.value)">${escaped}</textarea>
@@ -7890,24 +7889,35 @@ function _renderizarStickies() {
 }
 
 function _stickyTogglePicker(id, dotEl) {
-  // Cerrar otros
-  document.querySelectorAll('.sticky-color-picker.open').forEach(p => {
-    if (p.id !== 'sticky-picker-' + id) p.classList.remove('open');
-  });
-  const picker = document.getElementById('sticky-picker-' + id);
+  const picker = document.getElementById('sticky-global-picker');
   if (!picker) return;
-  picker.classList.toggle('open');
-  // Posicionar relativo al dot
-  if (picker.classList.contains('open')) {
-    const rect = dotEl.getBoundingClientRect();
-    picker.style.position = 'fixed';
-    picker.style.top = (rect.bottom + 4) + 'px';
-    picker.style.left = rect.left + 'px';
+  // Si ya está abierto para este mismo id, cerrarlo
+  if (_stickyPickerOpenId === id && picker.style.display === 'flex') {
+    picker.style.display = 'none';
+    _stickyPickerOpenId = null;
+    return;
   }
+  // Construir opciones
+  picker.innerHTML = STICKY_DOT_COLORS.map((c, i) =>
+    `<div class="sticky-color-opt" style="background:${c};" onclick="stickyColor('${id}',${i});_stickyClosePicker();event.stopPropagation();"></div>`
+  ).join('');
+  // Posicionar bajo el dot
+  const rect = dotEl.getBoundingClientRect();
+  picker.style.top = (rect.bottom + 6) + 'px';
+  picker.style.left = rect.left + 'px';
+  picker.style.display = 'flex';
+  _stickyPickerOpenId = id;
 }
+
+function _stickyClosePicker() {
+  const picker = document.getElementById('sticky-global-picker');
+  if (picker) picker.style.display = 'none';
+  _stickyPickerOpenId = null;
+}
+
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.sticky-color-dot') && !e.target.closest('.sticky-color-picker')) {
-    document.querySelectorAll('.sticky-color-picker.open').forEach(p => p.classList.remove('open'));
+  if (!e.target.closest('.sticky-color-dot') && !e.target.closest('#sticky-global-picker')) {
+    _stickyClosePicker();
   }
 });
 

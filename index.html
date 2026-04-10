@@ -463,12 +463,6 @@
       </div>
       <div id="dash-cursos"></div>
 
-      <!-- ── Estadísticas de rendimiento ── -->
-      <div class="dash-section-label" style="margin-top:8px;">
-        <span class="material-icons">bar_chart</span>Estadísticas de rendimiento
-      </div>
-      <div id="dash-estadisticas"></div>
-
       <!-- ── Sticky Notes ── -->
       <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">sticky_note_2</span>Mis Notas
@@ -477,6 +471,12 @@
         </button>
       </div>
       <div id="dash-stickies"></div>
+
+      <!-- ── Estadísticas de rendimiento ── -->
+      <div class="dash-section-label" style="margin-top:8px;">
+        <span class="material-icons">bar_chart</span>Estadísticas de rendimiento
+      </div>
+      <div id="dash-estadisticas"></div>
 
       <!-- ── Apoya el proyecto ── -->
       <div class="kofi-banner">
@@ -3443,6 +3443,9 @@
       });
     }
   </script>
+
+  <!-- Picker global de color para sticky notes (fuera de overflow:hidden) -->
+  <div id="sticky-global-picker" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.22);padding:8px;gap:6px;flex-wrap:wrap;width:130px;"></div>
 
 </body>
 
