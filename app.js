@@ -20988,6 +20988,7 @@ function renderizarDashboard() {
   _renderizarClasesHoy();
   _renderizarClasesManana();
   _renderizarClasesPasado();
+  _actualizarLabelsDias();
   _renderizarTareasProximas();
   _renderizarResumenCursos();
   _renderizarEstadisticasDashboard();
@@ -21172,14 +21173,59 @@ function _renderizarAlertas() {
 
 // ── Clases de hoy desde horario ──────────────────────────────────
 // ── Clases de hoy y mañana (función genérica) ────────────────────
+// Offset global de navegación de días en el dashboard (0 = hoy/mañana/pasado)
+let _dashDiaOffset = 0;
+
+function _dashNavDias(delta) {
+  if (delta === 0) {
+    _dashDiaOffset = 0; // Ir a hoy
+  } else {
+    _dashDiaOffset += delta;
+  }
+  _renderizarClasesHoy();
+  _renderizarClasesManana();
+  _renderizarClasesPasado();
+  _actualizarLabelsDias();
+}
+
+function _actualizarLabelsDias() {
+  const o = _dashDiaOffset;
+  const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const label = (offset) => {
+    const d = new Date(); d.setDate(d.getDate() + offset); return DIAS[d.getDay()];
+  };
+  const hoyBtn = document.getElementById('dash-nav-hoy-btn');
+  if (hoyBtn) hoyBtn.style.color = o === 0 ? '#1565C0' : '#E65100';
+
+  // Labels de columnas
+  const l0 = document.getElementById('dash-hoy-label');
+  const l1 = document.getElementById('dash-manana-label');
+  const l2 = document.getElementById('dash-pasado-label');
+  if (l0) l0.textContent = o === 0 ? 'Clases de hoy' : label(o);
+  if (l1) l1.textContent = o === 0 ? 'Mañana' : label(o + 1);
+  if (l2) l2.textContent = o === 0 ? 'Pasado mañana' : label(o + 2);
+
+  // Botones Mover — actualizar la fecha que usan
+  const d0 = new Date(); d0.setDate(d0.getDate() + o);
+  const d1 = new Date(); d1.setDate(d1.getDate() + o + 1);
+  const d2 = new Date(); d2.setDate(d2.getDate() + o + 2);
+  const iso = d => d.toISOString().split('T')[0];
+  const b0 = document.getElementById('dash-hoy-mover-btn');
+  const b1 = document.getElementById('dash-manana-mover-btn');
+  const b2 = document.getElementById('dash-pasado-mover-btn');
+  if (b0) b0.setAttribute('onclick', `abrirMoverDia('${iso(d0)}')`);
+  if (b1) b1.setAttribute('onclick', `abrirMoverDia('${iso(d1)}')`);
+  if (b2) b2.setAttribute('onclick', `abrirMoverDia('${iso(d2)}')`);
+}
+
 function _renderizarClasesHoy() {
-  _renderizarClasesDia('dash-hoy', 'dash-hoy-fecha', 0);
+  _renderizarClasesDia('dash-hoy', 'dash-hoy-fecha', _dashDiaOffset);
 }
 function _renderizarClasesManana() {
-  _renderizarClasesDia('dash-manana', 'dash-manana-fecha', 1);
+  _renderizarClasesDia('dash-manana', 'dash-manana-fecha', _dashDiaOffset + 1);
 }
 function _renderizarClasesPasado() {
-  _renderizarClasesDia('dash-pasado', 'dash-pasado-fecha', 2);
+  _renderizarClasesDia('dash-pasado', 'dash-pasado-fecha', _dashDiaOffset + 2);
 }
 
 function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {

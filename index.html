@@ -401,12 +401,22 @@
         <!-- Columna 1: clases de hoy -->
         <div>
           <div class="dash-section-label">
-            <span class="material-icons">today</span>Clases de hoy
+            <span class="material-icons">today</span><span id="dash-hoy-label">Clases de hoy</span>
             <span id="dash-hoy-fecha" style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
-            <button onclick="abrirMoverDia(_isoDate(new Date()))"
+            <button id="dash-hoy-mover-btn" onclick="abrirMoverDia(_isoDate(new Date()))"
               title="Mover actividades de hoy al siguiente día que toca"
               style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
               <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
+            </button>
+          </div>
+          <!-- Navegación de días -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <button onclick="_dashNavDias(-3)" title="3 días anteriores" style="background:none;border:1.5px solid #CFD8DC;border-radius:8px;padding:2px 8px;cursor:pointer;font-size:0.75rem;color:#546E7A;display:flex;align-items:center;gap:2px;">
+              <span class="material-icons" style="font-size:14px;">chevron_left</span>
+            </button>
+            <button onclick="_dashNavDias(0)" id="dash-nav-hoy-btn" title="Ir a hoy" style="background:none;border:1.5px solid #CFD8DC;border-radius:8px;padding:2px 8px;cursor:pointer;font-size:0.72rem;color:#1565C0;font-weight:700;">Hoy</button>
+            <button onclick="_dashNavDias(3)" title="3 días siguientes" style="background:none;border:1.5px solid #CFD8DC;border-radius:8px;padding:2px 8px;cursor:pointer;font-size:0.75rem;color:#546E7A;display:flex;align-items:center;gap:2px;">
+              <span class="material-icons" style="font-size:14px;">chevron_right</span>
             </button>
           </div>
           <div id="dash-hoy"></div>
@@ -414,10 +424,10 @@
         <!-- Columna 2: clases de mañana -->
         <div>
           <div class="dash-section-label">
-            <span class="material-icons">event</span>Mañana
+            <span class="material-icons">event</span><span id="dash-manana-label">Mañana</span>
             <span id="dash-manana-fecha"
               style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
-            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+86400000)))"
+            <button id="dash-manana-mover-btn" onclick="abrirMoverDia(_isoDate(new Date(Date.now()+86400000)))"
               title="Mover actividades de mañana al siguiente día que toca"
               style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
               <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
@@ -428,10 +438,10 @@
         <!-- Columna 3: clases de pasado mañana -->
         <div>
           <div class="dash-section-label">
-            <span class="material-icons">date_range</span>Pasado mañana
+            <span class="material-icons">date_range</span><span id="dash-pasado-label">Pasado mañana</span>
             <span id="dash-pasado-fecha"
               style="margin-left:auto;font-size:0.75rem;color:#78909C;font-weight:400;"></span>
-            <button onclick="abrirMoverDia(_isoDate(new Date(Date.now()+172800000)))"
+            <button id="dash-pasado-mover-btn" onclick="abrirMoverDia(_isoDate(new Date(Date.now()+172800000)))"
               title="Mover actividades de pasado mañana al siguiente día que toca"
               style="background:none;border:none;color:#0277BD;font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:2px;padding:2px 4px;">
               <span class="material-icons" style="font-size:14px;">swap_horiz</span>Mover
