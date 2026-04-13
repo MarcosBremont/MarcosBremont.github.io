@@ -21565,6 +21565,27 @@ function abrirModalClase(encodedData) {
         </div>
       </div>
 
+      <!-- Tarea rápida -->
+      <div class="mcl-seccion">
+        <div class="mcl-titulo">
+          <span class="material-icons">assignment_add</span>Dejar tarea
+        </div>
+        ${_renderTareasDelCurso(data.seccion, color)}
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:flex-end;">
+          <input id="mcl-tarea-desc" type="text" placeholder="Descripción de la tarea..."
+            style="flex:1;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;"
+            onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#E0E0E0'"
+            onkeydown="if(event.key==='Enter')_crearTareaDesdeModal('${escapeHTML(data.seccion)}')"/>
+          <input id="mcl-tarea-fecha" type="date"
+            style="padding:8px 6px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;outline:none;color:#546E7A;"
+            onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#E0E0E0'"/>
+          <button onclick="_crearTareaDesdeModal('${escapeHTML(data.seccion)}')"
+            style="background:${color};color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;">
+            <span class="material-icons" style="font-size:15px;">add</span>Agregar
+          </button>
+        </div>
+      </div>
+
       <!-- Notas rápidas de clase -->
       <div class="mcl-seccion">
         <div class="mcl-titulo">
@@ -21649,6 +21670,49 @@ function _guardarRecursoDesdeModal(actId, url) {
       }
     } else if (oldLink) { oldLink.remove(); }
   }
+}
+
+// ── Tarea rápida desde modal de clase ──────────────────────────────
+function _renderTareasDelCurso(seccion, color) {
+  const tareas = cargarTareas().filter(t => t.seccion === seccion && t.estado !== 'entregada');
+  if (!tareas.length) return '';
+  return `<div style="margin-bottom:6px;">
+    ${tareas.slice(0, 3).map(t => `
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#F5F5F5;border-radius:7px;margin-bottom:4px;font-size:0.8rem;">
+        <span class="material-icons" style="font-size:14px;color:${color};">assignment</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(t.descripcion)}</span>
+        ${t.fechaLimite ? `<span style="color:#9E9E9E;font-size:0.72rem;white-space:nowrap;">${t.fechaLimite}</span>` : ''}
+      </div>`).join('')}
+    ${tareas.length > 3 ? `<div style="font-size:0.72rem;color:#9E9E9E;padding-left:4px;">+${tareas.length - 3} más en Tareas</div>` : ''}
+  </div>`;
+}
+
+function _crearTareaDesdeModal(seccion) {
+  const descEl = document.getElementById('mcl-tarea-desc');
+  const fechaEl = document.getElementById('mcl-tarea-fecha');
+  if (!descEl) return;
+  const desc = descEl.value.trim();
+  if (!desc) { descEl.focus(); return; }
+  const fecha = fechaEl?.value || '';
+  const tareas = cargarTareas();
+  tareas.push({
+    id: uid(),
+    descripcion: desc,
+    seccion: seccion || '',
+    fechaLimite: fecha,
+    horaLimite: '',
+    observaciones: '',
+    estado: 'pendiente',
+    creadaEn: new Date().toISOString()
+  });
+  guardarTareas(tareas);
+  registrarCambio(`Tarea creada desde modal: "${desc.substring(0, 60)}"${seccion ? ' — ' + seccion : ''}`);
+  mostrarToast('Tarea agregada ✓', 'success');
+  descEl.value = '';
+  if (fechaEl) fechaEl.value = '';
+  // Refrescar la lista de tareas en el modal
+  const listEl = descEl.closest('.mcl-seccion')?.querySelector('div[style*="margin-bottom:6px"]');
+  if (listEl) listEl.outerHTML = _renderTareasDelCurso(seccion, '');
 }
 
 // ── Guía HTML adjunta a actividad (Firebase Storage) ───────────────────────
