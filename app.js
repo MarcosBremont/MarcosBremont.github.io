@@ -21570,16 +21570,16 @@ function abrirModalClase(encodedData) {
         <div class="mcl-titulo">
           <span class="material-icons">assignment_add</span>Dejar tarea
         </div>
-        ${_renderTareasDelCurso(data.seccion, color)}
+        ${_renderTareasDelCurso(d.seccion, color)}
         <div style="display:flex;gap:8px;margin-top:8px;align-items:flex-end;">
           <input id="mcl-tarea-desc" type="text" placeholder="Descripción de la tarea..."
             style="flex:1;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;"
             onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#E0E0E0'"
-            onkeydown="if(event.key==='Enter')_crearTareaDesdeModal('${escapeHTML(data.seccion)}')"/>
+            onkeydown="if(event.key==='Enter')_crearTareaDesdeModal('${escapeHTML(d.seccion)}')"/>
           <input id="mcl-tarea-fecha" type="date"
             style="padding:8px 6px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;outline:none;color:#546E7A;"
             onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#E0E0E0'"/>
-          <button onclick="_crearTareaDesdeModal('${escapeHTML(data.seccion)}')"
+          <button onclick="_crearTareaDesdeModal('${escapeHTML(d.seccion)}')"
             style="background:${color};color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;">
             <span class="material-icons" style="font-size:15px;">add</span>Agregar
           </button>
