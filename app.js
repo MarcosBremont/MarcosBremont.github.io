@@ -9162,9 +9162,9 @@ function renderizarTablaCalificaciones() {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
       const compLabel = (a.enunciado || '').substring(0, 20);
-      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:rgba(230,81,0,0.08);">'
-        + '<div style="font-size:0.72rem;font-weight:600;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
-        + '<div style="font-size:0.68rem;opacity:0.65;margin:1px 0;">Complementario</div>'
+      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;">'
+        + '<div style="font-size:0.72rem;font-weight:600;color:#BF360C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
+        + '<div style="font-size:0.68rem;color:#BF360C;opacity:0.75;margin:1px 0;">Complementario</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
         + ' title="Valor máximo de este ítem" placeholder="pts"'
         + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
