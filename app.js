@@ -21527,36 +21527,40 @@ function abrirModalClase(encodedData) {
         </div>
       </div>
 
-      <!-- Calificar actividad rápida -->
-      ${cursoConSeccion && (cursoConSeccion.estudiantes||[]).length > 0 && allSesiones.length > 0 ? (() => {
+      <!-- Calificar actividades rápido -->
+      ${cursoConSeccion && (cursoConSeccion.estudiantes||[]).length > 0 && allSesiones.filter(s=>s.planId).length > 0 ? (() => {
         const estudiantes = cursoConSeccion.estudiantes || [];
+        const sesionesConPlan = allSesiones.filter(s => s.planId);
+        const tituloSeccion = sesionesConPlan.length > 1 ? `Calificar (${sesionesConPlan.length} actividades)` : 'Calificar actividad';
         let html = `<div class="mcl-seccion">
           <div class="mcl-titulo" onclick="const b=document.getElementById('mcl-cal-body');const ic=document.getElementById('mcl-cal-icon');if(b){b.style.display=b.style.display==='none'?'block':'none';ic.style.transform=b.style.display==='none'?'':'rotate(180deg)';}" style="cursor:pointer;user-select:none;">
-            <span class="material-icons">grade</span>Calificar actividad
-            <span style="font-size:0.7rem;color:#9E9E9E;font-weight:400;margin-left:4px;">${estudiantes.length} estudiantes</span>
+            <span class="material-icons">grade</span>${tituloSeccion}
+            <span style="font-size:0.7rem;color:#9E9E9E;font-weight:400;margin-left:4px;">${estudiantes.length} est.</span>
             <span class="material-icons" id="mcl-cal-icon" style="margin-left:auto;font-size:20px;transition:transform 0.2s;">expand_more</span>
           </div>
           <div id="mcl-cal-body" style="display:none;margin-top:8px;">`;
-        allSesiones.forEach((si, idx) => {
-          if (!si.planId) return;
+        sesionesConPlan.forEach((si, rendIdx) => {
           const rk = _getPlanIdClave(si.planId);
           const maxVal = (cursoConSeccion.ras?.[rk]?.valores?.[si.actId]) ?? 10;
-          if (idx > 0) html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #F0F0F0;"></div>`;
-          if (allSesiones.length > 1) {
-            html += `<div style="font-size:0.72rem;font-weight:700;color:${color};margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML((si.enunciado||'').substring(0,55))||'Actividad '+(idx+1)}</div>`;
-          }
-          html += `<div style="display:grid;grid-template-columns:1fr 90px;gap:5px 8px;align-items:center;">`;
-          html += `<span style="font-size:0.7rem;font-weight:700;color:#9E9E9E;text-transform:uppercase;">Estudiante</span>
-                   <span style="font-size:0.7rem;font-weight:700;color:#9E9E9E;text-align:center;">/ ${maxVal} pts</span>`;
+          if (rendIdx > 0) html += `<div style="height:1px;background:#F0F0F0;margin:14px 0;"></div>`;
+          html += `<div style="margin-bottom:6px;">
+            <div style="font-size:0.72rem;font-weight:700;color:${color};display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+              <span class="material-icons" style="font-size:13px;">assignment</span>
+              Act. ${rendIdx+1}${sesionesConPlan.length > 1 ? ' / ' + sesionesConPlan.length : ''}
+              <span style="font-weight:400;color:#78909C;margin-left:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;" title="${escapeHTML(si.enunciado||'')}">— ${escapeHTML((si.enunciado||'').substring(0,60))}${(si.enunciado||'').length>60?'…':''}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 88px;gap:4px 8px;align-items:center;">
+              <span style="font-size:0.68rem;font-weight:700;color:#B0BEC5;text-transform:uppercase;letter-spacing:0.04em;">Estudiante</span>
+              <span style="font-size:0.68rem;font-weight:700;color:#B0BEC5;text-align:center;">/ ${maxVal} pts</span>`;
           estudiantes.forEach(est => {
             const notaActual = cursoConSeccion.notas?.[est.id]?.[rk]?.[si.actId] ?? '';
-            html += `<span style="font-size:0.83rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(est.nombre)}">${escapeHTML(est.nombre)}</span>
+            html += `<span style="font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(est.nombre)}">${escapeHTML(est.nombre)}</span>
               <input type="number" min="0" max="${maxVal}" step="0.1" value="${notaActual}" placeholder="—"
-                style="width:100%;padding:5px 8px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.9rem;text-align:center;box-sizing:border-box;"
+                style="width:100%;padding:5px 6px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.9rem;text-align:center;box-sizing:border-box;"
                 onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='#E0E0E0'"
                 oninput="_notaModalGuardar('${cursoConSeccion.id}','${rk}','${est.id}','${si.actId}',this.value,${maxVal})">`;
           });
-          html += `</div>`;
+          html += `</div></div>`;
         });
         html += `</div></div>`;
         return html;
