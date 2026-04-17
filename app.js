@@ -21264,7 +21264,7 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   const biblio = cargarBiblioteca();
   (biblio.items || []).forEach(reg => {
     (reg.planificacion?.actividades || []).forEach(act => {
-      if (!act.fecha) return;
+      if (!act.fecha || act.esComplementario) return;
       // Normalizar act.fecha a ISO string YYYY-MM-DD
       let _fechaISO;
       if (act.fecha instanceof Date) {
