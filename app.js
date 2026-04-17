@@ -21501,6 +21501,26 @@ function abrirModalClase(encodedData) {
           </a>` : ''}
         </div>
         ${_renderBtnGuiaHtml(si.actId)}
+        <!-- Forma de evaluación por actividad -->
+        ${(() => {
+          const actEvalKey = evalKey + '_' + si.actId;
+          let actEval = {};
+          try { actEval = JSON.parse(localStorage.getItem(actEvalKey) || '{}'); } catch {}
+          return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #F0F0F0;">
+            <div style="font-size:0.72rem;font-weight:700;color:#78909C;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+              <span class="material-icons" style="font-size:13px;">star_rate</span>Forma de evaluación
+            </div>
+            <div class="mcl-eval-grid">
+              ${FORM_EVAL.map(f => `
+              <button class="mcl-eval-btn ${actEval[f.id] ? 'activo' : ''}"
+                style="font-size:0.72rem;padding:5px 8px;${actEval[f.id] ? `background:${color}18;border-color:${color};color:${color};` : ''}"
+                onclick="toggleFormaEval('${actEvalKey}','${f.id}','${color}',this)">
+                <span class="material-icons" style="font-size:13px;">${f.icono}</span>
+                <span>${f.label}</span>
+              </button>`).join('')}
+            </div>
+          </div>`;
+        })()}
       </div>`;
       }).join('') : `
       <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
@@ -21549,21 +21569,6 @@ function abrirModalClase(encodedData) {
           ${asistRegistrada ? 'Ver / editar asistencia' : 'Pasar lista ahora'}
         </button>
       </div>` : ''}
-
-      <!-- Formas de evaluación -->
-      <div class="mcl-seccion">
-        <div class="mcl-titulo"><span class="material-icons">star_rate</span>Forma de evaluación</div>
-        <p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">¿Cómo vas a evaluar esta clase?</p>
-        <div class="mcl-eval-grid">
-          ${FORM_EVAL.map(f => `
-          <button class="mcl-eval-btn ${savedEval[f.id] ? 'activo' : ''}"
-            style="${savedEval[f.id] ? `background:${color}18;border-color:${color};color:${color};` : ''}"
-            onclick="toggleFormaEval('${evalKey}','${f.id}','${color}',this)">
-            <span class="material-icons">${f.icono}</span>
-            <span>${f.label}</span>
-          </button>`).join('')}
-        </div>
-      </div>
 
       <!-- Tarea rápida -->
       <div class="mcl-seccion">
