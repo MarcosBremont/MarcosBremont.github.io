@@ -10550,9 +10550,9 @@ function abrirTutorial() {
         <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Calificaciones y Seguimiento</p>
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
           ${[
-            {id:'tut-calificaciones',n:4,label:'Libro de Calificaciones',bg:'#FFF3E0',c:'#E65100'},
-            {id:'tut-rendimiento',n:5,label:'Rendimiento',bg:'#F3E5F5',c:'#6A1B9A'},
-            {id:'tut-asistencia',n:6,label:'Calculadora de Asistencia',bg:'#E0F2F1',c:'#00796B'},
+            {id:'tut-calificaciones',n:3,label:'Libro de Calificaciones',bg:'#FFF3E0',c:'#E65100'},
+            {id:'tut-rendimiento',n:4,label:'Rendimiento',bg:'#F3E5F5',c:'#6A1B9A'},
+            {id:'tut-asistencia',n:5,label:'Calculadora de Asistencia',bg:'#E0F2F1',c:'#00796B'},
           ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
 
@@ -10560,11 +10560,11 @@ function abrirTutorial() {
         <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Organizaci\u00f3n</p>
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
           ${[
-            {id:'tut-horario',n:7,label:'Mi Horario',bg:'#E3F2FD',c:'#0277BD'},
-            {id:'tut-tareas',n:8,label:'Tareas',bg:'#FFF3E0',c:'#E65100'},
-            {id:'tut-calendario',n:9,label:'Calendario Escolar',bg:'#E3F2FD',c:'#1565C0'},
-            {id:'tut-notas',n:10,label:'Mis Notas',bg:'#EFEBE9',c:'#5D4037'},
-            {id:'tut-libreta',n:11,label:'Mi Libreta',bg:'#E0F2F1',c:'#00695C'},
+            {id:'tut-horario',n:6,label:'Mi Horario',bg:'#E3F2FD',c:'#0277BD'},
+            {id:'tut-tareas',n:7,label:'Tareas',bg:'#FFF3E0',c:'#E65100'},
+            {id:'tut-calendario',n:8,label:'Calendario Escolar',bg:'#E3F2FD',c:'#1565C0'},
+            {id:'tut-notas',n:9,label:'Mis Notas',bg:'#EFEBE9',c:'#5D4037'},
+            {id:'tut-libreta',n:10,label:'Mi Libreta',bg:'#E0F2F1',c:'#00695C'},
           ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
 
@@ -10572,9 +10572,9 @@ function abrirTutorial() {
         <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Comunicaci\u00f3n y Reportes</p>
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
           ${[
-            {id:'tut-blog',n:12,label:'Blog',bg:'#E0F7FA',c:'#006064'},
-            {id:'tut-reportes',n:13,label:'Reportes Estudiantes',bg:'#FFEBEE',c:'#C62828'},
-            {id:'tut-denuncias',n:14,label:'Buz\u00f3n de Denuncias',bg:'#F3E5F5',c:'#6A1B9A'},
+            {id:'tut-blog',n:11,label:'Blog',bg:'#E0F7FA',c:'#006064'},
+            {id:'tut-reportes',n:12,label:'Reportes Estudiantes',bg:'#FFEBEE',c:'#C62828'},
+            {id:'tut-denuncias',n:13,label:'Buz\u00f3n de Denuncias',bg:'#F3E5F5',c:'#6A1B9A'},
           ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
 
@@ -10582,10 +10582,9 @@ function abrirTutorial() {
         <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Herramientas y Configuraci\u00f3n</p>
         <div style="display:flex;flex-direction:column;gap:6px;">
           ${[
-            {id:'tut-ia',n:15,label:'Configurar IA',bg:'#FCE4EC',c:'#AD1457'},
-            {id:'tut-presentacion',n:16,label:'Modo Presentaci\u00f3n',bg:'#FFF3E0',c:'#E65100'},
-            {id:'tut-backup',n:17,label:'Mis Datos / Backup',bg:'#FBE9E7',c:'#BF360C'},
-            {id:'tut-auditoria',n:18,label:'Auditor\u00eda',bg:'#EDE7F6',c:'#4A148C'},
+            {id:'tut-ia',n:14,label:'Configurar IA',bg:'#FCE4EC',c:'#AD1457'},
+            {id:'tut-backup',n:15,label:'Mis Datos / Backup',bg:'#FBE9E7',c:'#BF360C'},
+            {id:'tut-auditoria',n:16,label:'Auditor\u00eda',bg:'#EDE7F6',c:'#4A148C'},
           ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
       </div>
