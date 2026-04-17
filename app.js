@@ -11299,12 +11299,12 @@ function abrirCalculadoraAsistencia() {
   const body = document.getElementById('modal-body');
   if (!body) return;
 
+  document.getElementById('modal-title').textContent = 'Calculadora de Asistencia';
+  const footer = document.getElementById('modal-footer');
+  if (footer) footer.style.display = 'none';
+
   body.innerHTML = `
     <div style="max-width:480px;margin:0 auto;padding:10px;">
-      <h3 style="text-align:center;margin:0 0 6px;font-size:1.1rem;">
-        <span class="material-icons" style="vertical-align:middle;color:#00796B;">calculate</span>
-        Calculadora de Asistencia
-      </h3>
       <p style="text-align:center;color:#666;font-size:0.82rem;margin:0 0 18px;">
         Calcula el porcentaje de asistencia de un estudiante
       </p>
