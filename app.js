@@ -10543,7 +10543,6 @@ function abrirTutorial() {
           ${[
             {id:'tut-nueva',n:1,label:'Nueva Planificaci\u00f3n por RA',bg:'#E3F2FD',c:'#1565C0'},
             {id:'tut-mis',n:2,label:'Mis Planificaciones',bg:'#EDE7F6',c:'#4527A0'},
-            {id:'tut-diarias',n:3,label:'Planificaciones Diarias',bg:'#E0F2F1',c:'#00695C'},
           ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
 
@@ -10803,77 +10802,7 @@ function abrirTutorial() {
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
-      <!-- SECCIÓN 3: PLANIFICACIONES DIARIAS -->
-      <!-- ═══════════════════════════════════════════════════════ -->
-      <div id="tut-diarias" style="scroll-margin-top:20px;">
-        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #00695C;">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <span style="background:#00695C;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
-              <span class="material-icons">today</span>
-            </span>
-            <div>
-              <h2 style="margin:0;color:#00695C;font-size:1.25rem;">Planificaciones Diarias</h2>
-              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Detalla el desarrollo de cada sesi\u00f3n de clase</p>
-            </div>
-          </div>
-
-          <p style="color:#455A64;line-height:1.6;margin-bottom:16px;">
-            Las Planificaciones Diarias te permiten detallar exactamente qu\u00e9 vas a hacer en cada sesi\u00f3n de clase. Se generan a partir de las actividades de tu planificaci\u00f3n por RA.
-          </p>
-
-          <h4 style="color:#00695C;margin:16px 0 10px;display:flex;align-items:center;gap:6px;">
-            <span class="material-icons" style="font-size:20px;">route</span> \u00bfC\u00f3mo funciona?
-          </h4>
-
-          <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 1</div>
-            <h4 class="tut-step-title">Selecciona una planificaci\u00f3n</h4>
-            <p class="tut-step-desc">Primero debes tener al menos una planificaci\u00f3n guardada en "Mis Planificaciones". Al abrir Planificaciones Diarias, selecciona cu\u00e1l planificaci\u00f3n quieres detallar.</p>
-          </div>
-
-          <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 2</div>
-            <h4 class="tut-step-title">Visualiza las sesiones</h4>
-            <p class="tut-step-desc">El sistema muestra una lista de sesiones basadas en las fechas de clase calculadas. Cada sesi\u00f3n corresponde a un d\u00eda de clase con sus actividades asignadas.</p>
-          </div>
-
-          <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 3</div>
-            <h4 class="tut-step-title">Genera o edita cada sesi\u00f3n</h4>
-            <p class="tut-step-desc">Para cada sesi\u00f3n puedes:</p>
-            <ul class="tut-list">
-              <li><strong>Generar con IA:</strong> La IA crear\u00e1 autom\u00e1ticamente las fases de inicio, desarrollo y cierre con actividades contextualizadas.</li>
-              <li><strong>Generar localmente:</strong> Sin IA, se crea una estructura b\u00e1sica que puedes personalizar.</li>
-              <li><strong>Editar manualmente:</strong> Escribe directamente lo que har\u00e1s en cada fase de la sesi\u00f3n.</li>
-            </ul>
-          </div>
-
-          <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 4</div>
-            <h4 class="tut-step-title">Estructura de cada sesi\u00f3n</h4>
-            <p class="tut-step-desc">Cada planificaci\u00f3n diaria tiene tres fases:</p>
-            <ul class="tut-list">
-              <li><strong>Inicio:</strong> Actividad de apertura, motivaci\u00f3n, repaso de la clase anterior, presentaci\u00f3n del tema.</li>
-              <li><strong>Desarrollo:</strong> Actividades principales de ense\u00f1anza-aprendizaje, pr\u00e1cticas, trabajos en grupo, etc.</li>
-              <li><strong>Cierre:</strong> Resumen, evaluaci\u00f3n formativa, retroalimentaci\u00f3n, asignaci\u00f3n de tareas.</li>
-            </ul>
-          </div>
-
-          <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#E0F2F1;color:#00695C;">Paso 5</div>
-            <h4 class="tut-step-title">Exportar a Word</h4>
-            <p class="tut-step-desc">Una vez completadas las sesiones, puedes exportar todas las planificaciones diarias a Word. El archivo incluir\u00e1 cada sesi\u00f3n con su fecha, actividades, fases, recursos e instrumentos de evaluaci\u00f3n.</p>
-          </div>
-
-          <div class="tut-tip">
-            <span class="material-icons">auto_awesome</span>
-            <span>Consejo: Configura tu clave de IA desde el bot\u00f3n <strong>Configurar IA</strong> en el Dashboard para obtener planificaciones diarias m\u00e1s completas y contextualizadas autom\u00e1ticamente.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════ -->
-      <!-- SECCIÓN 4: LIBRO DE CALIFICACIONES -->
+      <!-- SECCIÓN 3: LIBRO DE CALIFICACIONES -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div id="tut-calificaciones" style="scroll-margin-top:20px;">
         <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #E65100;">
@@ -11299,40 +11228,7 @@ function abrirTutorial() {
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
-      <!-- SECCIÓN 16: MODO PRESENTACIÓN -->
-      <!-- ═══════════════════════════════════════════════════════ -->
-      <div id="tut-presentacion" style="scroll-margin-top:20px;">
-        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #E65100;">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <span style="background:#E65100;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
-              <span class="material-icons">cast_for_education</span>
-            </span>
-            <div>
-              <h2 style="margin:0;color:#E65100;font-size:1.25rem;">Modo Presentaci\u00f3n</h2>
-              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Pantalla de clase para proyectar en el aula</p>
-            </div>
-          </div>
-
-          <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
-            Pantalla especial dise\u00f1ada para proyectar en el aula. Muestra la informaci\u00f3n de la clase actual en formato grande y legible:
-          </p>
-          <ul class="tut-list">
-            <li><strong>Detecci\u00f3n autom\u00e1tica:</strong> Si tienes configurado tu horario, detecta autom\u00e1ticamente qu\u00e9 clase est\u00e1s dando seg\u00fan el d\u00eda y la hora.</li>
-            <li><strong>Objetivo de aprendizaje:</strong> Muestra el RA y las actividades del d\u00eda.</li>
-            <li><strong>Lista de estudiantes:</strong> Muestra la lista del curso para control de participaci\u00f3n.</li>
-            <li><strong>Temporizador:</strong> Cron\u00f3metro configurable para gestionar el tiempo de las actividades.</li>
-            <li><strong>Reloj en vivo:</strong> Muestra la hora actual en pantalla.</li>
-            <li><strong>Pantalla completa:</strong> Bot\u00f3n para entrar en modo de pantalla completa.</li>
-          </ul>
-          <div class="tut-tip">
-            <span class="material-icons">lightbulb</span>
-            <span>Para que la detecci\u00f3n autom\u00e1tica funcione, primero configura tu horario semanal en "Mi Horario" con los nombres de las materias que coincidan con los nombres de tus cursos.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════ -->
-      <!-- SECCIÓN 17: MIS DATOS / BACKUP -->
+      <!-- SECCIÓN 16: MIS DATOS / BACKUP -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div id="tut-backup" style="scroll-margin-top:20px;">
         <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #BF360C;">
