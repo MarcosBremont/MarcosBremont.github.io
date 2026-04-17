@@ -8720,6 +8720,45 @@ function crearCurso() {
   mostrarToast(`Curso "${nombre}" creado`, 'success');
 }
 
+function renombrarCurso(id) {
+  const curso = calState.cursos[id];
+  if (!curso) return;
+  document.getElementById('modal-title').textContent = 'Renombrar curso';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-curso-content">
+      <label for="input-renombre-curso">Nuevo nombre del curso</label>
+      <input type="text" id="input-renombre-curso" value="${escapeHTML(curso.nombre)}" maxlength="60" autofocus>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="guardarRenombreCurso('${id}')">
+          <span class="material-icons">check</span> Guardar
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => {
+    const inp = document.getElementById('input-renombre-curso');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 100);
+  document.getElementById('input-renombre-curso').addEventListener('keydown', e => {
+    if (e.key === 'Enter') guardarRenombreCurso(id);
+  });
+}
+
+function guardarRenombreCurso(id) {
+  const nombre = document.getElementById('input-renombre-curso')?.value?.trim();
+  if (!nombre) { mostrarToast('Escribe un nombre para el curso', 'error'); return; }
+  const curso = calState.cursos[id];
+  if (!curso) return;
+  const nombreAnterior = curso.nombre;
+  curso.nombre = nombre;
+  guardarCalificaciones();
+  cerrarModalBtn();
+  renderizarTabsCursos();
+  mostrarToast(`Curso renombrado a "${nombre}"`, 'success');
+}
+
 function activarCurso(id) {
   if (!calState.cursos[id]) return;
   calState.cursoActivoId = id;
@@ -8988,6 +9027,8 @@ function renderizarTabsCursos() {
     tab.innerHTML = '<span class="material-icons" style="font-size:16px;">class</span>'
       + escapeHTML(curso.nombre)
       + (nPlanes ? ` <span style="background:#E3F2FD;color:#1565C0;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700;">${nPlanes}</span>` : '')
+      + '<button class="cal-tab-edit" title="Renombrar curso" onclick="event.stopPropagation();renombrarCurso(\'' + curso.id + '\')">'
+      + '<span class="material-icons" style="font-size:14px;">edit</span></button>'
       + '<button class="cal-tab-del" title="Eliminar curso" onclick="event.stopPropagation();eliminarCurso(\'' + curso.id + '\')">'
       + '<span class="material-icons" style="font-size:16px;">close</span></button>';
     tab.onclick = () => activarCurso(curso.id);

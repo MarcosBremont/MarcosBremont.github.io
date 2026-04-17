@@ -2098,6 +2098,28 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
   opacity: 1;
 }
 
+.cal-tab-edit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-right: 2px;
+}
+
+.cal-tab:hover .cal-tab-edit,
+.cal-tab.activo .cal-tab-edit {
+  opacity: 0.6;
+}
+
+.cal-tab-edit:hover {
+  opacity: 1 !important;
+}
+
 /* Pestañas de planificaciones por curso */
 .cal-planes-tabs {
   display: flex;
