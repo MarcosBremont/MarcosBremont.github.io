@@ -14617,6 +14617,34 @@ function cargarPlanificacionGuardada(id) {
 }
 
 /** Carga una planificación completa en el editor y va directo al paso 5 (Planificaciones Diarias) */
+function cargarPlanEnPaso1(planId) {
+  const biblio = cargarBiblioteca();
+  const registro = biblio.items.find(i => i.id === planId);
+  if (!registro) { mostrarToast('Planificación no encontrada', 'error'); return; }
+  planificacion = JSON.parse(JSON.stringify(registro.planificacion));
+  planificacion._id = registro.id;
+  if (planificacion.actividades) {
+    planificacion.actividades.forEach(a => {
+      if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
+    });
+  }
+  if (planificacion.fechasClase) {
+    planificacion.fechasClase.forEach(f => {
+      if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha);
+    });
+  }
+  poblarFormularioDesdeEstado();
+  if (planificacion.elementosCapacidad?.length) {
+    renderizarEC(planificacion.elementosCapacidad);
+    renderizarActividades(planificacion.actividades);
+    document.getElementById('btn-paso2-siguiente').disabled = false;
+  }
+  guardarBorrador();
+  _ocultarPaneles();
+  irAlPaso(1, false);
+  mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
+}
+
 function cargarPlanEnPaso5(planId) {
   const biblio = cargarBiblioteca();
   const registro = biblio.items.find(i => i.id === planId);
@@ -21410,8 +21438,11 @@ function abrirModalClase(encodedData) {
             </div>
           </div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button onclick="cerrarModalBtn();cargarPlanEnPaso1('${si.planId}');" class="mcl-btn-link" style="color:#1565C0;border-color:#90CAF9;">
+            <span class="material-icons" style="font-size:14px;">edit_note</span> Ver planificación
+          </button>
           <button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
-            <span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir planificación diaria
+            <span class="material-icons" style="font-size:14px;">open_in_new</span> Planificación diaria
           </button>
           ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
             <span class="material-icons" style="font-size:14px;">link</span> Recurso
