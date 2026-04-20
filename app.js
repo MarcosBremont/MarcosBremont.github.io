@@ -8957,15 +8957,6 @@ function _ensureRA(curso, raKey) {
       cambioSync = true;
     }
 
-    // Sincronizar valores individuales de actividades con la planificación
-    acts.forEach(a => {
-      const valPlan = a.valor != null ? parseFloat(a.valor) : 0;
-      if (raInfo.valores && raInfo.valores[a.id] !== undefined && raInfo.valores[a.id] !== valPlan) {
-        raInfo.valores[a.id] = valPlan;
-        cambioSync = true;
-      }
-    });
-
     // Sincronizar snapshot de actividades (enunciado, fecha, etc.)
     if (raInfo._actividadesSnapshot) {
       acts.forEach(a => {
@@ -9547,16 +9538,6 @@ function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
   raInfo.valores[actividadId] = num;
   registrarCambio(`Valor de actividad actualizado a ${num} pts`);
   guardarCalificaciones();
-
-  // Sincronizar de vuelta a la planificación activa
-  const planSync = _getPlanActivaDeCurso() || planificacion;
-  if (planSync && planSync.actividades) {
-    const actPlan = planSync.actividades.find(a => a.id === actividadId);
-    if (actPlan && actPlan.valor !== num) {
-      actPlan.valor = num;
-      guardarBorrador();
-    }
-  }
 
   if (nuevaSuma > valorTotal) {
     mostrarToast(
