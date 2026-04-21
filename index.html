@@ -666,7 +666,6 @@
           <div class="form-group">
             <label for="fecha-inicio">Fecha de Inicio *</label>
             <input type="date" id="fecha-inicio" required oninput="_actualizarCalendarioDiasClase()" />
-            <div id="dias-clase-calendario" style="display:none;margin-top:8px;"></div>
           </div>
 
           <!-- Fecha de Término -->
@@ -675,6 +674,9 @@
             <input type="date" id="fecha-termino" required />
           </div>
         </div>
+
+        <!-- Mini-calendario días de clase (ancho completo, fuera de la grilla) -->
+        <div id="dias-clase-calendario" style="display:none;margin:4px 0 12px;"></div>
 
         <!-- Priorización y Ponderación de los RA -->
         <div class="dias-clase-section" id="seccion-priorizacion" style="display:none;">
