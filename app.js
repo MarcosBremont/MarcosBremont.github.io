@@ -5304,72 +5304,102 @@ function _actualizarCalendarioDiasClase() {
 
   if (!nombreCurso) { contenedor.style.display = 'none'; return; }
 
-  // Días de clase del curso desde el horario (dia: 0=Lu..4=Vi → JS getDay 1..5)
   const horario = cargarHorario();
-  const diasHorario = [...new Set(
-    horario.filter(e => e.seccion === nombreCurso && e.materia).map(e => e.dia)
-  )].sort(); // 0=Lu,1=Ma,2=Mi,3=Ju,4=Vi
+  const entradasCurso = horario.filter(e => e.seccion === nombreCurso && e.materia);
+  if (entradasCurso.length === 0) { contenedor.style.display = 'none'; return; }
 
-  if (diasHorario.length === 0) { contenedor.style.display = 'none'; return; }
+  // Agrupar por materia → { materia: Set<dia> }
+  const porMateria = {};
+  entradasCurso.forEach(e => {
+    if (!porMateria[e.materia]) porMateria[e.materia] = new Set();
+    porMateria[e.materia].add(e.dia);
+  });
+  const materias = Object.keys(porMateria);
 
-  // Mes a mostrar: el de la fecha seleccionada o el actual
-  const fechaVal = document.getElementById('fecha-inicio')?.value;
-  let base = fechaVal ? new Date(fechaVal + 'T12:00:00') : new Date();
-  const anio = base.getFullYear();
-  const mes = base.getMonth(); // 0-11
+  // Paleta de colores por materia
+  const PALETA = [
+    { bg: '#E3F2FD', border: '#90CAF9', text: '#1565C0', dot: '#1565C0' },
+    { bg: '#F3E5F5', border: '#CE93D8', text: '#6A1B9A', dot: '#6A1B9A' },
+    { bg: '#E8F5E9', border: '#A5D6A7', text: '#2E7D32', dot: '#2E7D32' },
+    { bg: '#FFF3E0', border: '#FFCC80', text: '#E65100', dot: '#E65100' },
+    { bg: '#FCE4EC', border: '#F48FB1', text: '#AD1457', dot: '#AD1457' },
+  ];
+  const colorDe = {}; // materia → color objeto
+  materias.forEach((m, i) => { colorDe[m] = PALETA[i % PALETA.length]; });
 
+  // Mapa dia → materia (para el calendario; si un dia tiene varias, la primera gana)
+  const diaAMateria = {}; // jsGetDay → materia
+  materias.forEach(m => {
+    porMateria[m].forEach(d => {
+      const jsDay = d + 1;
+      if (!diaAMateria[jsDay]) diaAMateria[jsDay] = m;
+    });
+  });
+
+  const DIAS_SHORT_LABEL = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
   const diasSemana = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
   const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  // Primero día del mes y total de días
-  const primerDia = new Date(anio, mes, 1).getDay(); // 0=Dom
+  const fechaVal = document.getElementById('fecha-inicio')?.value;
+  let base = fechaVal ? new Date(fechaVal + 'T12:00:00') : new Date();
+  const anio = base.getFullYear();
+  const mes = base.getMonth();
+  const primerDia = new Date(anio, mes, 1).getDay();
   const totalDias = new Date(anio, mes + 1, 0).getDate();
-
-  // Convierte dia horario (0=Lu) → JS getDay (1=Lu)
-  const jsGetDays = new Set(diasHorario.map(d => d + 1)); // 1=Lu,2=Ma,3=Mi,4=Ju,5=Vi
-
-  const DIAS_SHORT_LABEL = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
-  const diasLabel = diasHorario.map(d => DIAS_SHORT_LABEL[d]).join(' · ');
-
-  let html = `
-    <div style="background:#F8F9FA;border:1px solid #E3F2FD;border-radius:10px;padding:10px 12px;font-size:0.78rem;">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-        <span class="material-icons" style="font-size:14px;color:#1565C0;">calendar_today</span>
-        <span style="font-weight:700;color:#1565C0;">${escapeHTML(nombreCurso)}</span>
-        <span style="color:#78909C;">— clases los:</span>
-        <span style="font-weight:700;color:#0D47A1;">${diasLabel}</span>
-      </div>
-      <div style="font-weight:700;color:#455A64;text-align:center;margin-bottom:6px;">${mesesNombres[mes]} ${anio}</div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">`;
-
-  // Cabecera días
-  diasSemana.forEach((d, i) => {
-    const esClase = i >= 1 && i <= 5 && jsGetDays.has(i);
-    html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;color:${esClase ? '#1565C0' : '#90A4AE'};">${d}</div>`;
-  });
-
-  // Celdas vacías antes del día 1
-  for (let i = 0; i < primerDia; i++) {
-    html += `<div></div>`;
-  }
-
-  // Días del mes
   const hoyISO = new Date().toISOString().slice(0, 10);
   const selISO = fechaVal || '';
+
+  // ── Leyenda por materia ──
+  let html = `<div style="background:#F8F9FA;border:1px solid #E0E0E0;border-radius:10px;padding:10px 14px;font-size:0.78rem;">`;
+
+  // Header del curso
+  html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+    <span class="material-icons" style="font-size:14px;color:#455A64;">calendar_today</span>
+    <span style="font-weight:700;color:#37474F;">${escapeHTML(nombreCurso)}</span>
+    <span style="color:#90A4AE;font-size:0.72rem;">— ${materias.length > 1 ? materias.length + ' materias' : '1 materia'}</span>
+  </div>`;
+
+  // Leyenda: una fila por materia
+  materias.forEach(m => {
+    const c = colorDe[m];
+    const dias = [...porMateria[m]].sort().map(d => DIAS_SHORT_LABEL[d]).join(' · ');
+    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;padding:4px 8px;background:${c.bg};border-left:3px solid ${c.dot};border-radius:6px;">
+      <span style="font-weight:700;color:${c.text};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHTML(m)}">${escapeHTML(m.length > 40 ? m.substring(0,40)+'…' : m)}</span>
+      <span style="font-weight:700;color:${c.text};white-space:nowrap;font-size:0.75rem;">${dias}</span>
+    </div>`;
+  });
+
+  // ── Mini calendario ──
+  html += `<div style="font-weight:700;color:#455A64;text-align:center;margin:10px 0 6px;">${mesesNombres[mes]} ${anio}</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">`;
+
+  // Cabecera
+  diasSemana.forEach((d, i) => {
+    const mat = diaAMateria[i];
+    const c = mat ? colorDe[mat] : null;
+    html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;color:${c ? c.text : '#B0BEC5'};">${d}</div>`;
+  });
+
+  // Celdas vacías
+  for (let i = 0; i < primerDia; i++) html += `<div></div>`;
+
+  // Días del mes
   for (let dia = 1; dia <= totalDias; dia++) {
     const fecha = new Date(anio, mes, dia);
     const jsDay = fecha.getDay();
-    const esClase = jsGetDays.has(jsDay);
+    const mat = diaAMateria[jsDay];
     const iso = fecha.toISOString().slice(0, 10);
     const esHoy = iso === hoyISO;
     const esSel = iso === selISO;
+    const c = mat ? colorDe[mat] : null;
 
-    let bg = 'transparent', color = '#455A64', fw = '400', border = 'none', br = '50%';
-    if (esSel)        { bg = '#1565C0'; color = '#fff'; fw = '700'; }
-    else if (esHoy)   { bg = '#E3F2FD'; color = '#1565C0'; fw = '700'; border = '1.5px solid #1565C0'; }
-    else if (esClase) { bg = '#1565C020'; color = '#0D47A1'; fw = '700'; border = '1.5px solid #90CAF9'; }
+    let style;
+    if (esSel)      style = `background:#1565C0;color:#fff;font-weight:700;border:none;`;
+    else if (esHoy) style = `background:#E3F2FD;color:#1565C0;font-weight:700;border:1.5px solid #1565C0;`;
+    else if (c)     style = `background:${c.bg};color:${c.text};font-weight:700;border:1px solid ${c.border};`;
+    else            style = `color:#CFD8DC;`;
 
-    html += `<div style="padding:3px 1px;border-radius:${br};background:${bg};color:${color};font-weight:${fw};border:${border};font-size:0.72rem;">${dia}</div>`;
+    html += `<div style="padding:3px 1px;border-radius:50%;font-size:0.72rem;${style}">${dia}</div>`;
   }
 
   html += `</div></div>`;
