@@ -636,7 +636,7 @@
           <!-- Curso asignado -->
           <div class="form-group" id="grupo-curso-asignado">
             <label for="sel-curso-paso1">Curso *</label>
-            <select id="sel-curso-paso1" style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;">
+            <select id="sel-curso-paso1" style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;" onchange="_actualizarCalendarioDiasClase()">
               <option value="">— Selecciona un curso —</option>
             </select>
             <span id="aviso-curso-paso1" style="display:none;font-size:0.78rem;color:#E65100;margin-top:4px;">
@@ -665,7 +665,8 @@
           <!-- Fecha de Inicio -->
           <div class="form-group">
             <label for="fecha-inicio">Fecha de Inicio *</label>
-            <input type="date" id="fecha-inicio" required />
+            <input type="date" id="fecha-inicio" required oninput="_actualizarCalendarioDiasClase()" />
+            <div id="dias-clase-calendario" style="display:none;margin-top:8px;"></div>
           </div>
 
           <!-- Fecha de Término -->

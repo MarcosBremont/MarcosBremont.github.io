@@ -5293,6 +5293,90 @@ function _mostrarCursoAsignado() {
   }
 }
 
+/** Mini-calendario que muestra los días de clase del curso seleccionado */
+function _actualizarCalendarioDiasClase() {
+  const contenedor = document.getElementById('dias-clase-calendario');
+  if (!contenedor) return;
+
+  const cursoId = document.getElementById('sel-curso-paso1')?.value;
+  const curso = cursoId ? calState.cursos[cursoId] : null;
+  const nombreCurso = curso?.nombre || '';
+
+  if (!nombreCurso) { contenedor.style.display = 'none'; return; }
+
+  // Días de clase del curso desde el horario (dia: 0=Lu..4=Vi → JS getDay 1..5)
+  const horario = cargarHorario();
+  const diasHorario = [...new Set(
+    horario.filter(e => e.seccion === nombreCurso && e.materia).map(e => e.dia)
+  )].sort(); // 0=Lu,1=Ma,2=Mi,3=Ju,4=Vi
+
+  if (diasHorario.length === 0) { contenedor.style.display = 'none'; return; }
+
+  // Mes a mostrar: el de la fecha seleccionada o el actual
+  const fechaVal = document.getElementById('fecha-inicio')?.value;
+  let base = fechaVal ? new Date(fechaVal + 'T12:00:00') : new Date();
+  const anio = base.getFullYear();
+  const mes = base.getMonth(); // 0-11
+
+  const diasSemana = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
+  const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // Primero día del mes y total de días
+  const primerDia = new Date(anio, mes, 1).getDay(); // 0=Dom
+  const totalDias = new Date(anio, mes + 1, 0).getDate();
+
+  // Convierte dia horario (0=Lu) → JS getDay (1=Lu)
+  const jsGetDays = new Set(diasHorario.map(d => d + 1)); // 1=Lu,2=Ma,3=Mi,4=Ju,5=Vi
+
+  const DIAS_SHORT_LABEL = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
+  const diasLabel = diasHorario.map(d => DIAS_SHORT_LABEL[d]).join(' · ');
+
+  let html = `
+    <div style="background:#F8F9FA;border:1px solid #E3F2FD;border-radius:10px;padding:10px 12px;font-size:0.78rem;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <span class="material-icons" style="font-size:14px;color:#1565C0;">calendar_today</span>
+        <span style="font-weight:700;color:#1565C0;">${escapeHTML(nombreCurso)}</span>
+        <span style="color:#78909C;">— clases los:</span>
+        <span style="font-weight:700;color:#0D47A1;">${diasLabel}</span>
+      </div>
+      <div style="font-weight:700;color:#455A64;text-align:center;margin-bottom:6px;">${mesesNombres[mes]} ${anio}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">`;
+
+  // Cabecera días
+  diasSemana.forEach((d, i) => {
+    const esClase = i >= 1 && i <= 5 && jsGetDays.has(i);
+    html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;color:${esClase ? '#1565C0' : '#90A4AE'};">${d}</div>`;
+  });
+
+  // Celdas vacías antes del día 1
+  for (let i = 0; i < primerDia; i++) {
+    html += `<div></div>`;
+  }
+
+  // Días del mes
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const selISO = fechaVal || '';
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const fecha = new Date(anio, mes, dia);
+    const jsDay = fecha.getDay();
+    const esClase = jsGetDays.has(jsDay);
+    const iso = fecha.toISOString().slice(0, 10);
+    const esHoy = iso === hoyISO;
+    const esSel = iso === selISO;
+
+    let bg = 'transparent', color = '#455A64', fw = '400', border = 'none', br = '50%';
+    if (esSel)        { bg = '#1565C0'; color = '#fff'; fw = '700'; }
+    else if (esHoy)   { bg = '#E3F2FD'; color = '#1565C0'; fw = '700'; border = '1.5px solid #1565C0'; }
+    else if (esClase) { bg = '#1565C020'; color = '#0D47A1'; fw = '700'; border = '1.5px solid #90CAF9'; }
+
+    html += `<div style="padding:3px 1px;border-radius:${br};background:${bg};color:${color};font-weight:${fw};border:${border};font-size:0.72rem;">${dia}</div>`;
+  }
+
+  html += `</div></div>`;
+  contenedor.innerHTML = html;
+  contenedor.style.display = '';
+}
+
 /** Llena los campos del formulario desde el estado restaurado */
 
 
@@ -5351,6 +5435,7 @@ function poblarFormularioDesdeEstado() {
 
   // Mostrar curso asignado si la planificación tiene _id
   _mostrarCursoAsignado();
+  setTimeout(_actualizarCalendarioDiasClase, 50);
 
   setVal('cantidad-ra', dg.cantidadRA);
   setVal('cantidad-ec', dg.cantidadEC || 4);
