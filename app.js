@@ -2514,6 +2514,21 @@ function _moverActividad(idx, dir) {
   mostrarToast(`Actividad movida ${dir < 0 ? 'arriba' : 'abajo'} ✓`, 'success');
 }
 
+function _regenerarActividad(idx) {
+  const act = (planificacion.actividades || [])[idx];
+  if (!act) return;
+  const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+  if (!ec) return;
+  const plantillas = obtenerPlantillasActividad(ec);
+  const actualIdx = plantillas.indexOf(act.enunciado);
+  const siguiente = (actualIdx + 1) % plantillas.length;
+  act.enunciado = plantillas[siguiente];
+  act.instrumento = generarInstrumento(act, act.ecNivel || ec.nivel);
+  guardarBorrador();
+  renderizarActividades(planificacion.actividades);
+  mostrarToast('Actividad regenerada', 'success');
+}
+
 function _eliminarActividad(idx) {
   const act = planificacion.actividades[idx];
   if (!act) return;
@@ -2900,6 +2915,9 @@ function renderizarActividades(listaActividades) {
               </button>
               <button class="act-action-btn act-action--change" onclick="_editarInstrumentoActividad(${idx})">
                 <span class="material-icons">swap_horiz</span> Cambiar
+              </button>
+              <button class="act-action-btn act-action--regen" onclick="_regenerarActividad(${idx})" title="Generar otra versión de esta actividad">
+                <span class="material-icons">refresh</span> Regenerar
               </button>
               <button class="act-action-btn act-action--delete" onclick="_eliminarActividad(${idx})">
                 <span class="material-icons">delete_outline</span>

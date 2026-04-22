@@ -1914,6 +1914,10 @@ body {
   background: #fff; color: #C62828; border-color: #FFCDD2;
 }
 .act-action--delete:hover { background: #FFEBEE; }
+.act-action--regen {
+  background: #fff; color: #6A1B9A; border-color: #CE93D8;
+}
+.act-action--regen:hover { background: #F3E5F5; }
 
 /* Dark mode */
 body.dark-mode .act-card-inner {
