@@ -1095,6 +1095,27 @@ body {
   transform: translateX(3px);
 }
 
+.btn-guardar-paso {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-sm);
+  border: 1.5px solid #81C784;
+  border-radius: var(--radio-full);
+  padding: 10px 24px;
+  font-size: 0.95rem;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transicion);
+  background: #F1F8E9;
+  color: #2E7D32;
+}
+
+.btn-guardar-paso:hover {
+  background: #C8E6C9;
+  border-color: #4CAF50;
+}
+
 .btn-siguiente:disabled {
   opacity: 0.5;
   cursor: not-allowed;

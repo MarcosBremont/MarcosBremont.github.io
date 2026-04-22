@@ -5754,6 +5754,9 @@ function irAlPaso(nuevoPaso, validar = true) {
       <button class="btn-anterior" onclick="cerrarDiariasContextual()">
         <span class="material-icons">arrow_back</span> Anterior
       </button>
+      <button class="btn-guardar-paso" onclick="guardarPlanificacionActual(true)">
+        <span class="material-icons">save</span> Guardar
+      </button>
       <button class="btn-siguiente" onclick="guardarTodasDiarias(); irAlPaso(6, false)">
         Ver Vista Previa <span class="material-icons">preview</span>
       </button>`;
