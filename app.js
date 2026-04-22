@@ -15742,48 +15742,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // También añadir "Guardar" al paso 4 (para guardar sin necesitar ir al 5)
-
-
-
-  const headerPaso4 = document.querySelector('#section-4 .section-header');
-
-
-
-  if (headerPaso4 && !document.getElementById('btn-guardar-plan-4')) {
-
-
-
-    const btnG4 = document.createElement('button');
-
-
-
-    btnG4.id = 'btn-guardar-plan-4';
-
-
-
-    btnG4.className = 'btn-guardar-plan';
-
-
-
-    btnG4.style.cssText = 'font-size:0.82rem;padding:7px 14px;margin-left:auto;';
-
-
-
-    btnG4.innerHTML = '<span class="material-icons" style="font-size:16px;">save</span> Guardar';
-
-
-
-    btnG4.onclick = guardarPlanificacionActual;
-
-
-
-    headerPaso4.appendChild(btnG4);
-
-
-
-  }
-
   // ── Autoguardado: guardar borrador al cambiar cualquier input/select/textarea en los pasos ──
   let _autoguardadoTimer = null;
   const stepper = document.querySelector('.stepper-container')?.parentElement;
@@ -21559,9 +21517,9 @@ function abrirModalClase(encodedData) {
           <button onclick="cerrarModalBtn();cargarPlanEnPaso1('${si.planId}');" class="mcl-btn-link" style="color:#1565C0;border-color:#90CAF9;">
             <span class="material-icons" style="font-size:14px;">edit_note</span> Ver planificación
           </button>
-          <button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+          ${!hasDiaria ? `<button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
             <span class="material-icons" style="font-size:14px;">open_in_new</span> Planificación diaria
-          </button>
+          </button>` : ''}
           ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
             <span class="material-icons" style="font-size:14px;">link</span> Recurso
           </a>` : ''}
