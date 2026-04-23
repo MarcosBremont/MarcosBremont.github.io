@@ -237,6 +237,14 @@ async function _onLogin(user) {
     await _cargarDesdeFirestore(user.uid);
   }
 
+  // Sincronizar PIN de bloqueo desde el perfil de Firebase
+  const perfilPin = perfil || await _obtenerPerfilUsuario(user.uid);
+  if (perfilPin?.pin) {
+    localStorage.setItem('_tinclass_pin', perfilPin.pin);
+  } else {
+    localStorage.removeItem('_tinclass_pin');
+  }
+
   _ocultarAuthOverlay();
   // Ocultar panel pendiente por si estaba visible
   const pendPanel = document.getElementById('auth-pending-panel');

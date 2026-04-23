@@ -7415,6 +7415,11 @@ function _cfgGuardarPin() {
     return;
   }
   localStorage.setItem('_tinclass_pin', val);
+  if (window.currentUser) {
+    db.collection('usuarios').doc(window.currentUser.uid)
+      .set({ pin: val }, { merge: true })
+      .catch(e => console.warn('Error guardando PIN en Firebase:', e));
+  }
   document.getElementById('cfg-pin-form').style.display = 'none';
   _cfgActualizarEstadoPin();
   mostrarToast('PIN de bloqueo configurado', 'success');
@@ -7428,6 +7433,11 @@ function _cfgPinCancelar() {
 function _cfgQuitarPin() {
   if (!confirm('¿Quitar el PIN? Se usará la contraseña para desbloquear la pantalla.')) return;
   localStorage.removeItem('_tinclass_pin');
+  if (window.currentUser) {
+    db.collection('usuarios').doc(window.currentUser.uid)
+      .set({ pin: firebase.firestore.FieldValue.delete() }, { merge: true })
+      .catch(e => console.warn('Error eliminando PIN en Firebase:', e));
+  }
   _cfgActualizarEstadoPin();
   mostrarToast('PIN eliminado', 'info');
 }
