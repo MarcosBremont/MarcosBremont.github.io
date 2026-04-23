@@ -235,6 +235,9 @@ async function _onLogin(user) {
   } else {
     // Cargar datos desde Firestore → localStorage
     await _cargarDesdeFirestore(user.uid);
+    // Marcar como migrado para que no vuelva a intentar la migración
+    // en el siguiente reload (los datos ya están en Firebase)
+    localStorage.setItem(MIGRATION_FLAG, '1');
   }
 
   // Sincronizar PIN de bloqueo desde el perfil de Firebase
@@ -504,6 +507,9 @@ async function _migrarDatosLocales(uid) {
     setTimeout(() => document.getElementById('auth-migration-toast')?.remove(), 3000);
   } catch (e) {
     console.error('Error en migración:', e);
+    // Marcar como migrado aunque haya fallado para no repetir indefinidamente
+    localStorage.setItem(MIGRATION_FLAG, '1');
+    setTimeout(() => document.getElementById('auth-migration-toast')?.remove(), 3000);
   }
 }
 
