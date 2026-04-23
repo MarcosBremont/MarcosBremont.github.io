@@ -1958,6 +1958,32 @@
       <div style="font-size:1.15rem;font-weight:800;margin-bottom:4px;letter-spacing:0.01em;">Pantalla bloqueada</div>
       <div id="lock-username" style="font-size:0.82rem;color:#90CAF9;margin-bottom:6px;"></div>
       <div id="lock-time" style="font-size:0.73rem;color:#5C6BC0;margin-bottom:28px;"></div>
+      <!-- Sección PIN -->
+      <div id="lock-pin-section" style="display:none;">
+        <div id="lock-pin-dots" style="display:flex;gap:16px;justify-content:center;margin-bottom:26px;">
+          <div class="pin-dot" id="pin-dot-0"></div>
+          <div class="pin-dot" id="pin-dot-1"></div>
+          <div class="pin-dot" id="pin-dot-2"></div>
+          <div class="pin-dot" id="pin-dot-3"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:270px;margin:0 auto 16px;">
+          <button class="pin-key" onclick="_lockPinDigito('1')">1</button>
+          <button class="pin-key" onclick="_lockPinDigito('2')">2</button>
+          <button class="pin-key" onclick="_lockPinDigito('3')">3</button>
+          <button class="pin-key" onclick="_lockPinDigito('4')">4</button>
+          <button class="pin-key" onclick="_lockPinDigito('5')">5</button>
+          <button class="pin-key" onclick="_lockPinDigito('6')">6</button>
+          <button class="pin-key" onclick="_lockPinDigito('7')">7</button>
+          <button class="pin-key" onclick="_lockPinDigito('8')">8</button>
+          <button class="pin-key" onclick="_lockPinDigito('9')">9</button>
+          <div></div>
+          <button class="pin-key" onclick="_lockPinDigito('0')">0</button>
+          <button class="pin-key" onclick="_lockPinBorrar()"><span class="material-icons" style="font-size:22px;line-height:1;">backspace</span></button>
+        </div>
+        <button onclick="_lockMostrarContrasena()" style="background:none;border:none;color:#7986CB;font-size:0.75rem;cursor:pointer;text-decoration:underline;padding:4px;display:block;margin:0 auto;">
+          Usar contraseña
+        </button>
+      </div>
       <!-- Sección email/contraseña -->
       <div id="lock-pass-section">
         <input type="password" id="lock-pass-input" placeholder="Ingresa tu contraseña para continuar" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #3949AB;
@@ -2134,6 +2160,35 @@
         </div>
 
         <!-- Seguridad -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">lock</span>Seguridad</div>
+          <div class="toggle-row" style="align-items:flex-start;gap:12px;">
+            <div class="toggle-label">
+              PIN de bloqueo de pantalla
+              <small id="cfg-pin-status">No configurado — se usará contraseña para desbloquear</small>
+            </div>
+            <button id="cfg-pin-btn" onclick="_cfgAbrirSetPin()" style="background:#3F51B5;color:#fff;border:none;border-radius:20px;padding:7px 14px;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+              Configurar
+            </button>
+          </div>
+          <div id="cfg-pin-form" style="display:none;margin-top:10px;background:rgba(63,81,181,0.06);border-radius:10px;padding:14px;">
+            <div style="font-size:0.82rem;color:#5C6BC0;margin-bottom:10px;">Ingresa un PIN de 4 dígitos numéricos para desbloquear sin contraseña.</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="password" id="cfg-pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
+                style="width:88px;padding:8px 10px;border:1.5px solid #3F51B5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:6px;box-sizing:border-box;"
+                onkeydown="if(event.key==='Enter')_cfgGuardarPin()">
+              <button onclick="_cfgGuardarPin()" style="background:#3F51B5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;">Guardar</button>
+              <button onclick="_cfgPinCancelar()" style="background:none;border:1.5px solid #9E9E9E;color:#757575;border-radius:8px;padding:8px 12px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
+            </div>
+            <div id="cfg-pin-err" style="font-size:0.78rem;color:#C62828;margin-top:6px;min-height:16px;"></div>
+          </div>
+          <div id="cfg-pin-quitar-row" style="display:none;margin-top:8px;">
+            <button onclick="_cfgQuitarPin()" style="background:#FFF5F5;border:1.5px solid #FFCDD2;color:#C62828;border-radius:8px;padding:7px 14px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:5px;">
+              <span class="material-icons" style="font-size:15px;">remove_circle</span>Quitar PIN
+            </button>
+          </div>
+        </div>
+
         <!-- Datos -->
         <div class="config-section">
           <div class="config-section-title"><span class="material-icons">storage</span>Datos</div>

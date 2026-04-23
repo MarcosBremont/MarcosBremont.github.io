@@ -9861,3 +9861,51 @@ body.dark-mode .tut-action-item {
   border-color: #37474F;
   color: #B0BEC5;
 }
+
+/* ====================================================
+   PIN KEYPAD — Pantalla de bloqueo
+   ==================================================== */
+.pin-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+.pin-dot.pin-dot-filled {
+  background: #fff;
+  border-color: #fff;
+  transform: scale(1.15);
+}
+.pin-key {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 76px;
+  height: 76px;
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.pin-key:active {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(0.93);
+}
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-6px); }
+  80%       { transform: translateX(6px); }
+}
+.pin-shake {
+  animation: pinShake 0.38s ease;
+}

@@ -7214,6 +7214,7 @@ let _lastActivity          = Date.now();
 let _pantallaBloqueada     = false;
 let _inactivityInterval    = null;
 let _lastActivityWriteTime = 0;
+let _pinBuffer             = '';
 
 function _iniciarVigilanciaInactividad() {
   ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(ev => {
@@ -7265,8 +7266,20 @@ function _bloquearPantalla() {
   const esGoogle = user.providerData?.some(p => p.providerId === 'google.com');
   const passSection   = document.getElementById('lock-pass-section');
   const googleSection = document.getElementById('lock-google-section');
-  if (passSection)   passSection.style.display   = esGoogle ? 'none' : 'block';
-  if (googleSection) googleSection.style.display = esGoogle ? 'block' : 'none';
+  const pinSection    = document.getElementById('lock-pin-section');
+  const hasPIN = !!localStorage.getItem('_tinclass_pin');
+
+  if (hasPIN) {
+    if (pinSection)    pinSection.style.display    = 'block';
+    if (passSection)   passSection.style.display   = 'none';
+    if (googleSection) googleSection.style.display = 'none';
+    _pinBuffer = '';
+    _actualizarPinDots();
+  } else {
+    if (pinSection)    pinSection.style.display    = 'none';
+    if (passSection)   passSection.style.display   = esGoogle ? 'none' : 'block';
+    if (googleSection) googleSection.style.display = esGoogle ? 'block' : 'none';
+  }
 
   const input = document.getElementById('lock-pass-input');
   if (input) input.value = '';
@@ -7274,7 +7287,7 @@ function _bloquearPantalla() {
   if (err) err.textContent = '';
 
   document.getElementById('lock-overlay')?.classList.remove('hidden');
-  setTimeout(() => input?.focus(), 120);
+  if (!hasPIN) setTimeout(() => input?.focus(), 120);
   sessionStorage.setItem(_LOCK_KEY, '1');
   registrarCambio('Pantalla bloqueada por inactividad');
 }
@@ -7321,6 +7334,102 @@ function _completarDesbloqueo() {
   _lastActivityWriteTime = now;
   document.getElementById('lock-overlay')?.classList.add('hidden');
   registrarCambio('Pantalla desbloqueada');
+}
+
+// ── PIN numérico de desbloqueo ──────────────────────────────────────────
+function _lockPinDigito(d) {
+  if (_pinBuffer.length >= 4) return;
+  _pinBuffer += d;
+  _actualizarPinDots();
+  if (_pinBuffer.length === 4) setTimeout(_verificarLockPin, 150);
+}
+
+function _lockPinBorrar() {
+  if (!_pinBuffer.length) return;
+  _pinBuffer = _pinBuffer.slice(0, -1);
+  _actualizarPinDots();
+  const err = document.getElementById('lock-error');
+  if (err) err.textContent = '';
+}
+
+function _actualizarPinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pin-dot-' + i);
+    if (dot) dot.classList.toggle('pin-dot-filled', i < _pinBuffer.length);
+  }
+}
+
+function _verificarLockPin() {
+  const pin = localStorage.getItem('_tinclass_pin');
+  if (_pinBuffer === pin) {
+    _pinBuffer = '';
+    _actualizarPinDots();
+    _completarDesbloqueo();
+  } else {
+    const err = document.getElementById('lock-error');
+    if (err) err.textContent = 'PIN incorrecto. Intenta de nuevo.';
+    const dotsEl = document.getElementById('lock-pin-dots');
+    if (dotsEl) {
+      dotsEl.classList.add('pin-shake');
+      setTimeout(() => dotsEl.classList.remove('pin-shake'), 400);
+    }
+    _pinBuffer = '';
+    setTimeout(_actualizarPinDots, 160);
+  }
+}
+
+function _lockMostrarContrasena() {
+  document.getElementById('lock-pin-section').style.display = 'none';
+  const user = window.currentUser;
+  const esGoogle = user?.providerData?.some(p => p.providerId === 'google.com');
+  const passSection   = document.getElementById('lock-pass-section');
+  const googleSection = document.getElementById('lock-google-section');
+  if (passSection)   passSection.style.display   = esGoogle ? 'none' : 'block';
+  if (googleSection) googleSection.style.display = esGoogle ? 'block' : 'none';
+  setTimeout(() => document.getElementById('lock-pass-input')?.focus(), 60);
+}
+
+// ── Configurar PIN desde el modal de ajustes ────────────────────────────
+function _cfgActualizarEstadoPin() {
+  const pin = localStorage.getItem('_tinclass_pin');
+  const statusEl  = document.getElementById('cfg-pin-status');
+  const quitarRow = document.getElementById('cfg-pin-quitar-row');
+  if (statusEl)  statusEl.textContent  = pin ? 'Activo — 4 dígitos configurados' : 'No configurado — se usará contraseña para desbloquear';
+  if (quitarRow) quitarRow.style.display = pin ? 'block' : 'none';
+}
+
+function _cfgAbrirSetPin() {
+  const form = document.getElementById('cfg-pin-form');
+  if (form) form.style.display = 'block';
+  const input = document.getElementById('cfg-pin-input');
+  if (input) { input.value = ''; input.focus(); }
+  const err = document.getElementById('cfg-pin-err');
+  if (err) err.textContent = '';
+}
+
+function _cfgGuardarPin() {
+  const val = document.getElementById('cfg-pin-input')?.value || '';
+  const err = document.getElementById('cfg-pin-err');
+  if (!/^\d{4}$/.test(val)) {
+    if (err) err.textContent = 'El PIN debe tener exactamente 4 dígitos numéricos.';
+    return;
+  }
+  localStorage.setItem('_tinclass_pin', val);
+  document.getElementById('cfg-pin-form').style.display = 'none';
+  _cfgActualizarEstadoPin();
+  mostrarToast('PIN de bloqueo configurado', 'success');
+}
+
+function _cfgPinCancelar() {
+  const form = document.getElementById('cfg-pin-form');
+  if (form) form.style.display = 'none';
+}
+
+function _cfgQuitarPin() {
+  if (!confirm('¿Quitar el PIN? Se usará la contraseña para desbloquear la pantalla.')) return;
+  localStorage.removeItem('_tinclass_pin');
+  _cfgActualizarEstadoPin();
+  mostrarToast('PIN eliminado', 'info');
 }
 
 function mostrarToast(mensaje, tipo = 'success') {
@@ -9243,6 +9352,40 @@ function _irACalificacionesPlan(cursoId, planId) {
   abrirCalificaciones();
 }
 
+// ─── Tooltip táctil para nombre de actividad (mobile) ────────────────
+let _tooltipActTimer = null;
+function _mostrarTooltipAct(e, th) {
+  if (e.target.tagName === 'INPUT') return;
+  e.stopPropagation();
+  const nombre = th.dataset.actNombre || th.title || '';
+  if (!nombre) return;
+  const existing = document.getElementById('_act-tooltip');
+  if (existing) { existing.remove(); clearTimeout(_tooltipActTimer); _tooltipActTimer = null; return; }
+  if (_tooltipActTimer) clearTimeout(_tooltipActTimer);
+  const tip = document.createElement('div');
+  tip.id = '_act-tooltip';
+  tip.style.cssText = 'position:fixed;background:#1A237E;color:#fff;padding:10px 14px;border-radius:10px;font-size:0.84rem;max-width:260px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.35);pointer-events:none;line-height:1.45;word-break:break-word;text-align:center;';
+  tip.textContent = nombre;
+  document.body.appendChild(tip);
+  const rect = th.getBoundingClientRect();
+  const tipW = tip.offsetWidth;
+  const tipH = tip.offsetHeight;
+  const x = Math.min(Math.max(8, rect.left + rect.width / 2 - tipW / 2), window.innerWidth - tipW - 8);
+  const y = rect.bottom + 8;
+  tip.style.left = x + 'px';
+  tip.style.top = Math.min(y, window.innerHeight - tipH - 8) + 'px';
+  _tooltipActTimer = setTimeout(() => { tip.remove(); _tooltipActTimer = null; }, 4000);
+  setTimeout(() => {
+    document.addEventListener('click', function dismissTip() {
+      const t = document.getElementById('_act-tooltip');
+      if (t) t.remove();
+      clearTimeout(_tooltipActTimer);
+      _tooltipActTimer = null;
+      document.removeEventListener('click', dismissTip);
+    });
+  }, 80);
+}
+
 // ─── Tabla de calificaciones (usa planificación activa del curso) ─
 function renderizarTablaCalificaciones() {
   const thead = document.getElementById('cal-thead');
@@ -9346,7 +9489,7 @@ function renderizarTablaCalificaciones() {
       _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
       const numInEC = _idxEC[a.ecCodigo || ''];
       const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
-      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" style="min-width:80px;">'
+      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" data-act-nombre="' + escapeHTML(a.enunciado) + '" onclick="_mostrarTooltipAct(event,this)" style="min-width:80px;cursor:pointer;">'
         + '<div style="font-size:0.72rem;font-weight:600;">Act.' + actNum
         + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
         + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
@@ -20648,6 +20791,7 @@ function abrirConfiguracion() {
       || (typeof TINCLASS_INVITE_CODE_DEFAULT !== 'undefined' ? TINCLASS_INVITE_CODE_DEFAULT : 'TINCLASS2026');
     inviteLbl.textContent = 'Código activo: ' + codigoActual;
   }
+  _cfgActualizarEstadoPin();
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
