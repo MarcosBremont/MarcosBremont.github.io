@@ -1478,11 +1478,6 @@ function obtenerPlantillasActividad(ec) {
     ? matchObj[1].trim()
     : enunciado.replace(/^[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+\s+/, '').split(',')[0].trim();
 
-  // Limitar longitud
-  if (campo.length > 60) {
-    campo = campo.substring(0, 57) + '...';
-  }
-
   const mapActividades = {
     conocimiento: [
       `Cuestionario escrito: Identificación y definición de los conceptos clave relacionados con ${campo}`,
