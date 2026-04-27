@@ -16981,27 +16981,71 @@ async function generarIndexHtml(actId) {
   const _tc = function(s, max) { return s && s.length > max ? s.substring(0, max) + '...' : (s || ''); };
 
   const prompt =
-    'Genera un index.html COMPLETO para estudiantes de bachillerato (hoja de trabajo imprimible).\n\n' +
+    'Genera un index.html COMPLETO y SOFISTICADO para estudiantes de bachillerato (hoja de trabajo imprimible/interactiva de alta calidad).\n\n' +
     'DATOS: Asignatura=' + materia + ' | Centro=' + centro + ' | Docente=' + docente + '\n' +
     'Actividad: ' + (act.ecCodigo || '') + ': ' + act.enunciado + '\n' +
     'RA: ' + raDesc + '\n' +
-    'Previas: ' + _tc(actsPreviasStr, 300) + '\n\n' +
-    '[INICIO] ' + _tc(inicio, 500) + '\n\n' +
-    '[DESARROLLO] ' + _tc(desarrollo, 700) + '\n\n' +
-    '[CIERRE] ' + _tc(cierre, 400) + '\n\n' +
-    'DISENO — CSS variables en :root: --ink:#1a1a2e; --paper:#faf8f3; --accent:#c84b31; --gold:#e8a838; --teal:#2a7f7f; --warm:#f0e9dc; --mid:#6b6b8a; --line:#c8c0b0; --mono:"DM Mono",monospace; --serif:"Fraunces",serif; --sans:"Outfit",sans-serif\n' +
-    'Google Fonts: Fraunces (ital,wght@0,300;0,500;0,700;1,300;1,500), DM Mono (wght@400;500), Outfit (wght@300;400;500;600)\n' +
-    'Clases requeridas: .page(860px max-width), .top-bar(7px repeating-gradient accent/gold/teal), .corner-mark(abs top-right serif italic), .header(.breadcrumb mono, .act-label badge rojo, h1 serif con em teal, .rae-box borde-left teal, .meta-row, .name-field write-lines), .section-header(.section-num badge ink, .section-title serif), .motivation-box(gradient teal texto blanco ::before comilla), .callout(warm borde-left gold), .concept-grid(2cols), .concept-card(.c-num .example borde-left teal), .data-table(thead ink filas alternas), .activity-box(borde gold .act-tag abs top), .case-box(.metric-row 3 metricas), .write-line(input solo border-bottom sin caja), .write-label(mono uppercase), .tool-tag, .question-block(.q-num badge accent, .options radio), .ticket(fondo ink texto blanco .ticket-label gold), .self-eval-table(checkboxes), .task-box(borde ink 2px .t-label abs), .divider(::before diamond), .footer(flex space-between mono/serif), @media print, @media 600px\n\n' +
-    '8 SECCIONES OBLIGATORIAS:\n' +
-    '01 Punto de partida 💡: .motivation-box pregunta + 3 write-label con write-lines\n' +
-    '02 Conceptos clave 📖 (badge COPIAR): .callout + 4-6 .concept-card en .concept-grid + .data-table 5 filas\n' +
-    '03 Actividad guiada 🤝 (~20min parejas): .activity-box con .case-box caso RD + .metric-row + tabla plan + write-lines\n' +
-    '04 Actividad autonoma 🖥️ (~30min individual): .activity-box teal + .tool-tag + ol pasos + write-lines resultados\n' +
-    '05 Verificacion ✅: 3 opcion-multiple (4 opciones radio cada una) + 2 preguntas abiertas write-lines\n' +
-    '06 Ticket de salida 🎫: .ticket oscuro con 3 meta-q + write-lines blancas\n' +
-    '07 Autoevaluacion 📊: .self-eval-table 6-7 indicadores checkboxes (Lo logre/En proceso/Necesito apoyo)\n' +
-    '08 Tarea 📚: .task-box con requisitos ul + write-lines fuentes\n\n' +
-    'REGLAS: espanol con tildes/enyes, ejemplos dominicanos, conceptos solo los nuevos (no los de previas), auto-contenido. NO markdown. Empieza con <!DOCTYPE html>.';
+    'Previas (ya vistas, NO repetir): ' + _tc(actsPreviasStr, 500) + '\n\n' +
+    '[INICIO DE SESION]:\n' + _tc(inicio, 800) + '\n\n' +
+    '[DESARROLLO]:\n' + _tc(desarrollo, 1400) + '\n\n' +
+    '[CIERRE]:\n' + _tc(cierre, 600) + '\n\n' +
+    'DISENO OBLIGATORIO — :root { --ink:#1a1a2e; --paper:#faf8f3; --accent:#c84b31; --gold:#e8a838; --teal:#2a7f7f; --warm:#f0e9dc; --mid:#6b6b8a; --line:#c8c0b0; --mono:"DM Mono",monospace; --serif:"Fraunces",serif; --sans:"Outfit",sans-serif; }\n' +
+    'Google Fonts: Fraunces(ital,wght@0,300;0,500;0,700;1,300;1,500) + DM Mono(wght@400;500) + Outfit(wght@300;400;500;600)\n' +
+    'CSS CLASES (implementa todas con sus propiedades correctas):\n' +
+    '.page{max-width:860px;margin:0 auto;background:var(--paper);box-shadow:0 4px 40px rgba(0,0,0,.18)}\n' +
+    '.top-bar{height:7px;background:repeating-linear-gradient(90deg,var(--accent) 0 80px,var(--gold) 80px 160px,var(--teal) 160px 240px)}\n' +
+    '.corner-mark{position:absolute;top:60px;right:40px;font-family:var(--serif);font-style:italic;font-size:.72rem;color:var(--mid);text-align:right;opacity:.7}\n' +
+    '.header{padding:2.4rem 3rem 1.8rem;border-bottom:1px solid var(--line);position:relative}\n' +
+    '.breadcrumb{font-family:var(--mono);font-size:.68rem;color:var(--mid);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;display:flex;gap:.5rem}\n' +
+    '.act-label{display:inline-block;font-family:var(--mono);font-size:.7rem;background:var(--accent);color:white;padding:.2rem .75rem;letter-spacing:.1em;margin-bottom:.8rem}\n' +
+    '.header h1{font-family:var(--serif);font-size:2.1rem;font-weight:500;line-height:1.2;max-width:600px;margin-bottom:.6rem} .header h1 em{font-style:italic;font-weight:300;color:var(--teal)}\n' +
+    '.rae-box{background:var(--warm);border-left:3px solid var(--teal);padding:.75rem 1rem;margin-top:1rem;display:flex;gap:.8rem} .rae-box .tag{font-family:var(--mono);font-size:.65rem;background:var(--teal);color:white;padding:.15rem .5rem;white-space:nowrap}\n' +
+    '.meta-row{display:flex;gap:2rem;margin-top:1.2rem;padding-top:1rem;border-top:1px dashed var(--line);flex-wrap:wrap} .meta-item{display:flex;flex-direction:column;gap:.15rem} .meta-item .label{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;color:var(--mid)} .meta-item .val{font-size:.83rem;font-weight:500}\n' +
+    '.name-field{display:flex;gap:2rem;margin-top:1rem;flex-wrap:wrap} .name-field .field{flex:1;min-width:180px} .name-field .field .label{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;color:var(--mid);display:block;margin-bottom:.3rem}\n' +
+    '.content{padding:0 3rem 3rem} .section{margin-top:2.5rem}\n' +
+    '.section-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;padding-bottom:.5rem;border-bottom:1.5px solid var(--ink)}\n' +
+    '.section-num{font-family:var(--mono);font-size:.65rem;background:var(--ink);color:var(--paper);padding:.25rem .6rem;letter-spacing:.05em}\n' +
+    '.section-title{font-family:var(--serif);font-size:1.25rem;font-weight:500} .section-icon{margin-left:auto;font-size:1.1rem;opacity:.5}\n' +
+    '.motivation-box{background:linear-gradient(135deg,var(--teal) 0%,#1d5f5f 100%);color:white;padding:1.4rem 1.6rem;position:relative;overflow:hidden;margin-bottom:1.2rem}\n' +
+    '.motivation-box::before{content:\'\\201C\';font-family:var(--serif);font-size:8rem;position:absolute;top:-20px;left:10px;opacity:.15;line-height:1}\n' +
+    '.motivation-box p{font-family:var(--serif);font-style:italic;font-size:1.1rem;line-height:1.6;position:relative}\n' +
+    '.copy-badge{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.6rem;background:var(--accent);color:white;padding:.18rem .55rem;letter-spacing:.06em;vertical-align:middle;margin-left:.5rem}\n' +
+    '.callout{display:flex;gap:.8rem;background:var(--warm);border-left:3px solid var(--gold);padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;line-height:1.5} .callout .ico{font-size:1.1rem;flex-shrink:0}\n' +
+    '.concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem}\n' +
+    '.concept-card{border:1px solid var(--line);padding:1rem 1.1rem;background:white} .concept-card .c-num{font-family:var(--mono);font-size:.62rem;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem} .concept-card h3{font-family:var(--serif);font-size:1rem;font-weight:500;margin-bottom:.4rem} .concept-card p{font-size:.8rem;line-height:1.5} .concept-card .example{margin-top:.5rem;background:var(--warm);padding:.4rem .6rem;font-family:var(--mono);font-size:.68rem;color:var(--teal);border-left:2px solid var(--teal)}\n' +
+    '.data-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:1rem} .data-table th{background:var(--ink);color:white;padding:.5rem .75rem;text-align:left;font-family:var(--mono);font-size:.65rem;letter-spacing:.06em;text-transform:uppercase} .data-table td{padding:.5rem .75rem;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4} .data-table tr:nth-child(even) td{background:var(--warm)}\n' +
+    '.activity-box{border:1.5px solid var(--gold);padding:1.2rem 1.4rem;margin-bottom:1.2rem;position:relative;background:#fffcf5}\n' +
+    '.activity-box .act-tag{position:absolute;top:-10px;left:16px;background:var(--gold);color:var(--ink);font-family:var(--mono);font-size:.62rem;font-weight:500;padding:.15rem .6rem;letter-spacing:.08em;text-transform:uppercase}\n' +
+    '.activity-box h4{font-family:var(--serif);font-weight:500;font-size:1rem;margin-bottom:.6rem;margin-top:.3rem} .activity-box p,.activity-box li{font-size:.82rem;line-height:1.6} .activity-box ul,.activity-box ol{padding-left:1.4rem;margin-top:.4rem} .activity-box li{margin-bottom:.3rem}\n' +
+    '.team-badge{display:inline-flex;align-items:center;gap:.35rem;background:var(--ink);color:white;font-family:var(--mono);font-size:.62rem;padding:.2rem .6rem;margin-bottom:.7rem}\n' +
+    '.write-line{width:100%;border:none;border-bottom:1px solid var(--line);background:transparent;padding:.4rem .2rem;font-family:var(--sans);font-size:.83rem;color:var(--ink);display:block;margin-bottom:.2rem;outline:none}\n' +
+    '.write-line:focus{border-bottom-color:var(--teal)} .write-label{font-family:var(--mono);font-size:.63rem;color:var(--mid);text-transform:uppercase;letter-spacing:.08em;display:block;margin-top:.8rem;margin-bottom:.2rem}\n' +
+    '.case-box{background:#f0f7f7;border:1px solid #a8d0d0;padding:1.1rem 1.3rem;margin-bottom:1rem} .case-box .case-label{font-family:var(--mono);font-size:.62rem;color:var(--teal);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem} .case-box h4{font-family:var(--serif);font-size:.95rem;font-weight:500;margin-bottom:.5rem}\n' +
+    '.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.8rem} .metric{background:white;border:1px solid #a8d0d0;padding:.5rem .7rem;text-align:center} .metric .m-val{font-family:var(--mono);font-size:1.2rem;font-weight:500;color:var(--accent);display:block} .metric .m-label{font-size:.65rem;color:var(--mid);display:block;margin-top:.1rem}\n' +
+    '.tool-tag{display:inline-block;background:#e8e4dc;border:1px solid var(--line);font-family:var(--mono);font-size:.65rem;padding:.15rem .5rem;color:var(--teal);margin:.15rem}\n' +
+    '.question-block{margin-bottom:1.4rem;padding-bottom:1rem;border-bottom:1px dashed var(--line)} .q-num{font-family:var(--mono);font-size:.65rem;background:var(--accent);color:white;padding:.15rem .5rem;display:inline-block;margin-bottom:.5rem} .question-block p.q-text{font-size:.88rem;font-weight:500;line-height:1.5;margin-bottom:.6rem}\n' +
+    '.options{display:flex;flex-direction:column;gap:.4rem} .option{display:flex;align-items:flex-start;gap:.6rem;font-size:.82rem;line-height:1.4;cursor:pointer} .option input[type="radio"]{margin-top:3px;accent-color:var(--teal);flex-shrink:0}\n' +
+    '.ticket{background:var(--ink);color:white;padding:1.5rem 1.8rem;position:relative;overflow:hidden;margin-bottom:1.5rem}\n' +
+    '.ticket-label{font-family:var(--mono);font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem} .ticket-label::after{content:\'\';flex:1;height:1px;background:rgba(255,255,255,.15)}\n' +
+    '.ticket h3{font-family:var(--serif);font-size:1.1rem;font-weight:300;font-style:italic;margin-bottom:1rem;color:rgba(255,255,255,.9)} .ticket .meta-q{font-size:.82rem;font-weight:500;color:rgba(255,255,255,.85);margin-bottom:.3rem;margin-top:.9rem} .ticket .write-line{border-bottom-color:rgba(255,255,255,.25);color:white}\n' +
+    '.self-eval-table{width:100%;border-collapse:collapse;font-size:.78rem} .self-eval-table th{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;padding:.5rem .75rem;text-align:center;background:var(--warm);border:1px solid var(--line);color:var(--mid)} .self-eval-table th:first-child{text-align:left} .self-eval-table td{padding:.55rem .75rem;border:1px solid var(--line);vertical-align:top;line-height:1.4} .self-eval-table td:not(:first-child){text-align:center} .self-eval-table tr:nth-child(even) td{background:#fdfcf8}\n' +
+    'input[type="checkbox"]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer}\n' +
+    '.task-box{border:2px solid var(--ink);padding:1.2rem 1.4rem;position:relative;background:white} .task-box .t-label{position:absolute;top:-11px;left:14px;background:var(--ink);color:white;font-family:var(--mono);font-size:.65rem;padding:.2rem .7rem;letter-spacing:.08em;text-transform:uppercase} .task-box h4{font-family:var(--serif);font-weight:500;font-size:1rem;margin-bottom:.6rem;margin-top:.3rem} .task-box p,.task-box li{font-size:.82rem;line-height:1.6} .task-box ul{padding-left:1.3rem} .task-box li{margin-bottom:.25rem}\n' +
+    '.divider{height:1px;background:var(--line);margin:2rem 0;position:relative} .divider::before{content:"◆";position:absolute;left:50%;transform:translateX(-50%) translateY(-50%);background:var(--paper);padding:0 .5rem;font-size:.6rem;color:var(--line)}\n' +
+    '.footer{background:var(--warm);border-top:1px solid var(--line);padding:.8rem 3rem;display:flex;justify-content:space-between;align-items:center} .footer .f-left{font-family:var(--mono);font-size:.65rem;color:var(--mid);line-height:1.6} .footer .f-right{font-family:var(--serif);font-style:italic;font-size:.75rem;color:var(--mid)}\n' +
+    '@media print{.no-print{display:none!important} body{background:white} .page{box-shadow:none;margin:0}}\n' +
+    '@media (max-width:600px){.content{padding:0 1.2rem 2rem} .header{padding:1.5rem 1.2rem 1.2rem} .header h1{font-size:1.5rem} .concept-grid{grid-template-columns:1fr} .metric-row{grid-template-columns:1fr 1fr} .footer{flex-direction:column;gap:.3rem;text-align:center} .corner-mark{display:none}}\n\n' +
+    'ESTRUCTURA OBLIGATORIA 8 SECCIONES (contenido REAL basado en los datos de sesion, SIN placeholders):\n' +
+    '01 Punto de partida 💡: .motivation-box(p pregunta provocadora real) + parrafo introductorio + 3 .write-label distintos con 2-3 <input class="write-line" type="text"> c/u\n' +
+    '02 Conceptos clave 📖 (.copy-badge "✏️ COPIAR"): .callout(p con .ico 📌) + 4-6 .concept-card REALES en .concept-grid (c-num, h3, p definicion, .example con ejemplo dominicano) + .data-table(4 cols: Tecnica/Que hace/Herramienta/Beneficio, 5 filas reales) + p centrado mono "↑ Copia la tabla en tu cuaderno"\n' +
+    '03 Actividad guiada 🤝: .activity-box(.act-tag "⏱ 20 min · En parejas", .team-badge "👥 Equipo de 2") + .case-box(.case-label "📋 Caso de estudio", h4 nombre real RD, p descripcion real, .metric-row 3 .metric con datos reales) + h4+ol instrucciones reales + .data-table plan con inputs .write-line en td + 2 write-label+write-lines\n' +
+    '04 Actividad autonoma 🖥️: .activity-box(style borde teal, .act-tag teal "⏱ 30 min · Individual") + h4 + p descripcion + .tool-tag x3-5 + ol pasos reales numerados + 4 write-label+<input class="write-line"> para URL/puntuacion/tecnicas/resultado\n' +
+    '05 Verificacion ✅: 3 .question-block opcion-multiple (q-num "P-0X · Opcion multiple", p.q-text REAL, .options con 4 <label class="option"><input type="radio" name="qX"> span A/B/C/D</label>) + 2 .question-block pregunta abierta (q-num, p.q-text, 3 inputs write-line)\n' +
+    '06 Ticket de salida 🎫: .ticket(fondo ink) con .ticket-label + h3 serif italic + 3 p.meta-q de metacognicion + 2 <input class="write-line"> por pregunta\n' +
+    '07 Autoevaluacion 📊: p introductorio + .self-eval-table con thead(Indicador/Lo logre/En proceso/Necesito apoyo) + 6-7 tr con td texto indicador ESPECIFICO + 3 td con <input type="checkbox"> c/u + write-label+2 inputs\n' +
+    '08 Tarea 📚: .task-box(.t-label "🏠 Para entregar en la proxima clase") + h4 titulo tarea REAL + p descripcion + ul requisitos concretos + 2 write-label+input\n\n' +
+    'FOOTER: .f-left con centro y asignatura, .f-right con docente\n\n' +
+    'REGLAS CRITICAS: espanol con tildes y enyes correctos, ejemplos del contexto dominicano, conceptos NUEVOS solamente (los de previas NO), archivo auto-contenido, NO markdown ni bloques de codigo. Empieza DIRECTAMENTE con <!DOCTYPE html>.';
 
   const btn = document.querySelector('[onclick*="generarIndexHtml(\'' + actId + '\')"]');
   const _restaurarBtn = function() {
