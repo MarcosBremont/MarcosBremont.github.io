@@ -17112,37 +17112,118 @@ async function generarIndexHtml(actId) {
     '<div class="f-right">Docente: ' + _e(docente) + '</div>' +
     '</div>\n</div>\n</body>\n</html>';
 
-  /* Prompt corto: AI genera SOLO las 8 secciones (sin CSS, sin head, sin body wrapper) */
-  const prompt =
-    'Genera SOLO el HTML de 8 secciones para hoja de trabajo de ' + materia + '.\n' +
-    'El CSS ya existe. NO incluyas html/head/body/style. Empieza con <div class="section">.\n\n' +
-    'DATOS: ' + (act.ecCodigo || '') + ': ' + act.enunciado + '\n' +
-    'RA: ' + raDesc + '\n' +
-    'Previas (no repetir contenido): ' + _tc(actsPreviasStr, 400) + '\n\n' +
-    '[INICIO]:\n' + _tc(inicio, 600) + '\n\n' +
-    '[DESARROLLO]:\n' + _tc(desarrollo, 1200) + '\n\n' +
-    '[CIERRE]:\n' + _tc(cierre, 500) + '\n\n' +
-    'CLASES CSS DISPONIBLES:\n' +
-    '.section .section-header .section-num .section-title .section-icon\n' +
-    '.motivation-box(p italic sobre teal) .callout(.ico) .copy-badge\n' +
-    '.concept-grid(2cols) .concept-card(.c-num .example borde-left teal)\n' +
-    '.data-table(thead ink) .activity-box(.act-tag abs top, borde gold o teal) .team-badge\n' +
-    '.case-box(.case-label .metric-row 3 .metric con .m-val y .m-label)\n' +
-    '.write-line(input type=text sin caja solo border-bottom) .write-label(mono uppercase)\n' +
-    '.tool-tag .question-block(.q-num .q-text .options .option radio)\n' +
-    '.ticket(fondo oscuro ink .ticket-label gold .meta-q)\n' +
-    '.self-eval-table(thead warm checkboxes) .task-box(.t-label abs top) .divider\n\n' +
-    'GENERA EXACTAMENTE 8 SECCIONES con contenido REAL del tema:\n' +
-    '01 Punto de partida: .motivation-box pregunta + 3 write-label + inputs\n' +
-    '02 Conceptos clave (.copy-badge COPIAR): .callout + 4-6 .concept-card(c-num,h3,p,.example RD) + .data-table 5 filas reales\n' +
-    '03 Actividad guiada (~20min parejas): .activity-box(.act-tag,.team-badge) + .case-box(caso RD,.metric-row 3 datos) + ol + .data-table plan\n' +
-    '04 Actividad autonoma (~30min): .activity-box(borde teal,.act-tag) + .tool-tag x3 + ol + write-label+input\n' +
-    '05 Verificacion: 3 opcion multiple (4 .option radio) + 2 pregunta abierta (3 inputs)\n' +
-    '06 Ticket salida: .ticket(.ticket-label, h3 italic, 3 .meta-q + 2 inputs write-line c/u)\n' +
-    '07 Autoevaluacion: .self-eval-table(6-7 indicadores + checkboxes 3 columnas)\n' +
-    '08 Tarea: .task-box(.t-label, h4, p, ul) + 2 write-label+input\n\n' +
-    'Separar secciones con <div class="divider"></div>\n' +
-    'Reglas: espanol con tildes, ejemplos dominicanos, conceptos nuevos solo, SOLO divs de seccion.';
+  /* Prompts divididos en 2: cada llamada genera 4 secciones (la mitad del JSON) */
+  const _jsonSysMsg = 'Eres un generador de contenido educativo. Responde UNICAMENTE con JSON valido. Sin markdown, sin HTML, sin CSS, sin texto extra. El primer y ultimo caracter de tu respuesta deben ser { y }.';
+  const _promptBase =
+    'MATERIA: ' + _tc(materia, 60) + '\n' +
+    'TEMA: ' + _tc(act.ecCodigo || '', 30) + ' - ' + _tc(act.enunciado, 120) + '\n' +
+    'RA: ' + _tc(raDesc, 180) + '\n' +
+    'INICIO: ' + _tc(inicio, 300) + '\n' +
+    'DESARROLLO: ' + _tc(desarrollo, 600) + '\n' +
+    'CIERRE: ' + _tc(cierre, 200) + '\n\n' +
+    'Espanol con tildes. Ejemplos dominicanos. Rellena TODOS los [placeholders] con contenido REAL.\n';
+  const prompt1 = _promptBase +
+    'Genera SOLO este JSON (secciones 01-04):\n' +
+    '{"s1":{"preg":"[pregunta motivadora]","inputs":["[etiqueta 1]","[etiqueta 2]","[etiqueta 3]"]},' +
+    '"s2":{"intro":"[1 oracion]","tarjetas":[{"t":"[c1]","d":"[desc 2-3 oraciones]","ej":"[ej RD]"},{"t":"[c2]","d":"[d]","ej":"[ej]"},{"t":"[c3]","d":"[d]","ej":"[ej]"},{"t":"[c4]","d":"[d]","ej":"[ej]"}],' +
+    '"tabla":{"cols":["Concepto","Descripcion","Uso"],"filas":[["[c1]","[d1]","[u1]"],["[c2]","[d2]","[u2]"],["[c3]","[d3]","[u3]"],["[c4]","[d4]","[u4]"],["[c5]","[d5]","[u5]"]]}},' +
+    '"s3":{"titulo":"[titulo]","pasos":["[p1]","[p2]","[p3]"],"caso":{"t":"[caso RD]","d":"[desc]","m":[{"v":"[X%]","l":"[label]"},{"v":"[Xs]","l":"[label]"},{"v":"[X]","l":"[label]"}]},' +
+    '"tabla":{"cols":["Aspecto","Herramienta","Resultado"],"filas":[["[a1]","[h1]","[r1]"],["[a2]","[h2]","[r2]"],["[a3]","[h3]","[r3]"]]}},' +
+    '"s4":{"herr":["[h1]","[h2]","[h3]"],"pasos":["[p1]","[p2]","[p3]","[p4]"],"reflex":"[pregunta]"}}';
+  const prompt2 = _promptBase +
+    'Genera SOLO este JSON (secciones 05-08):\n' +
+    '{"s5":{"mc":[{"p":"[preg 1]","a":"[A]","b":"[B]","c":"[C]","d":"[D]"},{"p":"[p2]","a":"[a]","b":"[b]","c":"[c]","d":"[d]"},{"p":"[p3]","a":"[a]","b":"[b]","c":"[c]","d":"[d]"}],"ab":["[abierta 1]","[abierta 2]"]},' +
+    '"s6":{"preg":"[pregunta reflexion profunda]","q":["[q1]","[q2]","[q3]"]},' +
+    '"s7":{"ind":["[ind1]","[ind2]","[ind3]","[ind4]","[ind5]","[ind6]"]},' +
+    '"s8":{"t":"[titulo tarea]","d":"[desc]","items":["[i1]","[i2]","[i3]"],"entrega":"[instruccion]"}}';
+
+  /* Construir HTML completo desde el JSON devuelto por el AI */
+  function _buildSections(data) {
+    if (!data) return '';
+    var h = '';
+    var D = '\n<div class="divider"></div>\n';
+    // S1: Punto de partida
+    var s1 = data.s1 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">01</span><span class="section-title">Punto de partida</span><span class="section-icon">&#x1F4AD;</span></div>\n';
+    h += '<div class="motivation-box"><p>' + _e(s1.preg || '') + '</p></div>\n';
+    (s1.inputs || []).forEach(function(lbl) { h += '<span class="write-label">' + _e(lbl) + '</span><input class="write-line" type="text" placeholder="Escribe aqu&#237;...">\n'; });
+    h += '</div>' + D;
+    // S2: Conceptos clave
+    var s2 = data.s2 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">02</span><span class="section-title">Conceptos clave <span class="copy-badge">COPIAR</span></span><span class="section-icon">&#x1F4D6;</span></div>\n';
+    if (s2.intro) h += '<div class="callout"><span class="ico">&#x1F4A1;</span><span>' + _e(s2.intro) + '</span></div>\n';
+    if (s2.tarjetas && s2.tarjetas.length) {
+      h += '<div class="concept-grid">\n';
+      s2.tarjetas.forEach(function(c, i) { h += '<div class="concept-card"><div class="c-num">CONCEPTO 0' + (i + 1) + '</div><h3>' + _e(c.t || '') + '</h3><p>' + _e(c.d || '') + '</p>' + (c.ej ? '<div class="example">Ej: ' + _e(c.ej) + '</div>' : '') + '</div>\n'; });
+      h += '</div>\n';
+    }
+    if (s2.tabla) {
+      h += '<table class="data-table"><thead><tr>' + (s2.tabla.cols || []).map(function(c) { return '<th>' + _e(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
+      (s2.tabla.filas || []).forEach(function(row) { h += '<tr>' + (Array.isArray(row) ? row : []).map(function(cell) { return '<td>' + _e(String(cell)) + '</td>'; }).join('') + '</tr>'; });
+      h += '</tbody></table>\n';
+    }
+    h += '</div>' + D;
+    // S3: Actividad guiada
+    var s3 = data.s3 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">03</span><span class="section-title">Actividad guiada (~20 min)</span><span class="section-icon">&#x1F465;</span></div>\n';
+    h += '<div class="activity-box"><span class="act-tag">ACTIVIDAD GUIADA</span><span class="team-badge">Parejas</span>';
+    if (s3.titulo) h += '<h4>' + _e(s3.titulo) + '</h4>';
+    if (s3.pasos && s3.pasos.length) { h += '<ol>'; s3.pasos.forEach(function(p) { h += '<li>' + _e(p) + '</li>'; }); h += '</ol>'; }
+    h += '</div>\n';
+    if (s3.caso) {
+      h += '<div class="case-box"><div class="case-label">CASO PR&#193;CTICO</div><h4>' + _e(s3.caso.t || '') + '</h4><p>' + _e(s3.caso.d || '') + '</p>';
+      if (s3.caso.m && s3.caso.m.length) { h += '<div class="metric-row">'; s3.caso.m.forEach(function(m) { h += '<div class="metric"><span class="m-val">' + _e(m.v || '') + '</span><span class="m-label">' + _e(m.l || '') + '</span></div>'; }); h += '</div>'; }
+      h += '</div>\n';
+    }
+    if (s3.tabla) {
+      h += '<table class="data-table"><thead><tr>' + (s3.tabla.cols || []).map(function(c) { return '<th>' + _e(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
+      (s3.tabla.filas || []).forEach(function(row) { h += '<tr>' + (Array.isArray(row) ? row : []).map(function(cell) { return '<td>' + _e(String(cell)) + '</td>'; }).join('') + '</tr>'; });
+      h += '</tbody></table>\n';
+    }
+    h += '</div>' + D;
+    // S4: Actividad autónoma
+    var s4 = data.s4 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">04</span><span class="section-title">Actividad aut&#243;noma (~30 min)</span><span class="section-icon">&#x26A1;</span></div>\n';
+    h += '<div class="activity-box" style="border-color:var(--teal)"><span class="act-tag" style="background:var(--teal);color:white;">AUT&#211;NOMA</span>';
+    if (s4.herr && s4.herr.length) { h += '<div style="margin:.3rem 0 .8rem">'; s4.herr.forEach(function(t) { h += '<span class="tool-tag">' + _e(t) + '</span>'; }); h += '</div>'; }
+    if (s4.pasos && s4.pasos.length) { h += '<ol>'; s4.pasos.forEach(function(p) { h += '<li>' + _e(p) + '</li>'; }); h += '</ol>'; }
+    if (s4.reflex) h += '<span class="write-label">Reflexi&#243;n final</span><input class="write-line" type="text" placeholder="' + _e(s4.reflex) + '">';
+    h += '</div>\n</div>' + D;
+    // S5: Verificación
+    var s5 = data.s5 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">05</span><span class="section-title">Verificaci&#243;n de aprendizaje</span><span class="section-icon">&#x2713;</span></div>\n';
+    (s5.mc || []).forEach(function(q, i) {
+      h += '<div class="question-block"><span class="q-num">0' + (i + 1) + '</span><p class="q-text">' + _e(q.p || '') + '</p><div class="options">';
+      ['a','b','c','d'].forEach(function(k) { if (q[k]) h += '<label class="option"><input type="radio" name="q5_' + i + '">' + _e(q[k]) + '</label>'; });
+      h += '</div></div>\n';
+    });
+    (s5.ab || []).forEach(function(q, i) {
+      h += '<div class="question-block"><span class="q-num">0' + (i + 4) + '</span><p class="q-text">' + _e(q) + '</p><input class="write-line" type="text" placeholder="Tu respuesta..."><input class="write-line" type="text" placeholder="Contin&#250;a..."><input class="write-line" type="text" placeholder="..."></div>\n';
+    });
+    h += '</div>' + D;
+    // S6: Ticket de salida
+    var s6 = data.s6 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">06</span><span class="section-title">Ticket de salida</span><span class="section-icon">&#x1F3AB;</span></div>\n';
+    h += '<div class="ticket"><div class="ticket-label">TICKET DE SALIDA</div><h3>' + _e(s6.preg || '') + '</h3>';
+    (s6.q || []).forEach(function(q) { h += '<p class="meta-q">' + _e(q) + '</p><input class="write-line" type="text" placeholder="Responde aqu&#237;..."><input class="write-line" type="text" placeholder="...">'; });
+    h += '</div>\n</div>' + D;
+    // S7: Autoevaluación
+    var s7 = data.s7 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">07</span><span class="section-title">Autoevaluaci&#243;n</span><span class="section-icon">&#x1F50D;</span></div>\n';
+    h += '<table class="self-eval-table"><thead><tr><th>Indicador de logro</th><th>Lo logr&#233;</th><th>En proceso</th><th>No a&#250;n</th></tr></thead><tbody>';
+    (s7.ind || []).forEach(function(ind) { h += '<tr><td>' + _e(ind) + '</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>'; });
+    h += '</tbody></table>\n</div>' + D;
+    // S8: Tarea
+    var s8 = data.s8 || {};
+    h += '<div class="section">\n<div class="section-header"><span class="section-num">08</span><span class="section-title">Tarea para casa</span><span class="section-icon">&#x1F4DA;</span></div>\n';
+    h += '<div class="task-box"><span class="t-label">TAREA</span>';
+    if (s8.t) h += '<h4>' + _e(s8.t) + '</h4>';
+    if (s8.d) h += '<p>' + _e(s8.d) + '</p>';
+    if (s8.items && s8.items.length) { h += '<ul>'; s8.items.forEach(function(it) { h += '<li>' + _e(it) + '</li>'; }); h += '</ul>'; }
+    if (s8.entrega) h += '<span class="write-label">Entrega</span><input class="write-line" type="text" placeholder="' + _e(s8.entrega) + '">';
+    h += '</div>\n</div>';
+    return h;
+  }
 
   const btn = document.querySelector('[onclick*="generarIndexHtml(\'' + actId + '\')"]');
   const _restaurarBtn = function() {
@@ -17151,9 +17232,28 @@ async function generarIndexHtml(actId) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
   mostrarToast('Generando hoja de trabajo para estudiantes...', 'info');
 
+  function _parseJson(raw) {
+    if (!raw) return null;
+    var s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    if (s === -1 || e <= s) return null;
+    try { return JSON.parse(raw.substring(s, e + 1)); } catch(x) { return null; }
+  }
+
   try {
-    const sections = await _llamarIATextoLibre(prompt, 4096);
-    if (!sections) throw new Error('La IA no devolvio contenido.');
+    mostrarToast('Generando secciones 01-04...', 'info');
+    const raw1 = await _llamarIATextoLibre(prompt1, 2048, _jsonSysMsg, '{');
+    if (!raw1) throw new Error('Sin respuesta del AI (parte 1).');
+    const d1 = _parseJson(raw1);
+    if (!d1 || (!d1.s1 && !d1.s2)) throw new Error('JSON invalido parte 1. AI respondio: ' + raw1.substring(0, 80).replace(/[<>]/g, ''));
+
+    mostrarToast('Generando secciones 05-08...', 'info');
+    const raw2 = await _llamarIATextoLibre(prompt2, 2048, _jsonSysMsg, '{');
+    if (!raw2) throw new Error('Sin respuesta del AI (parte 2).');
+    const d2 = _parseJson(raw2);
+    if (!d2 || (!d2.s5 && !d2.s6)) throw new Error('JSON invalido parte 2. AI respondio: ' + raw2.substring(0, 80).replace(/[<>]/g, ''));
+
+    const sections = _buildSections(Object.assign({}, d1, d2));
+    if (!sections || sections.length < 200) throw new Error('Contenido insuficiente generado.');
     const html = _htmlTop + sections + _htmlBottom;
     const nombre = 'act' + (actIdx + 1) + '_' + (dg.moduloFormativo || 'actividad').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20) + '.html';
     const blob = new Blob(['﻿' + html], { type: 'text/html;charset=utf-8' });
@@ -17171,51 +17271,78 @@ async function generarIndexHtml(actId) {
 
 
 
-/** Llama a la IA disponible y devuelve texto libre (HTML), no JSON. */
-async function _llamarIATextoLibre(prompt, maxTokens) {
+/** Llama a la IA disponible y devuelve texto libre.
+ *  prefill: texto con que debe comenzar la respuesta (ej: "{" para forzar JSON).
+ *           Se envía como mensaje assistant parcial en Groq/OpenRouter (prefill nativo).
+ *           En Gemini se añade al final del prompt como pista. */
+async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
   maxTokens = maxTokens || 8000;
-  const _extraerHtml = function(text) {
+  const _limpiar = function(text, pre) {
     if (!text) return null;
-    var m = text.match(/```html\s*([\s\S]*?)```/i) || text.match(/```\s*([\s\S]*?)```/i);
-    return m ? m[1].trim() : text.trim();
+    var t = text;
+    var m = t.match(/```(?:json|html)?\s*([\s\S]*?)```/i);
+    if (m) t = m[1];
+    t = t.trim();
+    if (pre && !t.startsWith(pre)) t = pre + t;
+    return t || null;
   };
-  const sysMsg = 'Eres un experto en diseno de materiales educativos. Cuando se te pida un archivo HTML, responde UNICAMENTE con el codigo HTML completo. No uses markdown ni bloques de codigo. Empieza directamente con <!DOCTYPE html>.';
+  const sysMsg = customSysMsg || 'Eres un experto en diseno de materiales educativos. Responde UNICAMENTE con el codigo HTML solicitado. Sin markdown, sin bloques de codigo. Sin <!DOCTYPE>, <html>, <head> ni <body>. Empieza con el primer <div>.';
 
   if (getGroqKey()) {
     for (var gi = 0; gi < MODELOS_GROQ.length; gi++) {
       var gModelo = MODELOS_GROQ[gi];
       try {
         mostrarToast('Generando con Groq (' + gModelo + ')...', 'info');
+        var gMsgs = [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }];
+        if (prefill) gMsgs.push({ role: 'assistant', content: prefill });
         var gR = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getGroqKey() },
-          body: JSON.stringify({ model: gModelo, messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }], temperature: 0.65, max_tokens: maxTokens })
+          body: JSON.stringify({ model: gModelo, messages: gMsgs, temperature: 0.65, max_tokens: maxTokens })
         });
-        if (gR.ok) { var gD = await gR.json(); var gH = _extraerHtml(gD && gD.choices && gD.choices[0] && gD.choices[0].message && gD.choices[0].message.content); if (gH) return gH; }
-      } catch (e) { console.warn('[IndexHtml] Groq:', e.message); }
+        if (gR.ok) {
+          var gD = await gR.json();
+          var gTxt = gD && gD.choices && gD.choices[0] && gD.choices[0].message && gD.choices[0].message.content;
+          var gH = _limpiar(gTxt, prefill);
+          if (gH) return gH;
+        }
+      } catch (e) { console.warn('[IA] Groq ' + gModelo + ':', e.message); }
     }
   }
   if (getGeminiKey()) {
     try {
       mostrarToast('Generando con Gemini...', 'info');
+      var gemPrompt = sysMsg + '\n\n' + prompt + (prefill ? '\n\nRESPUESTA (empieza exactamente con "' + prefill + '"):\n' + prefill : '');
       var gemR = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + getGeminiKey(), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: sysMsg + '\n\n' + prompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens } })
+        body: JSON.stringify({ contents: [{ parts: [{ text: gemPrompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens } })
       });
-      if (gemR.ok) { var gemD = await gemR.json(); var gemH = _extraerHtml(gemD && gemD.candidates && gemD.candidates[0] && gemD.candidates[0].content && gemD.candidates[0].content.parts && gemD.candidates[0].content.parts[0] && gemD.candidates[0].content.parts[0].text); if (gemH) return gemH; }
-    } catch (e) { console.warn('[IndexHtml] Gemini:', e.message); }
+      if (gemR.ok) {
+        var gemD = await gemR.json();
+        var gemTxt = gemD && gemD.candidates && gemD.candidates[0] && gemD.candidates[0].content && gemD.candidates[0].content.parts && gemD.candidates[0].content.parts[0] && gemD.candidates[0].content.parts[0].text;
+        var gemH = _limpiar(gemTxt, prefill);
+        if (gemH) return gemH;
+      }
+    } catch (e) { console.warn('[IA] Gemini:', e.message); }
   }
   if (getOpenRouterKey()) {
     var orMs = MODELOS_OPENROUTER.slice(0, 4);
     for (var oi = 0; oi < orMs.length; oi++) {
       try {
-        mostrarToast('Generando con OpenRouter...', 'info');
+        mostrarToast('Generando con OpenRouter (' + orMs[oi] + ')...', 'info');
+        var orMsgs = [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }];
+        if (prefill) orMsgs.push({ role: 'assistant', content: prefill });
         var orR = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getOpenRouterKey() },
-          body: JSON.stringify({ model: orMs[oi], messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }], temperature: 0.65, max_tokens: maxTokens })
+          body: JSON.stringify({ model: orMs[oi], messages: orMsgs, temperature: 0.65, max_tokens: maxTokens })
         });
-        if (orR.ok) { var orD = await orR.json(); var orH = _extraerHtml(orD && orD.choices && orD.choices[0] && orD.choices[0].message && orD.choices[0].message.content); if (orH) return orH; }
-      } catch (e) { console.warn('[IndexHtml] OpenRouter:', e.message); }
+        if (orR.ok) {
+          var orD = await orR.json();
+          var orTxt = orD && orD.choices && orD.choices[0] && orD.choices[0].message && orD.choices[0].message.content;
+          var orH = _limpiar(orTxt, prefill);
+          if (orH) return orH;
+        }
+      } catch (e) { console.warn('[IA] OpenRouter ' + orMs[oi] + ':', e.message); }
     }
   }
   throw new Error('Sin claves de IA disponibles. Configura Groq, Gemini u OpenRouter en Configurar IA.');
