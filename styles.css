@@ -3481,6 +3481,33 @@ body.dark-mode .btn-pln-dup:hover {
   font-size: 15px;
 }
 
+/* Botón Generar Index.html */
+.btn-pd-index {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1.5px solid rgba(255, 230, 100, 0.65);
+  border-radius: 20px;
+  padding: 6px 13px;
+  color: rgba(255, 235, 120, 0.95);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transicion);
+  white-space: nowrap;
+}
+.btn-pd-index:hover {
+  background: rgba(255, 230, 100, 0.18);
+}
+.btn-pd-index .material-icons {
+  font-size: 15px;
+}
+.btn-pd-index:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Chip EC en sesion */
 .pd-ec-chip {
   display: inline-flex;

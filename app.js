@@ -16950,6 +16950,130 @@ function generarSesion(actId) {
 
 }
 
+// ── Generar hoja de trabajo Index.html para estudiantes ───────────────────
+async function generarIndexHtml(actId) {
+  const acts = planificacion.actividades || [];
+  const act = acts.find(a => a.id === actId);
+  if (!act) return;
+
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const sesion = estadoDiarias.sesiones[actId] || {};
+  const actIdx = acts.findIndex(a => a.id === actId);
+
+  const actsPrevias = acts.slice(0, actIdx).filter(a => !a.esComplementario);
+  const actsPreviasStr = actsPrevias.length
+    ? actsPrevias.map((a, i) => (i + 1) + '. ' + a.enunciado).join('\n')
+    : 'Esta es la primera actividad del módulo.';
+
+  const inicio = [sesion.inicio && sesion.inicio.apertura, sesion.inicio && sesion.inicio.encuadre, sesion.inicio && sesion.inicio.organizacion]
+    .filter(Boolean).join('\n\n') || 'No generado aún — genera la sesión primero.';
+  const desarrollo = [sesion.desarrollo && sesion.desarrollo.procedimental, sesion.desarrollo && sesion.desarrollo.conceptual]
+    .filter(Boolean).join('\n\n') || 'No generado aún.';
+  const cierre = [sesion.cierre && sesion.cierre.sintesis, sesion.cierre && sesion.cierre.conexion, sesion.cierre && sesion.cierre.proximopaso]
+    .filter(Boolean).join('\n\n') || 'No generado aún.';
+
+  const materia = dg.moduloFormativo || 'la asignatura';
+  const centro = dg.nombreBachillerato || 'Centro Educativo';
+  const docente = dg.nombreDocente || 'Docente';
+  const raDesc = ra.descripcion || 'No especificado';
+
+  const prompt = 'Crea un index.html para estudiantes de ' + materia + ' del ' + centro + '. Docente: ' + docente + '.\n\n' +
+    'Actividad: ' + act.ecCodigo + ': ' + act.enunciado + '\n' +
+    'RA: ' + raDesc + '\n' +
+    'Actividades previas ya vistas:\n' + actsPreviasStr + '\n\n' +
+    'El index.html es la hoja que el estudiante recibe y trabaja en el aula. NO incluyas la estructura Inicio/Desarrollo/Cierre, eso es solo orientacion para el docente.\n\n' +
+    'Este es el Inicio: ' + inicio + '\n' +
+    'Este es el desarrollo: ' + desarrollo + '\n' +
+    'Este es el cierre: ' + cierre + '\n\n' +
+    'Contenido que debe tener:\n' +
+    '- Conceptos nuevos (solo los que NO se hayan visto en actividades anteriores), con ejemplos reales de Republica Dominicana\n' +
+    '- Actividad guiada en parejas/equipos si se requiere con caso de estudio\n' +
+    '- Actividad autonoma\n' +
+    '- Verificacion de aprendizaje (mix de opcion multiple y preguntas abiertas)\n' +
+    '- Ticket de salida (3 preguntas de metacognicion)\n' +
+    '- Tarea para la proxima sesion\n\n' +
+    'Diseno:\n' +
+    '- Usa una paleta de colores y tipografia DIFERENTE a los indices anteriores de esta misma asignatura\n' +
+    '- Fuentes de Google Fonts\n' +
+    '- Lineas para escribir a mano donde el estudiante responde\n' +
+    'Nivel de los estudiantes: Principiantes\n\n' +
+    'IMPORTANTE: Responde UNICAMENTE con el codigo HTML completo del archivo. No uses markdown ni bloques de codigo. Empieza directamente con <!DOCTYPE html>.';
+
+  const btn = document.querySelector('[onclick*="generarIndexHtml(\'' + actId + '\')"]');
+  const _restaurarBtn = function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:14px;">html</span> Index.html'; }
+  };
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
+  mostrarToast('Generando hoja de trabajo para estudiantes...', 'info');
+
+  try {
+    const html = await _llamarIATextoLibre(prompt, 8000);
+    if (!html) throw new Error('La IA no devolvio contenido.');
+    const nombre = 'act' + (actIdx + 1) + '_' + (dg.moduloFormativo || 'actividad').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20) + '.html';
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre; a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+    mostrarToast('Hoja descargada: ' + nombre, 'success');
+  } catch (e) {
+    mostrarToast('Error al generar: ' + e.message, 'error');
+  } finally {
+    _restaurarBtn();
+  }
+}
+
+/** Llama a la IA disponible y devuelve texto libre (HTML), no JSON. */
+async function _llamarIATextoLibre(prompt, maxTokens) {
+  maxTokens = maxTokens || 8000;
+  const _extraerHtml = function(text) {
+    if (!text) return null;
+    var m = text.match(/```html\s*([\s\S]*?)```/i) || text.match(/```\s*([\s\S]*?)```/i);
+    return m ? m[1].trim() : text.trim();
+  };
+  const sysMsg = 'Eres un experto en diseno de materiales educativos. Cuando se te pida un archivo HTML, responde UNICAMENTE con el codigo HTML completo. No uses markdown ni bloques de codigo. Empieza directamente con <!DOCTYPE html>.';
+
+  if (getGroqKey()) {
+    for (var gi = 0; gi < MODELOS_GROQ.length; gi++) {
+      var gModelo = MODELOS_GROQ[gi];
+      try {
+        mostrarToast('Generando con Groq (' + gModelo + ')...', 'info');
+        var gR = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getGroqKey() },
+          body: JSON.stringify({ model: gModelo, messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }], temperature: 0.65, max_tokens: maxTokens })
+        });
+        if (gR.ok) { var gD = await gR.json(); var gH = _extraerHtml(gD && gD.choices && gD.choices[0] && gD.choices[0].message && gD.choices[0].message.content); if (gH) return gH; }
+      } catch (e) { console.warn('[IndexHtml] Groq:', e.message); }
+    }
+  }
+  if (getGeminiKey()) {
+    try {
+      mostrarToast('Generando con Gemini...', 'info');
+      var gemR = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + getGeminiKey(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: sysMsg + '\n\n' + prompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens } })
+      });
+      if (gemR.ok) { var gemD = await gemR.json(); var gemH = _extraerHtml(gemD && gemD.candidates && gemD.candidates[0] && gemD.candidates[0].content && gemD.candidates[0].content.parts && gemD.candidates[0].content.parts[0] && gemD.candidates[0].content.parts[0].text); if (gemH) return gemH; }
+    } catch (e) { console.warn('[IndexHtml] Gemini:', e.message); }
+  }
+  if (getOpenRouterKey()) {
+    var orMs = MODELOS_OPENROUTER.slice(0, 4);
+    for (var oi = 0; oi < orMs.length; oi++) {
+      try {
+        mostrarToast('Generando con OpenRouter...', 'info');
+        var orR = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getOpenRouterKey() },
+          body: JSON.stringify({ model: orMs[oi], messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }], temperature: 0.65, max_tokens: maxTokens })
+        });
+        if (orR.ok) { var orD = await orR.json(); var orH = _extraerHtml(orD && orD.choices && orD.choices[0] && orD.choices[0].message && orD.choices[0].message.content); if (orH) return orH; }
+      } catch (e) { console.warn('[IndexHtml] OpenRouter:', e.message); }
+    }
+  }
+  throw new Error('Sin claves de IA disponibles. Configura Groq, Gemini u OpenRouter en Configurar IA.');
+}
+
 
 
 
@@ -17320,7 +17444,9 @@ function renderizarDiarias() {
 
         </button>
 
-
+        <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
+          <span class="material-icons">html</span> Index.html
+        </button>
 
         <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
                 onclick="event.stopPropagation();toggleSesion('${act.id}')">
