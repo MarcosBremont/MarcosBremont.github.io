@@ -16978,27 +16978,109 @@ async function generarIndexHtml(actId) {
   const docente = dg.nombreDocente || 'Docente';
   const raDesc = ra.descripcion || 'No especificado';
 
-  const prompt = 'Crea un index.html para estudiantes de ' + materia + ' del ' + centro + '. Docente: ' + docente + '.\n\n' +
-    'Actividad: ' + act.ecCodigo + ': ' + act.enunciado + '\n' +
-    'RA: ' + raDesc + '\n' +
-    'Actividades previas ya vistas:\n' + actsPreviasStr + '\n\n' +
-    'El index.html es la hoja que el estudiante recibe y trabaja en el aula. NO incluyas la estructura Inicio/Desarrollo/Cierre, eso es solo orientacion para el docente.\n\n' +
-    'Este es el Inicio: ' + inicio + '\n' +
-    'Este es el desarrollo: ' + desarrollo + '\n' +
-    'Este es el cierre: ' + cierre + '\n\n' +
-    'Contenido que debe tener:\n' +
-    '- Conceptos nuevos (solo los que NO se hayan visto en actividades anteriores), con ejemplos reales de Republica Dominicana\n' +
-    '- Actividad guiada en parejas/equipos si se requiere con caso de estudio\n' +
-    '- Actividad autonoma\n' +
-    '- Verificacion de aprendizaje (mix de opcion multiple y preguntas abiertas)\n' +
-    '- Ticket de salida (3 preguntas de metacognicion)\n' +
-    '- Tarea para la proxima sesion\n\n' +
-    'Diseno:\n' +
-    '- Usa una paleta de colores y tipografia DIFERENTE a los indices anteriores de esta misma asignatura\n' +
-    '- Fuentes de Google Fonts\n' +
-    '- Lineas para escribir a mano donde el estudiante responde\n' +
-    'Nivel de los estudiantes: Principiantes\n\n' +
-    'IMPORTANTE: Responde UNICAMENTE con el codigo HTML completo del archivo. No uses markdown ni bloques de codigo. Empieza directamente con <!DOCTYPE html>.';
+  const prompt =
+    'Genera un index.html COMPLETO, rico y sofisticado para estudiantes de bachillerato. Es una hoja de trabajo imprimible/interactiva de alta calidad pedagogica.\n\n' +
+    'DATOS DE LA SESION:\n' +
+    '- Asignatura: ' + materia + '\n' +
+    '- Centro educativo: ' + centro + '\n' +
+    '- Docente: ' + docente + '\n' +
+    '- Codigo y titulo de la actividad: ' + (act.ecCodigo || '') + ': ' + act.enunciado + '\n' +
+    '- Resultado de Aprendizaje (RA): ' + raDesc + '\n' +
+    '- Actividades previas del modulo (ya vistas por los estudiantes):\n' + actsPreviasStr + '\n\n' +
+    '- Inicio de sesion (extrae la pregunta motivadora y contexto inicial):\n' + inicio + '\n\n' +
+    '- Desarrollo (extrae conceptos nuevos, actividades guiadas y autonomas):\n' + desarrollo + '\n\n' +
+    '- Cierre (extrae reflexion, ticket de salida y tarea):\n' + cierre + '\n\n' +
+    'SISTEMA DE DISENO OBLIGATORIO (copia EXACTAMENTE este CSS en el <style>):\n' +
+    ':root {\n' +
+    '  --ink: #1a1a2e; --paper: #faf8f3; --accent: #c84b31; --gold: #e8a838;\n' +
+    '  --teal: #2a7f7f; --warm: #f0e9dc; --mid: #6b6b8a; --line: #c8c0b0;\n' +
+    '  --badge: #c84b31; --mono: "DM Mono", monospace;\n' +
+    '  --serif: "Fraunces", serif; --sans: "Outfit", sans-serif;\n' +
+    '}\n' +
+    'Google Fonts obligatorio: Fraunces (ital,wght@0,300;0,500;0,700;1,300;1,500), DM Mono (wght@400;500), Outfit (wght@300;400;500;600)\n\n' +
+    'CLASES CSS OBLIGATORIAS (implementa TODAS con estilos correctos):\n' +
+    '- .page: max-width 860px, margin auto, background var(--paper), box-shadow elegante\n' +
+    '- .top-bar: 7px de alto, repeating-linear-gradient 90deg con accent/gold/teal cada 80px\n' +
+    '- .corner-mark: posicion absoluta top-right con centro/asignatura/docente en serif italic\n' +
+    '- .header: breadcrumb mono uppercase, .act-label badge rojo, h1 serif con <em> en teal, .rae-box (borde-left teal 3px, fondo warm), .meta-row flex, .name-field con write-lines\n' +
+    '- .section-header: flex, gap, border-bottom 1.5px solid ink\n' +
+    '- .section-num: badge fondo ink, texto paper, mono uppercase\n' +
+    '- .section-title: serif 1.25rem font-weight 500\n' +
+    '- .motivation-box: fondo gradient teal, texto blanco, serif italic, con ::before comilla grande decorativa\n' +
+    '- .callout: fondo warm, border-left gold 3px, flex con icono\n' +
+    '- .concept-grid: grid 2 columnas, gap 1rem\n' +
+    '- .concept-card: borde 1px solid line, padding, .c-num accent mono, h3 serif, p, .example fondo warm borde-left teal mono\n' +
+    '- .data-table: thead fondo ink texto blanco mono uppercase, td borde-bottom, filas alternas warm\n' +
+    '- .activity-box: borde 1.5px solid gold, fondo #fffcf5, .act-tag posicion absoluta top:-10px borde gold\n' +
+    '- .team-badge: fondo ink, texto blanco, mono\n' +
+    '- .case-box: fondo #f0f7f7, borde teal, .metric-row grid 3 cols con .metric (m-val accent mono, m-label)\n' +
+    '- .write-line: input border:none, border-bottom:1px solid var(--line), background transparent, display block, width 100%, outline none\n' +
+    '- .write-label: mono 0.63rem uppercase letter-spacing, color mid\n' +
+    '- .tool-tag: inline-block, fondo #e8e4dc, borde line, mono teal\n' +
+    '- .question-block: margin-bottom 1.4rem, border-bottom dashed line\n' +
+    '- .q-num: badge fondo accent, mono\n' +
+    '- .options: flex-direction column, gap; .option: flex, radio input con accent-color teal\n' +
+    '- .ticket: fondo var(--ink), texto blanco, .ticket-label mono gold uppercase, h3 serif italic light, .meta-q bold, write-lines con borde rgba blanco\n' +
+    '- .self-eval-table: thead fondo warm borde line, checkboxes accent-color teal, filas alternas\n' +
+    '- .task-box: borde 2px solid ink, .t-label posicion absoluta top:-11px fondo ink texto blanco mono\n' +
+    '- .divider: 1px solid line, ::before con diamond ornament centrado\n' +
+    '- .footer: fondo warm, borde-top line, flex space-between, .f-left mono, .f-right serif italic\n' +
+    '- @media print: sin box-shadow, fondo blanco, .no-print display none\n' +
+    '- @media (max-width:600px): content padding reducido, concept-grid 1 columna, footer column\n\n' +
+    'ESTRUCTURA OBLIGATORIA DE 8 SECCIONES (NO reduzcas ni combines secciones):\n\n' +
+    'SECCION 01 - Punto de partida (icono 💡):\n' +
+    '  .motivation-box con pregunta provocadora relacionada al tema (derivada del Inicio)\n' +
+    '  Parrafo introductorio corto\n' +
+    '  3 .write-label distintos con 2-3 .write-line cada uno (reflexion personal del estudiante)\n\n' +
+    'SECCION 02 - Conceptos clave (icono 📖, badge "COPIAR"):\n' +
+    '  .callout indicando cuales son conceptos NUEVOS vs los ya vistos\n' +
+    '  4 a 6 .concept-card en .concept-grid 2 columnas (solo conceptos NUEVOS de esta actividad)\n' +
+    '  Cada card: .c-num, h3 con nombre del concepto, p con definicion, .example con ejemplo real de Republica Dominicana\n' +
+    '  .data-table con columnas: Tecnica / Que hace / Herramienta o Como aplicarla / Beneficio (5 filas con datos concretos)\n' +
+    '  Nota centrada mono indicando "Copia la tabla en tu cuaderno"\n\n' +
+    'SECCION 03 - Actividad guiada en pareja (icono 🤝):\n' +
+    '  .activity-box con .act-tag "~20 min · En parejas" y .team-badge\n' +
+    '  .case-box con titulo "Caso de estudio" real y especifico de Republica Dominicana\n' +
+    '  .metric-row con 3 .metric que muestran datos concretos del caso\n' +
+    '  Instrucciones numeradas (h4 + ol) para el trabajo en pareja\n' +
+    '  .data-table para que los estudiantes completen su plan de trabajo (filas con inputs write-line)\n' +
+    '  2 write-label + write-lines de cierre\n\n' +
+    'SECCION 04 - Actividad autonoma (icono 🖥️):\n' +
+    '  .activity-box con borde var(--teal) y fondo #f0f7f7, .act-tag teal "~30 min · Individual"\n' +
+    '  h4 con titulo de la actividad\n' +
+    '  Parrafo descriptivo\n' +
+    '  3-5 .tool-tag con herramientas reales\n' +
+    '  Pasos numerados (ol) concretos y accionables\n' +
+    '  4-5 write-label + write-lines para registrar URL, puntuacion inicial, tecnicas aplicadas, resultado final\n\n' +
+    'SECCION 05 - Verificacion de aprendizaje (icono ✅):\n' +
+    '  3 .question-block de opcion multiple (cada uno: .q-num, p.q-text, .options con 4 .option radio)\n' +
+    '  2 .question-block de pregunta abierta (cada uno: .q-num, p.q-text, 3 write-lines)\n' +
+    '  Las preguntas deben ser especificas a los conceptos de ESTA actividad\n\n' +
+    'SECCION 06 - Ticket de salida Metacognicion (icono 🎫):\n' +
+    '  .ticket (fondo oscuro ink):\n' +
+    '    .ticket-label con linea decorativa\n' +
+    '    h3 en serif italic light\n' +
+    '    3 .meta-q con 2 write-lines cada uno (preguntas de metacognicion: que aprendi / como lo aplico / que quiero explorar)\n\n' +
+    'SECCION 07 - Autoevaluacion (icono 📊):\n' +
+    '  Parrafo introductorio\n' +
+    '  .self-eval-table con encabezados: Indicador de logro / Lo logre / En proceso / Necesito apoyo\n' +
+    '  6-7 filas con indicadores especificos y medibles de esta actividad, checkboxes en cada columna\n' +
+    '  1 write-label + 2 write-lines de reflexion final\n\n' +
+    'SECCION 08 - Tarea para la proxima sesion (icono 📚):\n' +
+    '  .task-box (borde ink 2px) con .t-label "Para entregar en la proxima clase"\n' +
+    '  h4 con titulo de la tarea\n' +
+    '  Descripcion de la tarea\n' +
+    '  ul con lista de requisitos o entregables\n' +
+    '  write-label + write-line para el tema/herramienta elegida\n' +
+    '  write-label + write-line para las fuentes de investigacion\n\n' +
+    '.footer: nombre del centro y asignatura a la izquierda, docente a la derecha\n\n' +
+    'REGLAS CRITICAS:\n' +
+    '- TODO el HTML debe estar en espanol correcto con tildes y enyes (no uses entidades HTML para vocales acentuadas)\n' +
+    '- Todos los ejemplos y casos de estudio deben ser del contexto dominicano\n' +
+    '- Los conceptos en seccion 02 son SOLO los nuevos (no los de actividades previas ya listadas)\n' +
+    '- El archivo debe ser 100% auto-contenido (solo dependencia externa: Google Fonts)\n' +
+    '- NO uses markdown. NO uses bloques de codigo. Empieza DIRECTAMENTE con <!DOCTYPE html> y termina con </html>\n' +
+    '- Genera contenido REAL y ESPECIFICO, no placeholders generico. El resultado debe poder usarse en clase HOY.';
 
   const btn = document.querySelector('[onclick*="generarIndexHtml(\'' + actId + '\')"]');
   const _restaurarBtn = function() {
@@ -17011,7 +17093,7 @@ async function generarIndexHtml(actId) {
     const html = await _llamarIATextoLibre(prompt, 8000);
     if (!html) throw new Error('La IA no devolvio contenido.');
     const nombre = 'act' + (actIdx + 1) + '_' + (dg.moduloFormativo || 'actividad').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20) + '.html';
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const blob = new Blob(['﻿' + html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = nombre; a.click();
