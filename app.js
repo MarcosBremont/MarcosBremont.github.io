@@ -17305,6 +17305,19 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
           var gTxt = gD && gD.choices && gD.choices[0] && gD.choices[0].message && gD.choices[0].message.content;
           var gH = _limpiar(gTxt, prefill);
           if (gH) return gH;
+        } else if (gR.status === 413 && prefill) {
+          /* 413 puede ser que el modelo no acepta prefill — reintentar sin el */
+          var gR2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getGroqKey() },
+            body: JSON.stringify({ model: gModelo, messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }], temperature: 0.65, max_tokens: maxTokens })
+          });
+          if (gR2.ok) {
+            var gD2 = await gR2.json();
+            var gTxt2 = gD2 && gD2.choices && gD2.choices[0] && gD2.choices[0].message && gD2.choices[0].message.content;
+            var gH2 = _limpiar(gTxt2, prefill);
+            if (gH2) return gH2;
+          }
         }
       } catch (e) { console.warn('[IA] Groq ' + gModelo + ':', e.message); }
     }
@@ -17345,7 +17358,7 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
       } catch (e) { console.warn('[IA] OpenRouter ' + orMs[oi] + ':', e.message); }
     }
   }
-  throw new Error('Sin claves de IA disponibles. Configura Groq, Gemini u OpenRouter en Configurar IA.');
+  throw new Error('Todos los servicios de IA fallaron (429=limite alcanzado, 413=modelo ocupado). Espera 1 minuto e intenta de nuevo.');
 }
 
 
