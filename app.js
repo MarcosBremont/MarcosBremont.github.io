@@ -17663,40 +17663,72 @@ async function verResultadosExamen(examenId) {
     }
     const respuestas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const preguntas = ex.preguntas || [];
-    body.innerHTML = `
-      <div style="background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.83rem;color:#1565C0;font-weight:600;">
-        ${respuestas.length} respuesta${respuestas.length !== 1 ? 's' : ''} recibida${respuestas.length !== 1 ? 's' : ''} · ${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:.76rem;min-width:500px;">
-          <thead>
-            <tr style="background:#1565C0;color:#fff;">
-              <th style="padding:8px 10px;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;background:#1565C0;">Estudiante</th>
-              <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Número</th>
-              <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Fecha</th>
-              ${preguntas.map((p, i) => `<th style="padding:8px 10px;text-align:center;white-space:nowrap;min-width:70px;">P${i + 1}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${respuestas.map((r, ri) => {
-              const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
-              const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') + ' ' + fechaObj.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
-              return `<tr style="border-bottom:1px solid #F0F0F0;${ri % 2 !== 0 ? 'background:#FAFAFA;' : ''}">
-                <td style="padding:7px 10px;font-weight:600;color:#1A1A2E;position:sticky;left:0;background:${ri % 2 !== 0 ? '#FAFAFA' : '#fff'};">${_eHtml(r.estudianteNombre || '—')}</td>
-                <td style="padding:7px 10px;color:#616161;">${_eHtml(r.estudianteNumero || '—')}</td>
-                <td style="padding:7px 10px;color:#9E9E9E;white-space:nowrap;">${fechaStr}</td>
-                ${preguntas.map(p => {
-                  const resp = (r.respuestas || {})[p.id] || '';
-                  return `<td style="padding:7px 10px;text-align:center;max-width:180px;overflow:hidden;text-overflow:ellipsis;${p.tipo !== 'abierta' ? 'white-space:nowrap;' : ''}">${resp ? _eHtml(resp) : '<span style="color:#E0E0E0;">—</span>'}</td>`;
-                }).join('')}
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+    const tipoLabel = { mc: 'Sel. múltiple', vf: 'V/F', abierta: 'Abierta' };
+    const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0' };
+    const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100' };
+
+    const tarjetas = respuestas.map((r, ri) => {
+      const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
+      const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') + ' · ' + fechaObj.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
+      const respondidas = preguntas.filter(p => (r.respuestas || {})[p.id]).length;
+
+      const detalleId = 'res-det-' + ri;
+      const detalle = preguntas.map((p, pi) => {
+        const resp = (r.respuestas || {})[p.id] || '';
+        const badge = `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:20px;background:${tipoBg[p.tipo] || '#F5F5F5'};color:${tipoCol[p.tipo] || '#616161'};">${tipoLabel[p.tipo] || p.tipo}</span>`;
+        const respHtml = resp
+          ? `<span style="font-size:.88rem;color:#1A1A2E;font-weight:500;">${_eHtml(resp)}</span>`
+          : `<span style="font-size:.83rem;color:#BDBDBD;font-style:italic;">Sin respuesta</span>`;
+        return `<div style="padding:10px 0;border-bottom:1px solid #F0F4F8;display:flex;gap:10px;align-items:flex-start;">
+          <span style="font-size:.7rem;font-weight:700;background:#1565C0;color:#fff;padding:3px 7px;border-radius:4px;flex-shrink:0;margin-top:2px;">P${pi + 1}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              ${badge}
+              <span style="font-size:.8rem;color:#424242;line-height:1.4;">${_eHtml(p.enunciado)}</span>
+            </div>
+            <div style="background:#F8FAFC;border-left:3px solid ${resp ? '#1565C0' : '#E0E0E0'};padding:6px 10px;border-radius:0 6px 6px 0;">
+              ${respHtml}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div style="border:1.5px solid #E8EDF2;border-radius:10px;overflow:hidden;margin-bottom:10px;">
+        <div onclick="_toggleResDetalle('${detalleId}',this)" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;background:#fff;user-select:none;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#1565C0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0;">${_eHtml((r.estudianteNombre || '?').charAt(0).toUpperCase())}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.9rem;font-weight:700;color:#1A1A2E;">${_eHtml(r.estudianteNombre || '—')}</div>
+            <div style="font-size:.74rem;color:#9E9E9E;">Nº ${_eHtml(r.estudianteNumero || '—')} · ${fechaStr}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:.75rem;font-weight:600;color:${respondidas === preguntas.length ? '#2E7D32' : '#E65100'};">${respondidas}/${preguntas.length} resp.</div>
+            <span class="material-icons res-chevron" style="font-size:18px;color:#9E9E9E;margin-top:2px;display:block;transition:transform .2s;">expand_more</span>
+          </div>
+        </div>
+        <div id="${detalleId}" style="display:none;padding:4px 14px 12px;background:#FAFCFF;border-top:1px solid #F0F4F8;">
+          ${detalle}
+        </div>
       </div>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.83rem;color:#1565C0;font-weight:600;">
+        <span class="material-icons" style="font-size:18px;">people</span>
+        ${respuestas.length} estudiante${respuestas.length !== 1 ? 's' : ''} respondieron · ${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}
+      </div>
+      ${tarjetas}`;
   } catch (e) {
     body.innerHTML = '<div style="color:#C62828;padding:16px;font-size:.83rem;">Error al cargar: ' + e.message + '</div>';
   }
+}
+
+function _toggleResDetalle(id, header) {
+  const det = document.getElementById(id);
+  if (!det) return;
+  const visible = det.style.display !== 'none';
+  det.style.display = visible ? 'none' : 'block';
+  const chevron = header.querySelector('.res-chevron');
+  if (chevron) chevron.style.transform = visible ? '' : 'rotate(180deg)';
 }
 
 function cerrarResultadosExamen() {
