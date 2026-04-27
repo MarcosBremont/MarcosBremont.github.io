@@ -353,6 +353,10 @@
           <span class="material-icons">campaign</span>
           <span>Buzón Denuncias</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-examenes" onclick="abrirExamenes()" style="--accent:#1565C0;">
+          <span class="material-icons">quiz</span>
+          <span>Exámenes</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-auditoria" onclick="abrirAuditoria()" style="--accent:#4A148C;">
           <span class="material-icons">security</span>
           <span>Auditoría</span>
@@ -2014,6 +2018,62 @@
                text-decoration:underline;padding:4px;">
         Cerrar sesión
       </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL EXÁMENES ===== -->
+  <div id="panel-examenes" class="cal-panel hidden">
+    <div class="section-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
+        <h2 style="display:flex;align-items:center;gap:8px;font-size:1.15rem;font-weight:700;color:#1A1A2E;">
+          <span class="material-icons" style="color:#1565C0;font-size:22px;">quiz</span>
+          Exámenes y Pruebas
+        </h2>
+        <button onclick="abrirEditorExamen(null)" style="background:#1565C0;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">add</span> Nuevo Examen
+        </button>
+      </div>
+      <p style="font-size:.8rem;color:#9E9E9E;margin-bottom:20px;">Crea exámenes, comparte el enlace con tus estudiantes y recibe las respuestas aquí.</p>
+      <div id="examenes-lista">
+        <div style="text-align:center;padding:40px;color:#BDBDBD;">
+          <span class="material-icons spin" style="font-size:36px;">hourglass_top</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OVERLAY: EDITOR DE EXAMEN ===== -->
+  <div id="examenes-editor-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='examenes-editor-overlay')cerrarEditorExamen()">
+    <div class="modal-box" style="max-width:680px;width:96%;max-height:92vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">quiz</span>
+          <span id="examen-editor-modal-titulo">Nuevo Examen</span>
+        </h3>
+        <button class="modal-close" onclick="cerrarEditorExamen()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" id="examenes-editor-body" style="overflow-y:auto;flex:1;padding:18px 20px;"></div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn-secundario" onclick="cerrarEditorExamen()">Cancelar</button>
+        <button id="examenes-editor-guardar" onclick="guardarExamen()" style="background:#1565C0;color:#fff;border:none;padding:9px 22px;border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;">Guardar examen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OVERLAY: RESULTADOS DE EXAMEN ===== -->
+  <div id="examenes-resultados-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='examenes-resultados-overlay')cerrarResultadosExamen()">
+    <div class="modal-box" style="max-width:960px;width:97%;max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">bar_chart</span>
+          <span id="examenes-resultados-titulo">Resultados</span>
+        </h3>
+        <button class="modal-close" onclick="cerrarResultadosExamen()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" id="examenes-resultados-body" style="overflow-y:auto;flex:1;padding:18px 20px;"></div>
+      <div class="modal-footer">
+        <button class="btn-secundario" onclick="cerrarResultadosExamen()">Cerrar</button>
+      </div>
     </div>
   </div>
 

@@ -7997,7 +7997,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -8013,7 +8013,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -17361,6 +17361,351 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
   throw new Error('Todos los servicios de IA fallaron (429=limite alcanzado, 413=modelo ocupado). Espera 1 minuto e intenta de nuevo.');
 }
 
+
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: EXÁMENES Y PRUEBAS
+// ════════════════════════════════════════════════════════════════════
+
+let _examenesCache = [];
+let _examenEditor = null;
+
+function abrirExamenes() {
+  _mostrarPanel('panel-examenes');
+  _cargarExamenes();
+}
+
+async function _cargarExamenes() {
+  if (!window.currentUser) return;
+  const lista = document.getElementById('examenes-lista');
+  if (lista) lista.innerHTML = '<div style="text-align:center;padding:32px;color:#9E9E9E;"><span class="material-icons spin" style="font-size:36px;display:block;">hourglass_top</span><p style="margin-top:8px;font-size:.83rem;">Cargando...</p></div>';
+  try {
+    const snap = await db.collection('examenes')
+      .where('docenteUid', '==', window.currentUser.uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+    _examenesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderizarExamenes();
+  } catch (e) {
+    console.error('[Examenes]', e);
+    const msg = e.message && e.message.includes('index') ? 'Índice de Firestore pendiente. Abre la consola del navegador y sigue el enlace para crearlo.' : 'Error al cargar: ' + e.message;
+    if (lista) lista.innerHTML = '<div style="padding:20px;color:#C62828;font-size:.83rem;">' + msg + '</div>';
+  }
+}
+
+function renderizarExamenes() {
+  const lista = document.getElementById('examenes-lista');
+  if (!lista) return;
+  if (!_examenesCache.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:48px 16px;">
+      <span class="material-icons" style="font-size:52px;display:block;margin-bottom:12px;opacity:.3;color:#9E9E9E;">quiz</span>
+      <p style="font-size:.95rem;font-weight:600;color:#616161;margin-bottom:6px;">No tienes exámenes creados</p>
+      <p style="font-size:.8rem;color:#9E9E9E;margin-bottom:20px;">Crea un examen y comparte el enlace con tus estudiantes.</p>
+      <button onclick="abrirEditorExamen(null)" style="background:#1565C0;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:.86rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:16px;">add</span> Crear primer examen
+      </button></div>`;
+    return;
+  }
+  lista.innerHTML = _examenesCache.map(ex => {
+    const fecha = ex.createdAt && ex.createdAt.toDate ? ex.createdAt.toDate().toLocaleDateString('es-DO') : '';
+    const nP = (ex.preguntas || []).length;
+    const activo = !!ex.activo;
+    const bS = 'border:none;padding:6px 12px;border-radius:6px;font-size:.76rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;';
+    return `<div style="background:#fff;border:1.5px solid ${activo ? '#90CAF9' : '#E0E0E0'};border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+      <div style="flex:1;min-width:160px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+          <span style="font-size:.67rem;font-weight:700;padding:2px 8px;border-radius:20px;background:${activo ? '#E3F2FD' : '#F5F5F5'};color:${activo ? '#1565C0' : '#9E9E9E'};">${activo ? '● ACTIVO' : '○ CERRADO'}</span>
+          ${ex.materia ? `<span style="font-size:.7rem;background:#F5F5F5;color:#616161;padding:2px 8px;border-radius:20px;">${_eHtml(ex.materia)}</span>` : ''}
+          ${ex.curso ? `<span style="font-size:.7rem;background:#F5F5F5;color:#616161;padding:2px 8px;border-radius:20px;">${_eHtml(ex.curso)}</span>` : ''}
+        </div>
+        <div style="font-size:.93rem;font-weight:700;color:#1A1A2E;margin-bottom:2px;">${_eHtml(ex.titulo || 'Sin título')}</div>
+        <div style="font-size:.74rem;color:#9E9E9E;">${nP} pregunta${nP !== 1 ? 's' : ''} · ${fecha}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <button onclick="verResultadosExamen('${ex.id}')" style="${bS}background:#F3E5F5;color:#6A1B9A;"><span class="material-icons" style="font-size:15px;">bar_chart</span>Resultados</button>
+        <button onclick="copiarLinkExamen('${ex.id}')" style="${bS}background:#E3F2FD;color:#1565C0;"><span class="material-icons" style="font-size:15px;">link</span>Enlace</button>
+        <button onclick="abrirEditorExamen('${ex.id}')" style="${bS}background:#F5F5F5;color:#424242;"><span class="material-icons" style="font-size:15px;">edit</span></button>
+        <button onclick="toggleActivarExamen('${ex.id}',${!activo})" style="${bS}background:${activo ? '#FFF3E0' : '#E8F5E9'};color:${activo ? '#E65100' : '#2E7D32'};">${activo ? '⏸ Cerrar' : '▶ Abrir'}</button>
+        <button onclick="eliminarExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;padding:6px 8px;"><span class="material-icons" style="font-size:15px;">delete</span></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Editor ────────────────────────────────────────────────────────────
+
+function abrirEditorExamen(examenId) {
+  if (examenId) {
+    const ex = _examenesCache.find(e => e.id === examenId);
+    if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
+    _examenEditor = JSON.parse(JSON.stringify(ex));
+  } else {
+    _examenEditor = { id: null, titulo: '', materia: '', curso: '', instrucciones: '', preguntas: [] };
+  }
+  const tEl = document.getElementById('examen-editor-modal-titulo');
+  if (tEl) tEl.textContent = _examenEditor.id ? 'Editar Examen' : 'Nuevo Examen';
+  _renderEditorExamen();
+  document.getElementById('examenes-editor-overlay').classList.remove('hidden');
+}
+
+function cerrarEditorExamen() {
+  document.getElementById('examenes-editor-overlay').classList.add('hidden');
+  _examenEditor = null;
+}
+
+function _renderEditorExamen() {
+  const body = document.getElementById('examenes-editor-body');
+  if (!body || !_examenEditor) return;
+  const ex = _examenEditor;
+  const inputS = 'width:100%;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.84rem;outline:none;font-family:inherit;';
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Título del examen *</label>
+        <input type="text" id="ex-ed-titulo" value="${_eHtml(ex.titulo)}" placeholder="Ej: Examen Parcial 1" maxlength="120" style="${inputS}" oninput="_examenEditor.titulo=this.value">
+      </div>
+      <div>
+        <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Materia</label>
+        <input type="text" id="ex-ed-materia" value="${_eHtml(ex.materia)}" placeholder="Ej: Matemáticas" style="${inputS}" oninput="_examenEditor.materia=this.value">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div>
+        <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Curso / Grupo</label>
+        <input type="text" id="ex-ed-curso" value="${_eHtml(ex.curso)}" placeholder="Ej: 2do B" style="${inputS}" oninput="_examenEditor.curso=this.value">
+      </div>
+      <div>
+        <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Instrucciones (opcional)</label>
+        <input type="text" id="ex-ed-instrucciones" value="${_eHtml(ex.instrucciones)}" placeholder="Ej: Lee bien cada pregunta antes de responder" style="${inputS}" oninput="_examenEditor.instrucciones=this.value">
+      </div>
+    </div>
+    <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:.87rem;font-weight:700;color:#1A1A2E;">Preguntas (${ex.preguntas.length})</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button type="button" onclick="_addPreguntaExamen('mc')" style="background:#E3F2FD;color:#1565C0;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Sel. múltiple</button>
+        <button type="button" onclick="_addPreguntaExamen('vf')" style="background:#E8F5E9;color:#2E7D32;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Verdadero/Falso</button>
+        <button type="button" onclick="_addPreguntaExamen('abierta')" style="background:#FFF3E0;color:#E65100;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Resp. abierta</button>
+      </div>
+    </div>
+    <div id="ex-ed-preguntas">
+      ${ex.preguntas.length === 0
+        ? '<div style="text-align:center;padding:22px;color:#BDBDBD;font-size:.83rem;border:2px dashed #E8EDF2;border-radius:8px;">Agrega preguntas usando los botones de arriba</div>'
+        : ex.preguntas.map((p, i) => _renderPreguntaEditorItem(p, i)).join('')}
+    </div>`;
+}
+
+function _renderPreguntaEditorItem(p, idx) {
+  const tipoLabel = { mc: 'Sel. Múltiple', vf: 'Verdadero/Falso', abierta: 'Resp. Abierta' };
+  const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0' };
+  const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100' };
+  const total = _examenEditor.preguntas.length;
+  const inputS = 'width:100%;padding:7px 9px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.82rem;outline:none;font-family:inherit;';
+
+  let extraHtml = '';
+  if (p.tipo === 'mc') {
+    const letras = ['A', 'B', 'C', 'D'];
+    extraHtml = '<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
+      letras.map((l, i) => `<div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.73rem;font-weight:700;color:#1565C0;min-width:14px;">${l}.</span>
+        <input type="text" value="${_eHtml((p.opciones || [])[i] || '')}" placeholder="Opción ${l}..." style="flex:1;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.8rem;outline:none;font-family:inherit;"
+          oninput="_examenEditor.preguntas[${idx}].opciones[${i}]=this.value">
+      </div>`).join('') + '</div>';
+  } else if (p.tipo === 'vf') {
+    extraHtml = '<div style="margin-top:6px;font-size:.73rem;color:#9E9E9E;font-style:italic;">Las opciones son automáticas: Verdadero / Falso</div>';
+  }
+
+  return `<div style="background:#FAFAFA;border:1.5px solid #E8EDF2;border-radius:9px;padding:13px 14px;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <span style="font-size:.69rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${tipoBg[p.tipo]};color:${tipoCol[p.tipo]};">${tipoLabel[p.tipo]}</span>
+      <span style="font-size:.7rem;color:#BDBDBD;">P${idx + 1}</span>
+      <div style="margin-left:auto;display:flex;gap:4px;">
+        ${idx > 0 ? `<button type="button" onclick="_moverPreguntaExamen(${idx},-1)" title="Subir" style="background:none;border:1px solid #E0E0E0;border-radius:5px;cursor:pointer;padding:3px 7px;font-size:12px;">↑</button>` : ''}
+        ${idx < total - 1 ? `<button type="button" onclick="_moverPreguntaExamen(${idx},1)" title="Bajar" style="background:none;border:1px solid #E0E0E0;border-radius:5px;cursor:pointer;padding:3px 7px;font-size:12px;">↓</button>` : ''}
+        <button type="button" onclick="_removePreguntaExamen(${idx})" title="Eliminar" style="background:#FFEBEE;color:#C62828;border:none;border-radius:5px;cursor:pointer;padding:3px 7px;display:flex;align-items:center;">
+          <span class="material-icons" style="font-size:14px;">delete</span>
+        </button>
+      </div>
+    </div>
+    <label style="display:block;font-size:.71rem;font-weight:600;color:#546E7A;margin-bottom:3px;">Enunciado *</label>
+    <textarea rows="2" style="${inputS}resize:vertical;" placeholder="Escribe la pregunta aquí..." oninput="_examenEditor.preguntas[${idx}].enunciado=this.value">${_eHtml(p.enunciado)}</textarea>
+    <div style="margin-top:8px;">
+      <label style="display:block;font-size:.71rem;font-weight:600;color:#546E7A;margin-bottom:3px;">URL de imagen (opcional)</label>
+      <input type="url" value="${_eHtml(p.imagen || '')}" placeholder="https://..." style="${inputS}" oninput="_examenEditor.preguntas[${idx}].imagen=this.value">
+    </div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+      <label style="font-size:.71rem;font-weight:600;color:#546E7A;">Puntos:</label>
+      <input type="number" min="1" max="100" value="${p.puntos || 1}" style="width:64px;padding:5px 8px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.83rem;outline:none;" oninput="_examenEditor.preguntas[${idx}].puntos=parseInt(this.value)||1">
+    </div>
+    ${extraHtml}
+  </div>`;
+}
+
+function _addPreguntaExamen(tipo) {
+  if (!_examenEditor) return;
+  const id = 'p' + Date.now() + '_' + Math.floor(Math.random() * 9999);
+  _examenEditor.preguntas.push({ id, tipo, enunciado: '', imagen: '', opciones: tipo === 'mc' ? ['', '', '', ''] : [], puntos: 1 });
+  _renderEditorExamen();
+  setTimeout(() => {
+    const cont = document.getElementById('examenes-editor-body');
+    if (cont) cont.scrollTop = cont.scrollHeight;
+  }, 60);
+}
+
+function _removePreguntaExamen(idx) {
+  if (!_examenEditor) return;
+  _examenEditor.preguntas.splice(idx, 1);
+  _renderEditorExamen();
+}
+
+function _moverPreguntaExamen(idx, dir) {
+  if (!_examenEditor) return;
+  const arr = _examenEditor.preguntas;
+  const ni = idx + dir;
+  if (ni < 0 || ni >= arr.length) return;
+  [arr[idx], arr[ni]] = [arr[ni], arr[idx]];
+  _renderEditorExamen();
+}
+
+async function guardarExamen() {
+  if (!_examenEditor || !window.currentUser) return;
+  const ex = _examenEditor;
+  ex.titulo = (document.getElementById('ex-ed-titulo')?.value || '').trim();
+  ex.materia = (document.getElementById('ex-ed-materia')?.value || '').trim();
+  ex.curso = (document.getElementById('ex-ed-curso')?.value || '').trim();
+  ex.instrucciones = (document.getElementById('ex-ed-instrucciones')?.value || '').trim();
+
+  if (!ex.titulo) { mostrarToast('Escribe un título para el examen', 'error'); return; }
+  if (ex.preguntas.length === 0) { mostrarToast('Agrega al menos una pregunta', 'error'); return; }
+
+  const sinEnunciado = ex.preguntas.findIndex(p => !p.enunciado.trim());
+  if (sinEnunciado !== -1) { mostrarToast('La pregunta P' + (sinEnunciado + 1) + ' no tiene enunciado', 'error'); return; }
+
+  const btn = document.getElementById('examenes-editor-guardar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  try {
+    const data = {
+      titulo: ex.titulo, materia: ex.materia, curso: ex.curso, instrucciones: ex.instrucciones,
+      preguntas: ex.preguntas,
+      docenteUid: window.currentUser.uid,
+      docenteNombre: window.currentUser.displayName || '',
+      docenteEmail: window.currentUser.email || ''
+    };
+    if (ex.id) {
+      await db.collection('examenes').doc(ex.id).update(data);
+      mostrarToast('Examen actualizado', 'success');
+    } else {
+      data.activo = true;
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('examenes').add(data);
+      mostrarToast('Examen creado y activado', 'success');
+    }
+    cerrarEditorExamen();
+    _cargarExamenes();
+  } catch (e) {
+    console.error('[Examenes guardar]', e);
+    mostrarToast('Error al guardar: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar examen'; }
+  }
+}
+
+async function eliminarExamen(examenId) {
+  if (!confirm('¿Eliminar este examen? También se borrarán todas las respuestas recibidas. Esta acción no se puede deshacer.')) return;
+  try {
+    await db.collection('examenes').doc(examenId).delete();
+    mostrarToast('Examen eliminado', 'success');
+    _cargarExamenes();
+  } catch (e) {
+    mostrarToast('Error al eliminar: ' + e.message, 'error');
+  }
+}
+
+async function toggleActivarExamen(examenId, nuevoEstado) {
+  try {
+    await db.collection('examenes').doc(examenId).update({ activo: nuevoEstado });
+    mostrarToast(nuevoEstado ? 'Examen abierto — los estudiantes ya pueden acceder' : 'Examen cerrado', 'success');
+    _cargarExamenes();
+  } catch (e) {
+    mostrarToast('Error: ' + e.message, 'error');
+  }
+}
+
+function copiarLinkExamen(examenId) {
+  const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+  const url = base + 'examen.html?id=' + examenId;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => mostrarToast('Enlace copiado al portapapeles', 'success'))
+      .catch(() => prompt('Copia este enlace:', url));
+  } else {
+    prompt('Copia este enlace:', url);
+  }
+}
+
+// ── Resultados ────────────────────────────────────────────────────────
+
+async function verResultadosExamen(examenId) {
+  const ex = _examenesCache.find(e => e.id === examenId);
+  if (!ex) return;
+  const overlay = document.getElementById('examenes-resultados-overlay');
+  const body = document.getElementById('examenes-resultados-body');
+  const tEl = document.getElementById('examenes-resultados-titulo');
+  if (!overlay || !body) return;
+  if (tEl) tEl.textContent = ex.titulo || 'Resultados';
+  body.innerHTML = '<div style="text-align:center;padding:32px;color:#9E9E9E;"><span class="material-icons spin" style="font-size:36px;display:block;">hourglass_top</span><p style="margin-top:8px;font-size:.83rem;">Cargando respuestas...</p></div>';
+  overlay.classList.remove('hidden');
+  try {
+    const snap = await db.collection('examenes').doc(examenId).collection('respuestas')
+      .orderBy('fechaEnvio', 'desc').get();
+    if (snap.empty) {
+      body.innerHTML = '<div style="text-align:center;padding:40px;color:#BDBDBD;"><span class="material-icons" style="font-size:48px;display:block;opacity:.4;margin-bottom:10px;">inbox</span><p>Nadie ha respondido este examen todavía.</p></div>';
+      return;
+    }
+    const respuestas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const preguntas = ex.preguntas || [];
+    body.innerHTML = `
+      <div style="background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.83rem;color:#1565C0;font-weight:600;">
+        ${respuestas.length} respuesta${respuestas.length !== 1 ? 's' : ''} recibida${respuestas.length !== 1 ? 's' : ''} · ${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.76rem;min-width:500px;">
+          <thead>
+            <tr style="background:#1565C0;color:#fff;">
+              <th style="padding:8px 10px;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;background:#1565C0;">Estudiante</th>
+              <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Número</th>
+              <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Fecha</th>
+              ${preguntas.map((p, i) => `<th style="padding:8px 10px;text-align:center;white-space:nowrap;min-width:70px;">P${i + 1}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${respuestas.map((r, ri) => {
+              const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
+              const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') + ' ' + fechaObj.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
+              return `<tr style="border-bottom:1px solid #F0F0F0;${ri % 2 !== 0 ? 'background:#FAFAFA;' : ''}">
+                <td style="padding:7px 10px;font-weight:600;color:#1A1A2E;position:sticky;left:0;background:${ri % 2 !== 0 ? '#FAFAFA' : '#fff'};">${_eHtml(r.estudianteNombre || '—')}</td>
+                <td style="padding:7px 10px;color:#616161;">${_eHtml(r.estudianteNumero || '—')}</td>
+                <td style="padding:7px 10px;color:#9E9E9E;white-space:nowrap;">${fechaStr}</td>
+                ${preguntas.map(p => {
+                  const resp = (r.respuestas || {})[p.id] || '';
+                  return `<td style="padding:7px 10px;text-align:center;max-width:180px;overflow:hidden;text-overflow:ellipsis;${p.tipo !== 'abierta' ? 'white-space:nowrap;' : ''}">${resp ? _eHtml(resp) : '<span style="color:#E0E0E0;">—</span>'}</td>`;
+                }).join('')}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    body.innerHTML = '<div style="color:#C62828;padding:16px;font-size:.83rem;">Error al cargar: ' + e.message + '</div>';
+  }
+}
+
+function cerrarResultadosExamen() {
+  document.getElementById('examenes-resultados-overlay').classList.add('hidden');
+}
+
+function _eHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 
 

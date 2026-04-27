@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinclass-v57';
+const CACHE_NAME = 'tinclass-v58';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -12,7 +12,8 @@ const STATIC_ASSETS = [
   '/LogoTinClass.png',
   '/manifest.json',
   '/reporte.html',
-  '/denuncia.html'
+  '/denuncia.html',
+  '/examen.html'
 ];
 
 // Dominios externos que se manejan solo con red (sin cache)
