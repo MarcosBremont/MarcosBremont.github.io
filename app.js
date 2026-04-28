@@ -22802,7 +22802,6 @@ function abrirModalClase(encodedData) {
           </div>
           ${si.ra?.descripcion ? `<div style="color:#2E7D32;line-height:1.45;font-weight:600;">${escapeHTML(si.ra.descripcion)}</div>` : ''}
         </div>` : ''}
-        <div class="mcl-actividad-txt">${escapeHTML(si.enunciado)}</div>
         ${si.instrumento ? `
         <div class="mcl-instrumento" style="background:${color}18;border-color:${color}44;">
           <span class="material-icons" style="color:${color};">${si.instrumento.tipo === 'rubrica' ? 'table_chart' : 'checklist'}</span>
