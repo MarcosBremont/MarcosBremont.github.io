@@ -2892,7 +2892,12 @@ function renderizarActividades(listaActividades) {
             <div class="act-card-meta">
               <div class="act-meta-item">
                 <span class="act-meta-label">Fecha</span>
-                <input type="date" class="act-fecha-input" data-idx="${idx}" value="${fechaVal}" title="${act.fechaStr || ''}">
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <input type="date" class="act-fecha-input" data-idx="${idx}" value="${fechaVal}" title="${act.fechaStr || ''}">
+                  <button type="button" onclick="_abrirFechaPicker(${idx},this)" title="Ver días de clase" style="background:none;border:1.5px solid #90CAF9;border-radius:6px;padding:3px 5px;cursor:pointer;color:#1565C0;display:flex;align-items:center;flex-shrink:0;">
+                    <span class="material-icons" style="font-size:17px;">calendar_month</span>
+                  </button>
+                </div>
               </div>
               <div class="act-meta-item">
                 <span class="act-meta-label">Valor (pts)</span>
@@ -2966,6 +2971,137 @@ function renderizarActividades(listaActividades) {
 
   // Resumen de valores al final de la tabla
   _actualizarResumenValores(listaActividades);
+}
+
+// ── Date picker de días de clase ──────────────────────────────────────
+let _fpActIdx = null;
+let _fpViewDate = null;
+
+function _abrirFechaPicker(actIdx, anchorEl) {
+  _fpActIdx = actIdx;
+  const act = planificacion.actividades[actIdx];
+  // Centrar el mes en la fecha actual de la actividad o en el primer día de clase
+  if (act && act.fecha) {
+    const d = new Date(act.fecha + 'T12:00:00');
+    _fpViewDate = new Date(d.getFullYear(), d.getMonth(), 1);
+  } else {
+    const fc = planificacion.fechasClase;
+    if (fc && fc.length) {
+      const f = fc[0].fecha instanceof Date ? fc[0].fecha : new Date(fc[0].fecha);
+      _fpViewDate = new Date(f.getFullYear(), f.getMonth(), 1);
+    } else {
+      const n = new Date();
+      _fpViewDate = new Date(n.getFullYear(), n.getMonth(), 1);
+    }
+  }
+
+  let popup = document.getElementById('_fp-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = '_fp-popup';
+    popup.style.cssText = 'position:fixed;z-index:10000;background:#fff;border-radius:14px;box-shadow:0 8px 36px rgba(0,0,0,.2);padding:14px 14px 10px;width:268px;display:none;';
+    document.body.appendChild(popup);
+  }
+
+  const rect = anchorEl.getBoundingClientRect();
+  let top = rect.bottom + 6;
+  let left = rect.left - 120;
+  if (left < 8) left = 8;
+  if (left + 268 > window.innerWidth - 8) left = window.innerWidth - 276;
+  if (top + 300 > window.innerHeight) top = rect.top - 306;
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+  popup.style.display = 'block';
+
+  _renderFpMes();
+
+  const handler = function(e) {
+    const p = document.getElementById('_fp-popup');
+    if (p && !p.contains(e.target) && !anchorEl.contains(e.target)) {
+      p.style.display = 'none';
+    } else {
+      document.addEventListener('click', handler, { once: true });
+    }
+  };
+  setTimeout(() => document.addEventListener('click', handler, { once: true }), 50);
+}
+
+function _renderFpMes() {
+  const popup = document.getElementById('_fp-popup');
+  if (!popup || !_fpViewDate) return;
+  const yr = _fpViewDate.getFullYear();
+  const mo = _fpViewDate.getMonth();
+
+  // Construir set de fechas de clase (YYYY-MM-DD) del mes actual
+  const claseDias = new Set();
+  (planificacion.fechasClase || []).forEach(fc => {
+    const d = fc.fecha instanceof Date ? fc.fecha : new Date(fc.fecha);
+    const s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    claseDias.add(s);
+  });
+
+  // Fecha seleccionada actual
+  const act = _fpActIdx !== null ? planificacion.actividades[_fpActIdx] : null;
+  const sel = act && act.fecha ? act.fecha : null;
+
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const dsem = ['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+  const firstDow = new Date(yr, mo, 1).getDay();
+  const diasEnMes = new Date(yr, mo + 1, 0).getDate();
+  const hoy = new Date();
+  const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
+
+  let celdas = '';
+  for (let i = 0; i < firstDow; i++) celdas += '<div></div>';
+  for (let d = 1; d <= diasEnMes; d++) {
+    const ds = yr + '-' + String(mo+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const esClase = claseDias.has(ds);
+    const esSel = ds === sel;
+    const esHoy = ds === hoyStr;
+    let st, cursor = 'cursor:pointer;';
+    if (esSel) {
+      st = 'background:#1565C0;color:#fff;font-weight:700;';
+    } else if (esClase) {
+      st = 'background:#DBEAFE;color:#1565C0;font-weight:600;border:1.5px solid #93C5FD;';
+    } else if (esHoy) {
+      st = 'color:#E65100;font-weight:600;';
+    } else {
+      st = 'color:#9E9E9E;';
+    }
+    celdas += `<div onclick="_selFpDia('${ds}')" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.8rem;margin:1px auto;${st}${cursor}">${d}</div>`;
+  }
+
+  popup.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button onclick="_fpNav(-1)" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:#424242;display:flex;"><span class="material-icons" style="font-size:20px;">chevron_left</span></button>
+      <span style="font-size:.87rem;font-weight:700;color:#1A1A2E;">${meses[mo]} ${yr}</span>
+      <button onclick="_fpNav(1)" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:#424242;display:flex;"><span class="material-icons" style="font-size:20px;">chevron_right</span></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:4px;">
+      ${dsem.map(d => `<div style="font-size:.67rem;font-weight:700;color:#9E9E9E;padding:2px 0;">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);">${celdas}</div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:.7rem;color:#757575;border-top:1px solid #F0F4F8;padding-top:7px;">
+      <span style="width:12px;height:12px;background:#DBEAFE;border:1.5px solid #93C5FD;border-radius:50%;display:inline-block;flex-shrink:0;"></span> Días de clase
+    </div>`;
+}
+
+function _fpNav(dir) {
+  if (!_fpViewDate) return;
+  _fpViewDate = new Date(_fpViewDate.getFullYear(), _fpViewDate.getMonth() + dir, 1);
+  _renderFpMes();
+}
+
+function _selFpDia(dateStr) {
+  const input = document.querySelector(`.act-fecha-input[data-idx="${_fpActIdx}"]`);
+  if (input) {
+    input.value = dateStr;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const popup = document.getElementById('_fp-popup');
+  if (popup) popup.style.display = 'none';
+  _fpActIdx = null;
+  // Redibujar para mostrar la nueva selección si el picker sigue abierto
 }
 
 function _actualizarResumenValores(listaActividades) {
