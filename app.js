@@ -2893,8 +2893,9 @@ function renderizarActividades(listaActividades) {
               <div class="act-meta-item">
                 <span class="act-meta-label">Fecha</span>
                 <div style="display:flex;align-items:center;gap:4px;">
-                  <input type="date" class="act-fecha-input" data-idx="${idx}" value="${fechaVal}" title="${act.fechaStr || ''}">
-                  <button type="button" onclick="_abrirFechaPicker(${idx},this)" title="Ver días de clase" style="background:none;border:1.5px solid #90CAF9;border-radius:6px;padding:3px 5px;cursor:pointer;color:#1565C0;display:flex;align-items:center;flex-shrink:0;">
+                  <input type="hidden" class="act-fecha-input" data-idx="${idx}" value="${fechaVal}">
+                  <span class="act-fecha-label" title="${act.fechaStr || ''}" style="font-size:.85rem;color:#37474F;font-weight:500;min-width:72px;">${fechaVal ? fechaVal.split('-').reverse().join('/') : '—'}</span>
+                  <button type="button" onclick="_abrirFechaPicker(${idx},this)" title="${act.fechaStr || 'Seleccionar fecha'}" style="background:none;border:1.5px solid #90CAF9;border-radius:6px;padding:3px 5px;cursor:pointer;color:#1565C0;display:flex;align-items:center;flex-shrink:0;">
                     <span class="material-icons" style="font-size:17px;">calendar_month</span>
                   </button>
                 </div>
@@ -2962,6 +2963,8 @@ function renderizarActividades(listaActividades) {
         act.fecha = val;
         act.fechaStr = d.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
         this.title = act.fechaStr;
+        const labelEl = this.closest('div')?.querySelector('.act-fecha-label');
+        if (labelEl) { labelEl.textContent = val.split('-').reverse().join('/'); labelEl.title = act.fechaStr; }
         guardarBorrador();
         const actLabelF = (act.enunciado || act.tipo || 'Actividad').substring(0, 35);
         mostrarToast(`Fecha de "${actLabelF}" → ${act.fechaStr} ✓`, 'success');
