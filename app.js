@@ -2979,8 +2979,33 @@ let _fpViewDate = null;
 const _FP_MAPA_DIA = { domingo:0, lunes:1, martes:2, miercoles:3, jueves:4, viernes:5, sabado:6 };
 
 function _fpGetClaseDow() {
-  // Devuelve Set de números de día de semana (0-6) que son días de clase
-  // Usa datosGenerales.diasClase que SÍ se guarda correctamente en localStorage
+  // 1. Buscar el nombre del curso vinculado a esta planificación via calState.cursos.planIds
+  let nombreCurso = '';
+  const planId = planificacion._id;
+  if (planId && typeof calState !== 'undefined' && calState.cursos) {
+    const curso = Object.values(calState.cursos).find(c => (c.planIds || []).includes(planId));
+    if (curso) nombreCurso = curso.nombre;
+  }
+
+  // 2. Buscar en el horario real los días de esta materia + curso
+  if (nombreCurso && typeof cargarHorario === 'function') {
+    const horario = cargarHorario();
+    let entradas = horario.filter(e => e.seccion === nombreCurso && e.materia);
+    // Filtrar por materia de esta planificación si es posible
+    const materia = ((planificacion.datosGenerales || {}).moduloFormativo || '').toLowerCase().trim();
+    if (materia && entradas.length > 0) {
+      const filtradas = entradas.filter(e => (e.materia || '').toLowerCase().includes(materia.substring(0, 20)));
+      if (filtradas.length > 0) entradas = filtradas;
+    }
+    if (entradas.length > 0) {
+      const dow = new Set();
+      // e.dia: 0=Lunes … 4=Viernes → jsDay (getDay): Lu=1, Ma=2, Mi=3, Ju=4, Vi=5
+      entradas.forEach(e => { if (typeof e.dia === 'number') dow.add(e.dia + 1); });
+      if (dow.size > 0) return dow;
+    }
+  }
+
+  // 3. Fallback: diasClase de datosGenerales (guardado en localStorage)
   const diasClase = (planificacion.datosGenerales || {}).diasClase || {};
   const dow = new Set();
   Object.entries(diasClase).forEach(([dia, cfg]) => {
@@ -3088,6 +3113,12 @@ function _renderFpMes() {
   // Nombre de días de clase para el pie
   const nombDias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const diasLabel = [...claseDow].sort().map(n => nombDias[n]).join(', ');
+  const planId2 = planificacion._id;
+  let cursoLabel = '';
+  if (planId2 && typeof calState !== 'undefined' && calState.cursos) {
+    const c2 = Object.values(calState.cursos).find(c => (c.planIds || []).includes(planId2));
+    if (c2) cursoLabel = c2.nombre;
+  }
 
   popup.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -3099,9 +3130,12 @@ function _renderFpMes() {
       ${dsem.map(d => `<div style="font-size:.67rem;font-weight:700;color:#9E9E9E;padding:2px 0;">${d}</div>`).join('')}
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);">${celdas}</div>
-    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:.7rem;color:#757575;border-top:1px solid #F0F4F8;padding-top:7px;flex-wrap:wrap;">
-      <span style="width:12px;height:12px;background:#DBEAFE;border:1.5px solid #93C5FD;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
-      ${diasLabel || 'Días de clase'}
+    <div style="margin-top:8px;border-top:1px solid #F0F4F8;padding-top:7px;font-size:.7rem;color:#757575;">
+      ${cursoLabel ? `<div style="font-weight:700;color:#1565C0;margin-bottom:3px;">${_eHtml(cursoLabel)}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+        <span style="width:11px;height:11px;background:#DBEAFE;border:1.5px solid #93C5FD;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+        ${diasLabel || 'Días de clase'}
+      </div>
     </div>`;
 }
 
