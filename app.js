@@ -27356,6 +27356,7 @@ const OPCIONES_DOCENTES = [
   { id: 'denuncias', label: 'Buzón de Denuncias', icono: 'report', desc: 'Denuncias anónimas' },
   { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios' },
   { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global de estudiantes' },
+  { id: 'examenes', label: 'Exámenes y Pruebas', icono: 'quiz', desc: 'Crear exámenes en línea para estudiantes' },
 ];
 
 async function _cargarOpcionesDocentes() {
@@ -27554,6 +27555,7 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
     auditoria: 'btn-dash-auditoria',
     buscar: 'btn-buscar-est',
     presentacion: 'btn-dash-presentacion',
+    examenes: 'btn-dash-examenes',
   };
   Object.entries(mapDash).forEach(([key, btnId]) => {
     const def = defsArray ? defsArray.find(o => o.id === key) : null;
