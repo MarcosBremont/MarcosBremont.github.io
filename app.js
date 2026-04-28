@@ -7656,6 +7656,7 @@ function _bloquearPantalla() {
 
   document.getElementById('lock-overlay')?.classList.remove('hidden');
   if (!hasPIN) setTimeout(() => input?.focus(), 120);
+  if (hasPIN) document.addEventListener('keydown', _lockPinKeyHandler);
   sessionStorage.setItem(_LOCK_KEY, '1');
   registrarCambio('Pantalla bloqueada por inactividad');
 }
@@ -7701,7 +7702,17 @@ function _completarDesbloqueo() {
   sessionStorage.setItem(_LAST_ACT_KEY, String(now));
   _lastActivityWriteTime = now;
   document.getElementById('lock-overlay')?.classList.add('hidden');
+  document.removeEventListener('keydown', _lockPinKeyHandler);
   registrarCambio('Pantalla desbloqueada');
+}
+
+// ── Teclado para el PIN ─────────────────────────────────────────────────
+function _lockPinKeyHandler(e) {
+  if (!_pantallaBloqueada) return;
+  const pinSection = document.getElementById('lock-pin-section');
+  if (!pinSection || pinSection.style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') { e.preventDefault(); _lockPinDigito(e.key); }
+  else if (e.key === 'Backspace')    { e.preventDefault(); _lockPinBorrar(); }
 }
 
 // ── PIN numérico de desbloqueo ──────────────────────────────────────────
