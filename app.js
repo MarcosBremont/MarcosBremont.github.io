@@ -3071,6 +3071,7 @@ function _renderFpMes() {
 
   // Días de semana que son clases (desde diasClase — siempre disponible)
   const claseDow = _fpGetClaseDow();
+  console.log('[FP] claseDow:', [...claseDow], 'has(2):', claseDow.has(2), 'has(3):', claseDow.has(3), 'has(4):', claseDow.has(4));
 
   // Rango del semestre (opcional, para no destacar fuera del rango)
   const fechaIni = _fpParseIso(dg.fechaInicio);
@@ -3094,7 +3095,7 @@ function _renderFpMes() {
     const dow = date.getDay();
     const ds = yr + '-' + String(mo+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     const enRango = (!fechaIni || date >= fechaIni) && (!fechaFin || date <= fechaFin);
-    const esClase = claseDow.has(dow) && enRango;
+    const esClase = claseDow.has(dow);
     const esSel = ds === sel;
     const esHoy = date.toDateString() === hoy.toDateString();
     let st;
