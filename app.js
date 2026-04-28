@@ -5780,11 +5780,20 @@ function _selDgFpDia(dateStr) {
   const input = _dgFpFieldId ? document.getElementById(_dgFpFieldId) : null;
   if (input) {
     input.value = dateStr;
+    _actualizarDgFechaLabels();
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
   const p = document.getElementById('_dg-fp-popup');
   if (p) p.style.display = 'none';
+}
+
+function _actualizarDgFechaLabels() {
+  ['fecha-inicio', 'fecha-termino'].forEach(id => {
+    const val = document.getElementById(id)?.value;
+    const lbl = document.getElementById(id + '-label');
+    if (lbl) lbl.textContent = val ? val.split('-').reverse().join('/') : '—';
+  });
 }
 
 /** Llena los campos del formulario desde el estado restaurado */
@@ -5845,7 +5854,6 @@ function poblarFormularioDesdeEstado() {
 
   // Mostrar curso asignado si la planificación tiene _id
   _mostrarCursoAsignado();
-  setTimeout(_actualizarCalendarioDiasClase, 50);
 
   setVal('cantidad-ra', dg.cantidadRA);
   setVal('cantidad-ec', dg.cantidadEC || 4);
@@ -5863,10 +5871,8 @@ function poblarFormularioDesdeEstado() {
 
 
   setVal('fecha-inicio', dg.fechaInicio);
-
-
-
   setVal('fecha-termino', dg.fechaTermino);
+  _actualizarDgFechaLabels();
 
 
 

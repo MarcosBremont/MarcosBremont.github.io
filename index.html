@@ -668,29 +668,29 @@
 
           <!-- Fecha de Inicio -->
           <div class="form-group">
-            <label for="fecha-inicio">Fecha de Inicio *</label>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <input type="date" id="fecha-inicio" required oninput="_actualizarCalendarioDiasClase()" style="flex:1;" />
-              <button type="button" onclick="_abrirDgFechaPicker('fecha-inicio',this)" title="Ver días de clase" style="background:none;border:1.5px solid #90CAF9;border-radius:6px;padding:5px 7px;cursor:pointer;color:#1565C0;display:flex;align-items:center;flex-shrink:0;">
-                <span class="material-icons" style="font-size:18px;">calendar_month</span>
+            <label>Fecha de Inicio *</label>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;background:#F8FBFF;">
+              <input type="hidden" id="fecha-inicio" />
+              <span id="fecha-inicio-label" style="flex:1;font-size:.92rem;color:#37474F;font-weight:500;">—</span>
+              <button type="button" onclick="_abrirDgFechaPicker('fecha-inicio',this)" title="Seleccionar fecha" style="background:none;border:none;cursor:pointer;color:#1565C0;display:flex;align-items:center;padding:0;flex-shrink:0;">
+                <span class="material-icons" style="font-size:20px;">calendar_month</span>
               </button>
             </div>
           </div>
 
           <!-- Fecha de Término -->
           <div class="form-group">
-            <label for="fecha-termino">Fecha de Término *</label>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <input type="date" id="fecha-termino" required style="flex:1;" />
-              <button type="button" onclick="_abrirDgFechaPicker('fecha-termino',this)" title="Ver días de clase" style="background:none;border:1.5px solid #90CAF9;border-radius:6px;padding:5px 7px;cursor:pointer;color:#1565C0;display:flex;align-items:center;flex-shrink:0;">
-                <span class="material-icons" style="font-size:18px;">calendar_month</span>
+            <label>Fecha de Término *</label>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;background:#F8FBFF;">
+              <input type="hidden" id="fecha-termino" />
+              <span id="fecha-termino-label" style="flex:1;font-size:.92rem;color:#37474F;font-weight:500;">—</span>
+              <button type="button" onclick="_abrirDgFechaPicker('fecha-termino',this)" title="Seleccionar fecha" style="background:none;border:none;cursor:pointer;color:#1565C0;display:flex;align-items:center;padding:0;flex-shrink:0;">
+                <span class="material-icons" style="font-size:20px;">calendar_month</span>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Mini-calendario días de clase -->
-        <div id="dias-clase-calendario" style="display:none;margin:4px 0 12px;max-width:420px;"></div>
 
         <!-- Priorización y Ponderación de los RA -->
         <div class="dias-clase-section" id="seccion-priorizacion" style="display:none;">
