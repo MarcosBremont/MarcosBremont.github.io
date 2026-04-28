@@ -5532,12 +5532,13 @@ function _actualizarCalendarioDiasClase() {
   const colorDe = {}; // materia → color objeto
   materias.forEach((m, i) => { colorDe[m] = PALETA[i % PALETA.length]; });
 
-  // Mapa dia → materia (para el calendario; si un dia tiene varias, la primera gana)
-  const diaAMateria = {}; // jsGetDay → materia
+  // Mapa dia → [materias] (soporte multi-materia para días compartidos)
+  const diaAMaterias = {}; // jsDay → [materia, ...]
   materias.forEach(m => {
     porMateria[m].forEach(d => {
       const jsDay = d + 1;
-      if (!diaAMateria[jsDay]) diaAMateria[jsDay] = m;
+      if (!diaAMaterias[jsDay]) diaAMaterias[jsDay] = [];
+      diaAMaterias[jsDay].push(m);
     });
   });
 
@@ -5580,9 +5581,15 @@ function _actualizarCalendarioDiasClase() {
 
   // Cabecera
   diasSemana.forEach((d, i) => {
-    const mat = diaAMateria[i];
-    const c = mat ? colorDe[mat] : null;
-    html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;color:${c ? c.text : '#B0BEC5'};">${d}</div>`;
+    const mats = diaAMaterias[i] || [];
+    if (mats.length === 0) {
+      html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;color:#B0BEC5;">${d}</div>`;
+    } else if (mats.length === 1) {
+      html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;color:${colorDe[mats[0]].text};">${d}</div>`;
+    } else {
+      const c1 = colorDe[mats[0]], c2 = colorDe[mats[1]];
+      html += `<div style="font-size:0.68rem;font-weight:700;padding:2px 0;background:linear-gradient(135deg,${c1.text} 50%,${c2.text} 50%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${d}</div>`;
+    }
   });
 
   // Celdas vacías
@@ -5592,17 +5599,25 @@ function _actualizarCalendarioDiasClase() {
   for (let dia = 1; dia <= totalDias; dia++) {
     const fecha = new Date(anio, mes, dia);
     const jsDay = fecha.getDay();
-    const mat = diaAMateria[jsDay];
+    const mats = diaAMaterias[jsDay] || [];
     const iso = fecha.toISOString().slice(0, 10);
     const esHoy = iso === hoyISO;
     const esSel = iso === selISO;
-    const c = mat ? colorDe[mat] : null;
 
     let style;
-    if (esSel)      style = `background:#1565C0;color:#fff;font-weight:700;border:none;`;
-    else if (esHoy) style = `background:#E3F2FD;color:#1565C0;font-weight:700;border:1.5px solid #1565C0;`;
-    else if (c)     style = `background:${c.bg};color:${c.text};font-weight:700;border:1px solid ${c.border};`;
-    else            style = `color:#CFD8DC;`;
+    if (esSel) {
+      style = `background:#1565C0;color:#fff;font-weight:700;border:none;`;
+    } else if (esHoy) {
+      style = `background:#E3F2FD;color:#1565C0;font-weight:700;border:1.5px solid #1565C0;`;
+    } else if (mats.length >= 2) {
+      const c1 = colorDe[mats[0]], c2 = colorDe[mats[1]];
+      style = `background:linear-gradient(135deg,${c1.bg} 50%,${c2.bg} 50%);color:${c1.text};font-weight:700;border:1px solid ${c1.border};`;
+    } else if (mats.length === 1) {
+      const c = colorDe[mats[0]];
+      style = `background:${c.bg};color:${c.text};font-weight:700;border:1px solid ${c.border};`;
+    } else {
+      style = `color:#CFD8DC;`;
+    }
 
     html += `<div style="padding:3px 1px;border-radius:50%;font-size:0.72rem;${style}">${dia}</div>`;
   }
@@ -5610,6 +5625,166 @@ function _actualizarCalendarioDiasClase() {
   html += `</div></div>`;
   contenedor.innerHTML = html;
   contenedor.style.display = '';
+}
+
+// ── Date picker de Datos Generales (multi-materia) ───────────────────
+let _dgFpFieldId = null;
+let _dgFpViewDate = null;
+const _DG_PALETA = [
+  { bg:'#E3F2FD', border:'#90CAF9', text:'#1565C0' },
+  { bg:'#F3E5F5', border:'#CE93D8', text:'#6A1B9A' },
+  { bg:'#E8F5E9', border:'#A5D6A7', text:'#2E7D32' },
+  { bg:'#FFF3E0', border:'#FFCC80', text:'#E65100' },
+  { bg:'#FCE4EC', border:'#F48FB1', text:'#AD1457' },
+];
+
+function _dgFpGetMaterias() {
+  const cursoId = document.getElementById('sel-curso-paso1')?.value;
+  const curso = cursoId && typeof calState !== 'undefined' ? calState.cursos?.[cursoId] : null;
+  const nombreCurso = curso?.nombre || '';
+  if (!nombreCurso || typeof cargarHorario !== 'function') return { materias:[], colorDe:{}, diaAMaterias:{} };
+  const horario = cargarHorario();
+  const entradas = horario.filter(e => e.seccion === nombreCurso && e.materia);
+  const porMateria = {};
+  entradas.forEach(e => {
+    if (!porMateria[e.materia]) porMateria[e.materia] = new Set();
+    porMateria[e.materia].add(e.dia);
+  });
+  const materias = Object.keys(porMateria);
+  const colorDe = {};
+  materias.forEach((m, i) => { colorDe[m] = _DG_PALETA[i % _DG_PALETA.length]; });
+  const diaAMaterias = {};
+  materias.forEach(m => {
+    porMateria[m].forEach(d => {
+      const jsDay = d + 1;
+      if (!diaAMaterias[jsDay]) diaAMaterias[jsDay] = [];
+      diaAMaterias[jsDay].push(m);
+    });
+  });
+  return { materias, colorDe, diaAMaterias };
+}
+
+function _abrirDgFechaPicker(fieldId, anchorEl) {
+  _dgFpFieldId = fieldId;
+  const input = document.getElementById(fieldId);
+  const val = input?.value;
+  let base = val ? new Date(val + 'T12:00:00') : new Date();
+  if (isNaN(base.getTime())) base = new Date();
+  _dgFpViewDate = new Date(base.getFullYear(), base.getMonth(), 1);
+
+  let popup = document.getElementById('_dg-fp-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = '_dg-fp-popup';
+    popup.style.cssText = 'position:fixed;background:#fff;border:1.5px solid #90CAF9;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);padding:14px;z-index:9999;width:290px;';
+    document.body.appendChild(popup);
+  }
+  const rect = anchorEl.getBoundingClientRect();
+  let top = rect.bottom + 6, left = rect.left;
+  if (left + 290 > window.innerWidth - 10) left = window.innerWidth - 300;
+  if (top + 300 > window.innerHeight - 10) top = rect.top - 310;
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+  popup.style.display = 'block';
+  _renderDgFpMes();
+
+  const handler = function(e) {
+    const p = document.getElementById('_dg-fp-popup');
+    if (!p || p.style.display === 'none') { document.removeEventListener('click', handler); return; }
+    const path = e.composedPath ? e.composedPath() : [e.target];
+    if (!path.includes(p) && !path.includes(anchorEl)) {
+      p.style.display = 'none';
+      document.removeEventListener('click', handler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', handler), 50);
+}
+
+function _renderDgFpMes() {
+  const popup = document.getElementById('_dg-fp-popup');
+  if (!popup || !_dgFpViewDate || isNaN(_dgFpViewDate.getTime())) return;
+  const yr = _dgFpViewDate.getFullYear();
+  const mo = _dgFpViewDate.getMonth();
+  const { materias, colorDe, diaAMaterias } = _dgFpGetMaterias();
+  const input = _dgFpFieldId ? document.getElementById(_dgFpFieldId) : null;
+  const sel = input?.value || null;
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const dsem = ['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+  const firstDow = new Date(yr, mo, 1).getDay();
+  const diasEnMes = new Date(yr, mo + 1, 0).getDate();
+  const hoy = new Date();
+
+  // Cabecera días de semana con color por materia
+  const cabecera = dsem.map((d, i) => {
+    const mats = diaAMaterias[i] || [];
+    if (mats.length === 0) return `<div style="font-size:.68rem;font-weight:700;padding:2px 0;color:#B0BEC5;">${d}</div>`;
+    if (mats.length === 1) return `<div style="font-size:.68rem;font-weight:700;padding:2px 0;color:${colorDe[mats[0]].text};">${d}</div>`;
+    const c1 = colorDe[mats[0]], c2 = colorDe[mats[1]];
+    return `<div style="font-size:.68rem;font-weight:700;padding:2px 0;background:linear-gradient(135deg,${c1.text} 50%,${c2.text} 50%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${d}</div>`;
+  }).join('');
+
+  // Celdas del mes
+  let celdas = '';
+  for (let i = 0; i < firstDow; i++) celdas += '<div></div>';
+  for (let d = 1; d <= diasEnMes; d++) {
+    const date = new Date(yr, mo, d);
+    const dow = date.getDay();
+    const ds = yr + '-' + String(mo+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const esSel = ds === sel;
+    const esHoy = date.toDateString() === hoy.toDateString();
+    const mats = diaAMaterias[dow] || [];
+    let st;
+    if (esSel) {
+      st = 'background:#1565C0;color:#fff;font-weight:700;';
+    } else if (esHoy) {
+      st = 'background:#E3F2FD;color:#1565C0;font-weight:700;border:1.5px solid #1565C0;';
+    } else if (mats.length >= 2) {
+      const c1 = colorDe[mats[0]], c2 = colorDe[mats[1]];
+      st = `background:linear-gradient(135deg,${c1.bg} 50%,${c2.bg} 50%);color:${c1.text};font-weight:700;border:1px solid ${c1.border};`;
+    } else if (mats.length === 1) {
+      const c = colorDe[mats[0]];
+      st = `background:${c.bg};color:${c.text};font-weight:700;border:1.5px solid ${c.border};`;
+    } else {
+      st = 'color:#9E9E9E;';
+    }
+    celdas += `<div onclick="_selDgFpDia('${ds}')" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.8rem;margin:1px auto;cursor:pointer;${st}">${d}</div>`;
+  }
+
+  // Leyenda de materias
+  let leyenda = materias.map(m => {
+    const c = colorDe[m];
+    return `<div style="display:flex;align-items:center;gap:5px;margin-top:4px;">
+      <span style="width:10px;height:10px;background:${c.bg};border:1.5px solid ${c.border};border-radius:50%;flex-shrink:0;display:inline-block;"></span>
+      <span style="font-size:.68rem;color:${c.text};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_eHtml(m)}">${_eHtml(m.length>38?m.substring(0,38)+'…':m)}</span>
+    </div>`;
+  }).join('');
+
+  popup.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button onclick="_dgFpNav(-1)" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:#424242;display:flex;"><span class="material-icons" style="font-size:20px;">chevron_left</span></button>
+      <span style="font-size:.87rem;font-weight:700;color:#1A1A2E;">${meses[mo]} ${yr}</span>
+      <button onclick="_dgFpNav(1)" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:#424242;display:flex;"><span class="material-icons" style="font-size:20px;">chevron_right</span></button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:4px;">${cabecera}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);">${celdas}</div>
+    ${leyenda ? `<div style="margin-top:8px;border-top:1px solid #F0F4F8;padding-top:7px;">${leyenda}</div>` : ''}`;
+}
+
+function _dgFpNav(dir) {
+  if (!_dgFpViewDate) return;
+  _dgFpViewDate = new Date(_dgFpViewDate.getFullYear(), _dgFpViewDate.getMonth() + dir, 1);
+  _renderDgFpMes();
+}
+
+function _selDgFpDia(dateStr) {
+  const input = _dgFpFieldId ? document.getElementById(_dgFpFieldId) : null;
+  if (input) {
+    input.value = dateStr;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const p = document.getElementById('_dg-fp-popup');
+  if (p) p.style.display = 'none';
 }
 
 /** Llena los campos del formulario desde el estado restaurado */
