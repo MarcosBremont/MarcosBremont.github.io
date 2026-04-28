@@ -2976,24 +2976,35 @@ function renderizarActividades(listaActividades) {
 // ── Date picker de días de clase ──────────────────────────────────────
 let _fpActIdx = null;
 let _fpViewDate = null;
+const _FP_MAPA_DIA = { domingo:0, lunes:1, martes:2, miercoles:3, jueves:4, viernes:5, sabado:6 };
+
+function _fpGetClaseDow() {
+  // Devuelve Set de números de día de semana (0-6) que son días de clase
+  // Usa datosGenerales.diasClase que SÍ se guarda correctamente en localStorage
+  const diasClase = (planificacion.datosGenerales || {}).diasClase || {};
+  const dow = new Set();
+  Object.entries(diasClase).forEach(([dia, cfg]) => {
+    if (cfg && cfg.activo && _FP_MAPA_DIA[dia] !== undefined) dow.add(_FP_MAPA_DIA[dia]);
+  });
+  return dow;
+}
+
+function _fpParseIso(str) {
+  if (!str) return null;
+  const d = new Date(str + 'T12:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
 
 function _abrirFechaPicker(actIdx, anchorEl) {
   _fpActIdx = actIdx;
   const act = planificacion.actividades[actIdx];
-  // Centrar el mes en la fecha actual de la actividad o en el primer día de clase
-  if (act && act.fecha) {
-    const d = new Date(act.fecha + 'T12:00:00');
-    _fpViewDate = new Date(d.getFullYear(), d.getMonth(), 1);
-  } else {
-    const fc = planificacion.fechasClase;
-    if (fc && fc.length) {
-      const f = fc[0].fecha instanceof Date ? fc[0].fecha : new Date(fc[0].fecha);
-      _fpViewDate = new Date(f.getFullYear(), f.getMonth(), 1);
-    } else {
-      const n = new Date();
-      _fpViewDate = new Date(n.getFullYear(), n.getMonth(), 1);
-    }
-  }
+  const dg = planificacion.datosGenerales || {};
+
+  // Centrar el mes: fecha de la actividad → fechaInicio del plan → hoy
+  let base = _fpParseIso(act && act.fecha ? act.fecha : null)
+          || _fpParseIso(dg.fechaInicio)
+          || new Date();
+  _fpViewDate = new Date(base.getFullYear(), base.getMonth(), 1);
 
   let popup = document.getElementById('_fp-popup');
   if (!popup) {
@@ -3008,7 +3019,7 @@ function _abrirFechaPicker(actIdx, anchorEl) {
   let left = rect.left - 120;
   if (left < 8) left = 8;
   if (left + 268 > window.innerWidth - 8) left = window.innerWidth - 276;
-  if (top + 300 > window.innerHeight) top = rect.top - 306;
+  if (top + 310 > window.innerHeight) top = rect.top - 316;
   popup.style.top = top + 'px';
   popup.style.left = left + 'px';
   popup.style.display = 'block';
@@ -3028,17 +3039,17 @@ function _abrirFechaPicker(actIdx, anchorEl) {
 
 function _renderFpMes() {
   const popup = document.getElementById('_fp-popup');
-  if (!popup || !_fpViewDate) return;
+  if (!popup || !_fpViewDate || isNaN(_fpViewDate.getTime())) return;
   const yr = _fpViewDate.getFullYear();
   const mo = _fpViewDate.getMonth();
+  const dg = planificacion.datosGenerales || {};
 
-  // Construir set de fechas de clase (YYYY-MM-DD) del mes actual
-  const claseDias = new Set();
-  (planificacion.fechasClase || []).forEach(fc => {
-    const d = fc.fecha instanceof Date ? fc.fecha : new Date(fc.fecha);
-    const s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    claseDias.add(s);
-  });
+  // Días de semana que son clases (desde diasClase — siempre disponible)
+  const claseDow = _fpGetClaseDow();
+
+  // Rango del semestre (opcional, para no destacar fuera del rango)
+  const fechaIni = _fpParseIso(dg.fechaInicio);
+  const fechaFin = _fpParseIso(dg.fechaTermino);
 
   // Fecha seleccionada actual
   const act = _fpActIdx !== null ? planificacion.actividades[_fpActIdx] : null;
@@ -3049,16 +3060,19 @@ function _renderFpMes() {
   const firstDow = new Date(yr, mo, 1).getDay();
   const diasEnMes = new Date(yr, mo + 1, 0).getDate();
   const hoy = new Date();
-  const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
+  const hoyStr = yr + '-' + String(mo+1).padStart(2,'0'); // solo para comparar mes
 
   let celdas = '';
   for (let i = 0; i < firstDow; i++) celdas += '<div></div>';
   for (let d = 1; d <= diasEnMes; d++) {
+    const date = new Date(yr, mo, d);
+    const dow = date.getDay();
     const ds = yr + '-' + String(mo+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    const esClase = claseDias.has(ds);
+    const enRango = (!fechaIni || date >= fechaIni) && (!fechaFin || date <= fechaFin);
+    const esClase = claseDow.has(dow) && enRango;
     const esSel = ds === sel;
-    const esHoy = ds === hoyStr;
-    let st, cursor = 'cursor:pointer;';
+    const esHoy = date.toDateString() === hoy.toDateString();
+    let st;
     if (esSel) {
       st = 'background:#1565C0;color:#fff;font-weight:700;';
     } else if (esClase) {
@@ -3068,8 +3082,12 @@ function _renderFpMes() {
     } else {
       st = 'color:#9E9E9E;';
     }
-    celdas += `<div onclick="_selFpDia('${ds}')" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.8rem;margin:1px auto;${st}${cursor}">${d}</div>`;
+    celdas += `<div onclick="_selFpDia('${ds}')" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.8rem;margin:1px auto;cursor:pointer;${st}">${d}</div>`;
   }
+
+  // Nombre de días de clase para el pie
+  const nombDias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const diasLabel = [...claseDow].sort().map(n => nombDias[n]).join(', ');
 
   popup.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -3081,8 +3099,9 @@ function _renderFpMes() {
       ${dsem.map(d => `<div style="font-size:.67rem;font-weight:700;color:#9E9E9E;padding:2px 0;">${d}</div>`).join('')}
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);">${celdas}</div>
-    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:.7rem;color:#757575;border-top:1px solid #F0F4F8;padding-top:7px;">
-      <span style="width:12px;height:12px;background:#DBEAFE;border:1.5px solid #93C5FD;border-radius:50%;display:inline-block;flex-shrink:0;"></span> Días de clase
+    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:.7rem;color:#757575;border-top:1px solid #F0F4F8;padding-top:7px;flex-wrap:wrap;">
+      <span style="width:12px;height:12px;background:#DBEAFE;border:1.5px solid #93C5FD;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+      ${diasLabel || 'Días de clase'}
     </div>`;
 }
 
@@ -3101,7 +3120,6 @@ function _selFpDia(dateStr) {
   const popup = document.getElementById('_fp-popup');
   if (popup) popup.style.display = 'none';
   _fpActIdx = null;
-  // Redibujar para mostrar la nueva selección si el picker sigue abierto
 }
 
 function _actualizarResumenValores(listaActividades) {
