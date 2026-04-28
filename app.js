@@ -22727,6 +22727,18 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
         <div class="dash-clase-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
         ${e.seccion ? `<div class="dash-clase-seccion"><span class="material-icons" style="font-size:13px;">group</span>${escapeHTML(e.seccion)}</div>` : ''}
         ${e.aula ? `<div class="dash-clase-aula"><span class="material-icons" style="font-size:13px;">room</span>${escapeHTML(e.aula)}</div>` : ''}
+        ${(() => {
+          const v = new Set();
+          return sesiones
+            .filter(s => s.ra && s.ra.descripcion && !v.has(s.ra.descripcion) && v.add(s.ra.descripcion))
+            .map(s => {
+              const desc = s.ra.descripcion;
+              const txt = escapeHTML(desc.substring(0, 72)) + (desc.length > 72 ? '…' : '');
+              return '<div style="margin-top:5px;font-size:.71rem;color:#2E7D32;display:flex;gap:4px;align-items:flex-start;line-height:1.35;">'
+                + '<span class="material-icons" style="font-size:12px;flex-shrink:0;margin-top:1px;color:#2E7D32;">school</span>'
+                + '<span>' + txt + '</span></div>';
+            }).join('');
+        })()}
         ${sesiones.length ? sesiones.map(s => `
           <div class="dash-clase-plan">
             <span class="material-icons" style="font-size:12px;">description</span>
