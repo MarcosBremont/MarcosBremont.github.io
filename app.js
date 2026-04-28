@@ -3056,13 +3056,14 @@ function _abrirFechaPicker(actIdx, anchorEl) {
 
   const handler = function(e) {
     const p = document.getElementById('_fp-popup');
-    if (p && !p.contains(e.target) && !anchorEl.contains(e.target)) {
+    if (!p || p.style.display === 'none') { document.removeEventListener('click', handler); return; }
+    const path = e.composedPath ? e.composedPath() : [e.target];
+    if (!path.includes(p) && !path.includes(anchorEl)) {
       p.style.display = 'none';
-    } else {
-      document.addEventListener('click', handler, { once: true });
+      document.removeEventListener('click', handler);
     }
   };
-  setTimeout(() => document.addEventListener('click', handler, { once: true }), 50);
+  setTimeout(() => document.addEventListener('click', handler), 50);
 }
 
 function _renderFpMes() {
