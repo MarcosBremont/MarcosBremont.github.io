@@ -20,6 +20,11 @@
   display: none;
 }
 
+/* Ocultar el scroll del body mientras el overlay esté visible */
+html:has(#auth-overlay:not(.hidden)) {
+  overflow: hidden;
+}
+
 /* Tarjeta central del login */
 .auth-card {
   background: #fff;
