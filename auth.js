@@ -359,13 +359,10 @@ async function _cargarDesdeFirestore(uid) {
           let localSesiones = {};
           try { fbSesiones = JSON.parse(doc.data().payload).sesiones || {}; } catch(e) {}
           try { localSesiones = JSON.parse(localRaw || '{}').sesiones || {}; } catch(e) {}
-          // Unión: Firebase como base, local sobreescribe (local es más reciente)
           const merged = { sesiones: { ...fbSesiones, ...localSesiones } };
           localStorage.setItem(key, JSON.stringify(merged));
-          // Si local tiene más sesiones que Firebase, sincronizar de vuelta
-          const fbCount = Object.keys(fbSesiones).length;
-          const mergedCount = Object.keys(merged.sesiones).length;
-          if (mergedCount > fbCount && window._syncFirebase) {
+          // Sincronizar si el merged difiere de lo que tiene Firebase
+          if (JSON.stringify(merged) !== JSON.stringify({ sesiones: fbSesiones }) && window._syncFirebase) {
             window._syncFirebase('diarias', merged);
           }
           return;
@@ -379,13 +376,10 @@ async function _cargarDesdeFirestore(uid) {
           let localCursos = {};
           try { fbCursos = JSON.parse(doc.data().payload).cursos || {}; } catch(e) {}
           try { localCursos = JSON.parse(localRaw || '{}').cursos || {}; } catch(e) {}
-          // Unión: Firebase como base, local sobreescribe curso a curso (local es más reciente)
           const merged = { cursos: { ...fbCursos, ...localCursos } };
           localStorage.setItem(key, JSON.stringify(merged));
-          // Si local tiene cursos que Firebase no tiene, sincronizar de vuelta
-          const fbCount = Object.keys(fbCursos).length;
-          const mergedCount = Object.keys(merged.cursos).length;
-          if (mergedCount > fbCount && window._syncFirebase) {
+          // Sincronizar si el merged difiere de lo que tiene Firebase (no solo si hay más cursos)
+          if (JSON.stringify(merged) !== JSON.stringify({ cursos: fbCursos }) && window._syncFirebase) {
             window._syncFirebase('calificaciones', merged);
           }
           return;
