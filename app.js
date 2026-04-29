@@ -26071,8 +26071,9 @@ async function _renderDocentesCentro() {
   cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando docentes...</div>';
 
   try {
-    const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', tab === 'pendientes' ? 'pendiente' : tab === 'aprobados' ? 'aprobado' : 'rechazado').get();
-    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    const estadoFiltro = tab === 'pendientes' ? 'pendiente' : tab === 'aprobados' ? 'aprobado' : 'rechazado';
+    const snap = await db.collection('usuarios').where('centroId', '==', centroId).get();
+    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => d.estado === estadoFiltro);
 
     // Actualizar badge de pendientes
     if (tab === 'pendientes') {
