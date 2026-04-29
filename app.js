@@ -16037,7 +16037,7 @@ function renderizarBiblioteca() {
 
     const card = document.createElement('div');
     card.className = 'pln-card' + (esPlanActiva ? ' pln-card-activa' : '');
-    const raLabel = cursoId && raNum ? `<span class="pln-badge-ra">RA${raNum}</span>` : '';
+    const raLabel = cursoId && raNum ? `<span class="pln-badge-ra">#${raNum}</span>` : '';
     const moveButtons = cursoId && totalPlanes > 1 ? `
       <div class="pln-card-move">
         <button class="btn-pln-move" onclick="moverPlanEnCurso('${cursoId}','${reg.id}',-1)" title="Mover arriba" ${raNum === 1 ? 'disabled' : ''}>
