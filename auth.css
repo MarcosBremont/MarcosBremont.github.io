@@ -10,9 +10,10 @@
   z-index: 9999;
   background: linear-gradient(135deg, #0D1B2A 0%, #1A237E 60%, #0D47A1 100%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 16px;
+  overflow-y: auto;
 }
 
 #auth-overlay.hidden {
@@ -28,6 +29,7 @@
   max-width: 420px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   animation: authFadeIn 0.4s ease;
+  margin: auto;
 }
 
 @keyframes authFadeIn {
