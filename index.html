@@ -106,7 +106,12 @@
         </div>
         <div class="auth-field">
           <label for="auth-pass">Contraseña</label>
-          <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password" />
+          <div class="auth-pass-wrap">
+            <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" class="auth-eye-btn" onclick="_togglePassVis('auth-pass',this)" tabindex="-1" aria-label="Mostrar contraseña">
+              <span class="material-icons">visibility</span>
+            </button>
+          </div>
         </div>
         <div class="auth-error" id="auth-error-login"></div>
         <button class="auth-btn-primary" id="auth-btn-login" onclick="authIniciarSesionEmail()">
@@ -181,11 +186,21 @@
         </div>
         <div class="auth-field">
           <label for="auth-pass-reg">Contraseña *</label>
-          <input type="password" id="auth-pass-reg" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+          <div class="auth-pass-wrap">
+            <input type="password" id="auth-pass-reg" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+            <button type="button" class="auth-eye-btn" onclick="_togglePassVis('auth-pass-reg',this)" tabindex="-1" aria-label="Mostrar contraseña">
+              <span class="material-icons">visibility</span>
+            </button>
+          </div>
         </div>
         <div class="auth-field">
           <label for="auth-pass-reg2">Confirmar contraseña *</label>
-          <input type="password" id="auth-pass-reg2" placeholder="Repite la contraseña" autocomplete="new-password" />
+          <div class="auth-pass-wrap">
+            <input type="password" id="auth-pass-reg2" placeholder="Repite la contraseña" autocomplete="new-password" />
+            <button type="button" class="auth-eye-btn" onclick="_togglePassVis('auth-pass-reg2',this)" tabindex="-1" aria-label="Mostrar contraseña">
+              <span class="material-icons">visibility</span>
+            </button>
+          </div>
         </div>
         <div class="auth-error" id="auth-error-reg"></div>
         <button class="auth-btn-primary" id="auth-btn-reg" onclick="authRegistrarse()">

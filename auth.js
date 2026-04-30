@@ -868,6 +868,15 @@ async function authCerrarSesion() {
 // UI HELPERS
 // ================================================================
 
+function _togglePassVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.querySelector('.material-icons').textContent = show ? 'visibility_off' : 'visibility';
+  btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+}
+
 function _mostrarAuthOverlay() {
   const el = document.getElementById('auth-overlay');
   if (el) el.classList.remove('hidden');

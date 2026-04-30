@@ -138,6 +138,39 @@ html:has(#auth-overlay:not(.hidden)) {
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
 }
 
+/* Wrapper contraseña con ojo */
+.auth-pass-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-pass-wrap input {
+  flex: 1;
+  padding-right: 42px;
+}
+
+.auth-eye-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #90A4AE;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.auth-eye-btn:hover {
+  color: #1565C0;
+}
+
+.auth-eye-btn .material-icons {
+  font-size: 20px;
+}
+
 /* Mensaje de error */
 .auth-error {
   font-size: 0.8rem;
