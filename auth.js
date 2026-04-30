@@ -348,25 +348,45 @@ async function _cargarDesdeFirestore(uid) {
           return;
         }
 
-        const doc = await base.doc(store).get();
-        if (!doc.exists || !doc.data().payload) return;
-
-        // Diarias: fusionar sesiones locales + Firebase, local tiene prioridad
-        // (evita perder sesiones guardadas si la página se cerró antes del sync)
+        // Diarias: carga chunked (o fallback legacy), fusionar con local
         if (store === 'diarias') {
-          const localRaw = localStorage.getItem(key);
           let fbSesiones = {};
+          const metaDoc = await base.doc('diarias_meta').get();
+          if (metaDoc.exists && metaDoc.data().payload) {
+            // Formato chunked
+            const meta = JSON.parse(metaDoc.data().payload);
+            const totalChunks = meta.totalChunks || 0;
+            for (let i = 0; i < totalChunks; i++) {
+              try {
+                const chunkDoc = await base.doc('diarias_chunk_' + i).get();
+                if (chunkDoc.exists && chunkDoc.data().payload) {
+                  const chunk = JSON.parse(chunkDoc.data().payload);
+                  Object.assign(fbSesiones, chunk.sesiones || {});
+                }
+              } catch(e) { console.warn('Error leyendo diarias_chunk_' + i, e); }
+            }
+          } else {
+            // Fallback: formato legacy (doc único)
+            try {
+              const legacyDoc = await base.doc('diarias').get();
+              if (legacyDoc.exists && legacyDoc.data().payload) {
+                fbSesiones = JSON.parse(legacyDoc.data().payload).sesiones || {};
+              } else {
+                // Firebase no tiene diarias en ningún formato → marcar para upload desde local
+                window._diariasFbVacio = true;
+              }
+            } catch(e) { window._diariasFbVacio = true; }
+          }
+          const localRaw = localStorage.getItem(key);
           let localSesiones = {};
-          try { fbSesiones = JSON.parse(doc.data().payload).sesiones || {}; } catch(e) {}
           try { localSesiones = JSON.parse(localRaw || '{}').sesiones || {}; } catch(e) {}
           const merged = { sesiones: { ...fbSesiones, ...localSesiones } };
           localStorage.setItem(key, JSON.stringify(merged));
-          // Sincronizar si el merged difiere de lo que tiene Firebase
-          if (JSON.stringify(merged) !== JSON.stringify({ sesiones: fbSesiones }) && window._syncFirebase) {
-            window._syncFirebase('diarias', merged);
-          }
           return;
         }
+
+        const doc = await base.doc(store).get();
+        if (!doc.exists || !doc.data().payload) return;
 
         // Calificaciones: fusionar cursos locales + Firebase, local tiene prioridad
         // (evita perder notas ingresadas si la página se cerró antes del sync)

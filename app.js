@@ -16406,25 +16406,17 @@ let estadoDiarias = {
 
 
 function cargarDiarias() {
-
-
-
   try {
-
-
-
     const raw = localStorage.getItem(DIARIAS_KEY);
-
-
-
-    if (raw) estadoDiarias = JSON.parse(raw);
-
-
-
+    if (raw) {
+      estadoDiarias = JSON.parse(raw);
+      // Si hay datos en local y Firebase aún no tiene chunks, subir ahora
+      if (window._diariasFbVacio && Object.keys(estadoDiarias.sesiones || {}).length > 0) {
+        window._diariasFbVacio = false;
+        setTimeout(_syncDiariasChunks, 500);
+      }
+    }
   } catch (e) { estadoDiarias = { sesiones: {} }; }
-
-
-
 }
 
 
@@ -16434,14 +16426,43 @@ function cargarDiarias() {
 
 
 function persistirDiarias() {
-
-
-
   localStorage.setItem(DIARIAS_KEY, JSON.stringify(estadoDiarias));
-  if (window._syncFirebase) _syncFirebase('diarias', estadoDiarias);
+  if (window.currentUser) _syncDiariasChunks();
+}
 
+// Sincroniza estadoDiarias a Firebase en chunks (evita límite de 1MB por doc)
+function _syncDiariasChunks() {
+  if (!window.currentUser) return;
+  const uid = window.currentUser.uid;
+  const base = db.collection('users').doc(uid).collection('data');
+  const sesionIds = Object.keys(estadoDiarias.sesiones || {});
+  const chunks = [];
+  let currentChunk = {};
+  let currentSize = 0;
+  for (const id of sesionIds) {
+    const s = JSON.stringify(estadoDiarias.sesiones[id]);
+    if (currentSize + s.length > 700000 && Object.keys(currentChunk).length > 0) {
+      chunks.push(currentChunk);
+      currentChunk = {};
+      currentSize = 0;
+    }
+    currentChunk[id] = estadoDiarias.sesiones[id];
+    currentSize += s.length;
+  }
+  if (Object.keys(currentChunk).length > 0) chunks.push(currentChunk);
+  if (chunks.length === 0) chunks.push({});
 
-
+  const meta = { totalChunks: chunks.length, updatedAt: Date.now() };
+  base.doc('diarias_meta').set({ payload: JSON.stringify(meta) })
+    .catch(e => console.warn('Sync diarias_meta error:', e));
+  chunks.forEach((chunk, i) => {
+    base.doc('diarias_chunk_' + i).set({ payload: JSON.stringify({ sesiones: chunk }) })
+      .catch(e => console.warn('Sync diarias_chunk_' + i + ' error:', e));
+  });
+  // Eliminar chunks sobrantes de guardados anteriores con más chunks
+  for (let i = chunks.length; i < 10; i++) {
+    base.doc('diarias_chunk_' + i).delete().catch(() => {});
+  }
 }
 
 
