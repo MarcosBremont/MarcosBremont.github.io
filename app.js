@@ -12149,11 +12149,18 @@ function renderizarAsistencia() {
           <span class="material-icons">bar_chart</span> Reporte
         </button>
       </div>
-      <button onclick="abrirExpAsistencia()" style="margin-left:auto;display:flex;align-items:center;gap:5px;
-        background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;
-        padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-        <span class="material-icons" style="font-size:15px;">download</span> Exportar
-      </button>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+        ${getGeminiKey() ? `<button onclick="_abrirOcrAsistencia()" style="display:flex;align-items:center;gap:5px;
+          background:#F3E5F5;border:1.5px solid #CE93D8;color:#6A1B9A;border-radius:8px;
+          padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+          <span class="material-icons" style="font-size:15px;">document_scanner</span> Escanear %
+        </button>` : ''}
+        <button onclick="abrirExpAsistencia()" style="display:flex;align-items:center;gap:5px;
+          background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;
+          padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+          <span class="material-icons" style="font-size:15px;">download</span> Exportar
+        </button>
+      </div>
     </div>
     <div id="asist-vista-body"></div>`;
 
@@ -13935,6 +13942,122 @@ function abrirExpAsistencia() {
 function cerrarExpAsistencia() {
   document.getElementById('exp-asist-overlay')?.classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+// ── OCR Escáner de columna "%" ────────────────────────────────────
+function _abrirOcrAsistencia() {
+  const overlay = document.getElementById('ocr-asist-overlay');
+  if (!overlay) return;
+  // Reset state
+  const fileInput = document.getElementById('ocr-file-input');
+  if (fileInput) fileInput.value = '';
+  const preview = document.getElementById('ocr-img-preview');
+  if (preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
+  const res = document.getElementById('ocr-resultados');
+  if (res) res.innerHTML = '';
+  const btn = document.getElementById('ocr-analizar-btn');
+  if (btn) { btn.style.display = 'none'; }
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function _cerrarOcrAsistencia() {
+  document.getElementById('ocr-asist-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function _ocrArchivoSeleccionado(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('ocr-img-preview');
+    if (preview) {
+      preview.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:280px;border-radius:8px;border:1.5px solid #E0E0E0;display:block;margin:0 auto;">`;
+      preview.style.display = 'block';
+    }
+    const btn = document.getElementById('ocr-analizar-btn');
+    if (btn) btn.style.display = 'flex';
+    document.getElementById('ocr-resultados').innerHTML = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function _procesarOcrAsistencia() {
+  const fileInput = document.getElementById('ocr-file-input');
+  const file = fileInput?.files[0];
+  if (!file) return;
+
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    mostrarToast('Configura tu clave de Gemini en Ajustes para usar esta función.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('ocr-analizar-btn');
+  const res = document.getElementById('ocr-resultados');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
+  if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando imagen a Gemini Vision...</div>';
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result.split(',')[1]);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const body = {
+      contents: [{
+        parts: [
+          { text: 'En esta imagen hay una hoja de un libro de asistencia físico. Hay una columna con el símbolo "%" o el encabezado "%". Extrae ÚNICAMENTE los valores numéricos que aparecen en esa columna, en el orden exacto de arriba hacia abajo, uno por línea. Responde SOLO con los números, uno por línea. Sin texto, sin encabezados, sin guiones, sin espacios extras. Si una celda está vacía o ilegible escribe 0.' },
+          { inline_data: { mime_type: file.type, data: base64 } }
+        ]
+      }],
+      generationConfig: { temperature: 0.05, maxOutputTokens: 512 }
+    };
+
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Error ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const numeros = rawText.split('\n').map(l => l.trim()).filter(l => l !== '');
+
+    if (!numeros.length) {
+      if (res) res.innerHTML = '<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">No se detectaron números en la columna %. Intenta con una foto más nítida o asegúrate de que la columna "%" esté visible.</div>';
+    } else {
+      const lista = numeros.map((n, i) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid #F0F0F0;">
+        <span style="color:#90A4AE;font-size:0.78rem;min-width:20px;">${i + 1}</span>
+        <span style="font-size:0.95rem;font-weight:700;color:#1565C0;font-variant-numeric:tabular-nums;">${escapeHTML(n)}</span>
+      </div>`).join('');
+      const textoCopiar = numeros.join('\n');
+      if (res) res.innerHTML = `
+        <div style="font-size:0.82rem;color:#546E7A;margin-bottom:8px;font-weight:600;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#388E3C;">check_circle</span>
+          ${numeros.length} valor${numeros.length !== 1 ? 'es' : ''} detectado${numeros.length !== 1 ? 's' : ''} en la columna %
+        </div>
+        <div style="border:1.5px solid #E0E0E0;border-radius:8px;overflow:hidden;max-height:300px;overflow-y:auto;">${lista}</div>
+        <button onclick="navigator.clipboard.writeText(${JSON.stringify(textoCopiar)}).then(()=>mostrarToast('Números copiados','ok'))"
+          style="margin-top:12px;width:100%;padding:10px;background:#E8F5E9;border:1.5px solid #A5D6A7;color:#1B5E20;
+          border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;">
+          <span class="material-icons" style="font-size:16px;">content_copy</span> Copiar todos los números
+        </button>`;
+    }
+  } catch (e) {
+    if (res) res.innerHTML = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">Error: ${escapeHTML(e.message)}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">document_scanner</span> Analizar imagen'; }
+  }
 }
 
 function setExpAsistPeriodo(tipo) {

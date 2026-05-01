@@ -3069,6 +3069,46 @@
     </div>
   </div>
 
+  <!-- ===== MODAL OCR COLUMNA % ===== -->
+  <div id="ocr-asist-overlay" class="modal-overlay hidden" onclick="_cerrarOcrAsistencia()">
+    <div class="modal-box" style="max-width:460px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">document_scanner</span>Escanear columna %</h3>
+        <button class="modal-close" onclick="_cerrarOcrAsistencia()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+        <p style="font-size:0.82rem;color:#546E7A;margin:0 0 14px;">
+          Sube o toma una foto de tu libro de asistencia físico. Gemini Vision extraerá los números de la columna <strong>%</strong> uno por línea.
+        </p>
+
+        <!-- Zona de carga -->
+        <label for="ocr-file-input" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;
+          border:2px dashed #CE93D8;border-radius:12px;cursor:pointer;background:#FCF4FF;transition:background 0.2s;"
+          onmouseover="this.style.background='#F3E5F5'" onmouseout="this.style.background='#FCF4FF'">
+          <span class="material-icons" style="font-size:36px;color:#8E24AA;">add_a_photo</span>
+          <span style="font-size:0.85rem;font-weight:700;color:#6A1B9A;">Toca para subir o capturar foto</span>
+          <span style="font-size:0.75rem;color:#9C4DCC;">JPG, PNG, WEBP · Cualquier resolución</span>
+        </label>
+        <input type="file" id="ocr-file-input" accept="image/*" capture="environment"
+          style="display:none;" onchange="_ocrArchivoSeleccionado(this)">
+
+        <!-- Preview imagen -->
+        <div id="ocr-img-preview" style="margin-top:14px;display:none;"></div>
+
+        <!-- Botón analizar -->
+        <button id="ocr-analizar-btn" onclick="_procesarOcrAsistencia()"
+          style="display:none;margin-top:12px;width:100%;padding:11px;background:linear-gradient(135deg,#6A1B9A,#8E24AA);
+          color:#fff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;
+          align-items:center;justify-content:center;gap:7px;font-family:inherit;">
+          <span class="material-icons" style="font-size:16px;">document_scanner</span> Analizar imagen
+        </button>
+
+        <!-- Resultados -->
+        <div id="ocr-resultados" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== MODAL DUPLICAR PLANIFICACIÓN ===== -->
   <div id="dup-plan-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
