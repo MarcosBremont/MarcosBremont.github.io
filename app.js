@@ -13318,12 +13318,17 @@ async function _cargarAvisosDocente() {
   } catch(e) { console.warn('Error cargando avisos docente:', e); }
 }
 
-/** Cuenta novedades/avisos nuevos desde la última vez que el usuario abrió la campana */
+// IDs de notificaciones app ya vistas (se puebla al abrir el modal)
+let _notifIdsVistos = new Set();
+// IDs de avisos del director ya vistos
+let _avisosIdsVistos = new Set();
+
+/** Cuenta ítems nuevos desde que el usuario abrió la campana por última vez */
 function _contarNuevosAvisosYNovedades() {
-  const lastCheck = localStorage.getItem('tinclass_notif_check') || '2000-01-01T00:00:00';
-  const nuevosDir = _avisosDocenteCache.filter(a => (a.fecha || '') > lastCheck).length;
-  const nuevasNov = NOVEDADES_SISTEMA.filter(n => n.fecha > (localStorage.getItem('tinclass_novedades_check') || '2000-01-01')).length;
-  return nuevosDir + nuevasNov;
+  const lastNov = localStorage.getItem('tinclass_novedades_check') || '2000-01-01';
+  const nuevasNov = NOVEDADES_SISTEMA.filter(n => n.fecha > lastNov).length;
+  const nuevosDir = _avisosDocenteCache.filter(a => !_avisosIdsVistos.has(a.id)).length;
+  return nuevasNov + nuevosDir;
 }
 
 // Genera la lista de notificaciones activas
@@ -13493,9 +13498,12 @@ function _generarNotificaciones() {
 // ── Actualizar badge del header ──────────────────────────────────
 function actualizarBadgeNotificaciones() {
   const notifs = _generarNotificaciones();
-  const urgentes = notifs.filter(n => n.tipo === 'error' || n.tipo === 'warning').length;
+  // Solo contar alertas de app que NO fueron vistas en la última apertura del modal
+  const nuevasApp = notifs.filter(n =>
+    (n.tipo === 'error' || n.tipo === 'warning') && !_notifIdsVistos.has(n.id)
+  ).length;
   const extras = _contarNuevosAvisosYNovedades();
-  const total = urgentes + extras;
+  const total = nuevasApp + extras;
   const badge = document.getElementById('notif-badge');
   if (!badge) return;
   if (total > 0) {
@@ -13512,13 +13520,14 @@ function abrirNotificaciones() {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  // Marcar como leído
-  const ahora = new Date().toISOString();
-  localStorage.setItem('tinclass_notif_check', ahora);
+  // Marcar como leído: guardar IDs de lo que está visible ahora
+  const notifActuales = _generarNotificaciones();
+  _notifIdsVistos = new Set(notifActuales.map(n => n.id));
+  _avisosIdsVistos = new Set(_avisosDocenteCache.map(a => a.id));
   localStorage.setItem('tinclass_novedades_check', new Date().toISOString().split('T')[0]);
   _renderizarNotificaciones();
   _renderizarAvisosYNovedades();
-  setTimeout(actualizarBadgeNotificaciones, 300);
+  setTimeout(actualizarBadgeNotificaciones, 200);
 }
 function cerrarNotificaciones() {
   document.getElementById('notif-overlay')?.classList.add('hidden');
