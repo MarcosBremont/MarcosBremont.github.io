@@ -14026,7 +14026,11 @@ async function _procesarOcrAsistencia() {
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `Error ${resp.status}`);
+      const msg = err?.error?.message || '';
+      if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
+        throw new Error('CUOTA_AGOTADA');
+      }
+      throw new Error(msg || `Error ${resp.status}`);
     }
 
     const data = await resp.json();
@@ -14054,7 +14058,19 @@ async function _procesarOcrAsistencia() {
         </button>`;
     }
   } catch (e) {
-    if (res) res.innerHTML = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">Error: ${escapeHTML(e.message)}</div>`;
+    const esRateLimit = e.message === 'CUOTA_AGOTADA' || e.message.toLowerCase().includes('quota') || e.message.toLowerCase().includes('rate');
+    if (res) res.innerHTML = esRateLimit
+      ? `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+          <div style="font-weight:700;margin-bottom:6px;">⚠️ Cuota de Gemini agotada</div>
+          Tu clave gratuita de Gemini alcanzó el límite de solicitudes. Puedes:
+          <ul style="margin:8px 0 0 16px;padding:0;">
+            <li>Esperar unos minutos y volver a intentarlo</li>
+            <li>Usar una clave de pago en <strong>Ajustes → Clave de Gemini</strong></li>
+          </ul>
+        </div>`
+      : `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">
+          <strong>Error:</strong> ${escapeHTML(e.message)}
+        </div>`;
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">document_scanner</span> Analizar imagen'; }
   }
