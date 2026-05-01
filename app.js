@@ -12149,18 +12149,11 @@ function renderizarAsistencia() {
           <span class="material-icons">bar_chart</span> Reporte
         </button>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        ${getGeminiKey() ? `<button onclick="_abrirOcrAsistencia()" style="display:flex;align-items:center;gap:5px;
-          background:#F3E5F5;border:1.5px solid #CE93D8;color:#6A1B9A;border-radius:8px;
-          padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-          <span class="material-icons" style="font-size:15px;">document_scanner</span> Escanear %
-        </button>` : ''}
-        <button onclick="abrirExpAsistencia()" style="display:flex;align-items:center;gap:5px;
-          background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;
-          padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-          <span class="material-icons" style="font-size:15px;">download</span> Exportar
-        </button>
-      </div>
+      <button onclick="abrirExpAsistencia()" style="margin-left:auto;display:flex;align-items:center;gap:5px;
+        background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;
+        padding:5px 13px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+        <span class="material-icons" style="font-size:15px;">download</span> Exportar
+      </button>
     </div>
     <div id="asist-vista-body"></div>`;
 
