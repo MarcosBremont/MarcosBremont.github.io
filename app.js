@@ -13720,6 +13720,9 @@ function renderizarParticipacion() {
       <button class="asist-btn-todos" onclick="_limpiarDiaParticip()" style="border-color:#E0E0E0;color:#757575;">
         <span class="material-icons">clear_all</span> Limpiar día
       </button>
+      <button class="asist-btn-todos" onclick="_abrirHistorialParticipacion()" style="border-color:#90CAF9;color:#1565C0;margin-left:auto;">
+        <span class="material-icons">table_chart</span> Historial
+      </button>
     </div>
     <div class="asist-lista" id="particip-lista-body">
       ${curso.estudiantes.map((est, i) => {
@@ -13804,6 +13807,103 @@ function _limpiarDiaParticip() {
   if (data[cursoId]) delete data[cursoId][fecha];
   guardarParticipacion(data);
   renderizarParticipacion();
+}
+
+function _abrirHistorialParticipacion() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !(curso.estudiantes || []).length) {
+    mostrarToast('Sin estudiantes en este curso', 'error'); return;
+  }
+  const data = cargarParticipacion();
+  const cursoData = data[calState.cursoActivoId] || {};
+  const fechas = Object.keys(cursoData).sort(); // YYYY-MM-DD orden cronológico
+
+  // Crear o reusar overlay
+  let overlay = document.getElementById('particip-historial-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'particip-historial-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.55);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:16px;';
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  const iconos = { D: '⭐', P: '✅', N: '❌', '': '—' };
+  const colores = { D: '#6A1B9A', P: '#2E7D32', N: '#C62828', '': '#CFD8DC' };
+
+  // Resumen por estudiante
+  const resumen = curso.estudiantes.map(est => {
+    let d = 0, p = 0, n = 0;
+    fechas.forEach(f => { const v = (cursoData[f] || {})[est.id]; if (v === 'D') d++; else if (v === 'P') p++; else if (v === 'N') n++; });
+    return { ...est, d, p, n, total: d + p + n };
+  });
+
+  const fechasCols = fechas.map(f => {
+    const d = new Date(f + 'T12:00:00');
+    return { iso: f, label: d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' }) };
+  });
+
+  const thStyle = 'padding:6px 8px;text-align:center;font-size:0.72rem;font-weight:700;border-bottom:2px solid #E0E0E0;white-space:nowrap;';
+  const tdStyle = 'padding:5px 6px;text-align:center;font-size:0.8rem;border-bottom:1px solid #F0F0F0;';
+
+  let colsFechas = fechasCols.map(f =>
+    `<th style="${thStyle}color:#546E7A;">${f.label}</th>`
+  ).join('');
+
+  let filas = resumen.map((est, i) => {
+    const celdas = fechasCols.map(f => {
+      const v = (cursoData[f.iso] || {})[est.id] || '';
+      return `<td style="${tdStyle}color:${colores[v] || colores['']};" title="${f.iso}">${iconos[v]}</td>`;
+    }).join('');
+    const pct = est.total > 0 ? Math.round(((est.d + est.p) / est.total) * 100) : null;
+    const pctColor = pct === null ? '#90A4AE' : pct >= 80 ? '#2E7D32' : pct >= 60 ? '#E65100' : '#C62828';
+    return `<tr style="background:${i % 2 === 0 ? '#fff' : '#FAFAFA'};">
+      <td style="${tdStyle}text-align:left;font-weight:600;min-width:160px;">${i + 1}. ${escapeHTML(est.nombre)}</td>
+      <td style="${tdStyle}color:#6A1B9A;font-weight:700;">${est.d}</td>
+      <td style="${tdStyle}color:#2E7D32;font-weight:700;">${est.p}</td>
+      <td style="${tdStyle}color:#C62828;font-weight:700;">${est.n}</td>
+      <td style="${tdStyle}color:${pctColor};font-weight:700;">${pct !== null ? pct + '%' : '—'}</td>
+      ${celdas}
+    </tr>`;
+  }).join('');
+
+  if (fechas.length === 0) {
+    filas = `<tr><td colspan="5" style="text-align:center;padding:24px;color:#90A4AE;">No hay registros de participación aún.</td></tr>`;
+    colsFechas = '';
+  }
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);width:100%;max-width:900px;margin:auto;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#4A148C,#7B1FA2);padding:16px 20px;display:flex;align-items:center;gap:10px;">
+        <span class="material-icons" style="color:#fff;font-size:22px;">table_chart</span>
+        <div style="flex:1;">
+          <div style="font-weight:800;color:#fff;font-size:1rem;">Historial de Participación</div>
+          <div style="font-size:0.78rem;color:#E1BEE7;">${escapeHTML(curso.nombre || '')} · ${fechas.length} día(s) registrado(s)</div>
+        </div>
+        <button onclick="document.getElementById('particip-historial-overlay').remove()"
+          style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;color:#fff;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:0.82rem;font-weight:600;">
+          <span class="material-icons" style="font-size:16px;">close</span> Cerrar
+        </button>
+      </div>
+      <div style="padding:16px;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:500px;">
+          <thead>
+            <tr style="background:#F3E5F5;">
+              <th style="${thStyle}text-align:left;color:#4A148C;">Estudiante</th>
+              <th style="${thStyle}color:#6A1B9A;" title="Destacado">⭐</th>
+              <th style="${thStyle}color:#2E7D32;" title="Participó">✅</th>
+              <th style="${thStyle}color:#C62828;" title="No participó">❌</th>
+              <th style="${thStyle}color:#1565C0;" title="% de participación">%</th>
+              ${colsFechas}
+            </tr>
+          </thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+      <div style="padding:10px 16px 14px;font-size:0.73rem;color:#90A4AE;border-top:1px solid #F0F0F0;">
+        ⭐ Destacado &nbsp;·&nbsp; ✅ Participó &nbsp;·&nbsp; ❌ No participó &nbsp;·&nbsp; — Sin registrar &nbsp;·&nbsp; % = (Destacado + Participó) / Total días registrados
+      </div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════════════════════════════
