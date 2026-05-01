@@ -13288,6 +13288,44 @@ function guardarObsEstudiante(key, valor) {
 // MÓDULO: NOTIFICACIONES Y RECORDATORIOS
 // ════════════════════════════════════════════════════════════════════
 
+// ── Novedades del sistema (changelog) ───────────────────────────────
+const NOVEDADES_SISTEMA = [
+  { id: 'v156_avisos_notif',  fecha: '2026-05-01', titulo: 'Avisos del director en notificaciones', desc: 'Los mensajes del director de tu centro ahora aparecen en la campana de notificaciones.' },
+  { id: 'v156_diarias_sync',  fecha: '2026-04-30', titulo: 'Sincronización de Planificaciones Diarias', desc: 'Los planes generados con IA ahora se sincronizan correctamente entre dispositivos y no se pierden al limpiar caché.' },
+  { id: 'v156_pass_eye',      fecha: '2026-04-30', titulo: 'Ver/ocultar contraseña en login', desc: 'Nuevo icono de ojo en los campos de contraseña del formulario de acceso y registro.' },
+  { id: 'v156_auth_scroll',   fecha: '2026-04-29', titulo: 'Scroll en pantalla de registro', desc: 'Se corrigió el scroll en móvil para que el botón Crear cuenta siempre sea visible.' },
+  { id: 'v156_pin_teclado',   fecha: '2026-04-20', titulo: 'PIN de bloqueo con teclado', desc: 'Ahora puedes escribir el código PIN de bloqueo directamente con el teclado físico.' },
+  { id: 'v156_ra_dashboard',  fecha: '2026-04-18', titulo: 'RA en tarjetas del dashboard', desc: 'Las tarjetas de clases muestran el Resultado de Aprendizaje activo que estás trabajando.' },
+  { id: 'v156_orden_badge',   fecha: '2026-04-17', titulo: 'Orden de planificación en Mis Planes', desc: 'Las tarjetas en Mis Planificaciones ahora muestran #1, #2... en vez de RA1, RA2.' },
+];
+
+// Cache de avisos del director para el docente actual
+let _avisosDocenteCache = [];
+let _avisosDocenteCargados = false;
+
+/** Carga los avisos del centro del docente y actualiza el badge */
+async function _cargarAvisosDocente() {
+  if (!window.currentUser) return;
+  try {
+    const perfilDoc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    const centroId = perfilDoc.exists ? perfilDoc.data().centroId : null;
+    if (!centroId) return;
+    const snap = await db.collection('centros').doc(centroId).collection('avisos')
+      .orderBy('fecha', 'desc').limit(30).get();
+    _avisosDocenteCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _avisosDocenteCargados = true;
+    actualizarBadgeNotificaciones();
+  } catch(e) { console.warn('Error cargando avisos docente:', e); }
+}
+
+/** Cuenta novedades/avisos nuevos desde la última vez que el usuario abrió la campana */
+function _contarNuevosAvisosYNovedades() {
+  const lastCheck = localStorage.getItem('tinclass_notif_check') || '2000-01-01T00:00:00';
+  const nuevosDir = _avisosDocenteCache.filter(a => (a.fecha || '') > lastCheck).length;
+  const nuevasNov = NOVEDADES_SISTEMA.filter(n => n.fecha > (localStorage.getItem('tinclass_novedades_check') || '2000-01-01')).length;
+  return nuevosDir + nuevasNov;
+}
+
 // Genera la lista de notificaciones activas
 function _generarNotificaciones() {
   const notifs = [];
@@ -13456,11 +13494,13 @@ function _generarNotificaciones() {
 function actualizarBadgeNotificaciones() {
   const notifs = _generarNotificaciones();
   const urgentes = notifs.filter(n => n.tipo === 'error' || n.tipo === 'warning').length;
+  const extras = _contarNuevosAvisosYNovedades();
+  const total = urgentes + extras;
   const badge = document.getElementById('notif-badge');
   if (!badge) return;
-  if (urgentes > 0) {
+  if (total > 0) {
     badge.style.display = 'flex';
-    badge.textContent = urgentes > 9 ? '9+' : urgentes;
+    badge.textContent = total > 9 ? '9+' : total;
   } else {
     badge.style.display = 'none';
   }
@@ -13472,11 +13512,82 @@ function abrirNotificaciones() {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  // Marcar como leído
+  const ahora = new Date().toISOString();
+  localStorage.setItem('tinclass_notif_check', ahora);
+  localStorage.setItem('tinclass_novedades_check', new Date().toISOString().split('T')[0]);
   _renderizarNotificaciones();
+  _renderizarAvisosYNovedades();
+  setTimeout(actualizarBadgeNotificaciones, 300);
 }
 function cerrarNotificaciones() {
   document.getElementById('notif-overlay')?.classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+/** Renderiza avisos del director + novedades del sistema en el panel superior */
+async function _renderizarAvisosYNovedades() {
+  const top = document.getElementById('notif-top-body');
+  if (!top) return;
+  top.innerHTML = '<div style="color:#90A4AE;font-size:0.78rem;padding:4px 0 8px;">Cargando avisos...</div>';
+
+  // Cargar avisos del director si no están en caché
+  if (!_avisosDocenteCargados) await _cargarAvisosDocente();
+
+  let html = '';
+
+  // ── Avisos del director ──────────────────────────────────────────
+  if (_avisosDocenteCache.length > 0) {
+    const prioColors = { urgente: '#C62828', importante: '#E65100', normal: '#4A148C' };
+    const prioIcons  = { urgente: 'priority_high', importante: 'campaign', normal: 'campaign' };
+    html += '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:0.72rem;font-weight:700;color:#4A148C;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:4px;">'
+      + '<span class="material-icons" style="font-size:14px;">campaign</span> Avisos del centro</div>';
+    _avisosDocenteCache.slice(0, 5).forEach(a => {
+      const color = prioColors[a.prioridad] || prioColors.normal;
+      const icon  = prioIcons[a.prioridad]  || prioIcons.normal;
+      const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' }) : '';
+      html += '<div style="background:#F3E5F5;border-left:4px solid ' + color + ';border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+        + '<span class="material-icons" style="font-size:15px;color:' + color + ';">' + icon + '</span>'
+        + '<span style="font-weight:700;font-size:0.88rem;color:#212121;flex:1;">' + escapeHTML(a.titulo || 'Aviso') + '</span>'
+        + '<span style="font-size:0.72rem;color:#9E9E9E;">' + fecha + '</span>'
+        + '</div>'
+        + '<div style="font-size:0.82rem;color:#424242;white-space:pre-wrap;">' + escapeHTML(a.mensaje || '') + '</div>'
+        + '<div style="font-size:0.7rem;color:#AB47BC;margin-top:4px;">— ' + escapeHTML(a.enviadoPor || '') + '</div>'
+        + '</div>';
+    });
+    if (_avisosDocenteCache.length > 5) {
+      html += '<div style="font-size:0.75rem;color:#9E9E9E;text-align:center;">…y ' + (_avisosDocenteCache.length - 5) + ' aviso(s) más en el Panel Director</div>';
+    }
+    html += '</div>';
+  }
+
+  // ── Novedades del sistema ────────────────────────────────────────
+  const lastNov = localStorage.getItem('tinclass_novedades_check') || '2000-01-01';
+  if (NOVEDADES_SISTEMA.length > 0) {
+    html += '<div style="margin-bottom:6px;">'
+      + '<div style="font-size:0.72rem;font-weight:700;color:#1565C0;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:4px;">'
+      + '<span class="material-icons" style="font-size:14px;">new_releases</span> Novedades del sistema</div>';
+    NOVEDADES_SISTEMA.slice(0, 5).forEach(n => {
+      const esNueva = n.fecha >= lastNov;
+      html += '<div style="background:' + (esNueva ? '#E3F2FD' : '#FAFAFA') + ';border:1px solid ' + (esNueva ? '#90CAF9' : '#E0E0E0') + ';border-radius:8px;padding:9px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;">'
+        + '<span class="material-icons" style="font-size:18px;color:' + (esNueva ? '#1565C0' : '#B0BEC5') + ';flex-shrink:0;margin-top:1px;">system_update_alt</span>'
+        + '<div style="flex:1;">'
+        + '<div style="font-weight:700;font-size:0.85rem;color:#212121;">' + escapeHTML(n.titulo)
+        + (esNueva ? ' <span style="background:#1565C0;color:#fff;padding:0 6px;border-radius:8px;font-size:0.65rem;font-weight:700;vertical-align:middle;">NUEVO</span>' : '') + '</div>'
+        + '<div style="font-size:0.78rem;color:#546E7A;margin-top:2px;">' + escapeHTML(n.desc) + '</div>'
+        + '<div style="font-size:0.68rem;color:#B0BEC5;margin-top:2px;">' + n.fecha + ' · ' + n.id.split('_')[0].toUpperCase() + '</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  }
+
+  if (!html) {
+    top.innerHTML = '';
+    return;
+  }
+  top.innerHTML = html;
 }
 
 function _renderizarNotificaciones() {
@@ -21231,6 +21342,8 @@ function _arrancarApp() {
     abrirDashboard();
   }
   actualizarBadgeNotificaciones();
+  // Cargar avisos del director en segundo plano para el badge
+  setTimeout(_cargarAvisosDocente, 3000);
   _tourVerificarAutoInicio();
   _iniciarVigilanciaInactividad();
   // Si al recargar corresponde bloquear (flag explícito O inactividad acumulada) → bloquear
@@ -26402,8 +26515,8 @@ async function _renderMonitoreoDocentes() {
   if (!centroId) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centro asignado.</div>'; return; }
 
   try {
-    const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
-    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    const snap = await db.collection('usuarios').where('centroId', '==', centroId).get();
+    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => d.estado === 'aprobado');
 
     if (docentes.length === 0) {
       cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">person_off</span>No hay docentes aprobados en este centro</div>';
@@ -27779,8 +27892,8 @@ async function _coordMostrarSelectorCentro(cont, callback) {
 
 async function _coordGetDocentes(centroId) {
   // Docentes aprobados del centro
-  const snap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
-  const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const snap = await db.collection('usuarios').where('centroId', '==', centroId).get();
+  const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => d.estado === 'aprobado');
   const uids = new Set(docentes.map(d => d.uid));
 
   // También incluir docentes del centro sin estado (admins auto-aprobados pueden no tener estado)
@@ -28960,7 +29073,7 @@ async function _pagosConsultarPublico() {
       const pagos = (pagosDoc.exists ? pagosDoc.data().registros : []) || [];
 
       // Buscar nombres de estudiantes en calificaciones de docentes
-      const docentesSnap = await db.collection('usuarios').where('centroId', '==', centroId).where('estado', '==', 'aprobado').get();
+      const docentesSnap = await db.collection('usuarios').where('centroId', '==', centroId).get();
       const nombres = {};
       for (const dDoc of docentesSnap.docs) {
         try {
