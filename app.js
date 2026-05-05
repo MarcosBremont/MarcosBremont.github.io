@@ -14000,28 +14000,35 @@ async function _procesarOcrAsistencia() {
       r.readAsDataURL(file);
     });
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const body = {
-      contents: [{
-        parts: [
-          { text: 'En esta imagen hay una hoja de un libro de asistencia físico. Hay una columna con el símbolo "%" o el encabezado "%". Extrae ÚNICAMENTE los valores numéricos que aparecen en esa columna, en el orden exacto de arriba hacia abajo, uno por línea. Responde SOLO con los números, uno por línea. Sin texto, sin encabezados, sin guiones, sin espacios extras. Si una celda está vacía o ilegible escribe 0.' },
-          { inline_data: { mime_type: file.type, data: base64 } }
-        ]
-      }],
+    const PROMPT_OCR = 'En esta imagen hay una hoja de un libro de asistencia físico. Hay una columna con el símbolo "%" o el encabezado "%". Extrae ÚNICAMENTE los valores numéricos que aparecen en esa columna, en el orden exacto de arriba hacia abajo, uno por línea. Responde SOLO con los números, uno por línea. Sin texto, sin encabezados, sin guiones, sin espacios extras. Si una celda está vacía o ilegible escribe 0.';
+    const bodyOcr = modelo => ({
+      contents: [{ parts: [{ text: PROMPT_OCR }, { inline_data: { mime_type: file.type, data: base64 } }] }],
       generationConfig: { temperature: 0.05, maxOutputTokens: 512 }
-    };
-
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
     });
 
+    // Intenta con el modelo indicado; devuelve { resp, errJson } si falla con 429
+    const _llamarModelo = async modelo => {
+      const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+      const r = await fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyOcr(modelo)) });
+      if (r.ok) return { resp: r, errJson: null };
+      const errJson = await r.json().catch(() => ({}));
+      return { resp: r, errJson };
+    };
+
+    // Probar primero gemini-2.0-flash, luego gemini-1.5-flash como fallback
+    let { resp, errJson } = await _llamarModelo('gemini-2.0-flash');
+    if (!resp.ok && resp.status === 429) {
+      if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Intentando con modelo alternativo...</div>';
+      const fallback = await _llamarModelo('gemini-1.5-flash');
+      resp = fallback.resp;
+      errJson = fallback.errJson;
+    }
+
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      const msg = err?.error?.message || '';
+      const msg = errJson?.error?.message || '';
+      const esLimiteCero = msg.includes('limit: 0') || msg.includes('limit:0');
       if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
-        throw new Error('CUOTA_AGOTADA');
+        throw new Error(esLimiteCero ? 'BILLING_REQUERIDO' : 'CUOTA_AGOTADA');
       }
       throw new Error(msg || `Error ${resp.status}`);
     }
@@ -14051,19 +14058,34 @@ async function _procesarOcrAsistencia() {
         </button>`;
     }
   } catch (e) {
-    const esRateLimit = e.message === 'CUOTA_AGOTADA' || e.message.toLowerCase().includes('quota') || e.message.toLowerCase().includes('rate');
-    if (res) res.innerHTML = esRateLimit
-      ? `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
-          <div style="font-weight:700;margin-bottom:6px;">⚠️ Cuota de Gemini agotada</div>
-          Tu clave gratuita de Gemini alcanzó el límite de solicitudes. Puedes:
-          <ul style="margin:8px 0 0 16px;padding:0;">
-            <li>Esperar unos minutos y volver a intentarlo</li>
-            <li>Usar una clave de pago en <strong>Ajustes → Clave de Gemini</strong></li>
-          </ul>
-        </div>`
-      : `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">
-          <strong>Error:</strong> ${escapeHTML(e.message)}
-        </div>`;
+    let html;
+    if (e.message === 'BILLING_REQUERIDO') {
+      html = `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+        <div style="font-weight:700;margin-bottom:6px;">🔑 Clave sin cuota gratuita</div>
+        Tu clave de Gemini pertenece a un proyecto que requiere <strong>facturación activada</strong> en Google.
+        Esperar días no lo soluciona — el límite es permanente (limit: 0).<br><br>
+        Para resolverlo:
+        <ul style="margin:6px 0 0 16px;padding:0;">
+          <li>Ve a <strong>aistudio.google.com</strong>, crea un nuevo proyecto y genera una clave nueva</li>
+          <li>O activa la facturación en tu proyecto actual de Google Cloud</li>
+          <li>Luego actualiza la clave en <strong>Ajustes → Clave de Gemini</strong></li>
+        </ul>
+      </div>`;
+    } else if (e.message === 'CUOTA_AGOTADA' || e.message.toLowerCase().includes('quota') || e.message.toLowerCase().includes('rate')) {
+      html = `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+        <div style="font-weight:700;margin-bottom:6px;">⚠️ Límite de solicitudes alcanzado</div>
+        Tu clave alcanzó el límite de solicitudes por minuto o por día.
+        <ul style="margin:8px 0 0 16px;padding:0;">
+          <li>Espera unos minutos y vuelve a intentarlo</li>
+          <li>O usa una clave de pago en <strong>Ajustes → Clave de Gemini</strong></li>
+        </ul>
+      </div>`;
+    } else {
+      html = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">
+        <strong>Error:</strong> ${escapeHTML(e.message)}
+      </div>`;
+    }
+    if (res) res.innerHTML = html;
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">document_scanner</span> Analizar imagen'; }
   }
