@@ -13290,13 +13290,16 @@ function guardarObsEstudiante(key, valor) {
 
 // ── Novedades del sistema (changelog) ───────────────────────────────
 const NOVEDADES_SISTEMA = [
-  { id: 'v156_avisos_notif',  fecha: '2026-05-01', titulo: 'Avisos del director en notificaciones', desc: 'Los mensajes del director de tu centro ahora aparecen en la campana de notificaciones.' },
-  { id: 'v156_diarias_sync',  fecha: '2026-04-30', titulo: 'Sincronización de Planificaciones Diarias', desc: 'Los planes generados con IA ahora se sincronizan correctamente entre dispositivos y no se pierden al limpiar caché.' },
-  { id: 'v156_pass_eye',      fecha: '2026-04-30', titulo: 'Ver/ocultar contraseña en login', desc: 'Nuevo icono de ojo en los campos de contraseña del formulario de acceso y registro.' },
-  { id: 'v156_auth_scroll',   fecha: '2026-04-29', titulo: 'Scroll en pantalla de registro', desc: 'Se corrigió el scroll en móvil para que el botón Crear cuenta siempre sea visible.' },
-  { id: 'v156_pin_teclado',   fecha: '2026-04-20', titulo: 'PIN de bloqueo con teclado', desc: 'Ahora puedes escribir el código PIN de bloqueo directamente con el teclado físico.' },
-  { id: 'v156_ra_dashboard',  fecha: '2026-04-18', titulo: 'RA en tarjetas del dashboard', desc: 'Las tarjetas de clases muestran el Resultado de Aprendizaje activo que estás trabajando.' },
-  { id: 'v156_orden_badge',   fecha: '2026-04-17', titulo: 'Orden de planificación en Mis Planes', desc: 'Las tarjetas en Mis Planificaciones ahora muestran #1, #2... en vez de RA1, RA2.' },
+  { id: 'v157_diarias_datos',  fecha: '2026-05-05', titulo: 'Fix: pérdida de datos en Planificaciones Diarias', desc: 'Se corrigió un bug donde los campos de estrategias y recursos se borraban al navegar entre actividades, dejando las planificaciones diarias generadas con IA en blanco.' },
+  { id: 'v157_mover_zona',     fecha: '2026-05-04', titulo: 'Fix: botón Mover usaba fecha incorrecta después de las 8 PM', desc: 'En República Dominicana (UTC-4), el botón Mover del dashboard movía actividades del día siguiente en lugar del actual. Corregido para usar siempre la hora local.' },
+  { id: 'v157_historial_part', fecha: '2026-05-01', titulo: 'Historial de participación', desc: 'Nueva tabla en el módulo de Participación que muestra todas las fechas vs. estudiantes con estado D/P/N y porcentaje acumulado.' },
+  { id: 'v156_avisos_notif',   fecha: '2026-05-01', titulo: 'Avisos del director en notificaciones', desc: 'Los mensajes del director de tu centro ahora aparecen en la campana de notificaciones.' },
+  { id: 'v156_diarias_sync',   fecha: '2026-04-30', titulo: 'Sincronización de Planificaciones Diarias', desc: 'Los planes generados con IA ahora se sincronizan correctamente entre dispositivos y no se pierden al limpiar caché.' },
+  { id: 'v156_pass_eye',       fecha: '2026-04-30', titulo: 'Ver/ocultar contraseña en login', desc: 'Nuevo icono de ojo en los campos de contraseña del formulario de acceso y registro.' },
+  { id: 'v156_auth_scroll',    fecha: '2026-04-29', titulo: 'Scroll en pantalla de registro', desc: 'Se corrigió el scroll en móvil para que el botón Crear cuenta siempre sea visible.' },
+  { id: 'v156_pin_teclado',    fecha: '2026-04-20', titulo: 'PIN de bloqueo con teclado', desc: 'Ahora puedes escribir el código PIN de bloqueo directamente con el teclado físico.' },
+  { id: 'v156_ra_dashboard',   fecha: '2026-04-18', titulo: 'RA en tarjetas del dashboard', desc: 'Las tarjetas de clases muestran el Resultado de Aprendizaje activo que estás trabajando.' },
+  { id: 'v156_orden_badge',    fecha: '2026-04-17', titulo: 'Orden de planificación en Mis Planes', desc: 'Las tarjetas en Mis Planificaciones ahora muestran #1, #2... en vez de RA1, RA2.' },
 ];
 
 // Cache de avisos del director para el docente actual
@@ -22580,7 +22583,7 @@ function exportarDatos() {
   const backup = {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.5',
+      version: '15.7',
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
@@ -22789,7 +22792,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.6</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.7</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
