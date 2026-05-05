@@ -16893,7 +16893,7 @@ function guardarTodasDiarias() {
 
 
 
-    const readSec = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const readSec = (id, fbk) => { const el = document.getElementById(id); return el ? el.value : (fbk || ''); };
 
 
 
@@ -16961,13 +16961,13 @@ function guardarTodasDiarias() {
 
 
 
-      estrategias: readSec(`pd-estrategias-${act.id}`),
+      estrategias: readSec(`pd-estrategias-${act.id}`, s.estrategias),
 
 
 
-      recursos: readSec(`pd-recursos-${act.id}`),
+      recursos: readSec(`pd-recursos-${act.id}`, s.recursos),
 
-      recursoUrl: readSec(`pd-recurso-url-${act.id}`),
+      recursoUrl: readSec(`pd-recurso-url-${act.id}`, s.recursoUrl),
 
       tiempos: { ini: readT('ini'), des: readT('des'), cie: readT('cie') }
 
