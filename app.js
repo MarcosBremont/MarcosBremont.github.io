@@ -22946,7 +22946,7 @@ function _actualizarLabelsDias() {
   const d0 = new Date(); d0.setDate(d0.getDate() + o);
   const d1 = new Date(); d1.setDate(d1.getDate() + o + 1);
   const d2 = new Date(); d2.setDate(d2.getDate() + o + 2);
-  const iso = d => d.toISOString().split('T')[0];
+  const iso = d => _isoDate(d); // usar hora local, no UTC
   const b0 = document.getElementById('dash-hoy-mover-btn');
   const b1 = document.getElementById('dash-manana-mover-btn');
   const b2 = document.getElementById('dash-pasado-mover-btn');
