@@ -13290,6 +13290,8 @@ function guardarObsEstudiante(key, valor) {
 
 // ── Novedades del sistema (changelog) ───────────────────────────────
 const NOVEDADES_SISTEMA = [
+  { id: 'v158_dup_fecha_clase', fecha: '2026-05-05', titulo: 'Fix: fecha de inicio en Duplicar Planificación', desc: 'Al duplicar una planificación asignada a un curso, la "Nueva fecha de inicio" ahora salta automáticamente al próximo día de clase real (ej: si hoy es martes y el curso solo tiene clases miércoles y viernes, sugiere el miércoles siguiente).' },
+  { id: 'v158_html_nombre',     fecha: '2026-05-05', titulo: 'Nombre de archivo HTML con código de actividad', desc: 'El archivo HTML generado para los estudiantes ahora se llama con el código de la actividad (ej: "Act 1.1.1.html") en lugar del nombre del módulo.' },
   { id: 'v157_diarias_datos',  fecha: '2026-05-05', titulo: 'Fix: pérdida de datos en Planificaciones Diarias', desc: 'Se corrigió un bug donde los campos de estrategias y recursos se borraban al navegar entre actividades, dejando las planificaciones diarias generadas con IA en blanco.' },
   { id: 'v157_mover_zona',     fecha: '2026-05-04', titulo: 'Fix: botón Mover usaba fecha incorrecta después de las 8 PM', desc: 'En República Dominicana (UTC-4), el botón Mover del dashboard movía actividades del día siguiente en lugar del actual. Corregido para usar siempre la hora local.' },
   { id: 'v157_historial_part', fecha: '2026-05-01', titulo: 'Historial de participación', desc: 'Nueva tabla en el módulo de Participación que muestra todas las fechas vs. estudiantes con estado D/P/N y porcentaje acumulado.' },
@@ -15859,6 +15861,49 @@ function _exportarWordHTML() {
 // ════════════════════════════════════════════════════════════════════
 let _dupPlanId = null; // id del registro original a duplicar
 
+/** Devuelve el ISO date del próximo día de clase ≥ desde, según diasClase */
+function _proximoDiaClaseDesde(diasClase, desde) {
+  const diasActivos = new Set(
+    Object.entries(diasClase || {})
+      .filter(([, v]) => v && v.activo)
+      .map(([d]) => _FP_MAPA_DIA[d])
+      .filter(n => n !== undefined)
+  );
+  if (!diasActivos.size) return _isoDate(desde);
+  const d = new Date(_isoDate(desde) + 'T12:00:00');
+  for (let i = 0; i < 14; i++) {
+    if (diasActivos.has(d.getDay())) return _isoDate(d);
+    d.setDate(d.getDate() + 1);
+  }
+  return _isoDate(desde);
+}
+
+/** Actualiza el input de fecha de inicio en el modal de duplicar al próximo día de clase del curso destino */
+function _actualizarFechaInicioDup() {
+  const inputFecha = document.getElementById('dup-plan-fecha-inicio');
+  if (!inputFecha) return;
+  const cursoId = document.getElementById('dup-plan-curso')?.value;
+  const cursoDest = cursoId ? calState.cursos[cursoId] : null;
+  if (!cursoDest) { inputFecha.value = _isoDate(new Date()); return; }
+  const biblio = cargarBiblioteca();
+  const planIds = [...new Set(cursoDest.planIds || [])];
+  // Replicar la misma lógica de _actualizarAvisoDesdeSel para encontrar diasClase
+  const planesCurso = planIds
+    .map(pid => (biblio.items || []).find(i => i.id === pid))
+    .filter(p => p?.planificacion?.datosGenerales?.diasClase);
+  const horarioSel = document.getElementById('dup-plan-horario-origen');
+  const horarioWrap = document.getElementById('dup-plan-horario-wrap');
+  const refPlanId = (horarioWrap?.style.display !== 'none' && horarioSel?.value)
+    ? horarioSel.value : cursoDest.planActivaId;
+  const planRef = refPlanId
+    ? (biblio.items || []).find(i => i.id === refPlanId)
+    : planesCurso[0];
+  const diasClase = planRef?.planificacion?.datosGenerales?.diasClase
+    || planesCurso[0]?.planificacion?.datosGenerales?.diasClase
+    || null;
+  inputFecha.value = _proximoDiaClaseDesde(diasClase, new Date());
+}
+
 function abrirDuplicarPlan(id) {
   const biblio = cargarBiblioteca();
   const reg = (biblio.items || []).find(i => i.id === id);
@@ -15887,7 +15932,11 @@ function abrirDuplicarPlan(id) {
       ).join('');
     // Pre-seleccionar el curso activo si existe
     if (calState.cursoActivoId) sel.value = calState.cursoActivoId;
-    sel.addEventListener('change', () => _actualizarAvisHorarioCurso(reg));
+    sel.addEventListener('change', () => {
+      _actualizarAvisHorarioCurso(reg);
+      _actualizarFechaInicioDup();
+      document.getElementById('dup-plan-fecha-inicio')?.dispatchEvent(new Event('input'));
+    });
   }
   // Mostrar aviso de horario inicial
   _actualizarAvisHorarioCurso(reg);
@@ -15909,9 +15958,9 @@ function abrirDuplicarPlan(id) {
   const primerFecha = fechasActs[0] || null;
   const ultimaFecha = fechasActs[fechasActs.length - 1] || null;
 
-  // Fecha de inicio por defecto: hoy
+  // Fecha de inicio por defecto: próximo día de clase del curso destino (o hoy si no hay horario)
+  _actualizarFechaInicioDup();
   const inputFecha = document.getElementById('dup-plan-fecha-inicio');
-  if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
 
   // Preview de fechas
   _actualizarPreviewDupFechas(primerFecha, ultimaFecha, fechasActs.length);
@@ -18037,7 +18086,8 @@ async function generarIndexHtml(actId) {
     const sections = _buildSections(Object.assign({}, d1, d2));
     if (!sections || sections.length < 200) throw new Error('Contenido insuficiente generado.');
     const html = _htmlTop + sections + _htmlBottom;
-    const nombre = 'act' + (actIdx + 1) + '_' + (dg.moduloFormativo || 'actividad').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20) + '.html';
+    const _actNumLabel = _getActNumero(act.ecCodigo, _actIndexInEC(acts, actIdx));
+    const nombre = _actNumLabel.replace(/\s+/g, ' ') + '.html';
     const blob = new Blob(['﻿' + html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -22583,7 +22633,7 @@ function exportarDatos() {
   const backup = {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.7',
+      version: '15.8',
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
@@ -22792,7 +22842,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.7</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.8</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
