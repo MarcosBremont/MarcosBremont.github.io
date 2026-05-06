@@ -9226,6 +9226,7 @@ function guardarCalificaciones() {
     if (curso.planIds) curso.planIds = [...new Set(curso.planIds)];
   });
 
+  calState._lastModified = Date.now();
   localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState));
   if (window._syncFirebase) _syncFirebase('calificaciones', calState);
 }
@@ -13290,6 +13291,7 @@ function guardarObsEstudiante(key, valor) {
 
 // ── Novedades del sistema (changelog) ───────────────────────────────
 const NOVEDADES_SISTEMA = [
+  { id: 'v158_sync_cal',        fecha: '2026-05-06', titulo: 'Fix: sincronización de calificaciones entre dispositivos', desc: 'Se corrigió un bug donde datos viejos del móvil sobreescribían calificaciones actualizadas en la PC. Ahora el sistema usa timestamps para quedarse siempre con la versión más reciente; Firebase gana cuando los datos locales están desactualizados.' },
   { id: 'v158_dup_fecha_clase', fecha: '2026-05-05', titulo: 'Fix: fecha de inicio en Duplicar Planificación', desc: 'Al duplicar una planificación asignada a un curso, la "Nueva fecha de inicio" ahora salta automáticamente al próximo día de clase real (ej: si hoy es martes y el curso solo tiene clases miércoles y viernes, sugiere el miércoles siguiente).' },
   { id: 'v158_html_nombre',     fecha: '2026-05-05', titulo: 'Nombre de archivo HTML con código de actividad', desc: 'El archivo HTML generado para los estudiantes ahora se llama con el código de la actividad (ej: "Act 1.1.1.html") en lugar del nombre del módulo.' },
   { id: 'v157_diarias_datos',  fecha: '2026-05-05', titulo: 'Fix: pérdida de datos en Planificaciones Diarias', desc: 'Se corrigió un bug donde los campos de estrategias y recursos se borraban al navegar entre actividades, dejando las planificaciones diarias generadas con IA en blanco.' },
@@ -22633,7 +22635,7 @@ function exportarDatos() {
   const backup = {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.8',
+      version: '15.9',
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
@@ -22842,7 +22844,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.8</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.9</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

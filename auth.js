@@ -388,18 +388,20 @@ async function _cargarDesdeFirestore(uid) {
         const doc = await base.doc(store).get();
         if (!doc.exists || !doc.data().payload) return;
 
-        // Calificaciones: fusionar cursos locales + Firebase, local tiene prioridad
-        // (evita perder notas ingresadas si la página se cerró antes del sync)
+        // Calificaciones: fusionar con resolución por timestamp
+        // El dispositivo con datos más recientes gana; Firebase gana en empate
+        // (evita que localStorage viejo de otro dispositivo sobreescriba datos nuevos de Firebase)
         if (store === 'calificaciones') {
           const localRaw = localStorage.getItem(key);
-          let fbCursos = {};
-          let localCursos = {};
-          try { fbCursos = JSON.parse(doc.data().payload).cursos || {}; } catch(e) {}
-          try { localCursos = JSON.parse(localRaw || '{}').cursos || {}; } catch(e) {}
-          const merged = { cursos: { ...fbCursos, ...localCursos } };
+          let fbCursos = {}, localCursos = {}, fbTs = 0, localTs = 0;
+          try { const fb = JSON.parse(doc.data().payload); fbCursos = fb.cursos || {}; fbTs = fb._lastModified || 0; } catch(e) {}
+          try { const lc = JSON.parse(localRaw || '{}'); localCursos = lc.cursos || {}; localTs = lc._lastModified || 0; } catch(e) {}
+          // Local más reciente → local gana para cursos en conflicto; Firebase más reciente (o empate) → Firebase gana
+          const merged = localTs > fbTs
+            ? { cursos: { ...fbCursos, ...localCursos }, _lastModified: localTs }
+            : { cursos: { ...localCursos, ...fbCursos }, _lastModified: fbTs };
           localStorage.setItem(key, JSON.stringify(merged));
-          // Sincronizar si el merged difiere de lo que tiene Firebase (no solo si hay más cursos)
-          if (JSON.stringify(merged) !== JSON.stringify({ cursos: fbCursos }) && window._syncFirebase) {
+          if (JSON.stringify(merged.cursos) !== JSON.stringify(fbCursos) && window._syncFirebase) {
             window._syncFirebase('calificaciones', merged);
           }
           return;
