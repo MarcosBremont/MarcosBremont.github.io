@@ -13291,6 +13291,7 @@ function guardarObsEstudiante(key, valor) {
 
 // ── Novedades del sistema (changelog) ───────────────────────────────
 const NOVEDADES_SISTEMA = [
+  { id: 'v1510_mover_act_modal', fecha: '2026-05-07', titulo: 'Botón Mover por actividad en el modal de clase', desc: 'Cada actividad dentro del detalle de clase ahora tiene su propio botón "Mover" para reagendarla individualmente al próximo día de clase, sin afectar las otras actividades.' },
   { id: 'v158_sync_cal',        fecha: '2026-05-06', titulo: 'Fix: sincronización de calificaciones entre dispositivos', desc: 'Se corrigió un bug donde datos viejos del móvil sobreescribían calificaciones actualizadas en la PC. Ahora el sistema usa timestamps para quedarse siempre con la versión más reciente; Firebase gana cuando los datos locales están desactualizados.' },
   { id: 'v158_dup_fecha_clase', fecha: '2026-05-05', titulo: 'Fix: fecha de inicio en Duplicar Planificación', desc: 'Al duplicar una planificación asignada a un curso, la "Nueva fecha de inicio" ahora salta automáticamente al próximo día de clase real (ej: si hoy es martes y el curso solo tiene clases miércoles y viernes, sugiere el miércoles siguiente).' },
   { id: 'v158_html_nombre',     fecha: '2026-05-05', titulo: 'Nombre de archivo HTML con código de actividad', desc: 'El archivo HTML generado para los estudiantes ahora se llama con el código de la actividad (ej: "Act 1.1.1.html") en lugar del nombre del módulo.' },
@@ -20267,6 +20268,80 @@ function _ejecutarMoverClaseIndividual(fechaOrigen, seccion, materia, nuevaFecha
 
 
 
+// ── Mover una actividad individual desde el modal de clase ────────
+
+function moverActividadUnicaDesdeModal(encodedData) {
+  let d;
+  try { d = JSON.parse(decodeURIComponent(encodedData)); } catch { return; }
+  const { planId, actId, fecha, seccion, materia, color } = d;
+
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === planId);
+  const act = (reg?.planificacion?.actividades || []).find(a => a.id === actId);
+  if (!act) { mostrarToast('Actividad no encontrada', 'error'); return; }
+
+  const sugerida = _proximaFechaHorario(fecha, seccion, materia);
+  const tieneHorario = _diasHorarioDeMateriaYSeccion(materia, seccion).length > 0;
+  const fuenteTag = tieneHorario
+    ? `<span style="font-size:0.7rem;background:#E3F2FD;color:#1565C0;border-radius:6px;padding:2px 7px;">📅 según horario</span>`
+    : `<span style="font-size:0.7rem;background:#FFF3E0;color:#E65100;border-radius:6px;padding:2px 7px;">+7 días</span>`;
+
+  const enunciado = (act.enunciado || '').substring(0, 60) + ((act.enunciado || '').length > 60 ? '…' : '');
+  const fechaActStr = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'short' });
+  const clr = color || '#0277BD';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'mover-act-unica-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10100;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div style="background:var(--color-superficie,#fff);border-radius:16px;padding:22px 24px;max-width:380px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.28);" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span class="material-icons" style="color:${clr};font-size:22px;">event_repeat</span>
+        <h3 style="margin:0;font-size:0.95rem;font-weight:800;color:var(--color-texto-primario,#212121);">Mover actividad</h3>
+      </div>
+      <div style="background:var(--color-fondo,#F5F5F5);border-left:3px solid ${clr};border-radius:0 10px 10px 0;padding:9px 13px;margin-bottom:12px;font-size:0.82rem;color:var(--color-texto-primario,#212121);line-height:1.4;">
+        ${escapeHTML(enunciado)}<br>
+        <span style="color:#9E9E9E;font-size:0.75rem;">Fecha actual: <span style="color:#C62828;text-decoration:line-through;">${fechaActStr}</span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <label style="font-size:0.82rem;font-weight:700;color:var(--color-texto-primario,#212121);white-space:nowrap;">Nueva fecha:</label>
+        <input type="date" id="mover-act-unica-fecha" value="${sugerida}"
+          style="flex:1;min-width:140px;padding:7px 11px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.85rem;font-family:inherit;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);" />
+      </div>
+      <div style="margin-bottom:16px;padding-left:2px;">${fuenteTag}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('mover-act-unica-overlay').remove()"
+          style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="_confirmarMoverActividadUnica('${planId}','${actId}')"
+          style="background:${clr};color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;">
+          <span class="material-icons" style="font-size:15px;">check</span> Confirmar
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _confirmarMoverActividadUnica(planId, actId) {
+  const nuevaFecha = document.getElementById('mover-act-unica-fecha')?.value;
+  if (!nuevaFecha) return;
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === planId);
+  const act = (reg?.planificacion?.actividades || []).find(a => a.id === actId);
+  if (!act) { mostrarToast('Actividad no encontrada', 'error'); return; }
+  act.fecha = nuevaFecha;
+  act.fechaStr = _fecStr(nuevaFecha);
+  persistirBiblioteca(biblio);
+  guardarBorrador();
+  guardarTodasDiarias();
+  renderizarDiarias();
+  renderizarDashboard();
+  registrarCambio(`Actividad "${(act.enunciado || '').substring(0, 40)}" movida a ${nuevaFecha}`);
+  mostrarToast('Actividad movida a ' + act.fechaStr, 'success');
+  document.getElementById('mover-act-unica-overlay')?.remove();
+  cerrarModalBtn();
+}
+
 // ----------------------------------------------------------------
 
 
@@ -22635,7 +22710,7 @@ function exportarDatos() {
   const backup = {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.9',
+      version: '15.10',
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
@@ -22844,7 +22919,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.9</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.10</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -23328,6 +23403,9 @@ function abrirModalClase(encodedData) {
           ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
             <span class="material-icons" style="font-size:14px;">link</span> Recurso
           </a>` : ''}
+          <button onclick="moverActividadUnicaDesdeModal('${encodeURIComponent(JSON.stringify({planId:si.planId,actId:si.actId,fecha:d.fecha,seccion:d.seccion||'',materia:d.materia||'',color}))}')" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;">
+            <span class="material-icons" style="font-size:14px;">event_repeat</span> Mover
+          </button>
         </div>
         ${_renderBtnGuiaHtml(si.actId)}
         <!-- Forma de evaluación por actividad -->
