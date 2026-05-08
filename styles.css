@@ -3567,6 +3567,36 @@ body.dark-mode .btn-pln-dup:hover {
 }
 
 @media (max-width: 600px) {
+  .stepper {
+    justify-content: flex-start;
+    min-width: auto;
+    gap: 0;
+    padding: 0 4px;
+  }
+
+  .step-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+
+  .step-label {
+    font-size: 0.65rem;
+    max-width: 62px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .step-line {
+    min-width: 16px;
+    flex: 1;
+    margin: 0 4px;
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 600px) {
   .pd-sesion-header {
     flex-wrap: wrap;
     gap: 6px 10px;
