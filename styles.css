@@ -1426,6 +1426,7 @@ body {
   max-height: 88vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   animation: slideUp 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1479,6 +1480,7 @@ body {
   overflow-y: auto;
   padding: var(--espacio-xl);
   flex: 1;
+  min-height: 0;
 }
 
 .modal-footer {
