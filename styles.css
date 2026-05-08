@@ -3548,13 +3548,77 @@ body.dark-mode .btn-pln-dup:hover {
   }
 }
 
-@media (max-width:768px) {
+/* Contenedor de botones de la tarjeta diaria */
+.pd-sesion-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
   .pd-panel {
     padding: var(--espacio-md);
   }
 
   .pd-sesion-meta {
     gap: 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pd-sesion-header {
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 10px 12px;
+    align-items: flex-start;
+  }
+
+  .pd-sesion-num {
+    margin-top: 2px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.88rem;
+  }
+
+  .pd-sesion-info {
+    /* ocupa todo el espacio al lado del número y fuerza los botones a la siguiente fila */
+    flex: 1 1 calc(100% - 50px);
+    min-width: 0;
+  }
+
+  .pd-sesion-titulo {
+    font-size: 0.88rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .pd-sesion-meta {
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  /* Fila de botones — segunda línea, alineada con el texto */
+  .pd-sesion-btns {
+    flex: 0 0 100%;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-left: 42px;
+  }
+
+  .btn-pd-generar,
+  .btn-pd-index,
+  .pd-sesion-expand-btn {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+  }
+
+  .btn-pd-generar .material-icons,
+  .btn-pd-index .material-icons,
+  .pd-sesion-expand-btn .material-icons {
+    font-size: 14px;
   }
 }
 

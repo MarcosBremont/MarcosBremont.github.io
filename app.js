@@ -18933,27 +18933,18 @@ function renderizarDiarias() {
 
 
 
-        <button class="btn-pd-generar" onclick="event.stopPropagation();generarSesion('${act.id}')" title="Generar contenido automáticamente">
-
-
-
-          <span class="material-icons">auto_awesome</span> Generar
-
-
-
-        </button>
-
-        <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
-          <span class="material-icons">html</span> Index.html
-        </button>
-
-        <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
-                onclick="event.stopPropagation();toggleSesion('${act.id}')">
-          <span class="material-icons" style="font-size:16px;">expand_more</span> Ver / Editar
-
-
-
-        </button>
+        <div class="pd-sesion-btns">
+          <button class="btn-pd-generar" onclick="event.stopPropagation();generarSesion('${act.id}')" title="Generar contenido automáticamente">
+            <span class="material-icons">auto_awesome</span> Generar
+          </button>
+          <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
+            <span class="material-icons">html</span> Index.html
+          </button>
+          <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
+                  onclick="event.stopPropagation();toggleSesion('${act.id}')">
+            <span class="material-icons" style="font-size:16px;">expand_more</span> Ver / Editar
+          </button>
+        </div>
 
 
 
