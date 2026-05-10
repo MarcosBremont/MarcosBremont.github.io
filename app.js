@@ -9665,6 +9665,101 @@ function cerrarPendientes() {
   document.body.style.overflow = '';
 }
 
+function imprimirPendientes() {
+  const selCurso = document.getElementById('pend-sel-curso');
+  const selGrupo = document.getElementById('pend-sel-grupo');
+  const cursoId = selCurso?.value === 'all' ? null : selCurso?.value;
+  const grupoVal = selGrupo?.value || 'estudiante';
+  const cursoNombreLabel = selCurso
+    ? (selCurso.options[selCurso.selectedIndex]?.text || 'Todos los cursos')
+    : 'Todos los cursos';
+
+  const pending = _calcPendientes(cursoId);
+  const fecha = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  // Agrupar por estudiante
+  const byEst = {};
+  pending.forEach(p => {
+    const key = p.cursoId + '||' + p.estudianteId;
+    if (!byEst[key]) byEst[key] = {
+      nombre: p.estudianteNombre,
+      cursoNombre: p.cursoNombre,
+      total: 0,
+      ras: {}
+    };
+    const e = byEst[key];
+    e.total++;
+    if (!e.ras[p.raKey]) e.ras[p.raKey] = { modulo: p.raModulo, desc: p.raDesc, acts: [] };
+    e.ras[p.raKey].acts.push(p);
+  });
+
+  if (Object.keys(byEst).length === 0) {
+    mostrarToast('No hay pendientes que imprimir', 'info');
+    return;
+  }
+
+  const mostrarCurso = !cursoId;
+  let filas = '';
+  Object.values(byEst).forEach(e => {
+    const rasRows = Object.values(e.ras).map(rg => {
+      const actsText = rg.acts.map(a => {
+        const label = a.esComplementario ? '★ Comp.' : 'Act.' + a.actNum;
+        const pts = a.actividadMax !== null ? ' (' + a.actividadMax + 'pts)' : '';
+        const fechaAct = a.actividadFecha ? a.actividadFecha.split(',')[0] : '';
+        return label + pts + (fechaAct ? ' · ' + fechaAct : '');
+      }).join('&nbsp;&nbsp; ');
+      return '<tr class="ra-row"><td class="ra-cell">'
+        + '<span class="ra-modulo">' + escHTML(rg.modulo) + '</span>'
+        + (rg.desc ? '<span class="ra-desc"> · ' + escHTML(rg.desc.substring(0, 60)) + (rg.desc.length > 60 ? '…' : '') + '</span>' : '')
+        + '</td><td class="acts-cell">' + actsText + '</td></tr>';
+    }).join('');
+
+    filas += '<tr class="est-header-row"><td colspan="2">'
+      + '<span class="est-nombre">' + escHTML(e.nombre) + '</span>'
+      + (mostrarCurso && e.cursoNombre ? ' <span class="est-curso">— ' + escHTML(e.cursoNombre) + '</span>' : '')
+      + ' <span class="est-total">' + e.total + ' pendiente(s)</span>'
+      + '</td></tr>'
+      + rasRows;
+  });
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Pendientes por calificar — ${escHTML(cursoNombreLabel)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #212121; padding: 18mm 15mm; }
+  h1 { font-size: 14pt; color: #1565C0; margin-bottom: 2px; }
+  .subtitulo { font-size: 9.5pt; color: #546E7A; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  .est-header-row td { background: #E3F2FD; color: #0D47A1; font-weight: 700;
+    padding: 5px 8px; border-top: 2px solid #90CAF9; font-size: 10.5pt; }
+  .est-nombre { font-size: 11pt; }
+  .est-curso { font-weight: 400; color: #37474F; }
+  .est-total { float: right; background: #EF5350; color: #fff; border-radius: 10px;
+    padding: 1px 9px; font-size: 9pt; font-weight: 700; }
+  .ra-row td { padding: 4px 8px; border-bottom: 1px solid #ECEFF1; font-size: 9.5pt; }
+  .ra-cell { width: 38%; color: #37474F; }
+  .ra-modulo { font-weight: 700; color: #1565C0; }
+  .ra-desc { color: #78909C; font-size: 9pt; }
+  .acts-cell { color: #E65100; }
+  @page { margin: 15mm; }
+  @media print {
+    body { padding: 0; }
+    .est-header-row td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style></head><body>
+<h1>📋 Actividades Pendientes de Calificar</h1>
+<div class="subtitulo">Curso: ${escHTML(cursoNombreLabel)} &nbsp;·&nbsp; Fecha: ${fecha}</div>
+<table>${filas}</table>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=650');
+  if (!win) { mostrarToast('Permite ventanas emergentes para imprimir', 'error'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+}
+
 function _calcPendientes(cursoId) {
   const result = [];
   const biblio = cargarBiblioteca();

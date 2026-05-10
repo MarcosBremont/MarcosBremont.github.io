@@ -3749,7 +3749,11 @@
       <div style="flex:1;overflow-y:auto;min-height:0;">
         <div id="pendientes-body" style="padding:16px 20px;"></div>
       </div>
-      <div class="modal-footer" style="flex-shrink:0;">
+      <div class="modal-footer" style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">
+        <button class="btn-siguiente" onclick="imprimirPendientes()"
+          style="background:#1565C0;border-color:#1565C0;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:18px;">print</span> Imprimir
+        </button>
         <button class="btn-secundario" onclick="cerrarPendientes()">Cerrar</button>
       </div>
     </div>
