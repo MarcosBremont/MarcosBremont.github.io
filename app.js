@@ -9667,6 +9667,7 @@ function cerrarPendientes() {
 
 function _calcPendientes(cursoId) {
   const result = [];
+  const biblio = cargarBiblioteca();
   const cursosArr = cursoId
     ? (calState.cursos[cursoId] ? [calState.cursos[cursoId]] : [])
     : Object.values(calState.cursos);
@@ -9675,10 +9676,19 @@ function _calcPendientes(cursoId) {
     const estudiantes = curso.estudiantes || [];
     const ras = curso.ras || {};
     const notas = curso.notas || {};
+    const planIds = curso.planIds || [];
 
-    Object.entries(ras).forEach(([raKey, raInfo]) => {
-      const actividades = raInfo._actividadesSnapshot || [];
+    planIds.forEach(planId => {
+      // Misma fuente que usa la tabla de calificaciones: biblioteca real, no snapshot
+      const reg = biblio.items.find(i => i.id === planId);
+      if (!reg) return;
+      const actividades = reg.planificacion?.actividades || [];
       if (actividades.length === 0) return;
+
+      const raKey = _getPlanIdClave(planId);
+      const raInfo = ras[raKey];
+      const planDg = reg.planificacion?.datosGenerales || {};
+      const planRa = reg.planificacion?.ra || {};
 
       let counter = 0;
       const actNums = actividades.map(act => {
@@ -9687,7 +9697,7 @@ function _calcPendientes(cursoId) {
       });
 
       actividades.forEach((act, i) => {
-        const maxVal = raInfo.valores ? raInfo.valores[act.id] : undefined;
+        const maxVal = raInfo?.valores ? raInfo.valores[act.id] : undefined;
         estudiantes.forEach(est => {
           const grade = notas[est.id] && notas[est.id][raKey]
             ? notas[est.id][raKey][act.id]
@@ -9697,15 +9707,15 @@ function _calcPendientes(cursoId) {
               cursoId: curso.id,
               cursoNombre: curso.nombre || '',
               raKey,
-              raModulo: raInfo.modulo || 'RA',
-              raDesc: raInfo.label || '',
-              raValorTotal: raInfo.valorTotal || 0,
+              raModulo: planDg.moduloFormativo || raInfo?.modulo || 'RA',
+              raDesc: planRa.descripcion || raInfo?.label || '',
+              raValorTotal: raInfo?.valorTotal || parseFloat(planDg.valorRA) || 0,
               estudianteId: est.id,
               estudianteNombre: est.nombre || est.id,
               actividadId: act.id,
               actividadEnunciado: act.enunciado || '',
               actividadFecha: act.fechaStr || '',
-              actividadMax: maxVal !== undefined ? maxVal : null,
+              actividadMax: maxVal !== undefined ? maxVal : (act.valor || null),
               actNum: actNums[i],
               esComplementario: act.esComplementario || false
             });
