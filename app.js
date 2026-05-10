@@ -9702,19 +9702,31 @@ function imprimirPendientes() {
   let filas = '';
   Object.values(byEst).forEach(e => {
     const rasRows = Object.values(e.ras).map(rg => {
-      const actsText = rg.acts.map(a => {
-        const label = a.esComplementario ? '★ Comp.' : 'Act.' + a.actNum;
+      const actsRows = rg.acts.map(a => {
+        const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
+        const label = a.esComplementario ? '★ Comp.' : (ecCorto || 'Act.' + a.actNum);
         const pts = a.actividadMax !== null ? ' (' + a.actividadMax + 'pts)' : '';
-        const fechaAct = a.actividadFecha ? a.actividadFecha.split(',')[0] : '';
-        return label + pts + (fechaAct ? ' · ' + fechaAct : '');
-      }).join('&nbsp;&nbsp; ');
-      return '<tr class="ra-row"><td class="ra-cell">'
+        let fechaFull = '';
+        if (a.actividadFechaISO) {
+          try {
+            const d = new Date(a.actividadFechaISO + 'T12:00:00');
+            fechaFull = d.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
+          } catch(ex) { fechaFull = a.actividadFecha ? a.actividadFecha.replace(',', '') : ''; }
+        } else if (a.actividadFecha) {
+          fechaFull = a.actividadFecha.replace(',', '');
+        }
+        const nombre = a.actividadEnunciado || '';
+        return '<tr class="act-row"><td class="act-codigo">' + escHTML(label) + escHTML(pts) + '</td>'
+          + '<td class="act-nombre">' + escHTML(nombre) + '</td>'
+          + '<td class="act-fecha">' + escHTML(fechaFull) + '</td></tr>';
+      }).join('');
+      return '<tr class="ra-row"><td colspan="3">'
         + '<span class="ra-modulo">' + escHTML(rg.modulo) + '</span>'
-        + (rg.desc ? '<span class="ra-desc"> · ' + escHTML(rg.desc.substring(0, 60)) + (rg.desc.length > 60 ? '…' : '') + '</span>' : '')
-        + '</td><td class="acts-cell">' + actsText + '</td></tr>';
+        + (rg.desc ? '<span class="ra-desc"> · ' + escHTML(rg.desc.substring(0, 70)) + (rg.desc.length > 70 ? '…' : '') + '</span>' : '')
+        + '</td></tr>' + actsRows;
     }).join('');
 
-    filas += '<tr class="est-header-row"><td colspan="2">'
+    filas += '<tr class="est-header-row"><td colspan="3">'
       + '<span class="est-nombre">' + escHTML(e.nombre) + '</span>'
       + (mostrarCurso && e.cursoNombre ? ' <span class="est-curso">— ' + escHTML(e.cursoNombre) + '</span>' : '')
       + ' <span class="est-total">' + e.total + ' pendiente(s)</span>'
@@ -9726,30 +9738,35 @@ function imprimirPendientes() {
 <title>Pendientes por calificar — ${escHTML(cursoNombreLabel)}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 11pt; color: #212121; padding: 18mm 15mm; }
-  h1 { font-size: 14pt; color: #1565C0; margin-bottom: 2px; }
-  .subtitulo { font-size: 9.5pt; color: #546E7A; margin-bottom: 14px; }
+  body { font-family: Arial, sans-serif; font-size: 10.5pt; color: #212121; padding: 16mm 14mm; }
+  h1 { font-size: 13.5pt; color: #1565C0; margin-bottom: 2px; }
+  .subtitulo { font-size: 9pt; color: #546E7A; margin-bottom: 14px; }
   table { width: 100%; border-collapse: collapse; }
   .est-header-row td { background: #E3F2FD; color: #0D47A1; font-weight: 700;
-    padding: 5px 8px; border-top: 2px solid #90CAF9; font-size: 10.5pt; }
-  .est-nombre { font-size: 11pt; }
+    padding: 5px 8px; border-top: 2.5px solid #90CAF9; font-size: 10.5pt; }
+  .est-nombre { font-size: 10.5pt; }
   .est-curso { font-weight: 400; color: #37474F; }
   .est-total { float: right; background: #EF5350; color: #fff; border-radius: 10px;
-    padding: 1px 9px; font-size: 9pt; font-weight: 700; }
-  .ra-row td { padding: 4px 8px; border-bottom: 1px solid #ECEFF1; font-size: 9.5pt; }
-  .ra-cell { width: 38%; color: #37474F; }
+    padding: 1px 9px; font-size: 8.5pt; font-weight: 700; }
+  .ra-row td { background: #F5F7FA; padding: 3px 8px; font-size: 9pt; border-top: 1px solid #E0E0E0; }
   .ra-modulo { font-weight: 700; color: #1565C0; }
-  .ra-desc { color: #78909C; font-size: 9pt; }
-  .acts-cell { color: #E65100; }
-  @page { margin: 15mm; }
+  .ra-desc { color: #78909C; font-size: 8.5pt; }
+  .act-row td { padding: 3px 8px; border-bottom: 1px solid #F0F0F0; font-size: 9.5pt; vertical-align: top; }
+  .act-codigo { width: 18%; color: #E65100; font-weight: 700; white-space: nowrap; }
+  .act-nombre { width: 55%; color: #37474F; }
+  .act-fecha { width: 27%; color: #78909C; font-size: 8.5pt; }
+  @page { margin: 14mm; }
   @media print {
     body { padding: 0; }
-    .est-header-row td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .est-header-row td, .ra-row td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style></head><body>
-<h1>📋 Actividades Pendientes de Calificar</h1>
-<div class="subtitulo">Curso: ${escHTML(cursoNombreLabel)} &nbsp;·&nbsp; Fecha: ${fecha}</div>
-<table>${filas}</table>
+<h1>&#128203; Actividades Pendientes de Calificar</h1>
+<div class="subtitulo">Curso: ${escHTML(cursoNombreLabel)} &nbsp;&middot;&nbsp; Generado: ${fecha}</div>
+<table>
+  <colgroup><col style="width:18%"><col style="width:55%"><col style="width:27%"></colgroup>
+  ${filas}
+</table>
 </body></html>`;
 
   const win = window.open('', '_blank', 'width=800,height=650');
@@ -9810,6 +9827,8 @@ function _calcPendientes(cursoId) {
               actividadId: act.id,
               actividadEnunciado: act.enunciado || '',
               actividadFecha: act.fechaStr || '',
+              actividadFechaISO: act.fecha ? String(act.fecha).split('T')[0] : '',
+              ecCodigo: act.ecCodigo || '',
               actividadMax: maxVal !== undefined ? maxVal : (act.valor || null),
               actNum: actNums[i],
               esComplementario: act.esComplementario || false
@@ -9909,14 +9928,24 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
         + '<div style="display:flex;flex-wrap:wrap;gap:5px;">';
 
       rg.acts.forEach(a => {
-        const actLabel = a.esComplementario
-          ? '<span class="material-icons" style="font-size:11px;vertical-align:middle;">star</span> Comp.'
-          : 'Act.' + a.actNum;
-        const maxLabel = a.actividadMax !== null ? ' <span style="opacity:0.7;">(' + a.actividadMax + 'pts)</span>' : '';
-        const fechaShort = a.actividadFecha ? a.actividadFecha.split(',')[0] : '';
-        html += '<span title="' + escHTML(a.actividadEnunciado) + '" style="background:#FFF8E1;border:1px solid #FFD54F;color:#E65100;border-radius:6px;padding:4px 9px;font-size:0.78rem;cursor:default;display:inline-flex;align-items:center;gap:3px;">'
-          + '<span style="font-weight:600;">' + actLabel + '</span>' + maxLabel
-          + (fechaShort ? '<span style="opacity:0.65;font-size:0.72rem;">· ' + escHTML(fechaShort) + '</span>' : '')
+        const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
+        const actLabel = a.esComplementario ? '★ Comp.' : (ecCorto || 'Act.' + a.actNum);
+        const ptsLabel = a.actividadMax !== null ? ' (' + a.actividadMax + 'pts)' : '';
+        const nombre = a.actividadEnunciado || '';
+        const nombreCorto = nombre.length > 38 ? nombre.substring(0, 38) + '…' : nombre;
+        let fechaFull = '';
+        if (a.actividadFechaISO) {
+          try {
+            const d = new Date(a.actividadFechaISO + 'T12:00:00');
+            fechaFull = d.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
+          } catch(e) { fechaFull = a.actividadFecha || ''; }
+        } else if (a.actividadFecha) {
+          fechaFull = a.actividadFecha.replace(',', '');
+        }
+        html += '<span title="' + escHTML(nombre) + '" style="background:#FFF8E1;border:1px solid #FFD54F;color:#E65100;border-radius:8px;padding:5px 9px;font-size:0.78rem;cursor:default;display:inline-flex;flex-direction:column;gap:1px;max-width:200px;">'
+          + '<span style="font-weight:700;font-size:0.8rem;">' + escHTML(actLabel) + escHTML(ptsLabel) + '</span>'
+          + (nombreCorto ? '<span style="font-size:0.71rem;opacity:0.82;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHTML(nombreCorto) + '</span>' : '')
+          + (fechaFull ? '<span style="font-size:0.68rem;opacity:0.62;">' + escHTML(fechaFull) + '</span>' : '')
           + '</span>';
       });
 
@@ -9944,6 +9973,8 @@ function _renderPendientesRA(pending, ocultarCurso) {
     if (!ra.actividades[p.actividadId]) ra.actividades[p.actividadId] = {
       enunciado: p.actividadEnunciado,
       fecha: p.actividadFecha,
+      fechaISO: p.actividadFechaISO,
+      ecCodigo: p.ecCodigo,
       max: p.actividadMax,
       actNum: p.actNum,
       esComp: p.esComplementario,
@@ -9970,19 +10001,24 @@ function _renderPendientesRA(pending, ocultarCurso) {
       + '</div><div style="padding:10px 14px;">';
 
     Object.values(ra.actividades).forEach(act => {
-      const actLabel = act.esComp
-        ? '<span class="material-icons" style="font-size:13px;vertical-align:middle;">star</span> Complementario'
-        : 'Act.' + act.actNum;
-      const fechaShort = act.fecha ? act.fecha.split(',')[0] : '';
+      const ecCorto = act.ecCodigo ? act.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
+      const actLabel = act.esComp ? '★ Complementario' : (ecCorto || 'Act.' + act.actNum);
+      let fechaFull = '';
+      if (act.fechaISO) {
+        try {
+          const d = new Date(act.fechaISO + 'T12:00:00');
+          fechaFull = d.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
+        } catch(e) { fechaFull = act.fecha ? act.fecha.replace(',', '') : ''; }
+      } else if (act.fecha) {
+        fechaFull = act.fecha.replace(',', '');
+      }
       html += '<div style="margin-bottom:9px;padding:8px 10px;background:#F3E5F5;border-radius:8px;border-left:3px solid #AB47BC;">'
         + '<div style="font-size:0.8rem;font-weight:600;color:#6A1B9A;margin-bottom:3px;">'
-        + actLabel
+        + escHTML(actLabel)
         + (act.max !== null ? ' · <span style="font-weight:400;">' + act.max + 'pts</span>' : '')
-        + (fechaShort ? '<span style="font-weight:400;opacity:0.65;font-size:0.74rem;"> · ' + escHTML(fechaShort) + '</span>' : '')
+        + (fechaFull ? '<span style="font-weight:400;opacity:0.65;font-size:0.74rem;"> · ' + escHTML(fechaFull) + '</span>' : '')
         + '</div>'
-        + (act.enunciado
-          ? '<div style="font-size:0.74rem;color:#6A1B9A;opacity:0.8;margin-bottom:5px;">' + escHTML(act.enunciado.substring(0, 90)) + (act.enunciado.length > 90 ? '…' : '') + '</div>'
-          : '')
+        + (act.enunciado ? '<div style="font-size:0.76rem;color:#6A1B9A;opacity:0.8;margin-bottom:5px;">' + escHTML(act.enunciado.substring(0, 90)) + (act.enunciado.length > 90 ? '…' : '') + '</div>' : '')
         + '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
       act.estudiantes.forEach(nombre => {
         html += '<span style="background:#FCE4EC;border:1px solid #F48FB1;color:#880E4F;border-radius:12px;padding:2px 9px;font-size:0.74rem;">'
