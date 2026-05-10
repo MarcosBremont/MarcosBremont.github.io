@@ -9634,6 +9634,261 @@ function renderizarCalificaciones() {
   renderizarTabsCursos();
   renderizarTabsPlanesDelCurso();
   renderizarTablaCalificaciones();
+  _actualizarBadgePendientes();
+}
+
+// ── Pendientes por calificar ─────────────────────────────────────────────────
+
+function abrirPendientes() {
+  const overlay = document.getElementById('pendientes-overlay');
+  if (!overlay) return;
+  // Populate curso selector
+  const sel = document.getElementById('pend-sel-curso');
+  if (sel) {
+    sel.innerHTML = '<option value="all">Todos los cursos</option>';
+    Object.values(calState.cursos).forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      if (c.id === calState.cursoActivoId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  _renderPendientes();
+}
+
+function cerrarPendientes() {
+  const overlay = document.getElementById('pendientes-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function _calcPendientes(cursoId) {
+  const result = [];
+  const cursosArr = cursoId
+    ? (calState.cursos[cursoId] ? [calState.cursos[cursoId]] : [])
+    : Object.values(calState.cursos);
+
+  cursosArr.forEach(curso => {
+    const estudiantes = curso.estudiantes || [];
+    const ras = curso.ras || {};
+    const notas = curso.notas || {};
+
+    Object.entries(ras).forEach(([raKey, raInfo]) => {
+      const actividades = raInfo._actividadesSnapshot || [];
+      if (actividades.length === 0) return;
+
+      let counter = 0;
+      const actNums = actividades.map(act => {
+        if (act.esComplementario) return null;
+        return ++counter;
+      });
+
+      actividades.forEach((act, i) => {
+        const maxVal = raInfo.valores ? raInfo.valores[act.id] : undefined;
+        estudiantes.forEach(est => {
+          const grade = notas[est.id] && notas[est.id][raKey]
+            ? notas[est.id][raKey][act.id]
+            : undefined;
+          if (grade === undefined || grade === null) {
+            result.push({
+              cursoId: curso.id,
+              cursoNombre: curso.nombre || '',
+              raKey,
+              raModulo: raInfo.modulo || 'RA',
+              raDesc: raInfo.label || '',
+              raValorTotal: raInfo.valorTotal || 0,
+              estudianteId: est.id,
+              estudianteNombre: est.nombre || est.id,
+              actividadId: act.id,
+              actividadEnunciado: act.enunciado || '',
+              actividadFecha: act.fechaStr || '',
+              actividadMax: maxVal !== undefined ? maxVal : null,
+              actNum: actNums[i],
+              esComplementario: act.esComplementario || false
+            });
+          }
+        });
+      });
+    });
+  });
+
+  return result;
+}
+
+function _actualizarBadgePendientes() {
+  const badge = document.getElementById('badge-pendientes-cal');
+  if (!badge) return;
+  const cursoId = calState.cursoActivoId;
+  if (!cursoId) { badge.style.display = 'none'; return; }
+  const n = _calcPendientes(cursoId).length;
+  if (n > 0) {
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function _renderPendientes() {
+  const body = document.getElementById('pendientes-body');
+  if (!body) return;
+  const selCurso = document.getElementById('pend-sel-curso')?.value || 'all';
+  const selGrupo = document.getElementById('pend-sel-grupo')?.value || 'estudiante';
+  const cursoId = selCurso === 'all' ? null : selCurso;
+  const pending = _calcPendientes(cursoId);
+
+  const counterEl = document.getElementById('pend-count-header');
+  if (counterEl) {
+    counterEl.textContent = pending.length > 0
+      ? pending.length + ' pendiente' + (pending.length !== 1 ? 's' : '')
+      : '';
+  }
+
+  if (pending.length === 0) {
+    body.innerHTML = '<div style="text-align:center;padding:40px 20px;">'
+      + '<span class="material-icons" style="font-size:52px;color:#4CAF50;display:block;margin-bottom:12px;">check_circle</span>'
+      + '<strong style="color:#2E7D32;font-size:1.05rem;">¡Todo al día!</strong>'
+      + '<p style="color:#78909C;font-size:0.88rem;margin-top:6px;">No hay actividades pendientes de calificar en este curso.</p>'
+      + '</div>';
+    return;
+  }
+
+  body.innerHTML = selGrupo === 'ra'
+    ? _renderPendientesRA(pending, selCurso !== 'all')
+    : _renderPendientesEstudiante(pending, selCurso !== 'all');
+}
+
+function _renderPendientesEstudiante(pending, ocultarCurso) {
+  // Group: estudianteId → raKey → activities
+  const byEst = {};
+  pending.forEach(p => {
+    const estKey = p.cursoId + '||' + p.estudianteId;
+    if (!byEst[estKey]) byEst[estKey] = {
+      nombre: p.estudianteNombre,
+      cursoNombre: p.cursoNombre,
+      total: 0,
+      ras: {}
+    };
+    const e = byEst[estKey];
+    e.total++;
+    if (!e.ras[p.raKey]) e.ras[p.raKey] = { modulo: p.raModulo, desc: p.raDesc, acts: [] };
+    e.ras[p.raKey].acts.push(p);
+  });
+
+  let html = '';
+  Object.values(byEst).forEach(e => {
+    html += '<div style="background:#fff;border:1px solid #E3E8EF;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+      + '<div style="background:#E3F2FD;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      + '<span class="material-icons" style="color:#1565C0;font-size:18px;">person</span>'
+      + '<strong style="color:#1565C0;">' + escHTML(e.nombre) + '</strong>'
+      + (!ocultarCurso && e.cursoNombre
+        ? '<span style="font-size:0.76rem;color:#546E7A;background:#ECEFF1;padding:2px 9px;border-radius:8px;">' + escHTML(e.cursoNombre) + '</span>'
+        : '')
+      + '<span style="margin-left:auto;background:#EF5350;color:#fff;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">'
+      + e.total + ' pendiente' + (e.total !== 1 ? 's' : '') + '</span>'
+      + '</div>'
+      + '<div style="padding:10px 14px;">';
+
+    Object.values(e.ras).forEach(rg => {
+      const raLabel = escHTML(rg.modulo)
+        + (rg.desc
+          ? ' <span style="font-weight:400;opacity:0.7;font-size:0.72rem;">· ' + escHTML(rg.desc.substring(0, 55)) + (rg.desc.length > 55 ? '…' : '') + '</span>'
+          : '');
+      html += '<div style="margin-bottom:8px;">'
+        + '<div style="font-size:0.78rem;font-weight:700;color:#37474F;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #F0F4F8;">'
+        + '<span class="material-icons" style="font-size:14px;vertical-align:middle;color:#1565C0;margin-right:3px;">assignment</span>'
+        + raLabel + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:5px;">';
+
+      rg.acts.forEach(a => {
+        const actLabel = a.esComplementario
+          ? '<span class="material-icons" style="font-size:11px;vertical-align:middle;">star</span> Comp.'
+          : 'Act.' + a.actNum;
+        const maxLabel = a.actividadMax !== null ? ' <span style="opacity:0.7;">(' + a.actividadMax + 'pts)</span>' : '';
+        const fechaShort = a.actividadFecha ? a.actividadFecha.split(',')[0] : '';
+        html += '<span title="' + escHTML(a.actividadEnunciado) + '" style="background:#FFF8E1;border:1px solid #FFD54F;color:#E65100;border-radius:6px;padding:4px 9px;font-size:0.78rem;cursor:default;display:inline-flex;align-items:center;gap:3px;">'
+          + '<span style="font-weight:600;">' + actLabel + '</span>' + maxLabel
+          + (fechaShort ? '<span style="opacity:0.65;font-size:0.72rem;">· ' + escHTML(fechaShort) + '</span>' : '')
+          + '</span>';
+      });
+
+      html += '</div></div>';
+    });
+
+    html += '</div></div>';
+  });
+  return html;
+}
+
+function _renderPendientesRA(pending, ocultarCurso) {
+  // Group: cursoId + raKey → actividadId → students
+  const byRA = {};
+  pending.forEach(p => {
+    const raKey = p.cursoId + '||' + p.raKey;
+    if (!byRA[raKey]) byRA[raKey] = {
+      modulo: p.raModulo, desc: p.raDesc,
+      cursoNombre: p.cursoNombre,
+      total: 0,
+      actividades: {}
+    };
+    const ra = byRA[raKey];
+    ra.total++;
+    if (!ra.actividades[p.actividadId]) ra.actividades[p.actividadId] = {
+      enunciado: p.actividadEnunciado,
+      fecha: p.actividadFecha,
+      max: p.actividadMax,
+      actNum: p.actNum,
+      esComp: p.esComplementario,
+      estudiantes: []
+    };
+    ra.actividades[p.actividadId].estudiantes.push(p.estudianteNombre);
+  });
+
+  let html = '';
+  Object.values(byRA).forEach(ra => {
+    html += '<div style="background:#fff;border:1px solid #E3E8EF;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+      + '<div style="background:#E8EAF6;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      + '<span class="material-icons" style="color:#3949AB;font-size:18px;">assignment</span>'
+      + '<div><strong style="color:#3949AB;">' + escHTML(ra.modulo) + '</strong>'
+      + (ra.desc
+        ? '<div style="font-size:0.72rem;color:#5C6BC0;">' + escHTML(ra.desc.substring(0, 70)) + (ra.desc.length > 70 ? '…' : '') + '</div>'
+        : '')
+      + '</div>'
+      + (!ocultarCurso && ra.cursoNombre
+        ? '<span style="font-size:0.76rem;color:#546E7A;background:#ECEFF1;padding:2px 9px;border-radius:8px;">' + escHTML(ra.cursoNombre) + '</span>'
+        : '')
+      + '<span style="margin-left:auto;background:#EF5350;color:#fff;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">'
+      + ra.total + ' pendiente' + (ra.total !== 1 ? 's' : '') + '</span>'
+      + '</div><div style="padding:10px 14px;">';
+
+    Object.values(ra.actividades).forEach(act => {
+      const actLabel = act.esComp
+        ? '<span class="material-icons" style="font-size:13px;vertical-align:middle;">star</span> Complementario'
+        : 'Act.' + act.actNum;
+      const fechaShort = act.fecha ? act.fecha.split(',')[0] : '';
+      html += '<div style="margin-bottom:9px;padding:8px 10px;background:#F3E5F5;border-radius:8px;border-left:3px solid #AB47BC;">'
+        + '<div style="font-size:0.8rem;font-weight:600;color:#6A1B9A;margin-bottom:3px;">'
+        + actLabel
+        + (act.max !== null ? ' · <span style="font-weight:400;">' + act.max + 'pts</span>' : '')
+        + (fechaShort ? '<span style="font-weight:400;opacity:0.65;font-size:0.74rem;"> · ' + escHTML(fechaShort) + '</span>' : '')
+        + '</div>'
+        + (act.enunciado
+          ? '<div style="font-size:0.74rem;color:#6A1B9A;opacity:0.8;margin-bottom:5px;">' + escHTML(act.enunciado.substring(0, 90)) + (act.enunciado.length > 90 ? '…' : '') + '</div>'
+          : '')
+        + '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+      act.estudiantes.forEach(nombre => {
+        html += '<span style="background:#FCE4EC;border:1px solid #F48FB1;color:#880E4F;border-radius:12px;padding:2px 9px;font-size:0.74rem;">'
+          + escHTML(nombre) + '</span>';
+      });
+      html += '</div></div>';
+    });
+
+    html += '</div></div>';
+  });
+  return html;
 }
 
 function renderizarTabsCursos() {
@@ -10168,6 +10423,7 @@ function registrarNota(estudianteId, actividadId, valor) {
   guardarCalificaciones();
   _actualizarFilaRA(estudianteId, raKey);
   _actualizarFooterRA(raKey);
+  _actualizarBadgePendientes();
 }
 
 function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
@@ -22701,7 +22957,7 @@ function exportarDatos() {
   const backup = {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.10',
+      version: '15.11',
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
@@ -22910,7 +23166,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.10</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.11</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

@@ -1357,6 +1357,11 @@
             style="background:#FFF3E0;border:1.5px solid #FFB74D;color:#E65100;">
             <span class="material-icons">casino</span> Aleatorio
           </button>
+          <button class="btn-export btn-sm" id="btn-pendientes-cal" onclick="abrirPendientes()"
+            style="background:#FCE4EC;border:1.5px solid #F48FB1;color:#880E4F;position:relative;">
+            <span class="material-icons">assignment_late</span> Pendientes
+            <span id="badge-pendientes-cal" style="display:none;position:absolute;top:-6px;right:-6px;background:#C62828;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.68rem;font-weight:700;align-items:center;justify-content:center;padding:0 3px;"></span>
+          </button>
           <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
             <span class="material-icons">description</span> Exportar Word
           </button>
@@ -2315,6 +2320,24 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#880E4F;">v15.11<span class="about-ver-fecha">May
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Módulo de Pendientes por Calificar</div>
+              <ul class="about-ver-items">
+                <li><strong>Pendientes por calificar:</strong> nuevo botón en el Libro de Calificaciones que abre un panel mostrando exactamente qué actividades le faltan a cada estudiante, organizadas por RA y materia</li>
+                <li><strong>Vista por Estudiante:</strong> cada alumno aparece en una tarjeta con las actividades pendientes agrupadas por RA, con nombre de la actividad, puntos máximos y fecha</li>
+                <li><strong>Vista por RA / Materia:</strong> agrupa las actividades sin calificar por resultado de aprendizaje y muestra qué estudiantes faltan en cada una</li>
+                <li><strong>Filtro por curso:</strong> visualiza pendientes del curso activo o de todos los cursos a la vez</li>
+                <li><strong>Badge numérico:</strong> el botón muestra en tiempo real cuántos registros están pendientes en el curso activo; se actualiza automáticamente al calificar</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -3692,6 +3715,45 @@
 
   <!-- Picker global de color para sticky notes (fuera de overflow:hidden) -->
   <div id="sticky-global-picker" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.22);padding:8px;gap:6px;flex-wrap:wrap;width:130px;"></div>
+
+  <!-- ===== MODAL PENDIENTES POR CALIFICAR ===== -->
+  <div id="pendientes-overlay" class="modal-overlay hidden" onclick="cerrarPendientes()">
+    <div class="modal-box" style="max-width:800px;width:95%;max-height:92vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="flex-shrink:0;">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">assignment_late</span>
+          Pendientes por calificar
+          <span id="pend-count-header" style="font-size:0.75rem;font-weight:400;color:#9E9E9E;margin-left:8px;"></span>
+        </h3>
+        <button class="modal-close" onclick="cerrarPendientes()"><span class="material-icons">close</span></button>
+      </div>
+      <div style="padding:12px 20px;border-bottom:1px solid #E0E0E0;flex-shrink:0;display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:#FAFAFA;">
+        <label style="font-size:0.82rem;color:#546E7A;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">class</span>
+          Curso:
+          <select id="pend-sel-curso" onchange="_renderPendientes()"
+            style="padding:5px 8px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;font-family:inherit;">
+            <option value="all">Todos los cursos</option>
+          </select>
+        </label>
+        <label style="font-size:0.82rem;color:#546E7A;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">view_list</span>
+          Agrupar por:
+          <select id="pend-sel-grupo" onchange="_renderPendientes()"
+            style="padding:5px 8px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;font-family:inherit;">
+            <option value="estudiante">Estudiante</option>
+            <option value="ra">RA / Materia</option>
+          </select>
+        </label>
+      </div>
+      <div style="flex:1;overflow-y:auto;min-height:0;">
+        <div id="pendientes-body" style="padding:16px 20px;"></div>
+      </div>
+      <div class="modal-footer" style="flex-shrink:0;">
+        <button class="btn-secundario" onclick="cerrarPendientes()">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 
