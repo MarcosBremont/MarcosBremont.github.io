@@ -9780,6 +9780,75 @@ function imprimirPendientes() {
   setTimeout(() => win.print(), 400);
 }
 
+function _generarLinkAlumno(estudianteId, cursoId) {
+  const curso = calState.cursos[cursoId];
+  if (!curso) return null;
+  const est = (curso.estudiantes || []).find(e => e.id === estudianteId);
+  if (!est) return null;
+
+  const pending = _calcPendientes(cursoId).filter(p => p.estudianteId === estudianteId);
+  if (pending.length === 0) return null;
+
+  const raGrupos = {};
+  pending.forEach(p => {
+    if (!raGrupos[p.raKey]) raGrupos[p.raKey] = { materia: p.raModulo, raDesc: p.raDesc, acts: [] };
+    let fechaCorta = '';
+    if (p.actividadFechaISO) {
+      try {
+        const d = new Date(p.actividadFechaISO + 'T12:00:00');
+        fechaCorta = d.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
+      } catch(e) { fechaCorta = p.actividadFecha ? p.actividadFecha.replace(',', '') : ''; }
+    } else if (p.actividadFecha) {
+      fechaCorta = p.actividadFecha.replace(',', '');
+    }
+    const ecCorto = p.ecCodigo ? p.ecCodigo.replace('E.C.', '').replace('CE', '') : ('Act.' + p.actNum);
+    raGrupos[p.raKey].acts.push({
+      ec: ecCorto,
+      nombre: p.actividadEnunciado || '',
+      pts: p.actividadMax || 0,
+      fecha: fechaCorta,
+      cero: p.notaActual === 0
+    });
+  });
+
+  const data = {
+    nombre: est.nombre,
+    curso: curso.nombre || '',
+    fecha: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
+    pendientes: Object.values(raGrupos)
+  };
+
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    return window.location.origin + '/alumno.html#' + encoded;
+  } catch(e) { return null; }
+}
+
+function _copiarLinkAlumno(estudianteId, cursoId, btnEl) {
+  const link = _generarLinkAlumno(estudianteId, cursoId);
+  if (!link) { mostrarToast('Este estudiante no tiene actividades pendientes', 'info'); return; }
+  const doFeedback = () => {
+    mostrarToast('Link copiado — compártelo con el estudiante', 'ok');
+    if (btnEl) {
+      const orig = btnEl.innerHTML;
+      btnEl.innerHTML = '<span class="material-icons" style="font-size:13px;vertical-align:middle;">check</span> Copiado';
+      btnEl.style.cssText = 'background:#E8F5E9;border-color:#81C784;color:#2E7D32;';
+      setTimeout(() => { btnEl.innerHTML = orig; btnEl.removeAttribute('style'); }, 2200);
+    }
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(doFeedback).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = link; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); doFeedback();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); doFeedback();
+  }
+}
+
 function _calcPendientes(cursoId) {
   const result = [];
   const biblio = cargarBiblioteca();
@@ -9897,6 +9966,8 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
     if (!byEst[estKey]) byEst[estKey] = {
       nombre: p.estudianteNombre,
       cursoNombre: p.cursoNombre,
+      estudianteId: p.estudianteId,
+      cursoId: p.cursoId,
       total: 0,
       ras: {}
     };
@@ -9908,6 +9979,7 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
 
   let html = '';
   Object.values(byEst).forEach(e => {
+    const btnId = 'btn-link-' + e.estudianteId;
     html += '<div style="background:#fff;border:1px solid #E3E8EF;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + '<div style="background:#E3F2FD;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
       + '<span class="material-icons" style="color:#1565C0;font-size:18px;">person</span>'
@@ -9917,6 +9989,9 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
         : '')
       + '<span style="margin-left:auto;background:#EF5350;color:#fff;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">'
       + e.total + ' pendiente' + (e.total !== 1 ? 's' : '') + '</span>'
+      + '<button id="' + btnId + '" onclick="_copiarLinkAlumno(\'' + e.estudianteId + '\',\'' + e.cursoId + '\',document.getElementById(\'' + btnId + '\'))"'
+      + ' style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;padding:4px 10px;font-size:0.74rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600;">'
+      + '<span class="material-icons" style="font-size:13px;">link</span> Copiar link</button>'
       + '</div>'
       + '<div style="padding:10px 14px;">';
 

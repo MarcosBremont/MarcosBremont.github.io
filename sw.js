@@ -13,7 +13,8 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/reporte.html',
   '/denuncia.html',
-  '/examen.html'
+  '/examen.html',
+  '/alumno.html'
 ];
 
 // Dominios externos que se manejan solo con red (sin cache)
