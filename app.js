@@ -9849,6 +9849,98 @@ function _copiarLinkAlumno(estudianteId, cursoId, btnEl) {
   }
 }
 
+function mostrarTodosLinks() {
+  const selCurso = document.getElementById('pend-sel-curso');
+  const cursoId = selCurso?.value === 'all' ? null : selCurso?.value;
+
+  const pending = _calcPendientes(cursoId);
+
+  const seen = new Set();
+  const estudiantes = [];
+  pending.forEach(p => {
+    const key = p.cursoId + '||' + p.estudianteId;
+    if (!seen.has(key)) {
+      seen.add(key);
+      estudiantes.push({ estudianteId: p.estudianteId, cursoId: p.cursoId, nombre: p.estudianteNombre });
+    }
+  });
+
+  if (estudiantes.length === 0) {
+    mostrarToast('No hay estudiantes con pendientes', 'info');
+    return;
+  }
+
+  const lineas = [];
+  estudiantes.forEach(e => {
+    const link = _generarLinkAlumno(e.estudianteId, e.cursoId);
+    if (link) lineas.push(e.nombre + ' - Link: ' + link);
+  });
+
+  if (lineas.length === 0) {
+    mostrarToast('No se pudieron generar los links', 'info');
+    return;
+  }
+
+  const texto = lineas.join('\n');
+
+  const overlay = document.createElement('div');
+  overlay.setAttribute('data-links-overlay', '1');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:14px;box-shadow:0 4px 32px rgba(0,0,0,0.22);width:100%;max-width:640px;display:flex;flex-direction:column;max-height:80vh;';
+  box.innerHTML = `
+    <div style="padding:16px 20px;border-bottom:1px solid #E0E0E0;display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="font-size:1rem;font-weight:700;color:#1B5E20;display:flex;align-items:center;gap:8px;">
+        <span class="material-icons" style="font-size:20px;color:#2E7D32;">link</span>
+        Links de estudiantes (${lineas.length})
+      </h3>
+      <button class="modal-close" onclick="document.querySelector('[data-links-overlay]').remove()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div style="padding:14px 20px;flex:1;overflow-y:auto;min-height:0;">
+      <p style="font-size:0.8rem;color:#78909C;margin-bottom:10px;">Copia estos links y envíalos a cada estudiante por WhatsApp, email o el medio que prefieras.</p>
+      <textarea id="todos-links-ta" readonly style="width:100%;height:220px;border:1.5px solid #E0E0E0;border-radius:8px;padding:10px;font-family:monospace;font-size:0.78rem;color:#37474F;resize:vertical;line-height:1.8;"></textarea>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid #E0E0E0;display:flex;justify-content:space-between;align-items:center;">
+      <button id="btn-copiar-todos-links" style="background:#2E7D32;border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:16px;">content_copy</span> Copiar todo
+      </button>
+      <button onclick="document.querySelector('[data-links-overlay]').remove()" style="background:#F5F5F5;border:1.5px solid #E0E0E0;color:#546E7A;border-radius:8px;padding:8px 16px;font-size:0.85rem;cursor:pointer;">Cerrar</button>
+    </div>`;
+
+  overlay.appendChild(box);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  const ta = document.getElementById('todos-links-ta');
+  if (ta) ta.value = texto;
+
+  const btnCopiar = document.getElementById('btn-copiar-todos-links');
+  if (btnCopiar) {
+    btnCopiar.addEventListener('click', () => {
+      const textoActual = ta ? ta.value : texto;
+      const doFeedback = () => {
+        mostrarToast('¡Todos los links copiados!', 'ok');
+        const orig = btnCopiar.innerHTML;
+        btnCopiar.innerHTML = '<span class="material-icons" style="font-size:16px;">check</span> ¡Copiado!';
+        btnCopiar.style.background = '#1B5E20';
+        setTimeout(() => { btnCopiar.innerHTML = orig; btnCopiar.style.background = '#2E7D32'; }, 2200);
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(textoActual).then(doFeedback).catch(() => {
+          if (ta) { ta.select(); document.execCommand('copy'); }
+          doFeedback();
+        });
+      } else {
+        if (ta) { ta.select(); document.execCommand('copy'); }
+        doFeedback();
+      }
+    });
+  }
+}
+
 function _calcPendientes(cursoId) {
   const result = [];
   const biblio = cargarBiblioteca();
