@@ -9716,7 +9716,8 @@ function imprimirPendientes() {
           fechaFull = a.actividadFecha.replace(',', '');
         }
         const nombre = a.actividadEnunciado || '';
-        return '<tr class="act-row"><td class="act-codigo">' + escHTML(label) + escHTML(pts) + '</td>'
+        const tag0print = a.notaActual === 0 ? ' <span style="background:#C62828;color:#fff;border-radius:3px;padding:0 3px;font-size:7.5pt;font-weight:700;">nota 0</span>' : '';
+        return '<tr class="act-row' + (a.notaActual === 0 ? ' act-row-cero' : '') + '"><td class="act-codigo">' + escHTML(label) + escHTML(pts) + tag0print + '</td>'
           + '<td class="act-nombre">' + escHTML(nombre) + '</td>'
           + '<td class="act-fecha">' + escHTML(fechaFull) + '</td></tr>';
       }).join('');
@@ -9753,6 +9754,8 @@ function imprimirPendientes() {
   .ra-desc { color: #78909C; font-size: 8.5pt; }
   .act-row td { padding: 3px 8px; border-bottom: 1px solid #F0F0F0; font-size: 9.5pt; vertical-align: top; }
   .act-codigo { width: 18%; color: #E65100; font-weight: 700; white-space: nowrap; }
+  .act-row-cero td { background: #FFF5F5; }
+  .act-row-cero .act-codigo { color: #C62828; }
   .act-nombre { width: 55%; color: #37474F; }
   .act-fecha { width: 27%; color: #78909C; font-size: 8.5pt; }
   @page { margin: 14mm; }
@@ -9814,7 +9817,7 @@ function _calcPendientes(cursoId) {
           const grade = notas[est.id] && notas[est.id][raKey]
             ? notas[est.id][raKey][act.id]
             : undefined;
-          if (grade === undefined || grade === null) {
+          if (grade === undefined || grade === null || grade === 0) {
             result.push({
               cursoId: curso.id,
               cursoNombre: curso.nombre || '',
@@ -9831,7 +9834,8 @@ function _calcPendientes(cursoId) {
               ecCodigo: act.ecCodigo || '',
               actividadMax: maxVal !== undefined ? maxVal : (act.valor || null),
               actNum: actNums[i],
-              esComplementario: act.esComplementario || false
+              esComplementario: act.esComplementario || false,
+              notaActual: grade === 0 ? 0 : null   // null = sin nota, 0 = nota cero
             });
           }
         });
@@ -9942,8 +9946,13 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
         } else if (a.actividadFecha) {
           fechaFull = a.actividadFecha.replace(',', '');
         }
-        html += '<span title="' + escHTML(nombre) + '" style="background:#FFF8E1;border:1px solid #FFD54F;color:#E65100;border-radius:8px;padding:5px 9px;font-size:0.78rem;cursor:default;display:inline-flex;flex-direction:column;gap:1px;max-width:200px;">'
-          + '<span style="font-weight:700;font-size:0.8rem;">' + escHTML(actLabel) + escHTML(ptsLabel) + '</span>'
+        const esNota0 = a.notaActual === 0;
+        const chipBg = esNota0 ? '#FFEBEE' : '#FFF8E1';
+        const chipBorder = esNota0 ? '#EF9A9A' : '#FFD54F';
+        const chipColor = esNota0 ? '#C62828' : '#E65100';
+        const etiqueta0 = esNota0 ? '<span style="font-size:0.65rem;font-weight:700;background:#C62828;color:#fff;border-radius:4px;padding:0 4px;margin-left:3px;">nota 0</span>' : '';
+        html += '<span title="' + escHTML(nombre) + '" style="background:' + chipBg + ';border:1px solid ' + chipBorder + ';color:' + chipColor + ';border-radius:8px;padding:5px 9px;font-size:0.78rem;cursor:default;display:inline-flex;flex-direction:column;gap:1px;max-width:200px;">'
+          + '<span style="font-weight:700;font-size:0.8rem;display:flex;align-items:center;gap:2px;">' + escHTML(actLabel) + escHTML(ptsLabel) + etiqueta0 + '</span>'
           + (nombreCorto ? '<span style="font-size:0.71rem;opacity:0.82;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHTML(nombreCorto) + '</span>' : '')
           + (fechaFull ? '<span style="font-size:0.68rem;opacity:0.62;">' + escHTML(fechaFull) + '</span>' : '')
           + '</span>';
@@ -9980,7 +9989,7 @@ function _renderPendientesRA(pending, ocultarCurso) {
       esComp: p.esComplementario,
       estudiantes: []
     };
-    ra.actividades[p.actividadId].estudiantes.push(p.estudianteNombre);
+    ra.actividades[p.actividadId].estudiantes.push({ nombre: p.estudianteNombre, nota0: p.notaActual === 0 });
   });
 
   let html = '';
@@ -10020,9 +10029,13 @@ function _renderPendientesRA(pending, ocultarCurso) {
         + '</div>'
         + (act.enunciado ? '<div style="font-size:0.76rem;color:#6A1B9A;opacity:0.8;margin-bottom:5px;">' + escHTML(act.enunciado.substring(0, 90)) + (act.enunciado.length > 90 ? '…' : '') + '</div>' : '')
         + '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
-      act.estudiantes.forEach(nombre => {
-        html += '<span style="background:#FCE4EC;border:1px solid #F48FB1;color:#880E4F;border-radius:12px;padding:2px 9px;font-size:0.74rem;">'
-          + escHTML(nombre) + '</span>';
+      act.estudiantes.forEach(est => {
+        const bg = est.nota0 ? '#FFEBEE' : '#FCE4EC';
+        const bd = est.nota0 ? '#EF9A9A' : '#F48FB1';
+        const col = est.nota0 ? '#B71C1C' : '#880E4F';
+        const tag0 = est.nota0 ? ' <span style="font-size:0.62rem;background:#B71C1C;color:#fff;border-radius:3px;padding:0 3px;">0</span>' : '';
+        html += '<span style="background:' + bg + ';border:1px solid ' + bd + ';color:' + col + ';border-radius:12px;padding:2px 9px;font-size:0.74rem;display:inline-flex;align-items:center;gap:3px;">'
+          + escHTML(est.nombre) + tag0 + '</span>';
       });
       html += '</div></div>';
     });
