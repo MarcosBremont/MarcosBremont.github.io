@@ -27468,13 +27468,22 @@ function _renderEnlaceDenuncias() {
 function _copiarEnlaceDenuncias() {
   const input = document.getElementById('den-comp-url');
   if (!input) return;
-  navigator.clipboard.writeText(input.value).then(() => {
-    mostrarToast('Enlace copiado al portapapeles', 'success');
-  }).catch(() => {
-    input.select();
-    document.execCommand('copy');
-    mostrarToast('Enlace copiado', 'success');
-  });
+  const texto = input.value;
+  const doFeedback = () => mostrarToast('Enlace copiado al portapapeles', 'success');
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed'; ta.style.top = '-9999px'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); doFeedback(); }
+    catch { mostrarToast('No se pudo copiar. Selecciona el texto manualmente.', 'error'); }
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(doFeedback).catch(fallback);
+  } else {
+    fallback();
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
