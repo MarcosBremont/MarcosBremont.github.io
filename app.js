@@ -10281,10 +10281,14 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
           ? ' <span style="font-weight:400;opacity:0.7;font-size:0.72rem;">· ' + escHTML(rg.desc.substring(0, 55)) + (rg.desc.length > 55 ? '…' : '') + '</span>'
           : '');
 
-      // Nota acumulada en este RA
+      // Nota acumulada en este RA (usando actividades reales del plan, igual que la tabla)
       let notaBadge = '';
       if (curso) {
-        const notaAcum = _calcNotaRA(curso, e.estudianteId, raKey);
+        const _bib = cargarBiblioteca();
+        const _pid = (curso.planIds || []).find(pid => _getPlanIdClave(pid) === raKey);
+        const _preg = _pid ? _bib.items.find(i => i.id === _pid) : null;
+        const _acts = _preg?.planificacion?.actividades;
+        const notaAcum = _calcNotaRA(curso, e.estudianteId, raKey, _acts?.length ? _acts : null);
         const valorTotal = curso.ras?.[raKey]?.valorTotal ?? null;
         if (notaAcum !== null && valorTotal !== null) {
           const pct = Math.min(100, Math.round((notaAcum / valorTotal) * 100));
