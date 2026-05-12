@@ -4769,6 +4769,21 @@ body.dark-mode .imp-resumen-row span {
   filter: brightness(0.94);
 }
 
+.hor-td-celda[draggable="true"] {
+  cursor: grab;
+}
+
+.hor-td-celda.hor-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.hor-td-celda.hor-drag-over {
+  outline: 2.5px dashed #1565C0;
+  background: #E3F2FD !important;
+  filter: brightness(1);
+}
+
 .hor-celda-inner {
   padding: 8px 10px;
   height: 100%;

@@ -15244,8 +15244,11 @@ function renderizarHorario() {
       const color = e && e.materia ? (colores[e.materia.trim()] || '#78909C') : null;
       const bg = color ? color + '22' : '';
       const border = color ? `2px solid ${color}` : '1px solid #E0E0E0';
-      html += `<td class="hor-td-celda" style="border-left:${border};background:${bg};"
-        onclick="editarCeldaHorario(${di},${p.id})" title="Clic para editar">`;
+      const draggable = e && e.materia ? 'draggable="true"' : '';
+      const title = e && e.materia ? 'Arrastra para mover · Clic para editar' : 'Clic para agregar';
+      html += `<td class="hor-td-celda" data-dia="${di}" data-periodo="${p.id}" ${draggable}
+        style="border-left:${border};background:${bg};"
+        onclick="editarCeldaHorario(${di},${p.id})" title="${title}">`;
       if (e && e.materia) {
         html += `<div class="hor-celda-inner">
           <div class="hor-materia" style="color:${color};">${escapeHTML(e.materia)}</div>
@@ -15261,6 +15264,7 @@ function renderizarHorario() {
   });
   html += '</tbody></table>';
   tabla.innerHTML = html;
+  _initHorarioDragDrop(tabla);
 
   // Leyenda de materias
   const leyenda = document.getElementById('horario-leyenda');
@@ -15276,6 +15280,68 @@ function renderizarHorario() {
       ).join('')
       + '</div>';
   }
+}
+
+function _initHorarioDragDrop(tabla) {
+  let dragSrc = null;
+
+  tabla.addEventListener('dragstart', ev => {
+    const td = ev.target.closest('td[data-dia][data-periodo][draggable]');
+    if (!td) return;
+    dragSrc = { dia: +td.dataset.dia, periodo: +td.dataset.periodo };
+    td.classList.add('hor-dragging');
+    ev.dataTransfer.effectAllowed = 'move';
+  });
+
+  tabla.addEventListener('dragend', () => {
+    tabla.querySelectorAll('.hor-dragging, .hor-drag-over').forEach(el => {
+      el.classList.remove('hor-dragging', 'hor-drag-over');
+    });
+    dragSrc = null;
+  });
+
+  tabla.addEventListener('dragover', ev => {
+    const td = ev.target.closest('td[data-dia][data-periodo]');
+    if (!td || !dragSrc) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    tabla.querySelectorAll('.hor-drag-over').forEach(el => el.classList.remove('hor-drag-over'));
+    td.classList.add('hor-drag-over');
+  });
+
+  tabla.addEventListener('dragleave', ev => {
+    const td = ev.target.closest('td[data-dia][data-periodo]');
+    if (td && !td.contains(ev.relatedTarget)) td.classList.remove('hor-drag-over');
+  });
+
+  tabla.addEventListener('drop', ev => {
+    ev.preventDefault();
+    const td = ev.target.closest('td[data-dia][data-periodo]');
+    if (!td || !dragSrc) return;
+    const destDia = +td.dataset.dia;
+    const destPeriodo = +td.dataset.periodo;
+    if (dragSrc.dia === destDia && dragSrc.periodo === destPeriodo) return;
+
+    const data = cargarHorario();
+    const srcIdx = data.findIndex(e => e.dia === dragSrc.dia && e.periodo === dragSrc.periodo);
+    if (srcIdx === -1) return;
+    const srcEntry = { ...data[srcIdx] };
+    const destIdx = data.findIndex(e => e.dia === destDia && e.periodo === destPeriodo);
+
+    if (destIdx === -1) {
+      // Destino vacío: mover
+      data.splice(srcIdx, 1);
+      data.push({ ...srcEntry, dia: destDia, periodo: destPeriodo });
+    } else {
+      // Ambas celdas con contenido: intercambiar
+      data[srcIdx] = { ...data[destIdx], dia: dragSrc.dia, periodo: dragSrc.periodo };
+      data[destIdx] = { ...srcEntry, dia: destDia, periodo: destPeriodo };
+    }
+
+    guardarHorario(data);
+    renderizarHorario();
+    mostrarToast('Horario actualizado', 'success');
+  });
 }
 
 function editarCeldaHorario(diaIdx, periodoId) {
