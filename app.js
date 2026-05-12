@@ -10263,15 +10263,34 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
       + '</div>'
       + '<div style="padding:10px 14px;">';
 
-    Object.values(e.ras).forEach(rg => {
+    const curso = calState.cursos?.[e.cursoId];
+    Object.entries(e.ras).forEach(([raKey, rg]) => {
       const raLabel = escHTML(rg.modulo)
         + (rg.desc
           ? ' <span style="font-weight:400;opacity:0.7;font-size:0.72rem;">· ' + escHTML(rg.desc.substring(0, 55)) + (rg.desc.length > 55 ? '…' : '') + '</span>'
           : '');
+
+      // Nota acumulada en este RA
+      let notaBadge = '';
+      if (curso) {
+        const notaAcum = _calcNotaRA(curso, e.estudianteId, raKey);
+        const valorTotal = curso.ras?.[raKey]?.valorTotal ?? null;
+        if (notaAcum !== null && valorTotal !== null) {
+          const pct = Math.min(100, Math.round((notaAcum / valorTotal) * 100));
+          const color = pct >= 70 ? '#2E7D32' : pct >= 50 ? '#E65100' : '#C62828';
+          const bg    = pct >= 70 ? '#E8F5E9'  : pct >= 50 ? '#FFF3E0'  : '#FFEBEE';
+          notaBadge = '<span style="margin-left:auto;background:' + bg + ';color:' + color + ';border-radius:8px;padding:1px 8px;font-size:0.72rem;font-weight:700;white-space:nowrap;">'
+            + notaAcum + ' / ' + valorTotal + ' pts</span>';
+        } else if (notaAcum !== null) {
+          notaBadge = '<span style="margin-left:auto;background:#E3F2FD;color:#1565C0;border-radius:8px;padding:1px 8px;font-size:0.72rem;font-weight:700;white-space:nowrap;">'
+            + notaAcum + ' pts</span>';
+        }
+      }
+
       html += '<div style="margin-bottom:8px;">'
-        + '<div style="font-size:0.78rem;font-weight:700;color:#37474F;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #F0F4F8;">'
+        + '<div style="font-size:0.78rem;font-weight:700;color:#37474F;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #F0F4F8;display:flex;align-items:center;gap:4px;">'
         + '<span class="material-icons" style="font-size:14px;vertical-align:middle;color:#1565C0;margin-right:3px;">assignment</span>'
-        + raLabel + '</div>'
+        + raLabel + notaBadge + '</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:5px;">';
 
       rg.acts.forEach(a => {
