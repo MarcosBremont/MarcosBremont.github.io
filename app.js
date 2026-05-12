@@ -60,15 +60,62 @@ function importarAlumnosCSV(input) {
 function exportarAlumnosCSV() {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso || !curso.estudiantes?.length) { mostrarToast('No hay estudiantes en este curso', 'error'); return; }
-  const csv = 'Nombre\n' + curso.estudiantes.map(e => '"' + e.nombre.replace(/"/g, '""') + '"').join('\n');
+
+  const planActiva = _getPlanActivaDeCurso();
+  const raKey = planActiva ? _getRaKey() : null;
+  const actividades = planActiva?.actividades?.filter(a => !a.esComplementario) || [];
+  const raInfo = raKey ? curso.ras?.[raKey] : null;
+
+  let csv, filename;
+
+  if (raKey && actividades.length && raInfo) {
+    // Exportar con notas del RA activo
+    const dg = planActiva.datosGenerales || {};
+    const ra = planActiva.ra || {};
+    const raLabel = [dg.modulo, ra.resultado].filter(Boolean).join(' · ') || raKey;
+
+    // Encabezados: Nombre, RA, act1, act2, ..., Total RA
+    let counter = 0;
+    const actHeaders = actividades.map(a => {
+      const num = ++counter;
+      const ec = a.ecCodigo ? a.ecCodigo.replace('E.C.', 'EC').trim() : ('Act.' + num);
+      const max = raInfo.valores?.[a.id] ?? '';
+      return '"' + (ec + (max !== '' ? ' (' + max + 'pts)' : '')).replace(/"/g, '""') + '"';
+    });
+    const header = ['"Nombre"', '"RA"', ...actHeaders, '"Total RA"', '"Valor máximo RA"'].join(',');
+
+    const filas = curso.estudiantes.map(est => {
+      const notasEst = curso.notas?.[est.id]?.[raKey] || {};
+      const actNotas = actividades.map(a => {
+        const n = notasEst[a.id];
+        return (n !== undefined && n !== null) ? n : '';
+      });
+      const total = _calcNotaRA(curso, est.id, raKey, actividades);
+      return [
+        '"' + est.nombre.replace(/"/g, '""') + '"',
+        '"' + raLabel.replace(/"/g, '""') + '"',
+        ...actNotas,
+        total !== null ? total : '',
+        raInfo.valorTotal ?? ''
+      ].join(',');
+    });
+
+    csv = [header, ...filas].join('\n');
+    filename = 'notas-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '-' + raKey + '.csv';
+    mostrarToast('Notas del RA exportadas', 'success');
+  } else {
+    // Sin RA activo: solo nombres
+    csv = 'Nombre\n' + curso.estudiantes.map(e => '"' + e.nombre.replace(/"/g, '""') + '"').join('\n');
+    filename = 'alumnos-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '.csv';
+    mostrarToast('Lista exportada', 'success');
+  }
+
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'alumnos-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '.csv';
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  mostrarToast('Lista exportada', 'success');
 }
 
 function eliminarEstudiante(estudianteId) {
