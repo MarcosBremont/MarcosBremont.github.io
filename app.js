@@ -94,6 +94,10 @@ function _toggleEstMenu(e, estId) {
   const menu = menuOrig.cloneNode(true);
   menu.id = 'est-menu-flotante';
   menu.style.display = 'flex';
+  // Cerrar el menú flotante al hacer clic en cualquier opción
+  menu.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => _cerrarEstMenus(), { once: true });
+  });
   document.body.appendChild(menu);
   const btn = e.currentTarget;
   const rect = btn.getBoundingClientRect();
@@ -8381,7 +8385,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -8397,7 +8401,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -23633,7 +23637,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.15</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.16</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -25547,8 +25551,10 @@ function cargarReportes() {
 function guardarReportes(data) {
   localStorage.setItem(REPORTES_KEY, JSON.stringify(data));
   _syncFirebase('reportes', data);
-  // Sincronizar al portal de padres en Firestore
+  // Sincronizar al portal de padres y psicología en Firestore
   _syncDatosPadreReportes(data);
+  // Actualizar cada estudiante modificado en datos_padre (para psicología)
+  Object.entries(data).forEach(([estId, reportes]) => _syncReportePsicologia(estId, reportes));
 }
 
 function _syncDatosPadreReportes(data) {
@@ -26754,6 +26760,165 @@ function _cargarCuentasEst() {
 function _guardarCuentasEst(data) {
   localStorage.setItem(CUENTAS_EST_KEY, JSON.stringify(data));
   if (window._syncFirebase) _syncFirebase('cuentas_estudiantes', data);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: PANEL DE PSICOLOGÍA
+// ════════════════════════════════════════════════════════════════════
+
+let _psicoDatos = []; // {docenteUid, docenteNombre, estNombre, estId, curso, reportes[]}
+
+function abrirPsicologia() {
+  _mostrarPanel('panel-psicologia');
+  cargarReportesPsicologia();
+}
+
+async function cargarReportesPsicologia() {
+  const cont = document.getElementById('psico-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;"><span class="material-icons" style="font-size:36px;display:block;margin-bottom:10px;">hourglass_empty</span>Cargando reportes…</div>';
+
+  try {
+    // Obtener lista de docentes registrados
+    const usersSnap = await db.collection('usuarios').where('rol', 'in', ['docente', 'maestro', 'profesor']).get();
+    // También incluir cualquier usuario que tenga datos_padre (tiene reportes)
+    const docentesSnap = await db.collection('public_blogs').get();
+
+    const resultados = [];
+    const promises = docentesSnap.docs.map(async docenteDoc => {
+      const uid = docenteDoc.id;
+      // Obtener perfil del docente
+      let nombreDocente = uid;
+      try {
+        const perfil = await db.collection('perfiles').doc(uid).get();
+        if (perfil.exists && perfil.data().nombre) nombreDocente = perfil.data().nombre;
+        else {
+          const usuario = await db.collection('usuarios').doc(uid).get();
+          if (usuario.exists && usuario.data().nombre) nombreDocente = usuario.data().nombre;
+        }
+      } catch(e) {}
+
+      // Leer datos_padre que contiene reportes formales
+      const datosSnap = await db.collection('public_blogs').doc(uid).collection('datos_padre').get();
+      datosSnap.docs.forEach(estDoc => {
+        const d = estDoc.data();
+        const reportes = (d.reportes || []).filter(r => r.detallesEvento && r.detallesEvento.trim());
+        if (reportes.length > 0) {
+          resultados.push({
+            docenteUid: uid,
+            docenteNombre: nombreDocente,
+            estId: estDoc.id,
+            estNombre: d.nombre || estDoc.id,
+            curso: d.curso || '',
+            reportes: reportes.sort((a, b) => b.ts - a.ts)
+          });
+        }
+      });
+    });
+
+    await Promise.all(promises);
+    _psicoDatos = resultados;
+
+    // Poblar filtros
+    const docentes = [...new Set(resultados.map(r => r.docenteNombre))].sort();
+    const cursos   = [...new Set(resultados.map(r => r.curso).filter(Boolean))].sort();
+
+    const selDoc = document.getElementById('psico-filtro-docente');
+    if (selDoc) {
+      const prevDoc = selDoc.value;
+      selDoc.innerHTML = '<option value="">Todos los docentes</option>' +
+        docentes.map(d => `<option value="${escapeHTML(d)}" ${d === prevDoc ? 'selected' : ''}>${escapeHTML(d)}</option>`).join('');
+    }
+    const selCurso = document.getElementById('psico-filtro-curso');
+    if (selCurso) {
+      const prevCurso = selCurso.value;
+      selCurso.innerHTML = '<option value="">Todos los cursos</option>' +
+        cursos.map(c => `<option value="${escapeHTML(c)}" ${c === prevCurso ? 'selected' : ''}>${escapeHTML(c)}</option>`).join('');
+    }
+
+    renderPsicologia();
+
+  } catch(e) {
+    if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#C62828;">Error al cargar: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
+function renderPsicologia() {
+  const cont = document.getElementById('psico-contenido');
+  if (!cont) return;
+
+  const filtroDoc    = document.getElementById('psico-filtro-docente')?.value || '';
+  const filtroCurso  = document.getElementById('psico-filtro-curso')?.value   || '';
+  const buscar       = (document.getElementById('psico-buscar')?.value || '').toLowerCase().trim();
+
+  let datos = _psicoDatos;
+  if (filtroDoc)   datos = datos.filter(d => d.docenteNombre === filtroDoc);
+  if (filtroCurso) datos = datos.filter(d => d.curso === filtroCurso);
+  if (buscar)      datos = datos.filter(d => d.estNombre.toLowerCase().includes(buscar));
+
+  if (datos.length === 0) {
+    cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+      '<span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span>' +
+      '<p>No se encontraron reportes con los filtros aplicados.</p></div>';
+    return;
+  }
+
+  const totalRep = datos.reduce((s, d) => s + d.reportes.length, 0);
+  let html = `<div style="font-size:0.78rem;color:#9E9E9E;margin-bottom:14px;">${datos.length} estudiante${datos.length !== 1 ? 's' : ''} · ${totalRep} reporte${totalRep !== 1 ? 's' : ''}</div>`;
+
+  datos.forEach(d => {
+    html += `
+      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div style="background:linear-gradient(90deg,#F3E5F5,#EDE7F6);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="material-icons" style="color:#6A1B9A;font-size:20px;">person</span>
+          <strong style="color:#4A148C;font-size:0.95rem;">${escapeHTML(d.estNombre)}</strong>
+          ${d.curso ? `<span style="background:#CE93D8;color:#fff;border-radius:10px;padding:1px 9px;font-size:0.72rem;font-weight:700;">${escapeHTML(d.curso)}</span>` : ''}
+          <span style="margin-left:auto;font-size:0.75rem;color:#7B1FA2;">Docente: ${escapeHTML(d.docenteNombre)}</span>
+          <span style="background:#B39DDB;color:#fff;border-radius:10px;padding:1px 9px;font-size:0.72rem;font-weight:700;">${d.reportes.length} reporte${d.reportes.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;">`;
+
+    d.reportes.forEach(r => {
+      const fecha = r.fechaReporte
+        ? new Date(r.fechaReporte + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+        : (r.ts ? new Date(r.ts).toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+
+      const campos = [
+        { label: 'Descripción del evento',            valor: r.detallesEvento },
+        { label: 'Medidas del docente',               valor: r.medidasDocente },
+        { label: 'Seguimiento Coordinación/Psicología', valor: r.seguimientoRepetitiva },
+      ].filter(c => c.valor && c.valor.trim());
+
+      html += `
+        <div style="border-left:3px solid #7B1FA2;padding:8px 12px;background:#FAFAFA;border-radius:0 8px 8px 0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="background:#EDE7F6;color:#4A148C;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:3px;">
+              <span class="material-icons" style="font-size:11px;">description</span> Reporte formal
+            </span>
+            <span style="font-size:0.78rem;font-weight:600;color:#37474F;">${escapeHTML(fecha)}</span>
+          </div>
+          ${campos.map(c => `
+            <div style="margin-bottom:4px;">
+              <div style="font-size:0.68rem;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:0.05em;">${escapeHTML(c.label)}</div>
+              <div style="font-size:0.85rem;color:#37474F;line-height:1.4;">${escapeHTML(c.valor)}</div>
+            </div>`).join('')}
+        </div>`;
+    });
+
+    html += '</div></div>';
+  });
+
+  cont.innerHTML = html;
+}
+
+// Sincronizar reporte nuevo a Firestore para que Psicología lo vea en tiempo real
+async function _syncReportePsicologia(estId, reportes) {
+  if (typeof db === 'undefined' || !firebase.auth().currentUser) return;
+  const uid = firebase.auth().currentUser.uid;
+  try {
+    await db.collection('public_blogs').doc(uid).collection('datos_padre').doc(estId)
+      .set({ reportes }, { merge: true });
+  } catch(e) { console.warn('sync psicologia:', e); }
 }
 
 let _repCompTab = 'reportes';
@@ -28880,6 +29045,7 @@ renderizarDashboard = function() {
   _verificarAccesoAdminCentro();
   _verificarAccesoDirector();
   _verificarAccesoCoordinadora();
+  _verificarAccesoPsicologia();
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
   _cargarAvisosDocente(); // mostrar avisos al docente en dashboard
   _aplicarOpcionesDocente(); // ocultar opciones desactivadas por superadmin
@@ -28939,6 +29105,19 @@ async function _esCoordinadora() {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
     return doc.exists && doc.data().rol === 'coordinadora';
   } catch { return false; }
+}
+
+async function _verificarAccesoPsicologia() {
+  const btn = document.getElementById('btn-dash-psicologia');
+  if (!btn) return;
+  if (!window.currentUser) { btn.style.display = 'none'; return; }
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    const rol = doc.exists ? (doc.data().rol || '') : '';
+    const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+    const visible = ['psicologia', 'psicologa', 'psicologo', 'coordinadora', 'director', 'superadmin', 'admin_centro'].includes(rol) || esSA;
+    btn.style.display = visible ? '' : 'none';
+  } catch { btn.style.display = 'none'; }
 }
 
 async function _verificarAccesoCoordinadora() {

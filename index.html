@@ -380,6 +380,11 @@
           <span class="material-icons">cast_for_education</span>
           <span>Presentación</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-psicologia" onclick="abrirPsicologia()"
+          style="--accent:#6A1B9A;display:none;">
+          <span class="material-icons">psychology</span>
+          <span>Psicología</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-coordinadora" onclick="abrirCoordinadora()"
           style="--accent:#00695C;display:none;">
           <span class="material-icons">supervisor_account</span>
@@ -1789,6 +1794,52 @@
     </div>
   </div>
 
+  <!-- ===== PANEL PSICOLOGÍA ===== -->
+  <div id="panel-psicologia" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;color:#6A1B9A;">psychology</span>
+          Departamento de Psicología
+        </h2>
+      </div>
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+        <select id="psico-filtro-docente"
+          style="padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;background:#fff;min-width:180px;"
+          onchange="renderPsicologia()">
+          <option value="">Todos los docentes</option>
+        </select>
+        <select id="psico-filtro-curso"
+          style="padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;background:#fff;min-width:160px;"
+          onchange="renderPsicologia()">
+          <option value="">Todos los cursos</option>
+        </select>
+        <input type="text" id="psico-buscar" placeholder="Buscar estudiante…"
+          style="padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;background:#fff;min-width:180px;flex:1;"
+          oninput="renderPsicologia()">
+        <button onclick="cargarReportesPsicologia()" title="Actualizar"
+          style="background:#F3E5F5;border:1.5px solid #CE93D8;color:#6A1B9A;border-radius:8px;padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:0.82rem;font-weight:600;">
+          <span class="material-icons" style="font-size:16px;">refresh</span> Actualizar
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="psico-contenido">
+        <div style="text-align:center;padding:40px;color:#9E9E9E;">
+          <span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">psychology</span>
+          <p>Los reportes de los docentes aparecerán aquí.</p>
+        </div>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
   <!-- ===== PANEL ADMIN CENTRO ===== -->
   <div id="panel-admin-centro" class="cal-panel hidden">
     <div class="section-card">
@@ -2320,6 +2371,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4A148C;">v15.16<span class="about-ver-fecha">May
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Panel de Psicología y correcciones de UI</div>
+              <ul class="about-ver-items">
+                <li><strong>Panel Psicología:</strong> nuevo acceso desde el dashboard para usuarios con rol psicología, coordinadora o director — muestra todos los reportes formales de todos los docentes, con filtros por docente, curso y búsqueda de estudiante</li>
+                <li><strong>Tiempo real:</strong> cada vez que un docente guarda un reporte, se sincroniza automáticamente a Firestore y aparece en el panel de psicología al actualizar</li>
+                <li><strong>Fix menú de estudiante:</strong> al seleccionar una opción del menú (Comentarios, Reportes, etc.) el menú flotante se cierra correctamente sin quedar superpuesto</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
