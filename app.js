@@ -9995,6 +9995,78 @@ async function mostrarTodosLinks() {
   }
 }
 
+// ── Portal de Padres ─────────────────────────────────────────────────────────
+
+async function _generarLinkPadre(estudianteId, cursoId) {
+  const curso = calState.cursos[cursoId];
+  if (!curso) return null;
+  const est = (curso.estudiantes || []).find(e => e.id === estudianteId);
+  if (!est) return null;
+  if (typeof db === 'undefined' || !firebase.auth().currentUser) return null;
+
+  const uid = firebase.auth().currentUser.uid;
+  try {
+    // Asegurar que los datos más recientes estén en Firestore antes de generar el link
+    const comentarios = cargarComentarios();
+    const reportes = cargarReportes();
+    const ref = db.collection('public_blogs').doc(uid).collection('datos_padre').doc(estudianteId);
+    await ref.set({
+      comentarios: comentarios[estudianteId] || [],
+      reportes: reportes[estudianteId] || [],
+      nombre: est.nombre,
+      curso: curso.nombre || '',
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const id = _idCortoLink();
+    await db.collection('links_padre').doc(id).set({
+      uid,
+      estId: estudianteId,
+      nombre: est.nombre,
+      curso: curso.nombre || '',
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return window.location.origin + '/padre.html#' + id;
+  } catch(e) {
+    console.warn('_generarLinkPadre error:', e);
+    return null;
+  }
+}
+
+async function _copiarLinkPadre(estudianteId, cursoId, btnEl) {
+  let origHtml = '';
+  if (btnEl) {
+    origHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<span class="material-icons" style="font-size:13px;vertical-align:middle;">hourglass_empty</span> Generando…';
+  }
+
+  const link = await _generarLinkPadre(estudianteId, cursoId);
+
+  if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origHtml; }
+  if (!link) { mostrarToast('No se pudo generar el link. Verifica tu conexión.', 'error'); return; }
+
+  const doFeedback = () => {
+    mostrarToast('Link para padres copiado', 'ok');
+    if (btnEl) {
+      btnEl.innerHTML = '<span class="material-icons" style="font-size:13px;vertical-align:middle;">check</span> Copiado';
+      btnEl.style.cssText = 'background:#E8F5E9;border-color:#81C784;color:#2E7D32;';
+      setTimeout(() => { btnEl.innerHTML = origHtml; btnEl.removeAttribute('style'); }, 2200);
+    }
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(doFeedback).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = link; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); doFeedback();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); doFeedback();
+  }
+}
+
 function _calcPendientes(cursoId) {
   const result = [];
   const biblio = cargarBiblioteca();
@@ -10138,6 +10210,9 @@ function _renderPendientesEstudiante(pending, ocultarCurso) {
       + '<button id="' + btnId + '" onclick="_copiarLinkAlumno(\'' + e.estudianteId + '\',\'' + e.cursoId + '\',document.getElementById(\'' + btnId + '\'))"'
       + ' style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:8px;padding:4px 10px;font-size:0.74rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600;">'
       + '<span class="material-icons" style="font-size:13px;">link</span> Copiar link</button>'
+      + '<button id="' + btnId + '-padre" onclick="_copiarLinkPadre(\'' + e.estudianteId + '\',\'' + e.cursoId + '\',document.getElementById(\'' + btnId + '-padre\'))"'
+      + ' style="background:#FCE4EC;border:1.5px solid #F48FB1;color:#AD1457;border-radius:8px;padding:4px 10px;font-size:0.74rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600;">'
+      + '<span class="material-icons" style="font-size:13px;">supervisor_account</span> Link padres</button>'
       + '</div>'
       + '<div style="padding:10px 14px;">';
 
@@ -10567,6 +10642,9 @@ function renderizarTablaCalificaciones() {
       + '</button>'
       + '<button onclick="abrirBoletin(\'' + est.id + '\')" style="color:#6A1B9A;">'
       + '<span class="material-icons">receipt_long</span> Boletín'
+      + '</button>'
+      + '<button id="btn-padre-perfil-' + est.id + '" onclick="_copiarLinkPadre(\'' + est.id + '\',\'' + calState.cursoActivoId + '\',document.getElementById(\'btn-padre-perfil-' + est.id + '\'))" style="color:#AD1457;">'
+      + '<span class="material-icons">supervisor_account</span> Link padres'
       + '</button>'
       + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'
       + '<button onclick="eliminarEstudiante(\'' + est.id + '\')" style="color:#EF5350;">'
@@ -13664,6 +13742,20 @@ function cargarComentarios() {
 function guardarComentarios(data) {
   localStorage.setItem(COMENT_KEY, JSON.stringify(data));
   if (window._syncFirebase) _syncFirebase('comentarios', data);
+  // Sincronizar al portal de padres en Firestore
+  _syncDatosPadreComentarios(data);
+}
+
+function _syncDatosPadreComentarios(data) {
+  if (typeof db === 'undefined' || !firebase.auth().currentUser) return;
+  const uid = firebase.auth().currentUser.uid;
+  const batch = db.batch();
+  Object.entries(data).forEach(([estId, items]) => {
+    const ref = db.collection('public_blogs').doc(uid)
+      .collection('datos_padre').doc(estId);
+    batch.set(ref, { comentarios: items }, { merge: true });
+  });
+  batch.commit().catch(e => console.warn('sync datos_padre comentarios:', e));
 }
 
 // Obtener comentarios de un estudiante, ordenados más reciente primero
@@ -25455,6 +25547,20 @@ function cargarReportes() {
 function guardarReportes(data) {
   localStorage.setItem(REPORTES_KEY, JSON.stringify(data));
   _syncFirebase('reportes', data);
+  // Sincronizar al portal de padres en Firestore
+  _syncDatosPadreReportes(data);
+}
+
+function _syncDatosPadreReportes(data) {
+  if (typeof db === 'undefined' || !firebase.auth().currentUser) return;
+  const uid = firebase.auth().currentUser.uid;
+  const batch = db.batch();
+  Object.entries(data).forEach(([estId, items]) => {
+    const ref = db.collection('public_blogs').doc(uid)
+      .collection('datos_padre').doc(estId);
+    batch.set(ref, { reportes: items }, { merge: true });
+  });
+  batch.commit().catch(e => console.warn('sync datos_padre reportes:', e));
 }
 function _getReportesEst(estId) {
   const data = cargarReportes();

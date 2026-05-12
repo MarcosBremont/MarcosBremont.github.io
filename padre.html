@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Estudiante — TinClass</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #F8F0F4; color: #212121; min-height: 100vh; }
+
+    .header {
+      background: linear-gradient(135deg, #880E4F 0%, #AD1457 100%);
+      color: #fff; padding: 24px 20px 20px; text-align: center;
+    }
+    .header .brand { font-size: 0.68rem; opacity: 0.75; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+    .header h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+    .header .sub { font-size: 0.82rem; opacity: 0.85; }
+
+    .estudiante-card {
+      background: #fff;
+      margin: 16px;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 10px rgba(136,14,79,0.10);
+    }
+    .est-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: linear-gradient(135deg, #F48FB1, #AD1457);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .est-avatar .material-icons { color: #fff; font-size: 26px; }
+    .est-nombre { font-size: 1.05rem; font-weight: 700; color: #212121; }
+    .est-meta { font-size: 0.82rem; color: #78909C; margin-top: 2px; }
+    .est-fecha { font-size: 0.72rem; color: #BDBDBD; margin-top: 2px; }
+
+    .main { padding: 0 16px 32px; }
+
+    .section-title {
+      font-size: 0.75rem; font-weight: 800; color: #880E4F;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin: 20px 0 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section-title .material-icons { font-size: 16px; }
+
+    .empty-section {
+      background: #fff; border-radius: 10px;
+      padding: 16px; text-align: center;
+      color: #BDBDBD; font-size: 0.85rem;
+      border: 1.5px dashed #F8BBD0;
+    }
+
+    /* Comentarios */
+    .coment-card {
+      background: #fff; border-radius: 10px; margin-bottom: 8px;
+      padding: 12px 14px;
+      border-left: 4px solid #ccc;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .coment-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+    .coment-cat {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.72rem; font-weight: 700; padding: 2px 9px;
+      border-radius: 20px; color: #fff;
+    }
+    .coment-cat .material-icons { font-size: 12px; }
+    .coment-fecha { font-size: 0.72rem; color: #BDBDBD; margin-left: auto; }
+    .coment-texto { font-size: 0.88rem; color: #37474F; line-height: 1.5; }
+
+    /* Reportes formales */
+    .reporte-card {
+      background: #fff; border-radius: 10px; margin-bottom: 8px;
+      padding: 14px 16px;
+      border-left: 4px solid #B71C1C;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .reporte-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .reporte-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #FFEBEE; color: #B71C1C;
+      font-size: 0.72rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px;
+    }
+    .reporte-fecha { font-size: 0.78rem; font-weight: 600; color: #37474F; }
+    .reporte-curso { font-size: 0.72rem; color: #78909C; margin-left: auto; }
+    .reporte-campo { margin-bottom: 6px; }
+    .reporte-campo-label { font-size: 0.7rem; font-weight: 700; color: #B71C1C; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .reporte-campo-valor { font-size: 0.85rem; color: #37474F; line-height: 1.5; }
+
+    .aviso-ok {
+      background: #F1F8E9; border: 1.5px solid #AED581; border-radius: 12px;
+      padding: 20px; text-align: center; margin: 20px 0;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .aviso-ok .material-icons { font-size: 36px; color: #558B2F; }
+    .aviso-ok strong { color: #33691E; font-size: 1rem; }
+    .aviso-ok span { color: #558B2F; font-size: 0.85rem; }
+
+    .error-box {
+      margin: 40px 20px; background: #fff; border-radius: 14px;
+      padding: 30px 20px; text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .error-box .material-icons { font-size: 48px; color: #EF9A9A; display: block; margin-bottom: 12px; }
+
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+      padding: 60px 20px; color: #AD1457;
+      font-size: 0.9rem;
+    }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid #F8BBD0;
+      border-top-color: #AD1457; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer {
+      text-align: center; font-size: 0.72rem; color: #BDBDBD;
+      padding: 16px 20px 24px;
+    }
+
+    @media (min-width: 600px) {
+      .header { padding: 32px 40px 28px; }
+      .estudiante-card { margin: 20px auto; max-width: 580px; }
+      .main { max-width: 580px; margin: 0 auto; padding-bottom: 40px; }
+      .footer { max-width: 580px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">TinClass · Sistema de Planificación Educativa</div>
+    <h1>Reporte del Estudiante</h1>
+    <div class="sub" id="header-sub">Cargando información…</div>
+  </div>
+
+  <div id="app">
+    <div class="loading">
+      <div class="spinner"></div>
+      Cargando información del estudiante…
+    </div>
+  </div>
+
+  <div class="footer">
+    TinClass &mdash; Sistema de Planificación para Docentes · ETP República Dominicana
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+  (function() {
+    const cfg = {
+      apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
+      authDomain:        "metabot-7af4d.firebaseapp.com",
+      projectId:         "metabot-7af4d",
+      storageBucket:     "metabot-7af4d.firebasestorage.app",
+      messagingSenderId: "872698787040",
+      appId:             "1:872698787040:web:9f8914b0601996d1f68c85"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    const db = firebase.firestore();
+
+    const app = document.getElementById('app');
+    const headerSub = document.getElementById('header-sub');
+
+    function escH(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showError(msg) {
+      app.innerHTML = `
+        <div class="error-box">
+          <span class="material-icons">link_off</span>
+          <strong style="font-size:1rem;color:#37474F;display:block;margin-bottom:8px;">No se pudo cargar</strong>
+          <p style="font-size:0.85rem;color:#78909C;">${msg}</p>
+        </div>`;
+      headerSub.textContent = 'Error al cargar';
+    }
+
+    const COMENT_CATEGORIAS = [
+      { id: 'academico',  label: 'Académico',      icono: 'school',              color: '#1565C0' },
+      { id: 'conducta',   label: 'Conducta',        icono: 'emoji_people',        color: '#E65100' },
+      { id: 'asistencia', label: 'Asistencia',      icono: 'how_to_reg',          color: '#00695C' },
+      { id: 'fortaleza',  label: 'Fortaleza',       icono: 'star',                color: '#F9A825' },
+      { id: 'seguimiento',label: 'Seguimiento',     icono: 'track_changes',       color: '#6A1B9A' },
+      { id: 'padre',      label: 'Contacto/Padre',  icono: 'supervisor_account',  color: '#AD1457' },
+      { id: 'otro',       label: 'Otro',            icono: 'label',               color: '#546E7A' },
+    ];
+
+    function formatFecha(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return d.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function renderComentarios(lista) {
+      if (!lista || !lista.length) {
+        return '<div class="empty-section">No hay comentarios registrados para este estudiante.</div>';
+      }
+      const ordenados = lista.slice().sort((a, b) => b.ts - a.ts);
+      return ordenados.map(c => {
+        const cat = COMENT_CATEGORIAS.find(x => x.id === c.categoria) || COMENT_CATEGORIAS[COMENT_CATEGORIAS.length - 1];
+        return `
+          <div class="coment-card" style="border-left-color:${cat.color};">
+            <div class="coment-top">
+              <span class="coment-cat" style="background:${cat.color};">
+                <span class="material-icons">${cat.icono}</span>${escH(cat.label)}
+              </span>
+              <span class="coment-fecha">${formatFecha(c.ts)}</span>
+            </div>
+            <div class="coment-texto">${escH(c.texto)}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderReportes(lista) {
+      if (!lista || !lista.length) {
+        return '<div class="empty-section">No hay reportes formales registrados.</div>';
+      }
+      const ordenados = lista.slice().sort((a, b) => b.ts - a.ts);
+      return ordenados.map(r => {
+        const fecha = r.fechaReporte
+          ? new Date(r.fechaReporte + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+          : formatFecha(r.ts);
+        const campos = [
+          { label: 'Descripción del evento', valor: r.detallesEvento },
+          { label: 'Medidas tomadas por el docente', valor: r.medidasDocente },
+          { label: 'Seguimiento requerido', valor: r.seguimientoRepetitiva },
+        ].filter(c => c.valor && c.valor.trim());
+        return `
+          <div class="reporte-card">
+            <div class="reporte-header">
+              <span class="reporte-badge"><span class="material-icons" style="font-size:12px;">description</span> Reporte formal</span>
+              <span class="reporte-fecha">${escH(fecha)}</span>
+              ${r.cursoNombre ? `<span class="reporte-curso">${escH(r.cursoNombre)}</span>` : ''}
+            </div>
+            ${campos.map(c => `
+              <div class="reporte-campo">
+                <div class="reporte-campo-label">${escH(c.label)}</div>
+                <div class="reporte-campo-valor">${escH(c.valor)}</div>
+              </div>`).join('')}
+          </div>`;
+      }).join('');
+    }
+
+    function render(nombre, curso, fecha, comentarios, reportes) {
+      headerSub.textContent = 'Actualizado el ' + fecha;
+      const totalComent = (comentarios || []).length;
+      const totalRep = (reportes || []).length;
+
+      const estCard = `
+        <div class="estudiante-card">
+          <div class="est-avatar"><span class="material-icons">person</span></div>
+          <div>
+            <div class="est-nombre">${escH(nombre)}</div>
+            <div class="est-meta">${escH(curso)}</div>
+            <div class="est-fecha">Generado el ${escH(fecha)}</div>
+          </div>
+        </div>`;
+
+      const sinRegistros = totalComent === 0 && totalRep === 0;
+
+      let html = estCard + '<div class="main">';
+
+      if (sinRegistros) {
+        html += `
+          <div class="aviso-ok">
+            <span class="material-icons">check_circle</span>
+            <strong>¡Sin observaciones pendientes!</strong>
+            <span>El docente no ha registrado comentarios ni reportes para este estudiante.</span>
+          </div>`;
+      } else {
+        html += `
+          <div class="section-title">
+            <span class="material-icons">comment</span>
+            Comentarios del docente
+            <span style="background:#F8BBD0;color:#AD1457;border-radius:10px;padding:1px 8px;font-size:0.72rem;">${totalComent}</span>
+          </div>
+          ${renderComentarios(comentarios)}
+
+          <div class="section-title" style="margin-top:24px;">
+            <span class="material-icons">description</span>
+            Reportes formales
+            <span style="background:#FFCDD2;color:#B71C1C;border-radius:10px;padding:1px 8px;font-size:0.72rem;">${totalRep}</span>
+          </div>
+          ${renderReportes(reportes)}`;
+      }
+
+      html += '</div>';
+      app.innerHTML = html;
+    }
+
+    // ── Inicialización ───────────────────────────────────────────────
+    const hash = window.location.hash.slice(1);
+    if (!hash) { showError('Este link no contiene datos. Pídele al docente que genere un nuevo link.'); return; }
+
+    const esIdCorto = /^[a-z0-9]{5,10}$/.test(hash);
+    if (!esIdCorto) { showError('El link no tiene el formato correcto. Solicita uno nuevo al docente.'); return; }
+
+    db.collection('links_padre').doc(hash).get()
+      .then(linkDoc => {
+        if (!linkDoc.exists) {
+          showError('Este link no existe o fue eliminado. Pídele al docente que genere uno nuevo.');
+          return;
+        }
+        const { uid, estId, nombre, curso } = linkDoc.data();
+        const fecha = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        return db.collection('public_blogs').doc(uid).collection('datos_padre').doc(estId).get()
+          .then(dataDoc => {
+            const comentarios = dataDoc.exists ? (dataDoc.data().comentarios || []) : [];
+            const reportes    = dataDoc.exists ? (dataDoc.data().reportes    || []) : [];
+            render(nombre, curso, fecha, comentarios, reportes);
+          });
+      })
+      .catch(() => showError('No se pudo cargar la información. Verifica tu conexión a internet.'));
+  })();
+  </script>
+</body>
+</html>
