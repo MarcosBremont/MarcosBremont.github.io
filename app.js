@@ -72,7 +72,7 @@ function exportarAlumnosCSV() {
     // Exportar con notas del RA activo
     const dg = planActiva.datosGenerales || {};
     const ra = planActiva.ra || {};
-    const raLabel = [dg.modulo, ra.resultado].filter(Boolean).join(' · ') || raKey;
+    const raLabel = ra.descripcion || [dg.moduloFormativo, ra.resultado].filter(Boolean).join(' · ') || raKey;
 
     // Encabezados: Nombre, RA, act1, act2, ..., Total RA
     let counter = 0;
