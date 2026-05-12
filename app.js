@@ -26779,44 +26779,43 @@ async function cargarReportesPsicologia() {
   cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;"><span class="material-icons" style="font-size:36px;display:block;margin-bottom:10px;">hourglass_empty</span>Cargando reportes…</div>';
 
   try {
-    // Obtener lista de docentes registrados
-    const usersSnap = await db.collection('usuarios').where('rol', 'in', ['docente', 'maestro', 'profesor']).get();
-    // También incluir cualquier usuario que tenga datos_padre (tiene reportes)
-    const docentesSnap = await db.collection('public_blogs').get();
+    // collectionGroup consulta datos_padre en TODOS los usuarios sin necesitar listar public_blogs
+    const snap = await db.collectionGroup('datos_padre').get();
 
     const resultados = [];
-    const promises = docentesSnap.docs.map(async docenteDoc => {
-      const uid = docenteDoc.id;
-      // Obtener perfil del docente
-      let nombreDocente = uid;
-      try {
-        const perfil = await db.collection('perfiles').doc(uid).get();
-        if (perfil.exists && perfil.data().nombre) nombreDocente = perfil.data().nombre;
-        else {
-          const usuario = await db.collection('usuarios').doc(uid).get();
-          if (usuario.exists && usuario.data().nombre) nombreDocente = usuario.data().nombre;
-        }
-      } catch(e) {}
+    const docenteNombres = {};
 
-      // Leer datos_padre que contiene reportes formales
-      const datosSnap = await db.collection('public_blogs').doc(uid).collection('datos_padre').get();
-      datosSnap.docs.forEach(estDoc => {
-        const d = estDoc.data();
-        const reportes = (d.reportes || []).filter(r => r.detallesEvento && r.detallesEvento.trim());
-        if (reportes.length > 0) {
-          resultados.push({
-            docenteUid: uid,
-            docenteNombre: nombreDocente,
-            estId: estDoc.id,
-            estNombre: d.nombre || estDoc.id,
-            curso: d.curso || '',
-            reportes: reportes.sort((a, b) => b.ts - a.ts)
-          });
-        }
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const reportes = (d.reportes || []).filter(r => r.detallesEvento && r.detallesEvento.trim());
+      if (reportes.length === 0) continue;
+
+      // Extraer uid del path: public_blogs/{uid}/datos_padre/{estId}
+      const segmentos = doc.ref.path.split('/');
+      const uid = segmentos[1];
+
+      // Obtener nombre del docente (con caché)
+      if (!docenteNombres[uid]) {
+        try {
+          const perfil = await db.collection('perfiles').doc(uid).get();
+          if (perfil.exists && perfil.data().nombre) docenteNombres[uid] = perfil.data().nombre;
+          else {
+            const usuario = await db.collection('usuarios').doc(uid).get();
+            docenteNombres[uid] = (usuario.exists && usuario.data().nombre) ? usuario.data().nombre : uid;
+          }
+        } catch(e) { docenteNombres[uid] = uid; }
+      }
+
+      resultados.push({
+        docenteUid: uid,
+        docenteNombre: docenteNombres[uid],
+        estId: doc.id,
+        estNombre: d.nombre || doc.id,
+        curso: d.curso || '',
+        reportes: reportes.sort((a, b) => b.ts - a.ts)
       });
-    });
+    }
 
-    await Promise.all(promises);
     _psicoDatos = resultados;
 
     // Poblar filtros
