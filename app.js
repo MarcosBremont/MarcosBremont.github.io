@@ -9843,7 +9843,7 @@ function _construirDataPendiente(estudianteId, cursoId) {
 
   const raGrupos = {};
   pending.forEach(p => {
-    if (!raGrupos[p.raKey]) raGrupos[p.raKey] = { materia: p.raModulo, raDesc: p.raDesc, acts: [] };
+    if (!raGrupos[p.raKey]) raGrupos[p.raKey] = { materia: p.raModulo, raDesc: p.raDesc, raKey: p.raKey, acts: [] };
     let fechaCorta = '';
     if (p.actividadFechaISO) {
       try {
@@ -9867,17 +9867,23 @@ function _construirDataPendiente(estudianteId, cursoId) {
     n: est.nombre,
     c: curso.nombre || '',
     f: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
-    p: Object.values(raGrupos).map(ra => ({
-      m: ra.materia,
-      r: (ra.raDesc || '').substring(0, 80),
-      a: ra.acts.map(a => ({
-        e: a.ec,
-        o: a.nombre,
-        t: a.pts,
-        d: a.fecha,
-        z: a.cero
-      }))
-    }))
+    p: Object.values(raGrupos).map(ra => {
+      const notaAcum = _calcNotaRA(curso, estudianteId, ra.raKey);
+      const valorTotal = curso.ras?.[ra.raKey]?.valorTotal ?? null;
+      return {
+        m: ra.materia,
+        r: (ra.raDesc || '').substring(0, 80),
+        s: notaAcum,        // nota acumulada
+        v: valorTotal,      // valor total del RA
+        a: ra.acts.map(a => ({
+          e: a.ec,
+          o: a.nombre,
+          t: a.pts,
+          d: a.fecha,
+          z: a.cero
+        }))
+      };
+    })
   };
 }
 

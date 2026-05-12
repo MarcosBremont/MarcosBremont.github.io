@@ -177,14 +177,26 @@
     } else {
       data.pendientes.forEach(ra => {
         if (!ra.acts || ra.acts.length === 0) return;
+        // Badge de nota acumulada
+        let notaBadge = '';
+        if (ra.notaAcum !== null && ra.notaAcum !== undefined && ra.valorTotal) {
+          const pct = Math.min(100, Math.round((ra.notaAcum / ra.valorTotal) * 100));
+          const color = pct >= 70 ? '#2E7D32' : pct >= 50 ? '#E65100' : '#C62828';
+          const bg    = pct >= 70 ? '#E8F5E9'  : pct >= 50 ? '#FFF3E0'  : '#FFEBEE';
+          notaBadge = `<span style="margin-left:auto;background:${bg};color:${color};border-radius:8px;padding:2px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;flex-shrink:0;">${ra.notaAcum} / ${ra.valorTotal} pts</span>`;
+        } else if (ra.notaAcum !== null && ra.notaAcum !== undefined) {
+          notaBadge = `<span style="margin-left:auto;background:#E3F2FD;color:#1565C0;border-radius:8px;padding:2px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;flex-shrink:0;">${ra.notaAcum} pts</span>`;
+        }
+
         html += `
         <div class="ra-section">
-          <div class="ra-header">
+          <div class="ra-header" style="justify-content:space-between;">
             <span class="material-icons">assignment</span>
-            <div>
+            <div style="flex:1;">
               <div class="ra-titulo">${escH(ra.materia)}</div>
               ${ra.raDesc ? `<div class="ra-desc">${escH(ra.raDesc.substring(0, 80))}${ra.raDesc.length > 80 ? '…' : ''}</div>` : ''}
             </div>
+            ${notaBadge}
           </div>
           <div class="act-list">`;
 
@@ -238,6 +250,8 @@
       pendientes: (data.p || []).map(ra => ({
         materia: ra.m,
         raDesc: ra.r || '',
+        notaAcum: ra.s ?? null,
+        valorTotal: ra.v ?? null,
         acts: (ra.a || []).map(a => ({
           ec: a.e,
           nombre: a.o,
