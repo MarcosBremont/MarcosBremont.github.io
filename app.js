@@ -29414,6 +29414,27 @@ async function _coordGetDocentes(centroId) {
     }
   } catch (e) { console.warn('Error buscando admins para coordinadora:', e); }
 
+  // Incluir superadmins que pertenezcan a este centro (pueden no tener centroId en su doc)
+  try {
+    const saDoc = await db.collection('config').doc('superadmin').get();
+    const saEmails = saDoc.exists ? (saDoc.data().emails || []) : [];
+    const todosEmails = [...new Set([...SUPERADMIN_DEFAULT, ...saEmails])];
+    for (const saEmail of todosEmails) {
+      const emailLower = saEmail.toLowerCase().trim();
+      for (const variant of [emailLower, saEmail.trim()]) {
+        const saSnap = await db.collection('usuarios').where('email', '==', variant).limit(1).get();
+        if (!saSnap.empty) {
+          const saDocUser = saSnap.docs[0];
+          if (!uids.has(saDocUser.id)) {
+            uids.add(saDocUser.id);
+            docentes.push({ uid: saDocUser.id, ...saDocUser.data() });
+          }
+          break;
+        }
+      }
+    }
+  } catch (e) { console.warn('Error buscando superadmins para coordinadora:', e); }
+
   return docentes;
 }
 
