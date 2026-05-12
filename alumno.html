@@ -119,6 +119,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script>
 (function() {
   const app = document.getElementById('app');
@@ -214,7 +215,15 @@
   try {
     const hash = window.location.hash.slice(1);
     if (!hash) { showError('Este link no contiene datos. Pídele al docente que genere un nuevo link.'); return; }
-    const json = decodeURIComponent(escape(atob(hash)));
+    let json = null;
+    // Intentar primero con LZ-String (links nuevos, cortos)
+    if (typeof LZString !== 'undefined') {
+      json = LZString.decompressFromEncodedURIComponent(hash);
+    }
+    // Fallback: base64 clásico (links viejos)
+    if (!json) {
+      json = decodeURIComponent(escape(atob(hash)));
+    }
     const data = JSON.parse(json);
     if (!data.nombre || !data.pendientes) { showError('Los datos del link están incompletos.'); return; }
     render(data);

@@ -9819,7 +9819,9 @@ function _generarLinkAlumno(estudianteId, cursoId) {
   };
 
   try {
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    const encoded = (typeof LZString !== 'undefined')
+      ? LZString.compressToEncodedURIComponent(JSON.stringify(data))
+      : btoa(unescape(encodeURIComponent(JSON.stringify(data))));
     return window.location.origin + '/alumno.html#' + encoded;
   } catch(e) { return null; }
 }
