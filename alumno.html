@@ -120,6 +120,22 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function() {
+  const cfg = {
+    apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
+    authDomain:        "metabot-7af4d.firebaseapp.com",
+    projectId:         "metabot-7af4d",
+    storageBucket:     "metabot-7af4d.firebasestorage.app",
+    messagingSenderId: "872698787040",
+    appId:             "1:872698787040:web:9f8914b0601996d1f68c85"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(cfg);
+  window._alumnoDb = firebase.firestore();
+})();
+</script>
 <script>
 (function() {
   const app = document.getElementById('app');
@@ -233,24 +249,39 @@
     };
   }
 
-  try {
-    const hash = window.location.hash.slice(1);
-    if (!hash) { showError('Este link no contiene datos. Pídele al docente que genere un nuevo link.'); return; }
-    let json = null;
-    // Intentar primero con LZ-String (links nuevos, cortos)
-    if (typeof LZString !== 'undefined') {
-      json = LZString.decompressFromEncodedURIComponent(hash);
+  const hash = window.location.hash.slice(1);
+  if (!hash) { showError('Este link no contiene datos. Pídele al docente que genere un nuevo link.'); return; }
+
+  // ID corto de Firestore: solo letras minúsculas y dígitos, longitud 5-10
+  const esIdCorto = /^[a-z0-9]{5,10}$/.test(hash);
+
+  if (esIdCorto && window._alumnoDb) {
+    window._alumnoDb.collection('links_alumno').doc(hash).get()
+      .then(doc => {
+        if (!doc.exists) { showError('Este link no existe o ya expiró. Pídele al docente un link nuevo.'); return; }
+        const raw = doc.data().data;
+        const data = normalizar(raw);
+        if (!data.nombre || !data.pendientes) { showError('Los datos del link están incompletos.'); return; }
+        render(data);
+      })
+      .catch(() => showError('No se pudo cargar el link. Verifica tu conexión a internet.'));
+  } else {
+    // Fallback: LZString o base64 clásico
+    try {
+      let json = null;
+      if (typeof LZString !== 'undefined') {
+        json = LZString.decompressFromEncodedURIComponent(hash);
+      }
+      if (!json) {
+        json = decodeURIComponent(escape(atob(hash)));
+      }
+      const raw = JSON.parse(json);
+      const data = normalizar(raw);
+      if (!data.nombre || !data.pendientes) { showError('Los datos del link están incompletos.'); return; }
+      render(data);
+    } catch(e) {
+      showError('No se pudo leer el link. Es posible que esté dañado o incompleto.');
     }
-    // Fallback: base64 clásico (links viejos)
-    if (!json) {
-      json = decodeURIComponent(escape(atob(hash)));
-    }
-    const raw = JSON.parse(json);
-    const data = normalizar(raw);
-    if (!data.nombre || !data.pendientes) { showError('Los datos del link están incompletos.'); return; }
-    render(data);
-  } catch(e) {
-    showError('No se pudo leer el link. Es posible que esté dañado o incompleto.');
   }
 })();
 </script>

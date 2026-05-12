@@ -9780,7 +9780,12 @@ function imprimirPendientes() {
   setTimeout(() => win.print(), 400);
 }
 
-function _generarLinkAlumno(estudianteId, cursoId) {
+function _idCortoLink() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // sin 0,o,l,1,i para evitar confusión
+  return Array.from({length: 7}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+function _construirDataPendiente(estudianteId, cursoId) {
   const curso = calState.cursos[cursoId];
   if (!curso) return null;
   const est = (curso.estudiantes || []).find(e => e.id === estudianteId);
@@ -9811,8 +9816,7 @@ function _generarLinkAlumno(estudianteId, cursoId) {
     });
   });
 
-  // Claves cortas para minimizar el tamaño del link
-  const data = {
+  return {
     n: est.nombre,
     c: curso.nombre || '',
     f: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
@@ -9828,7 +9832,27 @@ function _generarLinkAlumno(estudianteId, cursoId) {
       }))
     }))
   };
+}
 
+async function _generarLinkAlumno(estudianteId, cursoId) {
+  const data = _construirDataPendiente(estudianteId, cursoId);
+  if (!data) return null;
+
+  // Guardar en Firestore y devolver link corto
+  if (typeof db !== 'undefined') {
+    try {
+      const id = _idCortoLink();
+      await db.collection('links_alumno').doc(id).set({
+        data,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return window.location.origin + '/alumno.html#' + id;
+    } catch(e) {
+      console.warn('Firestore link fallido, usando fallback LZString:', e);
+    }
+  }
+
+  // Fallback: LZString comprimido
   try {
     const encoded = (typeof LZString !== 'undefined')
       ? LZString.compressToEncodedURIComponent(JSON.stringify(data))
@@ -9837,16 +9861,25 @@ function _generarLinkAlumno(estudianteId, cursoId) {
   } catch(e) { return null; }
 }
 
-function _copiarLinkAlumno(estudianteId, cursoId, btnEl) {
-  const link = _generarLinkAlumno(estudianteId, cursoId);
+async function _copiarLinkAlumno(estudianteId, cursoId, btnEl) {
+  let origHtml = '';
+  if (btnEl) {
+    origHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<span class="material-icons" style="font-size:13px;vertical-align:middle;">hourglass_empty</span> Generando…';
+  }
+
+  const link = await _generarLinkAlumno(estudianteId, cursoId);
+
+  if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origHtml; }
   if (!link) { mostrarToast('Este estudiante no tiene actividades pendientes', 'info'); return; }
+
   const doFeedback = () => {
     mostrarToast('Link copiado — compártelo con el estudiante', 'ok');
     if (btnEl) {
-      const orig = btnEl.innerHTML;
       btnEl.innerHTML = '<span class="material-icons" style="font-size:13px;vertical-align:middle;">check</span> Copiado';
       btnEl.style.cssText = 'background:#E8F5E9;border-color:#81C784;color:#2E7D32;';
-      setTimeout(() => { btnEl.innerHTML = orig; btnEl.removeAttribute('style'); }, 2200);
+      setTimeout(() => { btnEl.innerHTML = origHtml; btnEl.removeAttribute('style'); }, 2200);
     }
   };
   if (navigator.clipboard) {
@@ -9862,7 +9895,7 @@ function _copiarLinkAlumno(estudianteId, cursoId, btnEl) {
   }
 }
 
-function mostrarTodosLinks() {
+async function mostrarTodosLinks() {
   const selCurso = document.getElementById('pend-sel-curso');
   const cursoId = selCurso?.value === 'all' ? null : selCurso?.value;
 
@@ -9883,19 +9916,7 @@ function mostrarTodosLinks() {
     return;
   }
 
-  const lineas = [];
-  estudiantes.forEach(e => {
-    const link = _generarLinkAlumno(e.estudianteId, e.cursoId);
-    if (link) lineas.push(e.nombre + ' - Link: ' + link);
-  });
-
-  if (lineas.length === 0) {
-    mostrarToast('No se pudieron generar los links', 'info');
-    return;
-  }
-
-  const texto = lineas.join('\n');
-
+  // Abrir modal de inmediato con estado de carga
   const overlay = document.createElement('div');
   overlay.setAttribute('data-links-overlay', '1');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -9906,7 +9927,7 @@ function mostrarTodosLinks() {
     <div style="padding:16px 20px;border-bottom:1px solid #E0E0E0;display:flex;align-items:center;justify-content:space-between;">
       <h3 style="font-size:1rem;font-weight:700;color:#1B5E20;display:flex;align-items:center;gap:8px;">
         <span class="material-icons" style="font-size:20px;color:#2E7D32;">link</span>
-        Links de estudiantes (${lineas.length})
+        Links de estudiantes (${estudiantes.length})
       </h3>
       <button class="modal-close" onclick="document.querySelector('[data-links-overlay]').remove()">
         <span class="material-icons">close</span>
@@ -9914,11 +9935,11 @@ function mostrarTodosLinks() {
     </div>
     <div style="padding:14px 20px;flex:1;overflow-y:auto;min-height:0;">
       <p style="font-size:0.8rem;color:#78909C;margin-bottom:10px;">Copia estos links y envíalos a cada estudiante por WhatsApp, email o el medio que prefieras.</p>
-      <textarea id="todos-links-ta" readonly style="width:100%;height:220px;border:1.5px solid #E0E0E0;border-radius:8px;padding:10px;font-family:monospace;font-size:0.78rem;color:#37474F;resize:vertical;line-height:1.8;"></textarea>
+      <textarea id="todos-links-ta" readonly style="width:100%;height:220px;border:1.5px solid #E0E0E0;border-radius:8px;padding:10px;font-family:monospace;font-size:0.78rem;color:#37474F;resize:vertical;line-height:1.8;">Generando links cortos…</textarea>
     </div>
     <div style="padding:12px 20px;border-top:1px solid #E0E0E0;display:flex;justify-content:space-between;align-items:center;">
-      <button id="btn-copiar-todos-links" style="background:#2E7D32;border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
-        <span class="material-icons" style="font-size:16px;">content_copy</span> Copiar todo
+      <button id="btn-copiar-todos-links" disabled style="background:#9E9E9E;border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:700;cursor:not-allowed;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:16px;">hourglass_empty</span> Generando…
       </button>
       <button onclick="document.querySelector('[data-links-overlay]').remove()" style="background:#F5F5F5;border:1.5px solid #E0E0E0;color:#546E7A;border-radius:8px;padding:8px 16px;font-size:0.85rem;cursor:pointer;">Cerrar</button>
     </div>`;
@@ -9927,11 +9948,31 @@ function mostrarTodosLinks() {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 
+  // Generar todos los links en paralelo
+  const resultados = await Promise.all(
+    estudiantes.map(e =>
+      _generarLinkAlumno(e.estudianteId, e.cursoId)
+        .then(link => ({ nombre: e.nombre, link }))
+        .catch(() => ({ nombre: e.nombre, link: null }))
+    )
+  );
+
+  const lineas = resultados.filter(r => r.link).map(r => r.nombre + ' - Link: ' + r.link);
   const ta = document.getElementById('todos-links-ta');
+  const btnCopiar = document.getElementById('btn-copiar-todos-links');
+
+  if (lineas.length === 0) {
+    if (ta) ta.value = 'No se pudieron generar los links.';
+    return;
+  }
+
+  const texto = lineas.join('\n');
   if (ta) ta.value = texto;
 
-  const btnCopiar = document.getElementById('btn-copiar-todos-links');
   if (btnCopiar) {
+    btnCopiar.disabled = false;
+    btnCopiar.style.cssText = 'background:#2E7D32;border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;';
+    btnCopiar.innerHTML = '<span class="material-icons" style="font-size:16px;">content_copy</span> Copiar todo';
     btnCopiar.addEventListener('click', () => {
       const textoActual = ta ? ta.value : texto;
       const doFeedback = () => {
