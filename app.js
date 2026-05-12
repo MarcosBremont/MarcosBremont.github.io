@@ -29775,14 +29775,11 @@ async function _coordEliminarAviso(centroId, avisoId) {
 // MÓDULO DE PAGOS
 // ════════════════════════════════════════════════════════════════════
 
-/** Muestra/oculta botón Pagos en dashboard (admin, director, superadmin) */
+/** Muestra/oculta botón Pagos en dashboard (temporalmente oculto) */
 async function _verificarAccesoPagos() {
   const btn = document.getElementById('btn-dash-pagos');
   if (!btn) return;
-  const centros = await _esAdminDeCentro();
-  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-  const esDir = typeof _esDirector === 'function' && await _esDirector();
-  btn.style.display = (centros.length > 0 || esSA || esDir) ? '' : 'none';
+  btn.style.display = 'none'; // oculto temporalmente
 }
 
 /** Abre el panel de pagos */
