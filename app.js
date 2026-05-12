@@ -74,13 +74,16 @@ function exportarAlumnosCSV() {
     const ra = planActiva.ra || {};
     const raLabel = ra.descripcion || [dg.moduloFormativo, ra.resultado].filter(Boolean).join(' · ') || raKey;
 
-    // Encabezados: Nombre, RA, act1, act2, ..., Total RA
-    let counter = 0;
+    // Encabezados: Nombre, RA, Act X.X.1, Act X.X.2, ..., Total RA
+    const ecCounters = {};
     const actHeaders = actividades.map(a => {
-      const num = ++counter;
-      const ec = a.ecCodigo ? a.ecCodigo.replace('E.C.', 'EC').trim() : ('Act.' + num);
+      const ecBase = a.ecCodigo
+        ? a.ecCodigo.replace(/^E\.C\./i, '').replace(/^EC/i, '').trim()
+        : '?';
+      ecCounters[ecBase] = (ecCounters[ecBase] || 0) + 1;
+      const actLabel = 'Act ' + ecBase + '.' + ecCounters[ecBase];
       const max = raInfo.valores?.[a.id] ?? '';
-      return '"' + (ec + (max !== '' ? ' (' + max + 'pts)' : '')).replace(/"/g, '""') + '"';
+      return '"' + (actLabel + (max !== '' ? ' (' + max + 'pts)' : '')).replace(/"/g, '""') + '"';
     });
     const header = ['"Nombre"', '"RA"', ...actHeaders, '"Total RA"', '"Valor máximo RA"'].join(',');
 
