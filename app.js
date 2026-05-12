@@ -9811,11 +9811,22 @@ function _generarLinkAlumno(estudianteId, cursoId) {
     });
   });
 
+  // Claves cortas para minimizar el tamaño del link
   const data = {
-    nombre: est.nombre,
-    curso: curso.nombre || '',
-    fecha: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
-    pendientes: Object.values(raGrupos)
+    n: est.nombre,
+    c: curso.nombre || '',
+    f: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
+    p: Object.values(raGrupos).map(ra => ({
+      m: ra.materia,
+      r: (ra.raDesc || '').substring(0, 80),
+      a: ra.acts.map(a => ({
+        e: a.ec,
+        o: a.nombre,
+        t: a.pts,
+        d: a.fecha,
+        z: a.cero
+      }))
+    }))
   };
 
   try {

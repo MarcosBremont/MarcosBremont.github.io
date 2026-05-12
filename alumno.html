@@ -212,6 +212,27 @@
     </div>`;
   }
 
+  function normalizar(data) {
+    // Soporte de claves cortas (links nuevos) y claves largas (links viejos)
+    if (data.nombre) return data; // formato antiguo, sin cambios
+    return {
+      nombre: data.n,
+      curso: data.c,
+      fecha: data.f,
+      pendientes: (data.p || []).map(ra => ({
+        materia: ra.m,
+        raDesc: ra.r || '',
+        acts: (ra.a || []).map(a => ({
+          ec: a.e,
+          nombre: a.o,
+          pts: a.t,
+          fecha: a.d,
+          cero: a.z
+        }))
+      }))
+    };
+  }
+
   try {
     const hash = window.location.hash.slice(1);
     if (!hash) { showError('Este link no contiene datos. Pídele al docente que genere un nuevo link.'); return; }
@@ -224,7 +245,8 @@
     if (!json) {
       json = decodeURIComponent(escape(atob(hash)));
     }
-    const data = JSON.parse(json);
+    const raw = JSON.parse(json);
+    const data = normalizar(raw);
     if (!data.nombre || !data.pendientes) { showError('Los datos del link están incompletos.'); return; }
     render(data);
   } catch(e) {
