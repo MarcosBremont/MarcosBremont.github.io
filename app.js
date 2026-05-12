@@ -16837,9 +16837,10 @@ function _actualizarAvisHorarioCurso(regOriginal) {
     .filter(p => p && p.planificacion?.datosGenerales?.diasClase);
 
   // Agrupar por horario único (evitar opciones duplicadas por mismo módulo con mismo horario)
+  const _normDia = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const resumenDiasKey = (dias) => Object.entries(dias)
     .filter(([, v]) => v.activo)
-    .map(([d, v]) => `${d}:${v.horas}`)
+    .map(([d, v]) => `${_normDia(d)}:${v.horas}`)
     .sort().join('|');
 
   const vistosHorario = new Set();
