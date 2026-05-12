@@ -23637,7 +23637,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.16</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.17</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -26768,7 +26768,15 @@ function _guardarCuentasEst(data) {
 
 let _psicoDatos = []; // {docenteUid, docenteNombre, estNombre, estId, curso, reportes[]}
 
-function abrirPsicologia() {
+async function abrirPsicologia() {
+  if (!window.currentUser) return;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    const rol = doc.exists ? (doc.data().rol || '') : '';
+    const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+    const permitido = ['psicologia', 'psicologa', 'psicologo', 'director', 'superadmin'].includes(rol) || esSA;
+    if (!permitido) { mostrarToast('No tienes acceso a este panel.', 'error'); return; }
+  } catch { mostrarToast('Error verificando acceso.', 'error'); return; }
   _mostrarPanel('panel-psicologia');
   cargarReportesPsicologia();
 }
@@ -29114,7 +29122,7 @@ async function _verificarAccesoPsicologia() {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
     const rol = doc.exists ? (doc.data().rol || '') : '';
     const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-    const visible = ['psicologia', 'psicologa', 'psicologo', 'coordinadora', 'director', 'superadmin', 'admin_centro'].includes(rol) || esSA;
+    const visible = ['psicologia', 'psicologa', 'psicologo', 'director', 'superadmin'].includes(rol) || esSA;
     btn.style.display = visible ? '' : 'none';
   } catch { btn.style.display = 'none'; }
 }
