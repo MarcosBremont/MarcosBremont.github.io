@@ -2820,6 +2820,24 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
   color: #BDBDBD;
 }
 
+.pln-card-dias {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1565C0;
+  background: #E3F2FD;
+  border-radius: 6px;
+  padding: 4px 9px;
+  margin-bottom: 8px;
+}
+
+.pln-card-dias .material-icons {
+  font-size: 14px;
+  color: #1565C0;
+}
+
 .pln-card-ra {
   font-size: 0.8rem;
   color: var(--color-texto-secundario);

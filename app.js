@@ -17257,6 +17257,22 @@ function renderizarBiblioteca() {
       ? ra.descripcion.substring(0, 120) + (ra.descripcion.length > 120 ? '…' : '')
       : 'Sin descripción del RA';
 
+    // Días del horario
+    const _DIAS_ORD = ['lunes','martes','miércoles','miercoles','jueves','viernes','sábado','sabado'];
+    const diasClase = dg.diasClase || {};
+    const diasActivos = Object.entries(diasClase)
+      .filter(([, v]) => v && v.activo)
+      .sort((a, b) => {
+        const ai = _DIAS_ORD.findIndex(d => a[0].toLowerCase().replace('é','e').replace('á','a').startsWith(d.replace('é','e').replace('á','a').slice(0,3)));
+        const bi = _DIAS_ORD.findIndex(d => b[0].toLowerCase().replace('é','e').replace('á','a').startsWith(d.replace('é','e').replace('á','a').slice(0,3)));
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      })
+      .map(([d, v]) => `${d.charAt(0).toUpperCase() + d.slice(1)}${v.horas ? ' ('+v.horas+'h)' : ''}`)
+      .join(' · ');
+    const diasChip = diasActivos
+      ? `<div class="pln-card-dias"><span class="material-icons">event_repeat</span>${escHTML(diasActivos)}</div>`
+      : '';
+
     const card = document.createElement('div');
     card.className = 'pln-card' + (esPlanActiva ? ' pln-card-activa' : '');
     const raLabel = cursoId && raNum ? `<span class="pln-badge-ra">#${raNum}</span>` : '';
@@ -17284,6 +17300,7 @@ function renderizarBiblioteca() {
         ${dg.fechaInicio ? '<span><span class="material-icons">date_range</span>' +
         escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
       </div>
+      ${diasChip}
       <div class="pln-card-ra">${escHTML(resumenRA)}</div>
       <div class="pln-card-chips">
         ${ec.length ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
