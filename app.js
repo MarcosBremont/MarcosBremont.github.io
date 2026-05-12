@@ -9863,12 +9863,17 @@ function _construirDataPendiente(estudianteId, cursoId) {
     });
   });
 
+  const biblio = cargarBiblioteca();
   return {
     n: est.nombre,
     c: curso.nombre || '',
     f: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
     p: Object.values(raGrupos).map(ra => {
-      const notaAcum = _calcNotaRA(curso, estudianteId, ra.raKey);
+      // Usar mismas actividades que la tabla de calificaciones para evitar contar notas huérfanas
+      const planId = (curso.planIds || []).find(pid => _getPlanIdClave(pid) === ra.raKey);
+      const planReg = planId ? biblio.items.find(i => i.id === planId) : null;
+      const actsVisibles = planReg?.planificacion?.actividades;
+      const notaAcum = _calcNotaRA(curso, estudianteId, ra.raKey, actsVisibles?.length ? actsVisibles : null);
       const valorTotal = curso.ras?.[ra.raKey]?.valorTotal ?? null;
       return {
         m: ra.materia,
