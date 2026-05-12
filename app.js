@@ -9224,7 +9224,50 @@ function cargarCalificaciones() {
 
 
 
+// ── Backups automáticos de calificaciones ────────────────────────
+const CAL_BACKUP_KEY = 'planificadorRA_cal_backups_v1';
+const CAL_BACKUP_MAX = 5;
+
+function _guardarBackupCalificaciones() {
+  try {
+    const current = localStorage.getItem(CAL_STORAGE_KEY);
+    if (!current || current === '{"cursos":{}}') return;
+    const backups = JSON.parse(localStorage.getItem(CAL_BACKUP_KEY) || '[]');
+    const ts = Date.now();
+    // No guardar si el backup más reciente es idéntico
+    if (backups.length && backups[0].data === current) return;
+    const label = new Date(ts).toLocaleString('es-DO', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    backups.unshift({ ts, label, data: current });
+    while (backups.length > CAL_BACKUP_MAX) backups.pop();
+    localStorage.setItem(CAL_BACKUP_KEY, JSON.stringify(backups));
+  } catch (e) { console.warn('Backup cal error:', e); }
+}
+
+function restaurarBackupCalificaciones(idx) {
+  try {
+    const backups = JSON.parse(localStorage.getItem(CAL_BACKUP_KEY) || '[]');
+    const backup = backups[idx];
+    if (!backup) return;
+    const cal = JSON.parse(backup.data);
+    const nCursos = Object.keys(cal.cursos || {}).length;
+    if (!confirm(`¿Restaurar calificaciones del ${backup.label}?\n\nContiene ${nCursos} curso(s). Los datos actuales se reemplazarán.`)) return;
+    // Guardar backup del estado actual antes de restaurar
+    _guardarBackupCalificaciones();
+    localStorage.setItem(CAL_STORAGE_KEY, backup.data);
+    if (window._syncFirebase) _syncFirebase('calificaciones', cal);
+    cargarCalificaciones();
+    cerrarBackup();
+    mostrarToast('Calificaciones restauradas correctamente', 'success');
+  } catch (e) { mostrarToast('Error al restaurar: ' + e.message, 'error'); }
+}
+
 function guardarCalificaciones() {
+  // Backup automático antes de sobrescribir
+  _guardarBackupCalificaciones();
+
   // Limpiar planIds duplicados en todos los cursos antes de guardar
   Object.values(calState.cursos || {}).forEach(curso => {
     if (curso.planIds) curso.planIds = [...new Set(curso.planIds)];
@@ -23283,6 +23326,28 @@ function abrirBackup() {
     '<span><strong>' + nSesiones + '</strong> sesion' + (nSesiones !== 1 ? 'es' : '') + ' diarias</span>' +
     '<span>' + (tieneKey ? '✓ API Key guardada' : 'Sin API Key') + '</span>' +
     '</div>';
+
+  // Backups automáticos de calificaciones
+  const backups = JSON.parse(localStorage.getItem(CAL_BACKUP_KEY) || '[]');
+  const backupEl = document.getElementById('backup-cal-historial');
+  if (backupEl) {
+    if (!backups.length) {
+      backupEl.innerHTML = '<p style="color:#9E9E9E;font-size:0.82rem;text-align:center;padding:8px;">Aún no hay copias de seguridad automáticas.<br>Se generan cada vez que guardas calificaciones.</p>';
+    } else {
+      backupEl.innerHTML = backups.map((b, i) => {
+        let cal; try { cal = JSON.parse(b.data); } catch { cal = { cursos: {} }; }
+        const nc = Object.keys(cal.cursos || {}).length;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fff;border:1.5px solid #E0E0E0;border-radius:8px;margin-bottom:6px;">' +
+          '<span class="material-icons" style="color:#1565C0;font-size:20px;">history</span>' +
+          '<div style="flex:1;">' +
+          '<div style="font-size:0.85rem;font-weight:600;color:#212121;">' + escapeHTML(b.label) + (i === 0 ? ' <span style="background:#E8F5E9;color:#2E7D32;border-radius:8px;padding:1px 7px;font-size:0.7rem;font-weight:700;">Más reciente</span>' : '') + '</div>' +
+          '<div style="font-size:0.75rem;color:#78909C;">' + nc + ' curso' + (nc !== 1 ? 's' : '') + '</div>' +
+          '</div>' +
+          '<button onclick="restaurarBackupCalificaciones(' + i + ')" style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">Restaurar</button>' +
+          '</div>';
+      }).join('');
+    }
+  }
 }
 
 function cerrarBackup() {
