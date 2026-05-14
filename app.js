@@ -10715,9 +10715,11 @@ function renderizarTablaCalificaciones() {
       _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
       const numInEC = _idxEC[a.ecCodigo || ''];
       const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
-      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" data-act-nombre="' + escapeHTML(a.enunciado) + '" onclick="_mostrarTooltipAct(event,this)" style="min-width:80px;cursor:pointer;">'
-        + '<div style="font-size:0.72rem;font-weight:600;">Act.' + actNum
-        + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></div>'
+      h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" data-act-nombre="' + escapeHTML(a.enunciado) + '" data-act-id="' + a.id + '" onclick="_mostrarTooltipAct(event,this)" style="min-width:80px;cursor:pointer;">'
+        + '<div style="font-size:0.72rem;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:2px;">'
+        + '<span>Act.' + actNum + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></span>'
+        + '<button onclick="event.stopPropagation();_copiarColumnaNotas(\'' + a.id + '\',this)" title="Copiar notas de esta columna" style="background:none;border:none;cursor:pointer;padding:0 1px;color:#90CAF9;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button>'
+        + '</div>'
         + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
         + ' title="Valor máximo de esta actividad" placeholder="pts"'
@@ -27660,6 +27662,34 @@ function _renderEnlaceDenuncias() {
         '</ul>' +
       '</div>' +
     '</div>';
+}
+
+function _copiarColumnaNotas(actId, btn) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.estudiantes?.length) return;
+  const raKey = _getRaKey();
+  const valores = curso.estudiantes.map(est => {
+    const n = curso.notas?.[est.id]?.[raKey]?.[actId];
+    return (n !== undefined && n !== null) ? String(n) : '';
+  });
+  const texto = valores.join('\n');
+  const copiar = txt => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(txt).catch(() => _copiarFallback(txt));
+    } else { _copiarFallback(txt); }
+  };
+  const _copiarFallback = txt => {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  };
+  copiar(texto);
+  if (btn) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span class="material-icons" style="font-size:13px;color:#69F0AE;">check</span>';
+    setTimeout(() => { btn.innerHTML = orig; }, 1200);
+  }
+  mostrarToast('Notas copiadas (' + curso.estudiantes.length + ' filas)', 'success');
 }
 
 function _copiarEnlaceDenuncias() {
