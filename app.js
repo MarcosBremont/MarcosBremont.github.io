@@ -10679,7 +10679,7 @@ function renderizarTablaCalificaciones() {
     + '<th class="th-nombre" rowspan="2">Estudiante</th>'
     + '<th colspan="' + actividades.length + '" style="text-align:start;background:#1565C0;color:#fff;padding:6px 8px;">'
     + raLabel + '</th>'
-    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small></th>'
+    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small><br><button onclick="_copiarColumnaTotal(this)" title="Copiar columna Total RA" style="background:none;border:none;cursor:pointer;padding:1px 3px;color:#90CAF9;margin-top:2px;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button></th>'
     + '<th rowspan="2" style="background:#E65100;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Recuper.<br><small style=\'font-weight:400;opacity:0.85;\'>2da oport.</small></th>'
     + '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:80px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total<br><small style=\'font-weight:400;\'>RA + Recup.</small></th></tr>';
 
@@ -27690,6 +27690,24 @@ function _copiarColumnaNotas(actId, btn) {
     setTimeout(() => { btn.innerHTML = orig; }, 1200);
   }
   mostrarToast('Notas copiadas (' + curso.estudiantes.length + ' filas)', 'success');
+}
+
+function _copiarColumnaTotal(btn) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.estudiantes?.length) return;
+  const raKey = _getRaKey();
+  const planActiva = _getPlanActivaDeCurso();
+  const actsVisibles = planActiva?.actividades?.length ? planActiva.actividades : null;
+  const valores = curso.estudiantes.map(est => {
+    const n = _calcNotaRA(curso, est.id, raKey, actsVisibles);
+    return n !== null ? String(n) : '';
+  });
+  const texto = valores.join('\n');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(texto).catch(() => { const ta = document.createElement('textarea'); ta.value = texto; ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); });
+  } else { const ta = document.createElement('textarea'); ta.value = texto; ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+  if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:13px;color:#69F0AE;">check</span>'; setTimeout(() => { btn.innerHTML = orig; }, 1200); }
+  mostrarToast('Total RA copiado (' + curso.estudiantes.length + ' filas)', 'success');
 }
 
 function _copiarEnlaceDenuncias() {
