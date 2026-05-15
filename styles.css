@@ -4804,13 +4804,14 @@ body.dark-mode .imp-resumen-row span {
 
 /* Highlight columna y fila activas en tabla de calificaciones */
 .th-act.cal-col-activa {
-  background: #1A237E !important;
-  outline: 2.5px solid #82B1FF;
+  background: #E65100 !important;
+  outline: 2.5px solid #FF6D00;
   outline-offset: -2px;
+  color: #fff !important;
 }
 .td-nombre.cal-fila-activa {
-  background: #E8EAF6 !important;
-  outline: 2px solid #5C6BC0;
+  background: #FFF9C4 !important;
+  outline: 2.5px solid #F9A825;
   outline-offset: -2px;
 }
 
