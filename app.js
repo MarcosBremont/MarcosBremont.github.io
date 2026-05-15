@@ -10814,6 +10814,7 @@ function renderizarTablaCalificaciones() {
         + ' onkeydown="_notaKeyNav(event,this)"'
         + ' onwheel="event.preventDefault()"'
         + ' onfocus="_focusNotaInput(this)"'
+        + ' onblur="_limpiarHighlightCeldas()"'
         + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado || '').substring(0, 40)) + '"'
         + '/>' + recupDot + '</td>';
     });
@@ -10954,12 +10955,11 @@ function _focusNotaInput(el) {
 }
 
 function _highlightCeldaActiva(el) {
-  // Limpiar highlight anterior
   document.querySelectorAll('.cal-col-activa, .cal-fila-activa').forEach(e => {
     e.classList.remove('cal-col-activa', 'cal-fila-activa');
   });
   if (!el) return;
-  const parts = (el.id || '').split('-'); // nota-{estId}-{actId}  (actId puede tener guiones)
+  const parts = (el.id || '').split('-'); // nota-{estId}-{actId}
   if (parts.length < 3) return;
   const estId = parts[1];
   const actId = parts.slice(2).join('-');
@@ -10967,6 +10967,12 @@ function _highlightCeldaActiva(el) {
   const tdNombre = document.getElementById('nombre-' + estId);
   if (thCol) thCol.classList.add('cal-col-activa');
   if (tdNombre) tdNombre.classList.add('cal-fila-activa');
+}
+
+function _limpiarHighlightCeldas() {
+  document.querySelectorAll('.cal-col-activa, .cal-fila-activa').forEach(e => {
+    e.classList.remove('cal-col-activa', 'cal-fila-activa');
+  });
 }
 
 
