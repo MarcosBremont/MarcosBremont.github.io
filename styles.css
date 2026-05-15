@@ -4802,6 +4802,18 @@ body.dark-mode .imp-resumen-row span {
   filter: brightness(1);
 }
 
+/* Highlight columna y fila activas en tabla de calificaciones */
+.th-act.cal-col-activa {
+  background: #1A237E !important;
+  outline: 2.5px solid #82B1FF;
+  outline-offset: -2px;
+}
+.td-nombre.cal-fila-activa {
+  background: #E8EAF6 !important;
+  outline: 2px solid #5C6BC0;
+  outline-offset: -2px;
+}
+
 .hor-celda-inner {
   padding: 8px 10px;
   height: 100%;

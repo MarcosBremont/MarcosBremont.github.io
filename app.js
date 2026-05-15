@@ -10943,12 +10943,30 @@ function _moverNotaVertical(el, direccion) {
 
 function _focusNotaInput(el) {
   if (document.body.classList.contains('touch-mode')) {
-    el.blur(); // en modo táctil el teclado custom se abre vía touchstart
+    el.blur();
     return;
   }
   _notaActiva = true;
+  // Destacar columna y fila activas
+  _highlightCeldaActiva(el);
   el.focus({ preventScroll: true });
   el.select();
+}
+
+function _highlightCeldaActiva(el) {
+  // Limpiar highlight anterior
+  document.querySelectorAll('.cal-col-activa, .cal-fila-activa').forEach(e => {
+    e.classList.remove('cal-col-activa', 'cal-fila-activa');
+  });
+  if (!el) return;
+  const parts = (el.id || '').split('-'); // nota-{estId}-{actId}  (actId puede tener guiones)
+  if (parts.length < 3) return;
+  const estId = parts[1];
+  const actId = parts.slice(2).join('-');
+  const thCol = document.querySelector('.th-act[data-act-id="' + actId + '"]');
+  const tdNombre = document.getElementById('nombre-' + estId);
+  if (thCol) thCol.classList.add('cal-col-activa');
+  if (tdNombre) tdNombre.classList.add('cal-fila-activa');
 }
 
 
