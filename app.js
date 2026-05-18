@@ -7120,10 +7120,18 @@ function generarPlanificacion() {
 
 
       // 6. Generar actividades con fechas reales
-
-
-
+      // Preservar IDs anteriores por posición y EC para no perder diarias guardadas
+      const _actsAnteriores = planificacion.actividades || [];
       planificacion.actividades = generarActividades(ec, planificacion.fechasClase, _cantActPorEC);
+      // Reasignar IDs previos según EC + posición para mantener vínculo con estadoDiarias
+      const _idxPorEC = {};
+      planificacion.actividades.forEach(a => {
+        const k = a.ecCodigo || '';
+        _idxPorEC[k] = (_idxPorEC[k] || 0);
+        const pos = _idxPorEC[k]++;
+        const anterior = _actsAnteriores.filter(x => x.ecCodigo === k)[pos];
+        if (anterior && anterior.id) a.id = anterior.id;
+      });
 
       // 5b. Distribuir horas por EC según actividades × horas por sesión
       const _diasAct = Object.values(dg.diasClase || {}).filter(d => d.activo);
