@@ -22736,9 +22736,17 @@ function _tourFin() {
 
 // ─────────────────────────────────────────────────────────────
 // _arrancarApp: llamado por auth.js tras confirmar sesión, o en DOMContentLoaded si no hay Firebase
+function _ocultarSplash() {
+  const el = document.getElementById('splash-loader');
+  if (!el) return;
+  el.classList.add('oculto');
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+}
+
 function _arrancarApp() {
   if (window._appArranada) return;
   window._appArranada = true;
+  _ocultarSplash();
 
   // Limpiar planIds duplicados al arrancar (limpia datos existentes en Firebase)
   let hayCambios = false;

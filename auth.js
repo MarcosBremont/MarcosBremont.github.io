@@ -941,6 +941,8 @@ function _togglePassVis(inputId, btn) {
 }
 
 function _mostrarAuthOverlay() {
+  const splash = document.getElementById('splash-loader');
+  if (splash) { splash.classList.add('oculto'); setTimeout(() => splash.remove(), 500); }
   const el = document.getElementById('auth-overlay');
   if (el) el.classList.remove('hidden');
 }
