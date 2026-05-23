@@ -3305,6 +3305,20 @@ function _sincronizarValorActEnCalificaciones(act) {
   }
 }
 
+// Sincronizar valor de actividad desde calificaciones → planificación (biblioteca)
+function _sincronizarValorCalifEnPlanificacion(actividadId, nuevoValor) {
+  const curso = calState?.cursos?.[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) return;
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === curso.planActivaId);
+  if (!reg || !reg.planificacion || !reg.planificacion.actividades) return;
+  const act = reg.planificacion.actividades.find(a => a.id === actividadId);
+  if (!act) return;
+  if (act.valor === nuevoValor) return;
+  act.valor = nuevoValor;
+  persistirBiblioteca(biblio);
+}
+
 // ================================================================
 
 
@@ -11079,6 +11093,7 @@ function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
   }
 
   raInfo.valores[actividadId] = num;
+  _sincronizarValorCalifEnPlanificacion(actividadId, num);
   registrarCambio(`Valor de actividad actualizado a ${num} pts`);
   guardarCalificaciones();
 
