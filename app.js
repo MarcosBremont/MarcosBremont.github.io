@@ -23553,7 +23553,8 @@ function cerrarConfiguracion() {
 function _syncPreferencias() {
   if (!window._syncFirebase) return;
   const keys = ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana',
-                 'cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral'];
+                 'cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral',
+                 'planificadorRA_touchMode_v1'];
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
   _syncFirebase('preferencias', data);
@@ -23623,6 +23624,7 @@ function toggleModoTactil(on) {
   _inyectarCSSTouch(on);
   renderizarTablaCalificaciones();
   mostrarToast(on ? 'Modo táctil activado ✋' : 'Modo táctil desactivado', 'success');
+  _syncPreferencias();
 }
 
 function _inyectarCSSTouch(activo) {
@@ -23765,7 +23767,7 @@ function exportarDatos() {
   const backup = {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.21',
+      version: '15.22',
       exportado: ahora.toISOString(),
       exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     },
@@ -23974,7 +23976,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.21</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.22</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

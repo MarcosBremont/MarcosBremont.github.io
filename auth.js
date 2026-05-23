@@ -549,7 +549,7 @@ async function _migrarDatosLocales(uid) {
       }
       if (store === 'preferencias') {
         const data = {};
-        ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana','cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral'].forEach(k => {
+        ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana','cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral','planificadorRA_touchMode_v1'].forEach(k => {
           const v = localStorage.getItem(k); if (v !== null) data[k] = v;
         });
         if (Object.keys(data).length) await base.doc(store).set({ payload: JSON.stringify(data) });
