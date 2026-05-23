@@ -9722,6 +9722,14 @@ function _ensureRA(curso, raKey) {
       });
     }
 
+    // Reconciliar valores individuales desde la planificación (fuente de verdad)
+    acts.forEach(a => {
+      if (a.valor != null && raInfo.valores[a.id] !== a.valor) {
+        raInfo.valores[a.id] = a.valor;
+        cambioSync = true;
+      }
+    });
+
     if (cambioSync) guardarCalificaciones();
 
     const idsExistentes = new Set(raInfo.actividades);
