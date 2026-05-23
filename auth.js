@@ -28,6 +28,11 @@ const FIREBASE_STORES = [
   { store: 'geminiKey',            key: 'planificadorRA_geminiKey' },
   { store: 'openrouterKey',        key: 'planificadorRA_openrouterKey' },
   { store: 'stickies',             key: 'planificadorRA_stickies_v1' },
+  { store: 'notas_clase',          key: 'planificadorRA_notas_clase_v1' },
+  { store: 'obs_estudiantes',      key: 'planificadorRA_obs_estudiantes_v1' },
+  { store: 'eval_formas',          key: 'planificadorRA_eval_formas_v1' },
+  { store: 'cal_backups',          key: 'planificadorRA_cal_backups_v1' },
+  { store: 'preferencias',         key: 'planificadorRA_preferencias_v1' },
 ];
 
 const MIGRATION_FLAG = 'planificadorRA_migrated_v1';
@@ -407,6 +412,17 @@ async function _cargarDesdeFirestore(uid) {
           return;
         }
 
+        // Stores dinámicos: el payload es un objeto cuyos keys se restauran individualmente en localStorage
+        if (['notas_clase', 'obs_estudiantes', 'eval_formas', 'preferencias'].includes(store)) {
+          try {
+            const data = JSON.parse(doc.data().payload || '{}');
+            Object.entries(data).forEach(([k, v]) => {
+              if (v !== null && v !== undefined) localStorage.setItem(k, v);
+            });
+          } catch (e) { console.warn('Error expandiendo store dinámico:', store, e); }
+          return;
+        }
+
         localStorage.setItem(key, doc.data().payload);
       } catch (e) {
         console.warn('Error cargando store:', store, e);
@@ -512,10 +528,36 @@ async function _migrarDatosLocales(uid) {
   try {
     const base = db.collection('users').doc(uid).collection('data');
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        await base.doc(store).set({ payload: raw });
+      // Stores dinámicos: recolectar claves individuales en un objeto
+      if (store === 'notas_clase') {
+        const data = {};
+        Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
+        if (Object.keys(data).length) await base.doc(store).set({ payload: JSON.stringify(data) });
+        return;
       }
+      if (store === 'obs_estudiantes') {
+        const data = {};
+        Object.keys(localStorage).filter(k => k.startsWith('obs_est_')).forEach(k => { data[k] = localStorage.getItem(k); });
+        if (Object.keys(data).length) await base.doc(store).set({ payload: JSON.stringify(data) });
+        return;
+      }
+      if (store === 'eval_formas') {
+        const data = {};
+        Object.keys(localStorage).filter(k => k.startsWith('eval_')).forEach(k => { data[k] = localStorage.getItem(k); });
+        if (Object.keys(data).length) await base.doc(store).set({ payload: JSON.stringify(data) });
+        return;
+      }
+      if (store === 'preferencias') {
+        const data = {};
+        ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana','cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral'].forEach(k => {
+          const v = localStorage.getItem(k); if (v !== null) data[k] = v;
+        });
+        if (Object.keys(data).length) await base.doc(store).set({ payload: JSON.stringify(data) });
+        return;
+      }
+      // Store normal: clave única en localStorage
+      const raw = localStorage.getItem(key);
+      if (raw) await base.doc(store).set({ payload: raw });
     });
     await Promise.all(promesas);
     localStorage.setItem(MIGRATION_FLAG, '1');
@@ -523,7 +565,6 @@ async function _migrarDatosLocales(uid) {
     setTimeout(() => document.getElementById('auth-migration-toast')?.remove(), 3000);
   } catch (e) {
     console.error('Error en migración:', e);
-    // Marcar como migrado aunque haya fallado para no repetir indefinidamente
     localStorage.setItem(MIGRATION_FLAG, '1');
     setTimeout(() => document.getElementById('auth-migration-toast')?.remove(), 3000);
   }

@@ -2224,7 +2224,7 @@
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="cfg-asistencia-activa" checked
-                onchange="localStorage.setItem('cfg_asistencia_activa',this.checked);_aplicarAsistenciaActiva()">
+                onchange="localStorage.setItem('cfg_asistencia_activa',this.checked);_aplicarAsistenciaActiva();_syncPreferencias()">
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -2234,7 +2234,7 @@
               <small>Alerta cuando un estudiante baja de este porcentaje</small>
             </div>
             <input type="number" id="cfg-umbral-asist" min="1" max="100" value="80"
-              onchange="localStorage.setItem('asist_umbral',this.value);mostrarToast('Umbral guardado','success')"
+              onchange="localStorage.setItem('asist_umbral',this.value);mostrarToast('Umbral guardado','success');_syncPreferencias()"
               style="width:64px;padding:6px 8px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
           </div>
         </div>
@@ -2248,7 +2248,7 @@
               <small>Alerta cuando el promedio de un estudiante baja de este valor</small>
             </div>
             <input type="number" id="cfg-umbral-riesgo" min="1" max="100" value="70"
-              onchange="localStorage.setItem('cfg_umbral_riesgo', this.value); mostrarToast('Umbral de riesgo guardado', 'success')"
+              onchange="localStorage.setItem('cfg_umbral_riesgo', this.value); mostrarToast('Umbral de riesgo guardado', 'success');_syncPreferencias()"
               style="width:64px;padding:6px 8px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
           </div>
           <div class="toggle-row">
@@ -2257,7 +2257,7 @@
               <small>Alerta cuando un estudiante tiene este número o más actividades sin calificar</small>
             </div>
             <input type="number" id="cfg-umbral-acts" min="1" max="20" value="3"
-              onchange="localStorage.setItem('cfg_umbral_acts', this.value); mostrarToast('Umbral de actividades guardado', 'success')"
+              onchange="localStorage.setItem('cfg_umbral_acts', this.value); mostrarToast('Umbral de actividades guardado', 'success');_syncPreferencias()"
               style="width:64px;padding:6px 8px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;font-weight:700;text-align:center;">
           </div>
         </div>
@@ -2287,7 +2287,7 @@
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="cfg-alertas" checked
-                onchange="localStorage.setItem('cfg_alertas',this.checked);renderizarDashboard()">
+                onchange="localStorage.setItem('cfg_alertas',this.checked);renderizarDashboard();_syncPreferencias()">
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -2298,7 +2298,7 @@
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="cfg-manana" checked
-                onchange="localStorage.setItem('cfg_manana',this.checked);renderizarDashboard()">
+                onchange="localStorage.setItem('cfg_manana',this.checked);renderizarDashboard();_syncPreferencias()">
               <span class="toggle-slider"></span>
             </label>
           </div>

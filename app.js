@@ -9315,6 +9315,7 @@ function _guardarBackupCalificaciones() {
     backups.unshift({ ts, label, data: current });
     while (backups.length > CAL_BACKUP_MAX) backups.pop();
     localStorage.setItem(CAL_BACKUP_KEY, JSON.stringify(backups));
+    if (window._syncFirebase) _syncFirebase('cal_backups', backups);
   } catch (e) { console.warn('Backup cal error:', e); }
 }
 
@@ -14192,6 +14193,11 @@ function guardarObsEstudiante(key, valor) {
     else localStorage.removeItem(key);
     registrarCambio('Observaciones de estudiante actualizadas');
     if (ind) ind.style.display = 'inline';
+    if (window._syncFirebase) {
+      const data = {};
+      Object.keys(localStorage).filter(k => k.startsWith('obs_est_')).forEach(k => { data[k] = localStorage.getItem(k); });
+      _syncFirebase('obs_estudiantes', data);
+    }
   }, 600);
 }
 
@@ -23544,16 +23550,27 @@ function cerrarConfiguracion() {
   document.body.style.overflow = '';
 }
 
+function _syncPreferencias() {
+  if (!window._syncFirebase) return;
+  const keys = ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana',
+                 'cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral'];
+  const data = {};
+  keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
+  _syncFirebase('preferencias', data);
+}
+
 function toggleDarkMode(on) {
   localStorage.setItem('cfg_dark_mode', on);
   document.body.classList.toggle('dark-mode', on);
   mostrarToast(on ? 'Modo oscuro activado 🌙' : 'Modo claro activado ☀️', 'success');
+  _syncPreferencias();
 }
 
 function toggleFuenteGrande(on) {
   localStorage.setItem('cfg_fuente_grande', on);
   document.body.classList.toggle('fuente-grande', on);
   mostrarToast(on ? 'Fuente grande activada' : 'Fuente normal activada', 'success');
+  _syncPreferencias();
 }
 
 function limpiarTodosDatos() {
@@ -24645,6 +24662,11 @@ function guardarNotaClaseDebounce(key, valor) {
     localStorage.setItem(key, valor);
     registrarCambio('Nota de clase actualizada');
     if (ind) { ind.style.display = 'inline'; }
+    if (window._syncFirebase) {
+      const data = {};
+      Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
+      _syncFirebase('notas_clase', data);
+    }
   }, 600);
 }
 
@@ -24654,6 +24676,11 @@ function borrarNotaClase(key) {
   const ta = document.getElementById('mcl-nota-textarea');
   if (ta) ta.value = '';
   mostrarToast('Nota borrada', 'success');
+  if (window._syncFirebase) {
+    const data = {};
+    Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
+    _syncFirebase('notas_clase', data);
+  }
 }
 
 function _guardarRecursoDesdeModal(actId, url) {
@@ -24853,6 +24880,11 @@ function toggleFormaEval(evalKey, formaId, color, btn) {
   btn.style.background = activo ? color + '18' : '';
   btn.style.borderColor = activo ? color : '';
   btn.style.color = activo ? color : '';
+  if (window._syncFirebase) {
+    const data = {};
+    Object.keys(localStorage).filter(k => k.startsWith('eval_')).forEach(k => { data[k] = localStorage.getItem(k); });
+    _syncFirebase('eval_formas', data);
+  }
 }
 
 
