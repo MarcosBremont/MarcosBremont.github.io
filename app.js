@@ -11010,39 +11010,6 @@ function _limpiarHighlightCeldas() {
 // ─── Actualizar notas (usa raKey del curso activo) ──────────────
 
 // ── Navegación de teclado en inputs de nota sin scroll ──────────
-function _notaKeyNav(e, el) {
-  // Evitar que flechas arriba/abajo hagan scroll de la página
-  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-    e.preventDefault();
-    const delta = e.key === 'ArrowUp' ? 0.5 : -0.5;
-    const max = parseFloat(el.max) || 100;
-    const cur = parseFloat(el.value) || 0;
-    const nv = Math.min(max, Math.max(0, Math.round((cur + delta) * 2) / 2));
-    el.value = nv;
-    el.dispatchEvent(new Event('input'));
-    return;
-  }
-  // Enter o Tab → mover al siguiente input-nota
-  if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
-    e.preventDefault();
-    const todos = Array.from(document.querySelectorAll('.input-nota'));
-    const idx = todos.indexOf(el);
-    if (idx >= 0 && idx + 1 < todos.length) {
-      todos[idx + 1].focus();
-      todos[idx + 1].select();
-    }
-  }
-  // Shift+Tab → mover al anterior
-  if (e.key === 'Tab' && e.shiftKey) {
-    e.preventDefault();
-    const todos = Array.from(document.querySelectorAll('.input-nota'));
-    const idx = todos.indexOf(el);
-    if (idx > 0) {
-      todos[idx - 1].focus();
-      todos[idx - 1].select();
-    }
-  }
-}
 
 function registrarNota(estudianteId, actividadId, valor) {
   const curso = calState.cursos[calState.cursoActivoId];
