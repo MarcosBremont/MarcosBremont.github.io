@@ -10839,6 +10839,7 @@ function renderizarTablaCalificaciones() {
       const isTouchMode = document.body.classList.contains('touch-mode');
       cells += '<td' + tdStyle + '><input type="number" class="input-nota ' + cls + '"'
         + ' id="nota-' + est.id + '-' + a.id + '"'
+        + ' data-act-id="' + a.id + '"'
         + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
         + (isTouchMode ? ' inputmode="none" readonly' : '')
         + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
@@ -10945,31 +10946,21 @@ function _notaKeyNav(e, el) {
 }
 
 function _moverNotaVertical(el, direccion) {
-  // El id del input es "nota-{estId}-{actId}"
-  // La tabla tiene una fila por estudiante y una columna por actividad
-  // Buscamos el input en la misma columna (actId) pero la siguiente fila (estId)
-  const tbody = document.getElementById('cal-tbody');
-  if (!tbody) return _focusNotaInput(el); // fallback
+  const actId = el.dataset.actId;
+  if (!actId) return;
 
-  const filas = Array.from(tbody.querySelectorAll('tr'));
-  // Encontrar qué fila y qué celda tiene este input
-  let filaActual = -1, celdaActual = -1;
-  for (let f = 0; f < filas.length; f++) {
-    const inputs = Array.from(filas[f].querySelectorAll('.input-nota'));
-    const c = inputs.indexOf(el);
-    if (c >= 0) { filaActual = f; celdaActual = c; break; }
-  }
+  const tbody = document.getElementById('cal-tbody');
+  if (!tbody) return;
+
+  const filas = Array.from(tbody.querySelectorAll(':scope > tr'));
+  const filaActual = filas.findIndex(tr => tr.contains(el));
   if (filaActual < 0) return;
 
-  // Buscar en dirección (arriba o abajo) el mismo índice de columna
-  let siguienteFila = filaActual + direccion;
-  while (siguienteFila >= 0 && siguienteFila < filas.length) {
-    const inputs = Array.from(filas[siguienteFila].querySelectorAll('.input-nota'));
-    if (inputs[celdaActual]) {
-      _focusNotaInput(inputs[celdaActual]);
-      return;
-    }
-    siguienteFila += direccion;
+  let f = filaActual + direccion;
+  while (f >= 0 && f < filas.length) {
+    const target = filas[f].querySelector(`input.input-nota[data-act-id="${CSS.escape(actId)}"]`);
+    if (target) { _focusNotaInput(target); return; }
+    f += direccion;
   }
 }
 
