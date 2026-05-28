@@ -5405,6 +5405,70 @@ function copiarPortapapeles() {
 
 
 const STORAGE_KEY = 'planificadorRA_borrador_v1';
+const ACTIVE_YEAR_KEY = 'planificadorRA_active_year_v1';
+const ARCHIVES_KEY = 'planificadorRA_year_archives_v1';
+
+function _getSchoolYearKey(now = new Date()) {
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const baseYear = month >= 8 ? year : year - 1;
+  return baseYear + '-' + (baseYear + 1);
+}
+
+function _getNextSchoolYearKey(now = new Date()) {
+  const current = _getSchoolYearKey(now);
+  const [startYear, endYear] = current.split('-').map(Number);
+  return (startYear + 1) + '-' + (endYear + 1);
+}
+
+function _loadArchivedYears() {
+  try {
+    const raw = localStorage.getItem(ARCHIVES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function _saveArchivedYears(list) {
+  localStorage.setItem(ARCHIVES_KEY, JSON.stringify(list));
+  if (window._syncFirebase) {
+    window._syncFirebase('year_archives', list);
+  }
+}
+
+function _buildExportSnapshot() {
+  const now = new Date();
+  return {
+    _meta: {
+      app: 'El Gran Planificador',
+      version: '15.22',
+      exportado: now.toISOString(),
+      exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
+    },
+    biblioteca: localStorage.getItem(BIBLIO_KEY) || '{"items":[]}',
+    calificaciones: localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}',
+    horario: localStorage.getItem(HORARIO_KEY) || '[]',
+    tareas: localStorage.getItem(TAREAS_KEY) || '[]',
+    asistencia: localStorage.getItem(ASIST_KEY) || '{}',
+    comentarios: localStorage.getItem(COMENT_KEY) || '{}',
+    notasClase: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_')))),
+    obsEstudiantes: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_')))),
+    evalFormas: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('eval_')))),
+    diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
+    incidencias: localStorage.getItem(INCID_KEY) || '{}',
+    recuperaciones: localStorage.getItem(RECUP_KEY) || '{}',
+    borrador: localStorage.getItem(STORAGE_KEY) || 'null',
+    groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || '',
+    openrouterKey: localStorage.getItem(OPENROUTER_KEY_STORAGE) || '',
+    notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
+    libreta: localStorage.getItem(LIBRETA_KEY) || '{"entries":[]}',
+    cuentasEstudiantes: localStorage.getItem(CUENTAS_EST_KEY) || '{"cuentas":[]}'
+  };
+}
 
 
 
@@ -23414,6 +23478,109 @@ function _generarFechasDesde(dg) {
 
 var _backupFileData = null;
 
+async function archivarCicloActual() {
+  if (!window.currentUser || !window.currentUser.uid) {
+    mostrarToast('Inicia sesión para archivar ciclos en Firebase', 'error');
+    return;
+  }
+  if (!window.firebase || !firebase.firestore) {
+    mostrarToast('Firebase no está disponible para archivar datos', 'error');
+    return;
+  }
+
+  const currentYear = _getSchoolYearKey();
+  const nextYear = _getNextSchoolYearKey();
+  if (!confirm('¿Archivar el ciclo ' + currentYear + ' y dejarlo disponible en el historial?\n\nEl año activo se moverá a ' + nextYear + '.')) {
+    return;
+  }
+
+  try {
+    const snapshot = _buildExportSnapshot();
+    const biblio = cargarBiblioteca();
+    const cal = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}');
+    const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
+    const tareas = JSON.parse(localStorage.getItem(TAREAS_KEY) || '[]');
+    const asistencia = JSON.parse(localStorage.getItem(ASIST_KEY) || '{}');
+
+    const archiveDoc = {
+      yearLabel: currentYear,
+      yearId: currentYear,
+      closedAt: new Date().toISOString(),
+      counts: {
+        planificaciones: (biblio.items || []).length,
+        cursos: Object.keys(cal.cursos || {}).length,
+        sesionesDiarias: Object.keys(diarias.sesiones || {}).length,
+        tareas: Array.isArray(tareas) ? tareas.length : 0,
+        registrosAsistencia: Object.keys(asistencia || {}).length
+      },
+      snapshot,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(currentYear);
+    await archiveRef.set(archiveDoc, { merge: true });
+
+    const archivedYears = _loadArchivedYears();
+    const existingIndex = archivedYears.findIndex(item => item.id === currentYear);
+    const entry = {
+      id: currentYear,
+      yearLabel: currentYear,
+      closedAt: archiveDoc.closedAt,
+      counts: archiveDoc.counts
+    };
+    if (existingIndex >= 0) archivedYears[existingIndex] = entry;
+    else archivedYears.unshift(entry);
+
+    localStorage.setItem(ACTIVE_YEAR_KEY, nextYear);
+    if (window._syncFirebase) {
+      window._syncFirebase('active_year', nextYear);
+    }
+    _saveArchivedYears(archivedYears);
+
+    mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase', 'success');
+    abrirBackup();
+  } catch (e) {
+    mostrarToast('Error archivando ciclo: ' + e.message, 'error');
+  }
+}
+
+function renderizarCiclosAcademicos() {
+  const activeYear = localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey();
+  const archivedYears = _loadArchivedYears();
+
+  const activeEl = document.getElementById('backup-active-year');
+  if (activeEl) activeEl.textContent = activeYear;
+
+  const listEl = document.getElementById('backup-archivos-lista');
+  if (!listEl) return;
+
+  if (!archivedYears.length) {
+    listEl.innerHTML = '<div style="border:1.5px dashed #E0E0E0;border-radius:10px;padding:12px;text-align:center;color:#78909C;font-size:0.82rem;">Aún no hay ciclos archivados. Cierra el ciclo actual para guardar su historial.</div>';
+    return;
+  }
+
+  listEl.innerHTML = archivedYears.map(item => {
+    const counts = item.counts || {};
+    const fecha = item.closedAt ? new Date(item.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    const badge = item.id === activeYear ? '<span style="display:inline-flex;align-items:center;padding:2px 8px;background:#E8F5E9;color:#2E7D32;border-radius:999px;font-size:0.68rem;font-weight:800;">Activo</span>' : '';
+    return '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid #E0E0E0;border-radius:10px;background:#fff;margin-bottom:8px;">' +
+      '<div style="flex:1;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+          '<div style="font-size:0.95rem;font-weight:800;color:#1565C0;">' + escapeHTML(item.yearLabel) + '</div>' +
+          badge +
+        '</div>' +
+        '<div style="font-size:0.74rem;color:#78909C;margin-bottom:6px;">Archivado: ' + escapeHTML(fecha) + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.72rem;color:#616161;">' +
+          '<span style="background:#F1F8E9;color:#2E7D32;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.planificaciones || 0) + ' planificaciones</span>' +
+          '<span style="background:#E3F2FD;color:#1565C0;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.cursos || 0) + ' cursos</span>' +
+          '<span style="background:#FFF3E0;color:#E65100;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.sesionesDiarias || 0) + ' sesiones diarias</span>' +
+        '</div>' +
+      '</div>' +
+      '<span class="material-icons" style="color:#90A4AE;font-size:20px;">history</span>' +
+    '</div>';
+  }).join('');
+}
+
 function abrirBackup() {
   _backupFileData = null;
   document.getElementById('backup-overlay').classList.remove('hidden');
@@ -23422,6 +23589,11 @@ function abrirBackup() {
   document.getElementById('backup-preview').innerHTML = '';
   document.getElementById('backup-btn-importar').style.display = 'none';
   document.getElementById('backup-file-input').value = '';
+
+  const archiveBtn = document.getElementById('backup-archivar-btn');
+  if (archiveBtn) archiveBtn.disabled = !window.currentUser;
+
+  renderizarCiclosAcademicos();
 
   // Resumen de datos actuales
   const biblio = cargarBiblioteca();
@@ -23730,38 +23902,7 @@ function cerrarAcercaDe() {
 
 function exportarDatos() {
   const ahora = new Date();
-  const backup = {
-    _meta: {
-      app: 'El Gran Planificador',
-      version: '15.22',
-      exportado: ahora.toISOString(),
-      exportadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    },
-    biblioteca: localStorage.getItem(BIBLIO_KEY) || '{"items":[]}',
-    calificaciones: localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos": {}}',
-    horario: localStorage.getItem(HORARIO_KEY) || '[]',
-    tareas: localStorage.getItem(TAREAS_KEY) || '[]',
-    asistencia: localStorage.getItem(ASIST_KEY) || '{}',
-    comentarios: localStorage.getItem(COMENT_KEY) || '{}',
-    notasClase: JSON.stringify(Object.fromEntries(
-      Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_'))
-    )),
-    obsEstudiantes: JSON.stringify(Object.fromEntries(
-      Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_'))
-    )),
-    evalFormas: JSON.stringify(Object.fromEntries(
-      Object.entries(localStorage).filter(([k]) => k.startsWith('eval_'))
-    )),
-    diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
-    incidencias: localStorage.getItem(INCID_KEY) || '{}',
-    recuperaciones: localStorage.getItem(RECUP_KEY) || '{}',
-    borrador: localStorage.getItem(STORAGE_KEY) || 'null',
-    groqKey: localStorage.getItem(GROQ_KEY_STORAGE) || '',
-    openrouterKey: localStorage.getItem(OPENROUTER_KEY_STORAGE) || '',
-    notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
-    libreta: localStorage.getItem(LIBRETA_KEY) || '{"entries":[]}',
-    cuentasEstudiantes: localStorage.getItem(CUENTAS_EST_KEY) || '{"cuentas":[]}'
-  };
+  const backup = _buildExportSnapshot();
 
   const json = JSON.stringify(backup, null, 2);
   const blob = new Blob([json], { type: 'application/json' });

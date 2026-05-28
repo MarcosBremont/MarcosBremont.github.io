@@ -3609,6 +3609,27 @@
 
         <div class="backup-divider"></div>
 
+        <!-- Ciclos académicos -->
+        <div class="backup-section">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#6A1B9A;">school</span>
+            Ciclos académicos archivados
+          </div>
+          <p class="backup-desc">Cierra el ciclo actual para guardarlo en Firebase y deja visible el historial de años anteriores sin perder los datos.</p>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;border-radius:10px;background:#F3E5F5;margin-bottom:10px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Año activo</div>
+              <div id="backup-active-year" style="font-size:1.02rem;font-weight:800;color:#4A148C;margin-top:2px;">—</div>
+            </div>
+            <button id="backup-archivar-btn" class="btn-siguiente" onclick="archivarCicloActual()" style="width:auto;justify-content:center;padding:10px 14px;">Cerrar ciclo y archivar</button>
+          </div>
+
+          <div id="backup-archivos-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <div class="backup-divider"></div>
+
         <!-- Importar -->
         <div class="backup-section">
           <div class="backup-section-title">

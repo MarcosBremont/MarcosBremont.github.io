@@ -32,6 +32,8 @@ const FIREBASE_STORES = [
   { store: 'obs_estudiantes',      key: 'planificadorRA_obs_estudiantes_v1' },
   { store: 'eval_formas',          key: 'planificadorRA_eval_formas_v1' },
   { store: 'cal_backups',          key: 'planificadorRA_cal_backups_v1' },
+  { store: 'year_archives',       key: 'planificadorRA_year_archives_v1' },
+  { store: 'active_year',          key: 'planificadorRA_active_year_v1' },
   { store: 'preferencias',         key: 'planificadorRA_preferencias_v1' },
 ];
 
