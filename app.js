@@ -23625,7 +23625,12 @@ function identificarEstudiantesRAsPendientes() {
     } catch (e) { /* ignore */ }
   });
 
-  listaWrap.innerHTML = pendientes.map((p, idx) => {
+  // render list with a master select-all checkbox
+  let htmlList = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    + '<label style="font-weight:700;"><input id="recup-select-all" type="checkbox" style="margin-right:8px;" /> Seleccionar todo</label>'
+    + '</div>';
+
+  htmlList += pendientes.map((p, idx) => {
     const cursoObj = (calState.cursos || {})[p.cursoId] || {};
     const items = p.faltantes.map(f => {
       const raFromBiblio = raDescMap[f.raKey];
@@ -23634,14 +23639,34 @@ function identificarEstudiantesRAsPendientes() {
         : f.raKey;
       return '<li style="margin-bottom:4px;">' + escapeHTML(raLabel) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 160)) + '</li>';
     }).join('');
-    return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">' +
-      '<input type="checkbox" data-idx="' + idx + '" style="margin-top:6px;" checked />' +
-      '<div style="flex:1;">' +
-        '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>' +
-        '<ul style="margin:6px 0 0 16px;padding:0;color:#424242;">' + items + '</ul>' +
-      '</div>' +
-    '</div>';
+    return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">'
+      + '<input type="checkbox" data-idx="' + idx + '" class="recup-item" style="margin-top:6px;" checked />'
+      + '<div style="flex:1;">'
+        + '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>'
+        + '<ul style="margin:6px 0 0 16px;padding:0;color:#424242;">' + items + '</ul>'
+      + '</div>'
+    + '</div>';
   }).join('');
+
+  listaWrap.innerHTML = htmlList;
+
+  // attach select-all behavior
+  const masterCb = document.getElementById('recup-select-all');
+  if (masterCb) {
+    masterCb.addEventListener('change', function () {
+      const itemCbs = listaWrap.querySelectorAll('input.recup-item');
+      itemCbs.forEach(cb => cb.checked = masterCb.checked);
+    });
+  }
+  // update master checkbox state when items change
+  const itemCbs = listaWrap.querySelectorAll('input.recup-item');
+  itemCbs.forEach(cb => cb.addEventListener('change', function () {
+    const all = Array.from(listaWrap.querySelectorAll('input.recup-item'));
+    const checkedCount = all.filter(x => x.checked).length;
+    if (!masterCb) return;
+    masterCb.checked = checkedCount === all.length;
+    masterCb.indeterminate = checkedCount > 0 && checkedCount < all.length;
+  }));
 
   window._recupPendientesCache = pendientes;
   if (resultadoWrap) resultadoWrap.innerHTML = '';
