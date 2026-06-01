@@ -23761,6 +23761,7 @@ async function generarRecuperacionesIA() {
       + '<button class="btn-secundario" onclick="copiarResultadoRecuperaciones()">Copiar resultado</button>'
       + '<button class="btn-secundario" onclick="descargarResultadoRecuperaciones(\'json\')">Descargar JSON</button>'
       + '<button class="btn-secundario" onclick="descargarResultadoRecuperaciones(\'txt\')">Descargar TXT</button>'
+      + '<button class="btn-secundario" onclick="descargarResultadoRecuperaciones(\'docx\')">Descargar Word</button>'
       + '</div>';
 
     resultadoWrap.innerHTML = outHtml;
@@ -23807,10 +23808,35 @@ function copiarResultadoRecuperaciones() {
   });
 }
 
-function descargarResultadoRecuperaciones(tipo) {
+async function descargarResultadoRecuperaciones(tipo) {
   const txt = window._recupGeneradoUltimo;
   if (!txt) { mostrarToast('No hay generación previa para descargar.', 'error'); return; }
+
   try {
+    if (tipo === 'docx') {
+      if (typeof window.docx === 'undefined' || !window.docx.Document || !window.docx.Packer || !window.docx.Paragraph || !window.docx.TextRun) {
+        mostrarToast('No se puede generar Word: la librería docx no está disponible.', 'error');
+        return;
+      }
+      const { Document, Packer, Paragraph, TextRun } = window.docx;
+      const lines = txt.split(/\r?\n/);
+      const paragraphs = lines.map(line => new Paragraph({
+        children: [new TextRun({ text: line || ' ' })]
+      }));
+      const doc = new Document({ sections: [{ properties: {}, children: paragraphs }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'recuperaciones.docx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      mostrarToast('Descarga de Word iniciada', 'success');
+      return;
+    }
+
     const mime = tipo === 'json' ? 'application/json' : 'text/plain';
     const ext = tipo === 'json' ? 'json' : 'txt';
     const blob = new Blob([txt], { type: mime + ';charset=utf-8' });
@@ -23830,6 +23856,7 @@ window.identificarEstudiantesRAsPendientes = identificarEstudiantesRAsPendientes
 window.generarRecuperacionesIA = generarRecuperacionesIA;
 window._crearPlanesRecuperacionDesdeResultado = _crearPlanesRecuperacionDesdeResultado;
 window.copiarResultadoRecuperaciones = copiarResultadoRecuperaciones;
+window.descargarResultadoRecuperaciones = descargarResultadoRecuperaciones;
 
 async function verCicloArchivado(yearId) {
   const detailContent = document.getElementById('backup-archivos-detalle-contenido');
