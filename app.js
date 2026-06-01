@@ -23719,9 +23719,51 @@ async function generarRecuperacionesIA() {
     if (!data) throw new Error('Sin respuesta de IA');
 
     const text = typeof data === 'string' ? data : (data.text || JSON.stringify(data));
-    resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#ECEFF1;color:#263238;white-space:pre-wrap;">' + escapeHTML(text) + '</div>' +
-      '<div style="margin-top:8px;"><button class="btn-siguiente" onclick="_crearPlanesRecuperacionDesdeResultado()">Crear plan(es) en Biblioteca</button> <button class="btn-secundario" onclick="copiarResultadoRecuperaciones()">Copiar resultado</button></div>';
 
+    // Try to parse JSON result (best-effort)
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      // try to extract JSON substring between first { or [ and last } or ]
+      const first = Math.min(...['{','['].map(c => { const i = text.indexOf(c); return i===-1?Infinity:i;}));
+      const last = Math.max(...['}',']'].map(c => { const i = text.lastIndexOf(c); return i===-1?-Infinity:i;}));
+      if (first !== Infinity && last !== -Infinity && last > first) {
+        try { parsed = JSON.parse(text.substring(first, last+1)); } catch (e2) { parsed = null; }
+      }
+    }
+
+    let outHtml = '';
+    if (parsed && (Array.isArray(parsed) || typeof parsed === 'object')) {
+      const entries = Array.isArray(parsed) ? parsed : (parsed.resultados || parsed.items || parsed.recuperaciones || [parsed]);
+      outHtml += '<div style="display:flex;gap:8px;flex-direction:column;">';
+      entries.forEach((ent, i) => {
+        const est = ent.estudiante || ent.student || ent.name || ent.nombre || ('Estudiante ' + (i+1));
+        const curso = ent.curso || ent.course || '';
+        outHtml += '<div style="padding:12px;border-radius:8px;border:1px solid #E0E0E0;background:#fff;">';
+        outHtml += '<div style="font-weight:800;color:#1A237E;margin-bottom:6px;">' + escapeHTML(String(est)) + (curso ? ' — ' + escapeHTML(String(curso)) : '') + '</div>';
+        if (ent.pendientes && Array.isArray(ent.pendientes)) {
+          outHtml += '<div style="font-size:0.92rem;color:#424242;margin-bottom:6px;"><strong>Pendientes:</strong><ul>' + ent.pendientes.map(p => '<li>' + escapeHTML((p.codigo||p.raKey||p).toString()) + ': ' + escapeHTML((p.descripcion||p.actividadDesc||p).toString().substring(0,200)) + '</li>').join('') + '</ul></div>';
+        }
+        if (ent.sugerencias && Array.isArray(ent.sugerencias)) {
+          outHtml += '<div style="font-size:0.92rem;color:#424242;"><strong>Sugerencias:</strong>' + ent.sugerencias.map(s => '<div style="margin-top:6px;padding:8px;border-radius:6px;background:#FAFAFA;">' + '<strong>' + escapeHTML(s.tipo || '') + '</strong>: ' + escapeHTML((s.descripcion || s.texto || '').toString().substring(0,600)) + (s.pasos ? '<div style="margin-top:6px;"><em>Pasos:</em><ol>' + (Array.isArray(s.pasos) ? s.pasos.map(ps => '<li>' + escapeHTML(ps) + '</li>').join('') : ('<li>' + escapeHTML(String(s.pasos)) + '</li>')) + '</ol></div>' : '') + '</div>').join('') + '</div>';
+        }
+        outHtml += '</div>';
+      });
+      outHtml += '</div>';
+      outHtml = '<div style="padding:10px;border-radius:8px;background:#ECEFF1;color:#263238;">' + outHtml + '</div>';
+    } else {
+      outHtml = '<div style="padding:10px;border-radius:8px;background:#ECEFF1;color:#263238;white-space:pre-wrap;">' + escapeHTML(text) + '</div>';
+    }
+
+    outHtml += '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="btn-siguiente" onclick="_crearPlanesRecuperacionDesdeResultado()">Crear plan(es) en Biblioteca</button>'
+      + '<button class="btn-secundario" onclick="copiarResultadoRecuperaciones()">Copiar resultado</button>'
+      + '<button class="btn-secundario" onclick="descargarResultadoRecuperaciones(\'json\')">Descargar JSON</button>'
+      + '<button class="btn-secundario" onclick="descargarResultadoRecuperaciones(\'txt\')">Descargar TXT</button>'
+      + '</div>';
+
+    resultadoWrap.innerHTML = outHtml;
     window._recupGeneradoUltimo = text;
   } catch (e) {
     console.error('Error IA recuperaciones:', e);
@@ -23763,6 +23805,24 @@ function copiarResultadoRecuperaciones() {
   }, () => {
     mostrarToast('No se pudo copiar el resultado', 'error');
   });
+}
+
+function descargarResultadoRecuperaciones(tipo) {
+  const txt = window._recupGeneradoUltimo;
+  if (!txt) { mostrarToast('No hay generación previa para descargar.', 'error'); return; }
+  try {
+    const mime = tipo === 'json' ? 'application/json' : 'text/plain';
+    const ext = tipo === 'json' ? 'json' : 'txt';
+    const blob = new Blob([txt], { type: mime + ';charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'recuperaciones.' + ext;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    mostrarToast('Descarga iniciada', 'success');
+  } catch (e) {
+    mostrarToast('Error al descargar: ' + (e.message || String(e)), 'error');
+  }
 }
 
 // Expose recovery helpers to inline event handlers in index.html
