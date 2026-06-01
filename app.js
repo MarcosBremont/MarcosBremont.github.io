@@ -23684,16 +23684,22 @@ async function generarRecuperacionesIA() {
   const seleccionados = [];
   const itemCheckboxes = listaWrap.querySelectorAll('input.recup-item');
   if (!itemCheckboxes.length) {
+    console.log('[IA RECUP] no se encontraron checkboxes en recup-lista');
     mostrarToast('No se encontraron casillas de selección. Ejecuta la búsqueda de nuevo.', 'error');
     return;
   }
   itemCheckboxes.forEach(cb => {
     const idx = parseInt(cb.dataset.idx, 10);
-    if (cb.checked && !Number.isNaN(idx) && window._recupPendientesCache[idx]) {
+    if (cb.checked && !Number.isNaN(idx) && window._recupPendientesCache && window._recupPendientesCache[idx]) {
       seleccionados.push(window._recupPendientesCache[idx]);
     }
   });
-  if (!seleccionados.length) { mostrarToast('Selecciona al menos un estudiante.', 'error'); return; }
+  console.log('[IA RECUP] checkboxes encontrados:', itemCheckboxes.length, 'seleccionados:', seleccionados.length);
+  if (!seleccionados.length) {
+    console.log('[IA RECUP] ningun estudiante seleccionado, ver cache:', window._recupPendientesCache);
+    mostrarToast('Selecciona al menos un estudiante.', 'error');
+    return;
+  }
 
   resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFF3E0;color:#E65100;">Generando recursos con IA…</div>';
 
@@ -23711,21 +23717,30 @@ async function generarRecuperacionesIA() {
   });
   prompt += `Devuelve el resultado en JSON con claves: estudiante, curso, pendientes[], sugerencias[] (tipo, descripcion, pasos, tiempo aprox). Tipo solicitado: ${tipo}. Sé conciso.`;
 
+  console.log('[IA RECUP] prompt generado:', prompt);
+  console.log('[IA RECUP] claves disponibles — Groq:', !!getGroqKey(), 'Gemini:', !!getGeminiKey(), 'OpenRouter:', !!getOpenRouterKey());
+
   try {
     let data = null;
     if (getGroqKey()) {
       mostrarToast('🧠 Generando con Groq...', 'info');
       data = await _llamarGroqConFallback(prompt, 'Generando recuperaciones', 2048);
+      console.log('[IA RECUP] Groq respuesta:', data);
     }
     if (!data && getGeminiKey()) {
       mostrarToast('🟡 Generando con Gemini...', 'info');
       data = await _llamarGemini(prompt, 2048);
+      console.log('[IA RECUP] Gemini respuesta:', data);
     }
     if (!data && getOpenRouterKey()) {
       mostrarToast('🔵 Generando con OpenRouter...', 'info');
       data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando recuperaciones', 2048, 45000);
+      console.log('[IA RECUP] OpenRouter respuesta:', data);
     }
-    if (!data) throw new Error('Sin respuesta de IA');
+    if (!data) {
+      console.log('[IA RECUP] no se obtuvo data de ningun proveedor');
+      throw new Error('Sin respuesta de IA');
+    }
 
     const text = typeof data === 'string' ? data : (data.text || JSON.stringify(data));
 
@@ -23776,7 +23791,7 @@ async function generarRecuperacionesIA() {
     resultadoWrap.innerHTML = outHtml;
     window._recupGeneradoUltimo = text;
   } catch (e) {
-    console.error('Error IA recuperaciones:', e);
+    console.error('[IA RECUP] Error IA recuperaciones:', e);
     resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFEBEE;color:#C62828;">Error al generar: ' + escapeHTML(e.message || String(e)) + '</div>';
   }
 }
