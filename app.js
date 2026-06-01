@@ -23615,7 +23615,13 @@ function identificarEstudiantesRAsPendientes() {
   }
 
   listaWrap.innerHTML = pendientes.map((p, idx) => {
-    const items = p.faltantes.map(f => '<li style="margin-bottom:4px;">' + escapeHTML(f.raKey) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 80)) + '</li>').join('');
+    const cursoObj = (calState.cursos || {})[p.cursoId] || {};
+    const items = p.faltantes.map(f => {
+      const raLabel = (cursoObj.ras && cursoObj.ras[f.raKey] && (cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion))
+        ? (cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion)
+        : f.raKey;
+      return '<li style="margin-bottom:4px;">' + escapeHTML(raLabel) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 120)) + '</li>';
+    }).join('');
     return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">' +
       '<input type="checkbox" data-idx="' + idx + '" style="margin-top:6px;" checked />' +
       '<div style="flex:1;">' +
