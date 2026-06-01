@@ -23614,13 +23614,25 @@ function identificarEstudiantesRAsPendientes() {
     return;
   }
 
+  // Build a map from raKey -> full RA description from Biblioteca (if available)
+  const biblio = cargarBiblioteca();
+  const raDescMap = {};
+  (biblio.items || []).forEach(it => {
+    try {
+      const key = _getPlanIdClave(it.id);
+      const desc = (it.planificacion && it.planificacion.ra && it.planificacion.ra.descripcion) ? it.planificacion.ra.descripcion : null;
+      if (key && desc) raDescMap[key] = desc;
+    } catch (e) { /* ignore */ }
+  });
+
   listaWrap.innerHTML = pendientes.map((p, idx) => {
     const cursoObj = (calState.cursos || {})[p.cursoId] || {};
     const items = p.faltantes.map(f => {
-      const raLabel = (cursoObj.ras && cursoObj.ras[f.raKey] && (cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion))
-        ? (cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion)
+      const raFromBiblio = raDescMap[f.raKey];
+      const raLabel = raFromBiblio || (cursoObj.ras && cursoObj.ras[f.raKey] && (cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion))
+        ? (raFromBiblio || cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion)
         : f.raKey;
-      return '<li style="margin-bottom:4px;">' + escapeHTML(raLabel) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 120)) + '</li>';
+      return '<li style="margin-bottom:4px;">' + escapeHTML(raLabel) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 160)) + '</li>';
     }).join('');
     return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">' +
       '<input type="checkbox" data-idx="' + idx + '" style="margin-top:6px;" checked />' +
