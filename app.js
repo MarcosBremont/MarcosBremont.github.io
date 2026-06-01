@@ -23578,7 +23578,10 @@ function identificarEstudiantesRAsPendientes() {
           ? raInfo._actividadesSnapshot
           : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
 
-        const valorTotal = raInfo && raInfo.valorTotal ? Number(raInfo.valorTotal) : 10;
+        const rawValorTotal = raInfo?.valorTotal;
+        const valorTotal = rawValorTotal !== undefined && rawValorTotal !== null
+          ? parseFloat(String(rawValorTotal).replace(',', '.')) || 10
+          : 10;
         const notaRA = _calcNotaRA(curso, estId, raKey, acts);
         const porcentaje = notaRA !== null && valorTotal > 0 ? Math.round((notaRA / valorTotal) * 100) : null;
         const minAprobado = Math.ceil(valorTotal * 0.7);
