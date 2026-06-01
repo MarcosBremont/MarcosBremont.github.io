@@ -23574,13 +23574,31 @@ function identificarEstudiantesRAsPendientes() {
       const faltantes = [];
       Object.keys(ras).forEach(raKey => {
         const raInfo = ras[raKey];
-        const acts = (raInfo && raInfo._actividadesSnapshot) ? raInfo._actividadesSnapshot : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
-        acts.forEach(act => {
-          const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
-          if (nota === undefined || nota === null) {
-            faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
+        const acts = (raInfo && raInfo._actividadesSnapshot)
+          ? raInfo._actividadesSnapshot
+          : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
+
+        const valorTotal = raInfo && raInfo.valorTotal ? Number(raInfo.valorTotal) : 10;
+        const notaRA = _calcNotaRA(curso, estId, raKey, acts);
+        const porcentaje = notaRA !== null && valorTotal > 0 ? Math.round((notaRA / valorTotal) * 100) : null;
+        const minAprobado = Math.ceil(valorTotal * 0.7);
+        const esPendiente = notaRA === null || porcentaje === null || porcentaje < 70;
+
+        if (esPendiente) {
+          acts.forEach(act => {
+            const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
+            if (nota === undefined || nota === null) {
+              faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
+            }
+          });
+          if (notaRA !== null && porcentaje !== null && porcentaje < 70) {
+            faltantes.push({
+              raKey,
+              actividadId: null,
+              actividadDesc: `Total RA ${notaRA.toFixed(1)} / ${valorTotal} pts — necesita al menos ${minAprobado} pts para aprobar.`
+            });
           }
-        });
+        }
       });
       if (faltantes.length) {
         pendientes.push({ cursoId: curso.id, cursoNombre, estudianteId: estId, estudianteNombre: estNombre, faltantes });
