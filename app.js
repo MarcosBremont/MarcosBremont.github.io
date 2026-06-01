@@ -23545,145 +23545,6 @@ async function archivarCicloActual() {
 }
 
 function _safeParseJson(value, fallback) {
-
-  function identificarEstudiantesRAsPendientes() {
-    const listaWrap = document.getElementById('recup-lista');
-    const resultadoWrap = document.getElementById('recup-resultado');
-    if (!listaWrap) return;
-    listaWrap.innerHTML = '<div style="color:#616161;padding:10px;border-radius:8px;background:#FAFAFA;">Buscando estudiantes con RAs pendientes…</div>';
-    if (!calState || !calState.cursos) {
-      listaWrap.innerHTML = '<div style="color:#C62828;">No hay datos de cursos disponibles.</div>';
-      return;
-    }
-
-    const pendientes = [];
-    Object.values(calState.cursos).forEach(curso => {
-      const cursoNombre = curso.nombre || '';
-      const estudiantes = curso.estudiantes || [];
-      const ras = curso.ras || {};
-      estudiantes.forEach(est => {
-        const estId = est.id || est.estudianteId || '';
-        const estNombre = est.nombre || est.estudianteNombre || 'Sin nombre';
-        const faltantes = [];
-        Object.keys(ras).forEach(raKey => {
-          const raInfo = ras[raKey];
-          // actividades snapshot con id y enunciado
-          const acts = (raInfo && raInfo._actividadesSnapshot) ? raInfo._actividadesSnapshot : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
-          acts.forEach(act => {
-            const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
-            if (nota === undefined || nota === null) {
-              faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
-            }
-          });
-        });
-        if (faltantes.length) {
-          pendientes.push({ cursoId: curso.id, cursoNombre, estudianteId: estId, estudianteNombre: estNombre, faltantes });
-        }
-      });
-    });
-
-    if (!pendientes.length) {
-      listaWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#E8F5E9;color:#2E7D32;">No se encontraron RAs pendientes para los estudiantes.</div>';
-      if (resultadoWrap) resultadoWrap.innerHTML = '';
-      return;
-    }
-
-    // Render list
-    listaWrap.innerHTML = pendientes.map((p, idx) => {
-      const items = p.faltantes.map(f => '<li style="margin-bottom:4px;">' + escapeHTML(f.raKey) + ': ' + escapeHTML((f.actividadDesc || '').substring(0,80)) + '</li>').join('');
-      return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">' +
-        '<input type="checkbox" data-idx="' + idx + '" style="margin-top:6px;" checked />' +
-        '<div style="flex:1;">' +
-          '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>' +
-          '<ul style="margin:6px 0 0 16px;padding:0;color:#424242;">' + items + '</ul>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-
-    // Save the result for generation
-    window._recupPendientesCache = pendientes;
-    if (resultadoWrap) resultadoWrap.innerHTML = '';
-  }
-
-  async function generarRecuperacionesIA() {
-    const tipo = (document.getElementById('recup-tipo-select') || {}).value || 'actividad';
-    const listaWrap = document.getElementById('recup-lista');
-    const resultadoWrap = document.getElementById('recup-resultado');
-    if (!window._recupPendientesCache || !window._recupPendientesCache.length) {
-      mostrarToast('No hay estudiantes seleccionados. Ejecuta la búsqueda primero.', 'error');
-      return;
-    }
-
-    const seleccionados = [];
-    const checkboxes = listaWrap.querySelectorAll('input[type=checkbox]');
-    checkboxes.forEach((cb, i) => { if (cb.checked) seleccionados.push(window._recupPendientesCache[i]); });
-    if (!seleccionados.length) { mostrarToast('Selecciona al menos un estudiante.', 'error'); return; }
-
-    resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFF3E0;color:#E65100;">Generando recursos con IA…</div>';
-
-    // Build prompt
-    let prompt = 'Eres un asistente docente. Genera actividades de recuperación para los siguientes estudiantes con RAs pendientes. ' +
-      'Para cada estudiante, incluye: Nombre, Curso, Lista de RAs pendientes (código y descripción), y luego sugiere una o dos actividades según el tipo solicitado ("' + tipo + '"). ' +
-      'Devuelve el resultado en JSON con claves: estudiante, curso, pendientes[], sugerencias[] (tipo, descripcion, pasos, tiempo aprox).\n\n';
-    seleccionados.forEach(s => {
-      prompt += `Estudiante: ${s.estudianteNombre} — Curso: ${s.cursoNombre}\n`;
-      s.faltantes.forEach(f => { prompt += `- ${f.raKey}: ${f.actividadDesc}\n`; });
-      prompt += '\n';
-    });
-    prompt += `Formato: JSON. Tipo solicitado: ${tipo}. Sé conciso.`;
-
-    try {
-      let data = null;
-      if (getGroqKey()) {
-        mostrarToast('🧠 Generando con Groq...', 'info');
-        data = await _llamarGroqConFallback(prompt, 'Generando recuperaciones', 2048);
-      }
-      if (!data && getGeminiKey()) {
-        mostrarToast('🟡 Generando con Gemini...', 'info');
-        data = await _llamarGemini(prompt, 2048);
-      }
-      if (!data && getOpenRouterKey()) {
-        mostrarToast('🔵 Generando con OpenRouter...', 'info');
-        data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando recuperaciones', 2048, 45000);
-      }
-      if (!data) throw new Error('Sin respuesta de IA');
-
-      // data may be a string or object; normalize to string
-      const text = typeof data === 'string' ? data : (data.text || JSON.stringify(data));
-      resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#ECEFF1;color:#263238;white-space:pre-wrap;">' + escapeHTML(text) + '</div>' +
-        '<div style="margin-top:8px;"><button class="btn-siguiente" onclick="_crearPlanesRecuperacionDesdeResultado()">Crear plan(es) en Biblioteca</button> <button class="btn-secundario" onclick="navigator.clipboard.writeText(' + "'" + '"' + ' + JSON.stringify(text) + ' + '"' + '"' + ')">Copiar resultado</button></div>';
-
-      // Save last generated text for creating plans
-      window._recupGeneradoUltimo = text;
-    } catch (e) {
-      console.error('Error IA recuperaciones:', e);
-      resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFEBEE;color:#C62828;">Error al generar: ' + escapeHTML(e.message || String(e)) + '</div>';
-    }
-  }
-
-  function _crearPlanesRecuperacionDesdeResultado() {
-    const txt = window._recupGeneradoUltimo;
-    if (!txt) { mostrarToast('No hay generación previa para crear.', 'error'); return; }
-    try {
-      const biblio = cargarBiblioteca();
-      const id = 'RECUP-' + Date.now();
-      const newPlan = {
-        id,
-        fechaGuardado: Date.now(),
-        fechaGuardadoLabel: new Date().toLocaleString(),
-        planificacion: {
-          datosGenerales: { moduloFormativo: 'Recuperación IA', nombreDocente: (window.currentUser?.displayName || '') },
-          actividades: [],
-          ra: { descripcion: 'Recuperación generada por IA', nivelBloom: '', cantidadRA: 1 }
-        },
-        contenidoIA: txt
-      };
-      biblio.items = biblio.items || [];
-      biblio.items.unshift(newPlan);
-      persistirBiblioteca(biblio);
-      mostrarToast('Plan de recuperación creado en Biblioteca', 'success');
-    } catch (e) { mostrarToast('Error creando plan: ' + e.message, 'error'); }
-  }
   if (typeof value === 'object' && value !== null) return value;
   try {
     return JSON.parse(value);
@@ -23691,6 +23552,161 @@ function _safeParseJson(value, fallback) {
     return fallback;
   }
 }
+
+function identificarEstudiantesRAsPendientes() {
+  const listaWrap = document.getElementById('recup-lista');
+  const resultadoWrap = document.getElementById('recup-resultado');
+  if (!listaWrap) return;
+  listaWrap.innerHTML = '<div style="color:#616161;padding:10px;border-radius:8px;background:#FAFAFA;">Buscando estudiantes con RAs pendientes…</div>';
+  if (!calState || !calState.cursos) {
+    listaWrap.innerHTML = '<div style="color:#C62828;">No hay datos de cursos disponibles.</div>';
+    return;
+  }
+
+  const pendientes = [];
+  Object.values(calState.cursos).forEach(curso => {
+    const cursoNombre = curso.nombre || '';
+    const estudiantes = curso.estudiantes || [];
+    const ras = curso.ras || {};
+    estudiantes.forEach(est => {
+      const estId = est.id || est.estudianteId || '';
+      const estNombre = est.nombre || est.estudianteNombre || 'Sin nombre';
+      const faltantes = [];
+      Object.keys(ras).forEach(raKey => {
+        const raInfo = ras[raKey];
+        const acts = (raInfo && raInfo._actividadesSnapshot) ? raInfo._actividadesSnapshot : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
+        acts.forEach(act => {
+          const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
+          if (nota === undefined || nota === null) {
+            faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
+          }
+        });
+      });
+      if (faltantes.length) {
+        pendientes.push({ cursoId: curso.id, cursoNombre, estudianteId: estId, estudianteNombre: estNombre, faltantes });
+      }
+    });
+  });
+
+  if (!pendientes.length) {
+    listaWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#E8F5E9;color:#2E7D32;">No se encontraron RAs pendientes para los estudiantes.</div>';
+    if (resultadoWrap) resultadoWrap.innerHTML = '';
+    return;
+  }
+
+  listaWrap.innerHTML = pendientes.map((p, idx) => {
+    const items = p.faltantes.map(f => '<li style="margin-bottom:4px;">' + escapeHTML(f.raKey) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 80)) + '</li>').join('');
+    return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">' +
+      '<input type="checkbox" data-idx="' + idx + '" style="margin-top:6px;" checked />' +
+      '<div style="flex:1;">' +
+        '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>' +
+        '<ul style="margin:6px 0 0 16px;padding:0;color:#424242;">' + items + '</ul>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  window._recupPendientesCache = pendientes;
+  if (resultadoWrap) resultadoWrap.innerHTML = '';
+}
+
+async function generarRecuperacionesIA() {
+  const tipo = (document.getElementById('recup-tipo-select') || {}).value || 'actividad';
+  const listaWrap = document.getElementById('recup-lista');
+  const resultadoWrap = document.getElementById('recup-resultado');
+  if (!window._recupPendientesCache || !window._recupPendientesCache.length) {
+    mostrarToast('No hay estudiantes seleccionados. Ejecuta la búsqueda primero.', 'error');
+    return;
+  }
+
+  const seleccionados = [];
+  const checkboxes = listaWrap.querySelectorAll('input[type=checkbox]');
+  checkboxes.forEach((cb, i) => { if (cb.checked) seleccionados.push(window._recupPendientesCache[i]); });
+  if (!seleccionados.length) { mostrarToast('Selecciona al menos un estudiante.', 'error'); return; }
+
+  resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFF3E0;color:#E65100;">Generando recursos con IA…</div>';
+
+  let prompt = 'Eres un asistente docente. Genera recursos de recuperación separados por estudiante y por curso. ' +
+    'Para cada estudiante, genera una sugerencia específica basada únicamente en sus RAs pendientes. ' +
+    'No combines estudiantes en la misma sugerencia, incluso si pertenecen al mismo curso. ' +
+    'Incluye: Nombre del estudiante, Curso, Lista de RAs pendientes (código y descripción), y sugiere una o dos actividades según el tipo solicitado ("' + tipo + '"). ' +
+    'Cada sugerencia debe enfocarse en los RAs listados para ese estudiante y no en otros.' +
+    '\n\n';
+
+  seleccionados.forEach(s => {
+    prompt += `Estudiante: ${s.estudianteNombre} — Curso: ${s.cursoNombre}\n`;
+    s.faltantes.forEach(f => { prompt += `- ${f.raKey}: ${f.actividadDesc}\n`; });
+    prompt += '\n';
+  });
+  prompt += `Devuelve el resultado en JSON con claves: estudiante, curso, pendientes[], sugerencias[] (tipo, descripcion, pasos, tiempo aprox). Tipo solicitado: ${tipo}. Sé conciso.`;
+
+  try {
+    let data = null;
+    if (getGroqKey()) {
+      mostrarToast('🧠 Generando con Groq...', 'info');
+      data = await _llamarGroqConFallback(prompt, 'Generando recuperaciones', 2048);
+    }
+    if (!data && getGeminiKey()) {
+      mostrarToast('🟡 Generando con Gemini...', 'info');
+      data = await _llamarGemini(prompt, 2048);
+    }
+    if (!data && getOpenRouterKey()) {
+      mostrarToast('🔵 Generando con OpenRouter...', 'info');
+      data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando recuperaciones', 2048, 45000);
+    }
+    if (!data) throw new Error('Sin respuesta de IA');
+
+    const text = typeof data === 'string' ? data : (data.text || JSON.stringify(data));
+    resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#ECEFF1;color:#263238;white-space:pre-wrap;">' + escapeHTML(text) + '</div>' +
+      '<div style="margin-top:8px;"><button class="btn-siguiente" onclick="_crearPlanesRecuperacionDesdeResultado()">Crear plan(es) en Biblioteca</button> <button class="btn-secundario" onclick="copiarResultadoRecuperaciones()">Copiar resultado</button></div>';
+
+    window._recupGeneradoUltimo = text;
+  } catch (e) {
+    console.error('Error IA recuperaciones:', e);
+    resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFEBEE;color:#C62828;">Error al generar: ' + escapeHTML(e.message || String(e)) + '</div>';
+  }
+}
+
+function _crearPlanesRecuperacionDesdeResultado() {
+  const txt = window._recupGeneradoUltimo;
+  if (!txt) { mostrarToast('No hay generación previa para crear.', 'error'); return; }
+  try {
+    const biblio = cargarBiblioteca();
+    const id = 'RECUP-' + Date.now();
+    const newPlan = {
+      id,
+      fechaGuardado: Date.now(),
+      fechaGuardadoLabel: new Date().toLocaleString(),
+      planificacion: {
+        datosGenerales: { moduloFormativo: 'Recuperación IA', nombreDocente: (window.currentUser?.displayName || '') },
+        actividades: [],
+        ra: { descripcion: 'Recuperación generada por IA', nivelBloom: '', cantidadRA: 1 }
+      },
+      contenidoIA: txt
+    };
+    biblio.items = biblio.items || [];
+    biblio.items.unshift(newPlan);
+    persistirBiblioteca(biblio);
+    mostrarToast('Plan de recuperación creado en Biblioteca', 'success');
+  } catch (e) { mostrarToast('Error creando plan: ' + e.message, 'error'); }
+}
+
+function copiarResultadoRecuperaciones() {
+  if (!window._recupGeneradoUltimo) {
+    mostrarToast('No hay texto para copiar.', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(window._recupGeneradoUltimo).then(() => {
+    mostrarToast('Resultado copiado al portapapeles', 'success');
+  }, () => {
+    mostrarToast('No se pudo copiar el resultado', 'error');
+  });
+}
+
+// Expose recovery helpers to inline event handlers in index.html
+window.identificarEstudiantesRAsPendientes = identificarEstudiantesRAsPendientes;
+window.generarRecuperacionesIA = generarRecuperacionesIA;
+window._crearPlanesRecuperacionDesdeResultado = _crearPlanesRecuperacionDesdeResultado;
+window.copiarResultadoRecuperaciones = copiarResultadoRecuperaciones;
 
 async function verCicloArchivado(yearId) {
   const detailContent = document.getElementById('backup-archivos-detalle-contenido');
