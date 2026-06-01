@@ -23789,6 +23789,13 @@ async function generarRecuperacionesIA() {
       + '</div>';
 
     resultadoWrap.innerHTML = outHtml;
+    resultadoWrap.style.display = 'block';
+    resultadoWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    console.log('[IA RECUP] renderizado en pantalla, contenido largo:', outHtml.length);
+    if (!resultadoWrap.innerHTML || resultadoWrap.innerHTML.trim().length === 0) {
+      console.log('[IA RECUP] cuerpo de resultado vacío, mostrando texto raw');
+      resultadoWrap.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;background:#FFF3E0;padding:10px;border-radius:8px;">' + escapeHTML(text) + '</pre>';
+    }
     window._recupGeneradoUltimo = text;
   } catch (e) {
     console.error('[IA RECUP] Error IA recuperaciones:', e);
