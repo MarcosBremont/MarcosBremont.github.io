@@ -23682,8 +23682,17 @@ async function generarRecuperacionesIA() {
   }
 
   const seleccionados = [];
-  const checkboxes = listaWrap.querySelectorAll('input[type=checkbox]');
-  checkboxes.forEach((cb, i) => { if (cb.checked) seleccionados.push(window._recupPendientesCache[i]); });
+  const itemCheckboxes = listaWrap.querySelectorAll('input.recup-item');
+  if (!itemCheckboxes.length) {
+    mostrarToast('No se encontraron casillas de selección. Ejecuta la búsqueda de nuevo.', 'error');
+    return;
+  }
+  itemCheckboxes.forEach(cb => {
+    const idx = parseInt(cb.dataset.idx, 10);
+    if (cb.checked && !Number.isNaN(idx) && window._recupPendientesCache[idx]) {
+      seleccionados.push(window._recupPendientesCache[idx]);
+    }
+  });
   if (!seleccionados.length) { mostrarToast('Selecciona al menos un estudiante.', 'error'); return; }
 
   resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFF3E0;color:#E65100;">Generando recursos con IA…</div>';
