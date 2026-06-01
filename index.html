@@ -503,6 +503,27 @@
         </button>
       </div>
 
+      <div style="margin-top:16px;padding:18px;border-radius:16px;background:#E8F5E9;border:1px solid #C5CAE9;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:0.86rem;font-weight:800;color:#2E7D32;text-transform:uppercase;letter-spacing:.08em;">Recuperaciones IA — RAs pendientes</div>
+            <div style="font-size:0.85rem;color:#37474F;margin-top:4px;max-width:720px;">Detecta estudiantes con RAs incompletos y genera recursos de recuperación con IA: actividades, tareas, exámenes o guías según lo que elijas.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="padding:10px 14px;">Buscar RAs pendientes</button>
+            <select id="recup-tipo-select" style="padding:10px 12px;border-radius:10px;border:1px solid #B0BEC5;font-weight:700;">
+              <option value="actividad">Actividad práctica</option>
+              <option value="hoja_trabajo">Hoja de trabajo</option>
+              <option value="examen">Examen/Prueba</option>
+              <option value="tarea">Tarea para casa</option>
+            </select>
+            <button class="btn-secundario" onclick="generarRecuperacionesIA()" style="padding:10px 14px;">Generar con IA</button>
+          </div>
+        </div>
+        <div id="recup-lista" style="margin-top:16px;display:flex;flex-direction:column;gap:8px;font-size:0.92rem;color:#263238;">Pulsa "Buscar RAs pendientes" para iniciar.</div>
+        <div id="recup-resultado" style="margin-top:12px;font-size:0.9rem;color:#263238;"></div>
+      </div>
+
       <!-- ── Grid principal: Hoy | Mañana | Pasado mañana | Tareas ── -->
       <div class="dash-grid-4col">
         <!-- Columna 1: clases de hoy -->
@@ -3636,40 +3657,7 @@
             </div>
             <div id="backup-archivos-detalle-contenido" style="font-size:0.78rem;color:#616161;">No hay detalles cargados todavía.</div>
           </div>
-          
-          <div class="backup-divider"></div>
 
-          <!-- Recuperaciones IA -->
-          <div class="backup-section">
-            <div class="backup-section-title">
-              <span class="material-icons" style="color:#2E7D32;">auto_fix_high</span>
-              Recuperaciones IA — RAs pendientes
-            </div>
-            <p class="backup-desc">Identifica estudiantes con RAs incompletos y genera actividades de recuperación usando IA. Selecciona estudiantes y el tipo de recurso a generar.</p>
-
-            <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-              <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="width:auto;justify-content:center;padding:8px 12px;">Buscar RAs pendientes</button>
-              <select id="recup-tipo-select" style="padding:8px;border-radius:8px;border:1px solid #E0E0E0;font-weight:700;">
-                <option value="actividad">Actividad práctica</option>
-                <option value="hoja_trabajo">Hoja de trabajo</option>
-                <option value="examen">Examen/Prueba</option>
-                <option value="tarea">Tarea para casa</option>
-              </select>
-              <button class="btn-secundario" onclick="generarRecuperacionesIA()" style="padding:8px 12px;">Generar con IA</button>
-            </div>
-
-            <div id="recup-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;font-size:0.9rem;color:#424242;">Pulsa "Buscar RAs pendientes" para iniciar.</div>
-            <div id="recup-resultado" style="margin-top:8px;display:block;font-size:0.85rem;color:#263238;"></div>
-          </div>
-        </div>
-
-        <div class="backup-divider"></div>
-
-        <!-- Importar -->
-        <div class="backup-section">
-          <div class="backup-section-title">
-            <span class="material-icons" style="color:#1565C0;">cloud_upload</span>
-            Importar / Restaurar datos
           </div>
           <p class="backup-desc">Selecciona un archivo de backup generado anteriormente. <strong>Los datos actuales
               serán reemplazados</strong> por los del archivo.</p>
