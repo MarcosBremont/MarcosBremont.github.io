@@ -23583,18 +23583,17 @@ function identificarEstudiantesRAsPendientes() {
           ? parseFloat(String(rawValorTotal).replace(',', '.')) || 10
           : 10;
         const notaRA = _calcNotaRA(curso, estId, raKey, acts);
-        const porcentaje = notaRA !== null && valorTotal > 0 ? Math.round((notaRA / valorTotal) * 100) : null;
-        const minAprobado = Math.ceil(valorTotal * 0.7);
-        const esPendiente = notaRA === null || porcentaje === null || porcentaje < 70;
-
-        if (esPendiente) {
-          acts.forEach(act => {
-            const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
-            if (nota === undefined || nota === null) {
-              faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
-            }
-          });
-          if (notaRA !== null && porcentaje !== null && porcentaje < 70) {
+        // Only flag as pending when a final RA is calculable and below 70%
+        if (notaRA !== null) {
+          const porcentaje = valorTotal > 0 ? Math.round((notaRA / valorTotal) * 100) : null;
+          const minAprobado = Math.ceil(valorTotal * 0.7);
+          if (porcentaje !== null && porcentaje < 70) {
+            acts.forEach(act => {
+              const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
+              if (nota === undefined || nota === null) {
+                faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
+              }
+            });
             faltantes.push({
               raKey,
               actividadId: null,
