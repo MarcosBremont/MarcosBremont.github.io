@@ -23544,6 +23544,249 @@ async function archivarCicloActual() {
   }
 }
 
+function _safeParseJson(value, fallback) {
+
+  function identificarEstudiantesRAsPendientes() {
+    const listaWrap = document.getElementById('recup-lista');
+    const resultadoWrap = document.getElementById('recup-resultado');
+    if (!listaWrap) return;
+    listaWrap.innerHTML = '<div style="color:#616161;padding:10px;border-radius:8px;background:#FAFAFA;">Buscando estudiantes con RAs pendientes…</div>';
+    if (!calState || !calState.cursos) {
+      listaWrap.innerHTML = '<div style="color:#C62828;">No hay datos de cursos disponibles.</div>';
+      return;
+    }
+
+    const pendientes = [];
+    Object.values(calState.cursos).forEach(curso => {
+      const cursoNombre = curso.nombre || '';
+      const estudiantes = curso.estudiantes || [];
+      const ras = curso.ras || {};
+      estudiantes.forEach(est => {
+        const estId = est.id || est.estudianteId || '';
+        const estNombre = est.nombre || est.estudianteNombre || 'Sin nombre';
+        const faltantes = [];
+        Object.keys(ras).forEach(raKey => {
+          const raInfo = ras[raKey];
+          // actividades snapshot con id y enunciado
+          const acts = (raInfo && raInfo._actividadesSnapshot) ? raInfo._actividadesSnapshot : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
+          acts.forEach(act => {
+            const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
+            if (nota === undefined || nota === null) {
+              faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
+            }
+          });
+        });
+        if (faltantes.length) {
+          pendientes.push({ cursoId: curso.id, cursoNombre, estudianteId: estId, estudianteNombre: estNombre, faltantes });
+        }
+      });
+    });
+
+    if (!pendientes.length) {
+      listaWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#E8F5E9;color:#2E7D32;">No se encontraron RAs pendientes para los estudiantes.</div>';
+      if (resultadoWrap) resultadoWrap.innerHTML = '';
+      return;
+    }
+
+    // Render list
+    listaWrap.innerHTML = pendientes.map((p, idx) => {
+      const items = p.faltantes.map(f => '<li style="margin-bottom:4px;">' + escapeHTML(f.raKey) + ': ' + escapeHTML((f.actividadDesc || '').substring(0,80)) + '</li>').join('');
+      return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">' +
+        '<input type="checkbox" data-idx="' + idx + '" style="margin-top:6px;" checked />' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>' +
+          '<ul style="margin:6px 0 0 16px;padding:0;color:#424242;">' + items + '</ul>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    // Save the result for generation
+    window._recupPendientesCache = pendientes;
+    if (resultadoWrap) resultadoWrap.innerHTML = '';
+  }
+
+  async function generarRecuperacionesIA() {
+    const tipo = (document.getElementById('recup-tipo-select') || {}).value || 'actividad';
+    const listaWrap = document.getElementById('recup-lista');
+    const resultadoWrap = document.getElementById('recup-resultado');
+    if (!window._recupPendientesCache || !window._recupPendientesCache.length) {
+      mostrarToast('No hay estudiantes seleccionados. Ejecuta la búsqueda primero.', 'error');
+      return;
+    }
+
+    const seleccionados = [];
+    const checkboxes = listaWrap.querySelectorAll('input[type=checkbox]');
+    checkboxes.forEach((cb, i) => { if (cb.checked) seleccionados.push(window._recupPendientesCache[i]); });
+    if (!seleccionados.length) { mostrarToast('Selecciona al menos un estudiante.', 'error'); return; }
+
+    resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFF3E0;color:#E65100;">Generando recursos con IA…</div>';
+
+    // Build prompt
+    let prompt = 'Eres un asistente docente. Genera actividades de recuperación para los siguientes estudiantes con RAs pendientes. ' +
+      'Para cada estudiante, incluye: Nombre, Curso, Lista de RAs pendientes (código y descripción), y luego sugiere una o dos actividades según el tipo solicitado ("' + tipo + '"). ' +
+      'Devuelve el resultado en JSON con claves: estudiante, curso, pendientes[], sugerencias[] (tipo, descripcion, pasos, tiempo aprox).\n\n';
+    seleccionados.forEach(s => {
+      prompt += `Estudiante: ${s.estudianteNombre} — Curso: ${s.cursoNombre}\n`;
+      s.faltantes.forEach(f => { prompt += `- ${f.raKey}: ${f.actividadDesc}\n`; });
+      prompt += '\n';
+    });
+    prompt += `Formato: JSON. Tipo solicitado: ${tipo}. Sé conciso.`;
+
+    try {
+      let data = null;
+      if (getGroqKey()) {
+        mostrarToast('🧠 Generando con Groq...', 'info');
+        data = await _llamarGroqConFallback(prompt, 'Generando recuperaciones', 2048);
+      }
+      if (!data && getGeminiKey()) {
+        mostrarToast('🟡 Generando con Gemini...', 'info');
+        data = await _llamarGemini(prompt, 2048);
+      }
+      if (!data && getOpenRouterKey()) {
+        mostrarToast('🔵 Generando con OpenRouter...', 'info');
+        data = await _llamarOpenRouterConFallback(prompt, getOpenRouterKey(), 'Generando recuperaciones', 2048, 45000);
+      }
+      if (!data) throw new Error('Sin respuesta de IA');
+
+      // data may be a string or object; normalize to string
+      const text = typeof data === 'string' ? data : (data.text || JSON.stringify(data));
+      resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#ECEFF1;color:#263238;white-space:pre-wrap;">' + escapeHTML(text) + '</div>' +
+        '<div style="margin-top:8px;"><button class="btn-siguiente" onclick="_crearPlanesRecuperacionDesdeResultado()">Crear plan(es) en Biblioteca</button> <button class="btn-secundario" onclick="navigator.clipboard.writeText(' + "'" + '"' + ' + JSON.stringify(text) + ' + '"' + '"' + ')">Copiar resultado</button></div>';
+
+      // Save last generated text for creating plans
+      window._recupGeneradoUltimo = text;
+    } catch (e) {
+      console.error('Error IA recuperaciones:', e);
+      resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFEBEE;color:#C62828;">Error al generar: ' + escapeHTML(e.message || String(e)) + '</div>';
+    }
+  }
+
+  function _crearPlanesRecuperacionDesdeResultado() {
+    const txt = window._recupGeneradoUltimo;
+    if (!txt) { mostrarToast('No hay generación previa para crear.', 'error'); return; }
+    try {
+      const biblio = cargarBiblioteca();
+      const id = 'RECUP-' + Date.now();
+      const newPlan = {
+        id,
+        fechaGuardado: Date.now(),
+        fechaGuardadoLabel: new Date().toLocaleString(),
+        planificacion: {
+          datosGenerales: { moduloFormativo: 'Recuperación IA', nombreDocente: (window.currentUser?.displayName || '') },
+          actividades: [],
+          ra: { descripcion: 'Recuperación generada por IA', nivelBloom: '', cantidadRA: 1 }
+        },
+        contenidoIA: txt
+      };
+      biblio.items = biblio.items || [];
+      biblio.items.unshift(newPlan);
+      persistirBiblioteca(biblio);
+      mostrarToast('Plan de recuperación creado en Biblioteca', 'success');
+    } catch (e) { mostrarToast('Error creando plan: ' + e.message, 'error'); }
+  }
+  if (typeof value === 'object' && value !== null) return value;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return fallback;
+  }
+}
+
+async function verCicloArchivado(yearId) {
+  const detailContent = document.getElementById('backup-archivos-detalle-contenido');
+  if (!detailContent) return;
+
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore) {
+    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFEBEE;color:#C62828;font-size:0.78rem;">Inicia sesión para revisar los snapshots archivados en Firebase.</div>';
+    return;
+  }
+
+  detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;font-size:0.78rem;">Cargando snapshot archivado…</div>';
+
+  try {
+    const archiveDoc = await db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId).get();
+    if (!archiveDoc.exists) {
+      detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFF3E0;color:#EF6C00;font-size:0.78rem;">No se encontró el snapshot del ciclo ' + escapeHTML(yearId) + '.</div>';
+      return;
+    }
+
+    const data = archiveDoc.data() || {};
+    const snapshot = data.snapshot || {};
+    const biblioteca = _safeParseJson(snapshot.biblioteca, { items: [] });
+    const calificaciones = _safeParseJson(snapshot.calificaciones, { cursos: {} });
+    const diarias = _safeParseJson(snapshot.diarias, { sesiones: {} });
+    const tareas = _safeParseJson(snapshot.tareas, []);
+    const asistencia = _safeParseJson(snapshot.asistencia, {});
+    const comentarios = _safeParseJson(snapshot.comentarios, {});
+    const notasClase = _safeParseJson(snapshot.notasClase, {});
+    const obsEstudiantes = _safeParseJson(snapshot.obsEstudiantes, {});
+    const incidencias = _safeParseJson(snapshot.incidencias, {});
+    const recuperaciones = _safeParseJson(snapshot.recuperaciones, {});
+    const libreta = _safeParseJson(snapshot.libreta, { entries: [] });
+    const cuentasEstudiantes = _safeParseJson(snapshot.cuentasEstudiantes, { cuentas: [] });
+
+    const fecha = data.closedAt ? new Date(data.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+    detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
+      '<div style="padding:12px 13px;border-radius:10px;background:#fff;border:1px solid #E1BEE7;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Ciclo archivado</div>' +
+            '<div style="font-size:1.02rem;font-weight:800;color:#4A148C;margin-top:2px;">' + escapeHTML(data.yearLabel || yearId) + '</div>' +
+          '</div>' +
+          '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(fecha) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E8F5E9;color:#1B5E20;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Planificaciones</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + ((biblioteca.items || []).length) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E3F2FD;color:#0D47A1;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Cursos</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(calificaciones.cursos || {}).length) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#FFF3E0;color:#E65100;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Sesiones diarias</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(diarias.sesiones || {}).length) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#F1F8E9;color:#2E7D32;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Tareas</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Array.isArray(tareas) ? tareas.length : 0) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Asistencia</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(asistencia || {}).length) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E0F2F1;color:#00695C;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Comentarios</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(comentarios || {}).length) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#ECEFF1;color:#37474F;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Notas de clase</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(notasClase || {}).length) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#FFF8E1;color:#8D6E63;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Observaciones</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(obsEstudiantes || {}).length) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:12px 13px;border-radius:10px;background:#FAFAFA;border:1px solid #E0E0E0;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">' +
+          '<div style="font-size:0.74rem;font-weight:800;color:#424242;text-transform:uppercase;letter-spacing:.08em;">Snapshot completo</div>' +
+          '<div style="font-size:0.68rem;color:#78909C;">Puedes revisar el contenido completo del ciclo archivado aquí.</div>' +
+        '</div>' +
+        '<pre id="backup-archivo-json" style="margin:0;background:#263238;color:#ECEFF1;border-radius:10px;padding:12px;overflow:auto;max-height:360px;font-size:0.68rem;white-space:pre-wrap;word-break:break-word;"></pre>' +
+      '</div>' +
+    '</div>';
+
+    const preEl = document.getElementById('backup-archivo-json');
+    if (preEl) preEl.textContent = JSON.stringify(snapshot, null, 2);
+  } catch (e) {
+    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFEBEE;color:#C62828;font-size:0.78rem;">Error al cargar el snapshot archivado: ' + escapeHTML(e.message) + '</div>';
+  }
+}
+
 function renderizarCiclosAcademicos() {
   const activeYear = localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey();
   const archivedYears = _loadArchivedYears();
@@ -23553,6 +23796,11 @@ function renderizarCiclosAcademicos() {
 
   const listEl = document.getElementById('backup-archivos-lista');
   if (!listEl) return;
+
+  const detailContent = document.getElementById('backup-archivos-detalle-contenido');
+  if (detailContent && !archivedYears.length) {
+    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FAFAFA;border:1px dashed #BDBDBD;color:#78909C;font-size:0.78rem;">Selecciona un ciclo archivado para revisar su snapshot completo.</div>';
+  }
 
   if (!archivedYears.length) {
     listEl.innerHTML = '<div style="border:1.5px dashed #E0E0E0;border-radius:10px;padding:12px;text-align:center;color:#78909C;font-size:0.82rem;">Aún no hay ciclos archivados. Cierra el ciclo actual para guardar su historial.</div>';
@@ -23570,15 +23818,23 @@ function renderizarCiclosAcademicos() {
           badge +
         '</div>' +
         '<div style="font-size:0.74rem;color:#78909C;margin-bottom:6px;">Archivado: ' + escapeHTML(fecha) + '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.72rem;color:#616161;">' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.72rem;color:#616161;margin-bottom:10px;">' +
           '<span style="background:#F1F8E9;color:#2E7D32;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.planificaciones || 0) + ' planificaciones</span>' +
           '<span style="background:#E3F2FD;color:#1565C0;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.cursos || 0) + ' cursos</span>' +
           '<span style="background:#FFF3E0;color:#E65100;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.sesionesDiarias || 0) + ' sesiones diarias</span>' +
         '</div>' +
+        '<button type="button" data-action="ver-archivo" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#6A1B9A;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Revisar snapshot</button>' +
       '</div>' +
       '<span class="material-icons" style="color:#90A4AE;font-size:20px;">history</span>' +
     '</div>';
   }).join('');
+
+  listEl.querySelectorAll('[data-action="ver-archivo"]').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const yearId = e.currentTarget.dataset.year;
+      verCicloArchivado(yearId);
+    });
+  });
 }
 
 function abrirBackup() {
@@ -23594,6 +23850,10 @@ function abrirBackup() {
   if (archiveBtn) archiveBtn.disabled = !window.currentUser;
 
   renderizarCiclosAcademicos();
+
+  // Inicializar panel de recuperaciones IA
+  const recupLista = document.getElementById('recup-lista');
+  if (recupLista) recupLista.innerHTML = 'Pulsa "Buscar RAs pendientes" para iniciar.';
 
   // Resumen de datos actuales
   const biblio = cargarBiblioteca();

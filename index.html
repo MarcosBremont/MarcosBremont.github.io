@@ -3626,6 +3626,41 @@
           </div>
 
           <div id="backup-archivos-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+          <div id="backup-archivos-detalle" style="margin-top:10px;padding:12px 13px;border-radius:10px;background:#FAF7FF;border:1px solid #D1C4E9;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+              <div>
+                <div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Detalle del snapshot</div>
+                <div style="font-size:0.82rem;color:#616161;margin-top:4px;">Selecciona un ciclo archivado para revisar su contenido completo.</div>
+              </div>
+            </div>
+            <div id="backup-archivos-detalle-contenido" style="font-size:0.78rem;color:#616161;">No hay detalles cargados todavía.</div>
+          </div>
+          
+          <div class="backup-divider"></div>
+
+          <!-- Recuperaciones IA -->
+          <div class="backup-section">
+            <div class="backup-section-title">
+              <span class="material-icons" style="color:#2E7D32;">auto_fix_high</span>
+              Recuperaciones IA — RAs pendientes
+            </div>
+            <p class="backup-desc">Identifica estudiantes con RAs incompletos y genera actividades de recuperación usando IA. Selecciona estudiantes y el tipo de recurso a generar.</p>
+
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+              <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="width:auto;justify-content:center;padding:8px 12px;">Buscar RAs pendientes</button>
+              <select id="recup-tipo-select" style="padding:8px;border-radius:8px;border:1px solid #E0E0E0;font-weight:700;">
+                <option value="actividad">Actividad práctica</option>
+                <option value="hoja_trabajo">Hoja de trabajo</option>
+                <option value="examen">Examen/Prueba</option>
+                <option value="tarea">Tarea para casa</option>
+              </select>
+              <button class="btn-secundario" onclick="generarRecuperacionesIA()" style="padding:8px 12px;">Generar con IA</button>
+            </div>
+
+            <div id="recup-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;font-size:0.9rem;color:#424242;">Pulsa "Buscar RAs pendientes" para iniciar.</div>
+            <div id="recup-resultado" style="margin-top:8px;display:block;font-size:0.85rem;color:#263238;"></div>
+          </div>
         </div>
 
         <div class="backup-divider"></div>
