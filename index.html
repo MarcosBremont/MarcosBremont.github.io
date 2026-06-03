@@ -415,7 +415,7 @@
           <span class="material-icons">insights</span>
           <span>Rendimiento</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-recuperaciones" onclick="abrirConfigIA()" style="--accent:#2E7D32;">
+        <button class="dash-nav-btn" id="btn-dash-recuperaciones" onclick="abrirRecuperacionesDashboard()" style="--accent:#2E7D32;">
           <span class="material-icons">assignment_return</span>
           <span>Recuperaciones IA</span>
         </button>
@@ -505,6 +505,27 @@
           <span class="material-icons">help_outline</span>
           <span>Tutorial</span>
         </button>
+      </div>
+
+      <div id="dashboard-ra-deudas" style="margin-top:16px;padding:16px;border-radius:8px;background:#F7FAF8;border:1px solid #C8E6C9;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:0.88rem;font-weight:800;color:#1B5E20;text-transform:uppercase;">RAs adeudados</div>
+            <div style="font-size:0.82rem;color:#455A64;margin-top:3px;">Estudiantes con menos del 70% acumulado en un resultado de aprendizaje.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="padding:9px 13px;">Actualizar lista</button>
+            <select id="recup-tipo-select" style="padding:9px 11px;border-radius:8px;border:1px solid #B0BEC5;font-weight:700;">
+              <option value="actividad">Actividad práctica</option>
+              <option value="hoja_trabajo">Hoja de trabajo</option>
+              <option value="examen">Examen/Prueba</option>
+              <option value="tarea">Tarea para casa</option>
+            </select>
+            <button class="btn-secundario" onclick="generarRecuperacionesIA()" style="padding:9px 13px;">Generar recuperación IA</button>
+          </div>
+        </div>
+        <div id="recup-lista" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;font-size:0.9rem;color:#263238;">Pulsa "Actualizar lista" para revisar los RAs adeudados.</div>
+        <div id="recup-resultado" style="margin-top:12px;font-size:0.9rem;color:#263238;"></div>
       </div>
 
       <!-- ── Grid principal: Hoy | Mañana | Pasado mañana | Tareas ── -->
@@ -2457,6 +2478,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.24<span class="about-ver-fecha">Jun
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Módulo de RAs adeudados en el dashboard</div>
+              <ul class="about-ver-items">
+                <li><strong>RAs adeudados:</strong> nuevo módulo en el dashboard que muestra estudiantes con menos del 70% acumulado en cada resultado de aprendizaje</li>
+                <li><strong>Cálculo por porcentaje:</strong> si un RA vale 10 puntos, el sistema marca como adeudado a quien tenga menos de 7 puntos; también muestra acumulado, porcentaje y mínimo requerido</li>
+                <li><strong>Recuperaciones IA:</strong> el acceso rápido del dashboard ahora lleva directo al módulo y usa las notas/actividades del RA para generar recuperaciones más precisas</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">

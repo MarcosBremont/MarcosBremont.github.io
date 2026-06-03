@@ -5444,7 +5444,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.23',
+      version: '15.24',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -11087,6 +11087,7 @@ function registrarNota(estudianteId, actividadId, valor) {
   _actualizarFilaRA(estudianteId, raKey);
   _actualizarFooterRA(raKey);
   _actualizarBadgePendientes();
+  if (document.getElementById('recup-lista')) identificarEstudiantesRAsPendientes();
 }
 
 function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
@@ -23553,102 +23554,165 @@ function _safeParseJson(value, fallback) {
   }
 }
 
-function identificarEstudiantesRAsPendientes() {
-  const listaWrap = document.getElementById('recup-lista');
-  const resultadoWrap = document.getElementById('recup-resultado');
-  if (!listaWrap) return;
-  listaWrap.innerHTML = '<div style="color:#616161;padding:10px;border-radius:8px;background:#FAFAFA;">Buscando estudiantes con RAs pendientes…</div>';
-  if (!calState || !calState.cursos) {
-    listaWrap.innerHTML = '<div style="color:#C62828;">No hay datos de cursos disponibles.</div>';
-    return;
+function _getDescripcionRA(curso, raKey, planReg, raDescMap) {
+  const cursoRa = curso?.ras?.[raKey] || {};
+  return raDescMap?.[raKey]
+    || planReg?.planificacion?.ra?.descripcion
+    || cursoRa.descripcion
+    || cursoRa.label
+    || cursoRa.desc
+    || cursoRa.raDescripcion
+    || cursoRa.resultado
+    || raKey;
+}
+
+function _getActividadesRAParaCalculo(curso, raKey, biblio) {
+  const planId = (curso.planIds || []).find(pid => _getPlanIdClave(pid) === raKey);
+  const planReg = planId ? (biblio.items || []).find(i => i.id === planId) : null;
+  const planActs = planReg?.planificacion?.actividades || [];
+  const raInfo = curso.ras?.[raKey] || {};
+  const snapshotActs = raInfo._actividadesSnapshot || [];
+  const actividades = planActs.length
+    ? planActs
+    : (snapshotActs.length ? snapshotActs : (raInfo.actividades || []).map(id => ({ id, enunciado: id })));
+  return { planReg, actividades };
+}
+
+function _getValorTotalRA(curso, raKey, planReg) {
+  const raInfo = curso?.ras?.[raKey] || {};
+  const valores = Object.values(raInfo.valores || {})
+    .map(v => parseFloat(String(v).replace(',', '.')))
+    .filter(v => Number.isFinite(v));
+  const valorDesdeSuma = valores.length ? valores.reduce((s, v) => s + v, 0) : null;
+  const candidates = [
+    raInfo.valorTotal,
+    planReg?.planificacion?.datosGenerales?.valorRA,
+    valorDesdeSuma,
+    10
+  ];
+  for (const candidate of candidates) {
+    const n = parseFloat(String(candidate).replace(',', '.'));
+    if (Number.isFinite(n) && n > 0) return Math.round(n * 10) / 10;
   }
+  return 10;
+}
 
-  const pendientes = [];
-  Object.values(calState.cursos).forEach(curso => {
-    const cursoNombre = curso.nombre || '';
-    const estudiantes = curso.estudiantes || [];
-    const ras = curso.ras || {};
-    estudiantes.forEach(est => {
-      const estId = est.id || est.estudianteId || '';
-      const estNombre = est.nombre || est.estudianteNombre || 'Sin nombre';
-      const faltantes = [];
-      Object.keys(ras).forEach(raKey => {
-        const raInfo = ras[raKey];
-        const acts = (raInfo && raInfo._actividadesSnapshot)
-          ? raInfo._actividadesSnapshot
-          : (raInfo && raInfo.actividades ? raInfo.actividades.map(id => ({ id, enunciado: id })) : []);
-
-        const rawValorTotal = raInfo?.valorTotal;
-        const valorTotal = rawValorTotal !== undefined && rawValorTotal !== null
-          ? parseFloat(String(rawValorTotal).replace(',', '.')) || 10
-          : 10;
-        const notaRA = _calcNotaRA(curso, estId, raKey, acts);
-        // Only flag as pending when a final RA is calculable and below 70%
-        if (notaRA !== null) {
-          const porcentaje = valorTotal > 0 ? Math.round((notaRA / valorTotal) * 100) : null;
-          const minAprobado = Math.ceil(valorTotal * 0.7);
-          if (porcentaje !== null && porcentaje < 70) {
-            acts.forEach(act => {
-              const nota = curso.notas?.[estId]?.[raKey]?.[act.id];
-              if (nota === undefined || nota === null) {
-                faltantes.push({ raKey, actividadId: act.id, actividadDesc: act.enunciado || act.id });
-              }
-            });
-            faltantes.push({
-              raKey,
-              actividadId: null,
-              actividadDesc: `Total RA ${notaRA.toFixed(1)} / ${valorTotal} pts — necesita al menos ${minAprobado} pts para aprobar.`
-            });
-          }
-        }
-      });
-      if (faltantes.length) {
-        pendientes.push({ cursoId: curso.id, cursoNombre, estudianteId: estId, estudianteNombre: estNombre, faltantes });
-      }
-    });
-  });
-
-  if (!pendientes.length) {
-    listaWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#E8F5E9;color:#2E7D32;">No se encontraron RAs pendientes para los estudiantes.</div>';
-    if (resultadoWrap) resultadoWrap.innerHTML = '';
-    return;
-  }
-
-  // Build a map from raKey -> full RA description from Biblioteca (if available)
+function _calcRAsAdeudados(cursoIdFiltro) {
   const biblio = cargarBiblioteca();
   const raDescMap = {};
   (biblio.items || []).forEach(it => {
     try {
       const key = _getPlanIdClave(it.id);
-      const desc = (it.planificacion && it.planificacion.ra && it.planificacion.ra.descripcion) ? it.planificacion.ra.descripcion : null;
+      const desc = it?.planificacion?.ra?.descripcion;
       if (key && desc) raDescMap[key] = desc;
-    } catch (e) { /* ignore */ }
+    } catch (e) { }
   });
 
-  // render list with a master select-all checkbox
+  const pendientes = [];
+  Object.values(calState.cursos || {}).forEach(curso => {
+    if (cursoIdFiltro && curso.id !== cursoIdFiltro) return;
+    const estudiantes = curso.estudiantes || [];
+    Object.keys(curso.ras || {}).forEach(raKey => {
+      const { planReg, actividades } = _getActividadesRAParaCalculo(curso, raKey, biblio);
+      if (!actividades.length) return;
+      const valorTotal = _getValorTotalRA(curso, raKey, planReg);
+      const minimo = Math.round(valorTotal * 0.7 * 10) / 10;
+      const descripcion = _getDescripcionRA(curso, raKey, planReg, raDescMap);
+      estudiantes.forEach(est => {
+        const notaCalculada = _calcNotaRA(curso, est.id, raKey, actividades);
+        const notaRA = notaCalculada === null ? 0 : notaCalculada;
+        const porcentaje = valorTotal > 0 ? Math.round((notaRA / valorTotal) * 1000) / 10 : 0;
+        if (porcentaje >= 70) return;
+
+        const actividadesDetalle = actividades.map(act => {
+          const nota = curso.notas?.[est.id]?.[raKey]?.[act.id];
+          const max = curso.ras?.[raKey]?.valores?.[act.id] ?? act.valor ?? null;
+          return {
+            id: act.id,
+            enunciado: act.enunciado || act.descripcion || act.id,
+            nota: nota === undefined || nota === null ? null : nota,
+            max
+          };
+        });
+
+        pendientes.push({
+          cursoId: curso.id,
+          cursoNombre: curso.nombre || '',
+          estudianteId: est.id,
+          estudianteNombre: est.nombre || est.id || 'Sin nombre',
+          raKey,
+          raDescripcion: descripcion,
+          notaRA,
+          valorTotal,
+          porcentaje,
+          minimo,
+          sinNotas: notaCalculada === null,
+          actividades: actividadesDetalle,
+          faltantes: [{
+            raKey,
+            actividadId: null,
+            actividadDesc: 'Acumulado: ' + notaRA.toFixed(1) + ' / ' + valorTotal + ' pts (' + porcentaje.toFixed(1) + '%). Minimo requerido: ' + minimo + ' pts.',
+            actividades: actividadesDetalle
+          }]
+        });
+      });
+    });
+  });
+
+  return pendientes.sort((a, b) =>
+    a.cursoNombre.localeCompare(b.cursoNombre)
+    || a.estudianteNombre.localeCompare(b.estudianteNombre)
+    || a.raDescripcion.localeCompare(b.raDescripcion)
+  );
+}
+
+function identificarEstudiantesRAsPendientes() {
+  const listaWrap = document.getElementById('recup-lista');
+  const resultadoWrap = document.getElementById('recup-resultado');
+  if (!listaWrap) return;
+  listaWrap.innerHTML = '<div style="color:#616161;padding:10px;border-radius:8px;background:#FAFAFA;">Buscando estudiantes con RAs adeudados…</div>';
+  if (!calState || !calState.cursos) {
+    listaWrap.innerHTML = '<div style="color:#C62828;">No hay datos de cursos disponibles.</div>';
+    return;
+  }
+
+  const pendientes = _calcRAsAdeudados();
+
+  if (!pendientes.length) {
+    listaWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#E8F5E9;color:#2E7D32;">No se encontraron estudiantes con RAs por debajo del 70%.</div>';
+    if (resultadoWrap) resultadoWrap.innerHTML = '';
+    window._recupPendientesCache = [];
+    return;
+  }
+
   let htmlList = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-    + '<label style="font-weight:700;"><input id="recup-select-all" type="checkbox" style="margin-right:8px;" /> Seleccionar todo</label>'
+    + '<label style="font-weight:700;color:#1B5E20;"><input id="recup-select-all" type="checkbox" style="margin-right:8px;" checked /> Seleccionar todo</label>'
+    + '<span style="font-size:0.78rem;color:#546E7A;font-weight:700;">' + pendientes.length + ' RA' + (pendientes.length !== 1 ? 's' : '') + ' adeudado' + (pendientes.length !== 1 ? 's' : '') + '</span>'
     + '</div>';
 
   htmlList += pendientes.map((p, idx) => {
-    const cursoObj = (calState.cursos || {})[p.cursoId] || {};
-    const items = p.faltantes.map(f => {
-      const raFromBiblio = raDescMap[f.raKey];
-      const cursoRa = cursoObj.ras?.[f.raKey] || {};
-      const raLabel = raFromBiblio
-        || cursoRa.descripcion
-        || cursoRa.label
-        || cursoRa.desc
-        || cursoRa.raDescripcion
-        || cursoRa.resultado
-        || f.raKey;
-      return '<li style="margin-bottom:4px;">' + escapeHTML(raLabel) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 160)) + '</li>';
+    const pctColor = p.porcentaje >= 50 ? '#E65100' : '#C62828';
+    const pctBg = p.porcentaje >= 50 ? '#FFF3E0' : '#FFEBEE';
+    const actividades = (p.actividades || []).slice(0, 4).map(a => {
+      const notaTxt = a.nota === null ? 'sin nota' : (a.nota + (a.max ? ' / ' + a.max : ''));
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:#FAFAFA;border:1px solid #ECEFF1;border-radius:6px;padding:3px 7px;font-size:0.74rem;color:#455A64;">'
+        + escapeHTML((a.enunciado || '').substring(0, 34)) + (a.enunciado && a.enunciado.length > 34 ? '…' : '')
+        + ' <strong style="color:#263238;">' + escapeHTML(String(notaTxt)) + '</strong></span>';
     }).join('');
-    return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">'
+    return '<div style="padding:11px;border-radius:8px;background:#fff;border:1px solid #DDE7DE;display:flex;align-items:flex-start;gap:10px;">'
       + '<input type="checkbox" data-idx="' + idx + '" class="recup-item" style="margin-top:6px;" checked />'
       + '<div style="flex:1;">'
-        + '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>'
-        + '<ul style="margin:6px 0 0 16px;padding:0;color:#424242;">' + items + '</ul>'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+          + '<div>'
+            + '<div style="font-weight:800;color:#1A237E;">' + escapeHTML(p.estudianteNombre) + ' — ' + escapeHTML(p.cursoNombre) + '</div>'
+            + '<div style="font-size:0.82rem;color:#37474F;margin-top:4px;"><strong>RA:</strong> ' + escapeHTML(p.raDescripcion) + '</div>'
+          + '</div>'
+          + '<div style="background:' + pctBg + ';color:' + pctColor + ';border-radius:8px;padding:5px 9px;font-size:0.78rem;font-weight:800;white-space:nowrap;">'
+            + p.notaRA.toFixed(1) + ' / ' + p.valorTotal + ' pts · ' + p.porcentaje.toFixed(1) + '%'
+          + '</div>'
+        + '</div>'
+        + '<div style="margin-top:6px;font-size:0.78rem;color:#546E7A;">Necesita al menos <strong>' + p.minimo + ' pts</strong> para aprobar este RA.' + (p.sinNotas ? ' Sin calificaciones registradas todavía.' : '') + '</div>'
+        + (actividades ? '<div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;">' + actividades + '</div>' : '')
       + '</div>'
     + '</div>';
   }).join('');
@@ -23742,7 +23806,15 @@ async function generarRecuperacionesIA() {
       if (!raAgrupadas[key]) {
         raAgrupadas[key] = { codigo: key, descripcion: raDesc, actividades: [] };
       }
-      raAgrupadas[key].actividades.push(actividadDesc);
+      if (Array.isArray(f.actividades) && f.actividades.length) {
+        f.actividades.forEach(act => {
+          const notaTxt = act.nota === null || act.nota === undefined ? 'sin nota' : String(act.nota);
+          const maxTxt = act.max ? ' / ' + act.max + ' pts' : '';
+          raAgrupadas[key].actividades.push((act.enunciado || act.id || 'Actividad') + ' — ' + notaTxt + maxTxt);
+        });
+      } else {
+        raAgrupadas[key].actividades.push(actividadDesc);
+      }
     });
 
     Object.values(raAgrupadas).forEach(ra => {
@@ -23998,8 +24070,9 @@ async function descargarResultadoRecuperaciones(tipo) {
 }
 
 function abrirRecuperacionesDashboard() {
-  const recupSection = document.getElementById('recup-lista');
+  const recupSection = document.getElementById('dashboard-ra-deudas') || document.getElementById('recup-lista');
   if (recupSection) {
+    identificarEstudiantesRAsPendientes();
     recupSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     recupSection.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
     recupSection.style.boxShadow = '0 0 0 3px rgba(46,125,50,0.18)';
@@ -24672,7 +24745,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.23</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.24</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
