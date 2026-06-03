@@ -415,6 +415,10 @@
           <span class="material-icons">insights</span>
           <span>Rendimiento</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-recuperaciones" onclick="abrirConfigIA()" style="--accent:#2E7D32;">
+          <span class="material-icons">assignment_return</span>
+          <span>Recuperaciones IA</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-ia" onclick="abrirConfigIA()" style="--accent:#AD1457;">
           <span class="material-icons">auto_awesome</span>
           <span>Configurar IA</span>
@@ -501,27 +505,6 @@
           <span class="material-icons">help_outline</span>
           <span>Tutorial</span>
         </button>
-      </div>
-
-      <div style="margin-top:16px;padding:18px;border-radius:16px;background:#E8F5E9;border:1px solid #C5CAE9;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div>
-            <div style="font-size:0.86rem;font-weight:800;color:#2E7D32;text-transform:uppercase;letter-spacing:.08em;">Recuperaciones IA — RAs pendientes</div>
-            <div style="font-size:0.85rem;color:#37474F;margin-top:4px;max-width:720px;">Detecta estudiantes con RAs incompletos y genera recursos de recuperación con IA: actividades, tareas, exámenes o guías según lo que elijas.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="padding:10px 14px;">Buscar RAs pendientes</button>
-            <select id="recup-tipo-select" style="padding:10px 12px;border-radius:10px;border:1px solid #B0BEC5;font-weight:700;">
-              <option value="actividad">Actividad práctica</option>
-              <option value="hoja_trabajo">Hoja de trabajo</option>
-              <option value="examen">Examen/Prueba</option>
-              <option value="tarea">Tarea para casa</option>
-            </select>
-            <button class="btn-secundario" onclick="generarRecuperacionesIA()" style="padding:10px 14px;">Generar con IA</button>
-          </div>
-        </div>
-        <div id="recup-lista" style="margin-top:16px;display:flex;flex-direction:column;gap:8px;font-size:0.92rem;color:#263238;">Pulsa "Buscar RAs pendientes" para iniciar.</div>
-        <div id="recup-resultado" style="margin-top:12px;font-size:0.9rem;color:#263238;"></div>
       </div>
 
       <!-- ── Grid principal: Hoy | Mañana | Pasado mañana | Tareas ── -->
@@ -2474,6 +2457,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v15.23<span class="about-ver-fecha">Jun
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Actualización del dashboard principal y mejoras de recuperación IA</div>
+              <ul class="about-ver-items">
+                <li><strong>Dashboard principal:</strong> se actualizó el número de versión visible y se ajustó la navegación rápida para acceder a Recuperaciones IA desde el panel principal</li>
+                <li><strong>Mejoras de exportación:</strong> se refinó la generación y exportación de recuperaciones y su vista previa para facilitar el uso diario</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">

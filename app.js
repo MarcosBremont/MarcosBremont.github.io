@@ -5444,7 +5444,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.22',
+      version: '15.23',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -23634,9 +23634,14 @@ function identificarEstudiantesRAsPendientes() {
     const cursoObj = (calState.cursos || {})[p.cursoId] || {};
     const items = p.faltantes.map(f => {
       const raFromBiblio = raDescMap[f.raKey];
-      const raLabel = raFromBiblio || (cursoObj.ras && cursoObj.ras[f.raKey] && (cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion))
-        ? (raFromBiblio || cursoObj.ras[f.raKey].label || cursoObj.ras[f.raKey].descripcion)
-        : f.raKey;
+      const cursoRa = cursoObj.ras?.[f.raKey] || {};
+      const raLabel = raFromBiblio
+        || cursoRa.descripcion
+        || cursoRa.label
+        || cursoRa.desc
+        || cursoRa.raDescripcion
+        || cursoRa.resultado
+        || f.raKey;
       return '<li style="margin-bottom:4px;">' + escapeHTML(raLabel) + ': ' + escapeHTML((f.actividadDesc || '').substring(0, 160)) + '</li>';
     }).join('');
     return '<div style="padding:10px;border-radius:8px;background:#fff;border:1px solid #E0E0E0;display:flex;align-items:flex-start;gap:10px;">'
@@ -23701,21 +23706,74 @@ async function generarRecuperacionesIA() {
     return;
   }
 
+  const biblio = cargarBiblioteca();
+  const raDescMap = {};
+  (biblio.items || []).forEach(it => {
+    try {
+      const key = _getPlanIdClave(it.id);
+      const desc = it?.planificacion?.ra?.descripcion;
+      if (key && desc) raDescMap[key] = desc;
+    } catch (e) { }
+  });
+
   resultadoWrap.innerHTML = '<div style="padding:10px;border-radius:8px;background:#FFF3E0;color:#E65100;">Generando recursos con IA…</div>';
 
-  let prompt = 'Eres un asistente docente. Genera recursos de recuperación separados por estudiante y por curso. ' +
-    'Para cada estudiante, genera una sugerencia específica basada únicamente en sus RAs pendientes. ' +
-    'No combines estudiantes en la misma sugerencia, incluso si pertenecen al mismo curso. ' +
-    'Incluye: Nombre del estudiante, Curso, Lista de RAs pendientes (código y descripción), y sugiere una o dos actividades según el tipo solicitado ("' + tipo + '"). ' +
-    'Cada sugerencia debe enfocarse en los RAs listados para ese estudiante y no en otros.' +
-    '\n\n';
+  let prompt = `Generame un ${tipo} de estos resultados de aprendizaje y acts correspondientes:\n\n`;
+  prompt += 'Para cada RA, utiliza la descripción completa del resultado de aprendizaje. No devuelvas solo el código ra_plan_... ni generes títulos inventados.\n';
+  prompt += 'Incluye en cada pendiente un arreglo de actividades bajo la clave "actividades". Si no se puede identificar la actividad exacta, usa "Actividad no especificada" en la lista.\n\n';
 
   seleccionados.forEach(s => {
     prompt += `Estudiante: ${s.estudianteNombre} — Curso: ${s.cursoNombre}\n`;
-    s.faltantes.forEach(f => { prompt += `- ${f.raKey}: ${f.actividadDesc}\n`; });
-    prompt += '\n';
+    const curso = calState.cursos?.[s.cursoId] || {};
+    const raAgrupadas = {};
+    s.faltantes.forEach(f => {
+      const key = f.raKey || 'RA';
+      const cursoRa = curso.ras?.[key] || {};
+      const raDesc = raDescMap[key]
+        || cursoRa.descripcion
+        || cursoRa.label
+        || cursoRa.desc
+        || cursoRa.raDescripcion
+        || cursoRa.resultado
+        || key;
+      const actividadDesc = f.actividadDesc
+        || cursoRa._actividadesSnapshot?.find(a => a.id === f.actividadId)?.enunciado
+        || 'Actividad pendiente asociada al RA';
+      if (!raAgrupadas[key]) {
+        raAgrupadas[key] = { codigo: key, descripcion: raDesc, actividades: [] };
+      }
+      raAgrupadas[key].actividades.push(actividadDesc);
+    });
+
+    Object.values(raAgrupadas).forEach(ra => {
+      prompt += `RA: ${ra.codigo}\nDescripción: ${ra.descripcion}\n`;
+      if (ra.actividades.length) {
+        prompt += 'Actividades:\n';
+        ra.actividades.forEach(act => {
+          prompt += `- ${act}\n`;
+        });
+      }
+      prompt += '\n';
+    });
   });
-  prompt += `Devuelve el resultado en JSON con claves: estudiante, curso, pendientes[], sugerencias[] (tipo, descripcion, pasos, tiempo aprox). Tipo solicitado: ${tipo}. Sé conciso.`;
+
+  prompt += 'Devuelve exclusivamente un JSON válido con este formato:\n'
+    + '[{\n'
+    + '  "estudiante": "...",\n'
+    + '  "curso": "...",\n'
+    + '  "pendientes": [{\n'
+    + '    "codigo": "...",\n'
+    + '    "descripcion": "...",\n'
+    + '    "actividades": ["..." ]\n'
+    + '  }],\n'
+    + '  "sugerencias": [{\n'
+    + '    "tipo": "...",\n'
+    + '    "descripcion": "...",\n'
+    + '    "pasos": ["..."],\n'
+    + '    "tiempoAprox": "..."\n'
+    + '  }]\n'
+    + '}]\n'
+    + `No agregues comentarios adicionales, solo retorna el JSON. Tipo solicitado: ${tipo}.`;
 
   console.log('[IA RECUP] prompt generado:', prompt);
   console.log('[IA RECUP] claves disponibles — Groq:', !!getGroqKey(), 'Gemini:', !!getGeminiKey(), 'OpenRouter:', !!getOpenRouterKey());
@@ -23767,7 +23825,15 @@ async function generarRecuperacionesIA() {
         outHtml += '<div style="padding:12px;border-radius:8px;border:1px solid #E0E0E0;background:#fff;">';
         outHtml += '<div style="font-weight:800;color:#1A237E;margin-bottom:6px;">' + escapeHTML(String(est)) + (curso ? ' — ' + escapeHTML(String(curso)) : '') + '</div>';
         if (ent.pendientes && Array.isArray(ent.pendientes)) {
-          outHtml += '<div style="font-size:0.92rem;color:#424242;margin-bottom:6px;"><strong>Pendientes:</strong><ul>' + ent.pendientes.map(p => '<li>' + escapeHTML((p.codigo||p.raKey||p).toString()) + ': ' + escapeHTML((p.descripcion||p.actividadDesc||p).toString().substring(0,200)) + '</li>').join('') + '</ul></div>';
+          outHtml += '<div style="font-size:0.92rem;color:#424242;margin-bottom:6px;"><strong>Pendientes:</strong><ul>' + ent.pendientes.map(p => {
+            const codigo = escapeHTML((p.codigo||p.raKey||p).toString());
+            const descripcion = escapeHTML((p.descripcion||p.actividadDesc||'').toString().substring(0,200));
+            const actividades = Array.isArray(p.actividades) ? p.actividades : (p.actividad ? [p.actividad] : []);
+            const actividadesHtml = actividades.length
+              ? '<ul style="margin:4px 0 0 16px;padding-left:16px;color:#424242;">' + actividades.map(a => '<li>' + escapeHTML(a.toString()) + '</li>').join('') + '</ul>'
+              : '';
+            return '<li style="margin-bottom:8px;">' + codigo + ': ' + descripcion + actividadesHtml + '</li>';
+          }).join('') + '</ul></div>';
         }
         if (ent.sugerencias && Array.isArray(ent.sugerencias)) {
           outHtml += '<div style="font-size:0.92rem;color:#424242;"><strong>Sugerencias:</strong>' + ent.sugerencias.map(s => '<div style="margin-top:6px;padding:8px;border-radius:6px;background:#FAFAFA;">' + '<strong>' + escapeHTML(s.tipo || '') + '</strong>: ' + escapeHTML((s.descripcion || s.texto || '').toString().substring(0,600)) + (s.pasos ? '<div style="margin-top:6px;"><em>Pasos:</em><ol>' + (Array.isArray(s.pasos) ? s.pasos.map(ps => '<li>' + escapeHTML(ps) + '</li>').join('') : ('<li>' + escapeHTML(String(s.pasos)) + '</li>')) + '</ol></div>' : '') + '</div>').join('') + '</div>';
@@ -23850,11 +23916,60 @@ async function descargarResultadoRecuperaciones(tipo) {
         return;
       }
       const { Document, Packer, Paragraph, TextRun } = window.docx;
-      const lines = txt.split(/\r?\n/);
-      const paragraphs = lines.map(line => new Paragraph({
-        children: [new TextRun({ text: line || ' ' })]
-      }));
-      const doc = new Document({ sections: [{ properties: {}, children: paragraphs }] });
+      let docItems = [];
+
+      const parsedText = (() => {
+        try { return JSON.parse(txt); } catch (_e) { return null; }
+      })();
+
+      if (parsedText && (Array.isArray(parsedText) || typeof parsedText === 'object')) {
+        const entries = Array.isArray(parsedText) ? parsedText : (parsedText.resultados || parsedText.items || parsedText.recuperaciones || [parsedText]);
+        entries.forEach((ent, idx) => {
+          docItems.push(new Paragraph({ children: [new TextRun({ text: `Estudiante: ${ent.estudiante || ent.name || ''}`, bold: true })] }));
+          docItems.push(new Paragraph({ children: [new TextRun({ text: `Curso: ${ent.curso || ent.course || ''}` })] }));
+          docItems.push(new Paragraph({ children: [new TextRun({ text: '' })] }));
+
+          if (Array.isArray(ent.pendientes) && ent.pendientes.length) {
+            docItems.push(new Paragraph({ children: [new TextRun({ text: 'Pendientes:', bold: true })] }));
+            ent.pendientes.forEach(p => {
+              const codigo = p.codigo || p.raKey || '';
+              const desc = p.descripcion || p.actividadDesc || '';
+              docItems.push(new Paragraph({ children: [new TextRun({ text: `- ${codigo}: ${desc}` })] }));
+              const actividades = Array.isArray(p.actividades) ? p.actividades : (p.actividad ? [p.actividad] : []);
+              actividades.forEach(act => {
+                docItems.push(new Paragraph({ children: [new TextRun({ text: `    • ${act}` })] }));
+              });
+            });
+            docItems.push(new Paragraph({ children: [new TextRun({ text: '' })] }));
+          }
+
+          if (Array.isArray(ent.sugerencias) && ent.sugerencias.length) {
+            docItems.push(new Paragraph({ children: [new TextRun({ text: 'Sugerencias:', bold: true })] }));
+            ent.sugerencias.forEach(s => {
+              docItems.push(new Paragraph({ children: [new TextRun({ text: `- ${s.tipo || ''}: ${s.descripcion || ''}` })] }));
+              if (Array.isArray(s.pasos) && s.pasos.length) {
+                s.pasos.forEach(paso => {
+                  docItems.push(new Paragraph({ children: [new TextRun({ text: `    • ${paso}` })] }));
+                });
+              }
+              if (s.tiempoAprox) {
+                docItems.push(new Paragraph({ children: [new TextRun({ text: `    Tiempo aproximado: ${s.tiempoAprox}` })] }));
+              }
+            });
+          }
+
+          if (idx < entries.length - 1) {
+            docItems.push(new Paragraph({ children: [new TextRun({ text: ' ' })] }));
+          }
+        });
+      } else {
+        const lines = txt.split(/\r?\n/);
+        lines.forEach(line => {
+          docItems.push(new Paragraph({ children: [new TextRun({ text: line || ' ' })] }));
+        });
+      }
+
+      const doc = new Document({ sections: [{ properties: {}, children: docItems }] });
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -23882,12 +23997,29 @@ async function descargarResultadoRecuperaciones(tipo) {
   }
 }
 
+function abrirRecuperacionesDashboard() {
+  const recupSection = document.getElementById('recup-lista');
+  if (recupSection) {
+    recupSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    recupSection.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
+    recupSection.style.boxShadow = '0 0 0 3px rgba(46,125,50,0.18)';
+    recupSection.style.borderColor = '#2E7D32';
+    setTimeout(() => {
+      recupSection.style.boxShadow = '';
+      recupSection.style.borderColor = '';
+    }, 1800);
+  } else {
+    document.getElementById('panel-dashboard')?.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
 // Expose recovery helpers to inline event handlers in index.html
 window.identificarEstudiantesRAsPendientes = identificarEstudiantesRAsPendientes;
 window.generarRecuperacionesIA = generarRecuperacionesIA;
 window._crearPlanesRecuperacionDesdeResultado = _crearPlanesRecuperacionDesdeResultado;
 window.copiarResultadoRecuperaciones = copiarResultadoRecuperaciones;
 window.descargarResultadoRecuperaciones = descargarResultadoRecuperaciones;
+window.abrirRecuperacionesDashboard = abrirRecuperacionesDashboard;
 
 async function verCicloArchivado(yearId) {
   const detailContent = document.getElementById('backup-archivos-detalle-contenido');
@@ -24540,7 +24672,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.22</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.23</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
