@@ -8521,7 +8521,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -8537,7 +8537,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -24070,20 +24070,12 @@ async function descargarResultadoRecuperaciones(tipo) {
 }
 
 function abrirRecuperacionesDashboard() {
-  const recupSection = document.getElementById('dashboard-ra-deudas') || document.getElementById('recup-lista');
-  if (recupSection) {
-    identificarEstudiantesRAsPendientes();
-    recupSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    recupSection.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
-    recupSection.style.boxShadow = '0 0 0 3px rgba(46,125,50,0.18)';
-    recupSection.style.borderColor = '#2E7D32';
-    setTimeout(() => {
-      recupSection.style.boxShadow = '';
-      recupSection.style.borderColor = '';
-    }, 1800);
-  } else {
-    document.getElementById('panel-dashboard')?.scrollIntoView({ behavior: 'smooth' });
-  }
+  _mostrarPanel('panel-recuperaciones');
+  identificarEstudiantesRAsPendientes();
+}
+
+function cerrarRecuperacionesDashboard() {
+  abrirDashboard();
 }
 
 // Expose recovery helpers to inline event handlers in index.html
@@ -24093,6 +24085,7 @@ window._crearPlanesRecuperacionDesdeResultado = _crearPlanesRecuperacionDesdeRes
 window.copiarResultadoRecuperaciones = copiarResultadoRecuperaciones;
 window.descargarResultadoRecuperaciones = descargarResultadoRecuperaciones;
 window.abrirRecuperacionesDashboard = abrirRecuperacionesDashboard;
+window.cerrarRecuperacionesDashboard = cerrarRecuperacionesDashboard;
 
 async function verCicloArchivado(yearId) {
   const detailContent = document.getElementById('backup-archivos-detalle-contenido');

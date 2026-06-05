@@ -507,27 +507,6 @@
         </button>
       </div>
 
-      <div id="dashboard-ra-deudas" style="margin-top:16px;padding:16px;border-radius:8px;background:#F7FAF8;border:1px solid #C8E6C9;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div>
-            <div style="font-size:0.88rem;font-weight:800;color:#1B5E20;text-transform:uppercase;">RAs adeudados</div>
-            <div style="font-size:0.82rem;color:#455A64;margin-top:3px;">Estudiantes con menos del 70% acumulado en un resultado de aprendizaje.</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="padding:9px 13px;">Actualizar lista</button>
-            <select id="recup-tipo-select" style="padding:9px 11px;border-radius:8px;border:1px solid #B0BEC5;font-weight:700;">
-              <option value="actividad">Actividad práctica</option>
-              <option value="hoja_trabajo">Hoja de trabajo</option>
-              <option value="examen">Examen/Prueba</option>
-              <option value="tarea">Tarea para casa</option>
-            </select>
-            <button class="btn-secundario" onclick="generarRecuperacionesIA()" style="padding:9px 13px;">Generar recuperación IA</button>
-          </div>
-        </div>
-        <div id="recup-lista" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;font-size:0.9rem;color:#263238;">Pulsa "Actualizar lista" para revisar los RAs adeudados.</div>
-        <div id="recup-resultado" style="margin-top:12px;font-size:0.9rem;color:#263238;"></div>
-      </div>
-
       <!-- ── Grid principal: Hoy | Mañana | Pasado mañana | Tareas ── -->
       <div class="dash-grid-4col">
         <!-- Columna 1: clases de hoy -->
@@ -1674,6 +1653,42 @@
     </div>
     <div class="nav-buttons">
       <button class="btn-anterior" onclick="cerrarBlog()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL RAS ADEUDADOS ===== -->
+  <div id="panel-recuperaciones" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E8F5E9;color:#2E7D32;">assignment_return</span>
+        <h2>RAs Adeudados</h2>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="recup-tipo-select"
+            style="font-size:0.82rem;padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:8px;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);">
+            <option value="actividad">Actividad</option>
+            <option value="guia">Guía de recuperación</option>
+            <option value="plan">Plan de apoyo</option>
+          </select>
+          <button class="btn-siguiente" onclick="identificarEstudiantesRAsPendientes()" style="font-size:0.82rem;padding:8px 14px;">
+            <span class="material-icons">search</span> Buscar RAs pendientes
+          </button>
+          <button class="btn-siguiente" onclick="generarRecuperacionesIA()" style="font-size:0.82rem;padding:8px 14px;">
+            <span class="material-icons">auto_awesome</span> Generar IA
+          </button>
+        </div>
+      </div>
+
+      <div style="font-size:0.88rem;color:#546E7A;margin-bottom:12px;">
+        Revisa los estudiantes por debajo del 70% en sus RAs y genera materiales de recuperación desde aquí.
+      </div>
+
+      <div id="recup-lista" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="recup-resultado" style="display:none;margin-top:14px;"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarRecuperacionesDashboard()">
         <span class="material-icons">arrow_back</span> Volver
       </button>
     </div>
