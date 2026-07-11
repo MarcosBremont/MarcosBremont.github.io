@@ -1,4 +1,4 @@
-﻿function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 
 // ─── Funciones de gestión de cursos ───────────────────────────────
 function eliminarCurso(id) {
@@ -5466,7 +5466,16 @@ function _buildExportSnapshot() {
     openrouterKey: localStorage.getItem(OPENROUTER_KEY_STORAGE) || '',
     notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
     libreta: localStorage.getItem(LIBRETA_KEY) || '{"entries":[]}',
-    cuentasEstudiantes: localStorage.getItem(CUENTAS_EST_KEY) || '{"cuentas":[]}'
+    cuentasEstudiantes: localStorage.getItem(CUENTAS_EST_KEY) || '{"cuentas":[]}',
+    bitacora: localStorage.getItem(BITACORA_KEY) || '[]',
+    participacion: localStorage.getItem(PARTICIP_KEY) || '{}',
+    blog: localStorage.getItem(BLOG_KEY) || '[]',
+    reportes: localStorage.getItem(REPORTES_KEY) || '[]',
+    calendarioEscolar: localStorage.getItem(CAL_ESC_KEY) || '{}',
+    stickies: localStorage.getItem(STICKIES_KEY) || '[]',
+    calBackups: localStorage.getItem(CAL_BACKUP_KEY) || '[]',
+    geminiKey: localStorage.getItem(GEMINI_KEY_STORAGE) || '',
+    preferencias: JSON.stringify(Object.fromEntries(['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana','cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral','planificadorRA_touchMode_v1'].map(k => [k, localStorage.getItem(k)]).filter(([_, v]) => v !== null)))
   };
 }
 
@@ -23491,12 +23500,36 @@ async function archivarCicloActual() {
 
   const currentYear = _getSchoolYearKey();
   const nextYear = _getNextSchoolYearKey();
-  if (!confirm('¿Archivar el ciclo ' + currentYear + ' y dejarlo disponible en el historial?\n\nEl año activo se moverá a ' + nextYear + '.')) {
+  if (!confirm('¿Archivar el ciclo ' + currentYear + ' y dejarlo disponible en el historial?\n\nSe descargará una copia de seguridad completa (.json) de todos tus datos en tu dispositivo y se guardará el ciclo en Firebase.\n\nEl año activo se moverá a ' + nextYear + '.')) {
     return;
   }
 
   try {
     const snapshot = _buildExportSnapshot();
+
+    // Descarga automática del backup completo (.json)
+    const ahora = new Date();
+    const json = JSON.stringify(snapshot, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const fecha = ahora.toISOString().slice(0, 10);
+    a.href = url;
+    a.download = 'backup-ciclo-' + currentYear + '-' + fecha + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // También descargar la bitácora de cambios (.txt)
+    try {
+      if (typeof exportarBitacora === 'function') {
+        exportarBitacora();
+      }
+    } catch (eb) {
+      console.warn('Error descargando bitácora al cerrar ciclo:', eb);
+    }
+
     const biblio = cargarBiblioteca();
     const cal = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}');
     const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
@@ -24668,6 +24701,28 @@ function importarDatos() {
     if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
     if (d.openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, d.openrouterKey);
     if (d.cuentasEstudiantes) localStorage.setItem(CUENTAS_EST_KEY, d.cuentasEstudiantes);
+    if (d.bitacora) localStorage.setItem(BITACORA_KEY, d.bitacora);
+    if (d.participacion) localStorage.setItem(PARTICIP_KEY, d.participacion);
+    if (d.blog) localStorage.setItem(BLOG_KEY, d.blog);
+    if (d.reportes) localStorage.setItem(REPORTES_KEY, d.reportes);
+    if (d.calendarioEscolar) localStorage.setItem(CAL_ESC_KEY, d.calendarioEscolar);
+    if (d.stickies) localStorage.setItem(STICKIES_KEY, d.stickies);
+    if (d.calBackups) localStorage.setItem(CAL_BACKUP_KEY, d.calBackups);
+    if (d.geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, d.geminiKey);
+    if (d.preferencias) {
+      try {
+        const pref = JSON.parse(d.preferencias);
+        Object.entries(pref).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) localStorage.setItem(k, v);
+        });
+      } catch { }
+    }
+    if (d._meta && d._meta.schoolYear) {
+      localStorage.setItem(ACTIVE_YEAR_KEY, d._meta.schoolYear);
+      if (window._syncFirebase) {
+        window._syncFirebase('active_year', d._meta.schoolYear);
+      }
+    }
 
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
     cerrarBackup();
