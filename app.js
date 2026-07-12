@@ -23541,14 +23541,15 @@ async function archivarCicloActual() {
       yearId: currentYear,
       closedAt: new Date().toISOString(),
       counts: {
-        planificaciones: (biblio.items || []).length,
-        cursos: Object.keys(cal.cursos || {}).length,
-        sesionesDiarias: Object.keys(diarias.sesiones || {}).length,
-        tareas: Array.isArray(tareas) ? tareas.length : 0,
-        registrosAsistencia: Object.keys(asistencia || {}).length
+        planificaciones: Number((biblio.items || []).length) || 0,
+        cursos: Number(Object.keys(cal.cursos || {}).length) || 0,
+        sesionesDiarias: Number(Object.keys(diarias.sesiones || {}).length) || 0,
+        tareas: Number(Array.isArray(tareas) ? tareas.length : 0) || 0,
+        registrosAsistencia: Number(Object.keys(asistencia || {}).length) || 0
       },
-      snapshot: JSON.stringify(snapshot),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      // El snapshot completo se descarga localmente en .json; no se guarda en Firestore para evitar el límite de 1MB.
+      // Usamos valores planos y serializables para evitar errores de Firestore con entidades anidadas.
+      createdAt: new Date().toISOString()
     };
 
     const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(currentYear);
@@ -24134,25 +24135,12 @@ async function verCicloArchivado(yearId) {
   try {
     const archiveDoc = await db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId).get();
     if (!archiveDoc.exists) {
-      detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFF3E0;color:#EF6C00;font-size:0.78rem;">No se encontró el snapshot del ciclo ' + escapeHTML(yearId) + '.</div>';
+      detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFF3E0;color:#EF6C00;font-size:0.78rem;">No se encontró el registro del ciclo ' + escapeHTML(yearId) + ' en Firebase.</div>';
       return;
     }
 
     const data = archiveDoc.data() || {};
-    const snapshot = _safeParseJson(data.snapshot, {});
-    const biblioteca = _safeParseJson(snapshot.biblioteca, { items: [] });
-    const calificaciones = _safeParseJson(snapshot.calificaciones, { cursos: {} });
-    const diarias = _safeParseJson(snapshot.diarias, { sesiones: {} });
-    const tareas = _safeParseJson(snapshot.tareas, []);
-    const asistencia = _safeParseJson(snapshot.asistencia, {});
-    const comentarios = _safeParseJson(snapshot.comentarios, {});
-    const notasClase = _safeParseJson(snapshot.notasClase, {});
-    const obsEstudiantes = _safeParseJson(snapshot.obsEstudiantes, {});
-    const incidencias = _safeParseJson(snapshot.incidencias, {});
-    const recuperaciones = _safeParseJson(snapshot.recuperaciones, {});
-    const libreta = _safeParseJson(snapshot.libreta, { entries: [] });
-    const cuentasEstudiantes = _safeParseJson(snapshot.cuentasEstudiantes, { cuentas: [] });
-
+    const counts = data.counts || {};
     const fecha = data.closedAt ? new Date(data.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
     detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
@@ -24168,50 +24156,35 @@ async function verCicloArchivado(yearId) {
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">' +
         '<div style="padding:10px 11px;border-radius:10px;background:#E8F5E9;color:#1B5E20;">' +
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Planificaciones</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + ((biblioteca.items || []).length) + '</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.planificaciones || 0) + '</div>' +
         '</div>' +
         '<div style="padding:10px 11px;border-radius:10px;background:#E3F2FD;color:#0D47A1;">' +
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Cursos</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(calificaciones.cursos || {}).length) + '</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.cursos || 0) + '</div>' +
         '</div>' +
         '<div style="padding:10px 11px;border-radius:10px;background:#FFF3E0;color:#E65100;">' +
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Sesiones diarias</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(diarias.sesiones || {}).length) + '</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.sesionesDiarias || 0) + '</div>' +
         '</div>' +
         '<div style="padding:10px 11px;border-radius:10px;background:#F1F8E9;color:#2E7D32;">' +
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Tareas</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Array.isArray(tareas) ? tareas.length : 0) + '</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.tareas || 0) + '</div>' +
         '</div>' +
         '<div style="padding:10px 11px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;">' +
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Asistencia</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(asistencia || {}).length) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#E0F2F1;color:#00695C;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Comentarios</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(comentarios || {}).length) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#ECEFF1;color:#37474F;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Notas de clase</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(notasClase || {}).length) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#FFF8E1;color:#8D6E63;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Observaciones</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (Object.keys(obsEstudiantes || {}).length) + '</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.registrosAsistencia || 0) + '</div>' +
         '</div>' +
       '</div>' +
-      '<div style="padding:12px 13px;border-radius:10px;background:#FAFAFA;border:1px solid #E0E0E0;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">' +
-          '<div style="font-size:0.74rem;font-weight:800;color:#424242;text-transform:uppercase;letter-spacing:.08em;">Snapshot completo</div>' +
-          '<div style="font-size:0.68rem;color:#78909C;">Puedes revisar el contenido completo del ciclo archivado aquí.</div>' +
+      '<div style="padding:12px 13px;border-radius:10px;background:#E8F5E9;border:1px solid #C8E6C9;display:flex;align-items:flex-start;gap:10px;">' +
+        '<span class="material-icons" style="color:#2E7D32;font-size:20px;margin-top:1px;">download_done</span>' +
+        '<div>' +
+          '<div style="font-size:0.78rem;font-weight:800;color:#1B5E20;margin-bottom:3px;">Backup completo disponible localmente</div>' +
+          '<div style="font-size:0.73rem;color:#388E3C;">Al archivar este ciclo, el backup completo (<strong>.json</strong>) y la bitácora (<strong>.txt</strong>) se descargaron automáticamente en tu dispositivo. Usa la sección <em>"Importar backup"</em> para restaurar estos datos si lo necesitas.</div>' +
         '</div>' +
-        '<pre id="backup-archivo-json" style="margin:0;background:#263238;color:#ECEFF1;border-radius:10px;padding:12px;overflow:auto;max-height:360px;font-size:0.68rem;white-space:pre-wrap;word-break:break-word;"></pre>' +
       '</div>' +
     '</div>';
-
-    const preEl = document.getElementById('backup-archivo-json');
-    if (preEl) preEl.textContent = JSON.stringify(snapshot, null, 2);
   } catch (e) {
-    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFEBEE;color:#C62828;font-size:0.78rem;">Error al cargar el snapshot archivado: ' + escapeHTML(e.message) + '</div>';
+    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFEBEE;color:#C62828;font-size:0.78rem;">Error al cargar el registro archivado: ' + escapeHTML(e.message) + '</div>';
   }
 }
 
