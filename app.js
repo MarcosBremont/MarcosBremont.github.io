@@ -23547,7 +23547,7 @@ async function archivarCicloActual() {
         tareas: Array.isArray(tareas) ? tareas.length : 0,
         registrosAsistencia: Object.keys(asistencia || {}).length
       },
-      snapshot,
+      snapshot: JSON.stringify(snapshot),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -24139,7 +24139,7 @@ async function verCicloArchivado(yearId) {
     }
 
     const data = archiveDoc.data() || {};
-    const snapshot = data.snapshot || {};
+    const snapshot = _safeParseJson(data.snapshot, {});
     const biblioteca = _safeParseJson(snapshot.biblioteca, { items: [] });
     const calificaciones = _safeParseJson(snapshot.calificaciones, { cursos: {} });
     const diarias = _safeParseJson(snapshot.diarias, { sesiones: {} });
