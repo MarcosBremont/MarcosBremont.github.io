@@ -2497,7 +2497,23 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.25<span class="about-ver-fecha">Jul
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.26<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: error al archivar ciclo escolar en Firebase</div>
+              <ul class="about-ver-items">
+                <li><strong>Error corregido:</strong> al presionar "Cerrar ciclo y archivar", el sistema mostraba <em>"Property snapshot contains an invalid nested entity"</em>; esto ocurría porque Firestore no acepta objetos JavaScript anidados arbitrariamente.</li>
+                <li><strong>Solución aplicada:</strong> el snapshot de datos ahora se serializa como cadena JSON antes de guardarse en Firebase, eliminando el error por completo.</li>
+                <li><strong>Lectura compatible:</strong> al consultar el historial de ciclos archivados, el sistema deserializa el JSON automáticamente para mostrar el resumen correctamente.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v15.25<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
             </div>
