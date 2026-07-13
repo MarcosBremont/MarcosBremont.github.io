@@ -2497,15 +2497,15 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.27<span class="about-ver-fecha">Jul
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.28<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Corrección: archivado seguro en Firebase y invalidación de caché del PWA</div>
+              <div class="about-ver-titulo">Corrección: navegación forzada a HTTPS y ajuste de caché del PWA</div>
               <ul class="about-ver-items">
-                <li><strong>Fix aplicado:</strong> al presionar "Cerrar ciclo y archivar", ahora el sistema guarda solo metadatos planos en Firebase y deja el backup completo descargándose localmente en formato JSON.</li>
-                <li><strong>Evita el error anterior:</strong> se elimina la persistencia de entidades anidadas complejas en Firestore, evitando el mensaje <em>"Property snapshot contains an invalid nested entity"</em>.</li>
+                <li><strong>Fix aplicado:</strong> la app redirige automáticamente de HTTP a HTTPS para evitar los mensajes de conexión insegura con blobs y recursos enlazados.</li>
+                <li><strong>Evita el error anterior:</strong> además del archivado seguro en Firebase, ahora el sitio se sirve de forma segura y el navegador deja de mostrar los avisos de origen inseguro.</li>
                 <li><strong>Recarga visible:</strong> el cache del PWA fue invalidado para que el navegador cargue la versión corregida y muestre el número de versión actualizado en el dashboard.</li>
               </ul>
             </div>
