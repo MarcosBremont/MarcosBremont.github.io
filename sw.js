@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinclass-v77';
+const CACHE_NAME = 'tinclass-v78';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -85,11 +85,18 @@ async function networkFirstWithCacheFallback(request) {
   } catch {
     const cached = await cache.match(request);
     if (cached) return cached;
+
     // Fallback final para navegación
     if (request.mode === 'navigate') {
-      return cache.match('/index.html');
+      const cachedIndex = await cache.match('/index.html');
+      if (cachedIndex) return cachedIndex;
+      return new Response('<!DOCTYPE html><html><body>Sin conexión</body></html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      });
     }
-    return new Response('Sin conexión', { status: 503 });
+
+    return new Response('', { status: 200 });
   }
 }
 
