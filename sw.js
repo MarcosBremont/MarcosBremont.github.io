@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinclass-v78';
+const CACHE_NAME = 'tinclass-v79';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -47,6 +47,12 @@ self.addEventListener('activate', event => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ── Fetch: estrategia según el tipo de recurso ──────────────────────────────
