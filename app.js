@@ -23552,9 +23552,6 @@ async function archivarCicloActual() {
       createdAt: new Date().toISOString()
     };
 
-    const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(currentYear);
-    await archiveRef.set(archiveDoc, { merge: true });
-
     const archivedYears = _loadArchivedYears();
     const existingIndex = archivedYears.findIndex(item => item.id === currentYear);
     const entry = {
@@ -23567,12 +23564,29 @@ async function archivarCicloActual() {
     else archivedYears.unshift(entry);
 
     localStorage.setItem(ACTIVE_YEAR_KEY, nextYear);
-    if (window._syncFirebase) {
-      window._syncFirebase('active_year', nextYear);
+    try {
+      if (window._syncFirebase) {
+        window._syncFirebase('active_year', nextYear);
+      }
+    } catch (syncErr) {
+      console.warn('No se pudo sincronizar active_year en Firebase:', syncErr);
     }
     _saveArchivedYears(archivedYears);
 
-    mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase', 'success');
+    let firebaseArchiveOk = false;
+    try {
+      const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(currentYear);
+      await archiveRef.set(archiveDoc, { merge: true });
+      firebaseArchiveOk = true;
+    } catch (firebaseErr) {
+      console.warn('No se pudo guardar el registro del ciclo en Firebase. El backup local ya quedó descargado:', firebaseErr);
+    }
+
+    if (firebaseArchiveOk) {
+      mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase', 'success');
+    } else {
+      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. La sincronización en Firebase quedó pendiente.', 'warning');
+    }
     abrirBackup();
   } catch (e) {
     mostrarToast('Error archivando ciclo: ' + e.message, 'error');
