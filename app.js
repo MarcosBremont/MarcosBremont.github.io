@@ -24139,23 +24139,82 @@ async function verCicloArchivado(yearId) {
   const detailContent = document.getElementById('backup-archivos-detalle-contenido');
   if (!detailContent) return;
 
-  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore) {
-    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFEBEE;color:#C62828;font-size:0.78rem;">Inicia sesión para revisar los snapshots archivados en Firebase.</div>';
+  const localArchivedYears = _loadArchivedYears();
+  const localArchive = localArchivedYears.find(item => item.id === yearId) || null;
+  const renderLocalArchiveCard = (title, subtitle, counts, closedAt) => {
+    const displayFecha = closedAt ? new Date(closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
+      '<div style="padding:12px 13px;border-radius:10px;background:#fff;border:1px solid #E1BEE7;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Ciclo archivado</div>' +
+            '<div style="font-size:1.02rem;font-weight:800;color:#4A148C;margin-top:2px;">' + escapeHTML(title || yearId) + '</div>' +
+          '</div>' +
+          '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(displayFecha) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E8F5E9;color:#1B5E20;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Planificaciones</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.planificaciones || 0) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E3F2FD;color:#0D47A1;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Cursos</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.cursos || 0) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#FFF3E0;color:#E65100;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Sesiones diarias</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.sesionesDiarias || 0) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#F1F8E9;color:#2E7D32;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Tareas</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.tareas || 0) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Asistencia</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.registrosAsistencia || 0) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:12px 13px;border-radius:10px;background:#E8F5E9;border:1px solid #C8E6C9;display:flex;align-items:flex-start;gap:10px;">' +
+        '<span class="material-icons" style="color:#2E7D32;font-size:20px;margin-top:1px;">download_done</span>' +
+        '<div>' +
+          '<div style="font-size:0.78rem;font-weight:800;color:#1B5E20;margin-bottom:3px;">Backup completo disponible localmente</div>' +
+          '<div style="font-size:0.73rem;color:#388E3C;">' + escapeHTML(subtitle) + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  };
+
+  if (!localArchive) {
+    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFF3E0;color:#EF6C00;font-size:0.78rem;">No se encontró una entrada local para el ciclo ' + escapeHTML(yearId) + '.</div>';
     return;
   }
 
   detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;font-size:0.78rem;">Cargando snapshot archivado…</div>';
 
+  const fallbackInfo = {
+    title: localArchive.yearLabel || yearId,
+    subtitle: 'El backup completo (.json) y la bitácora (.txt) se descargaron automáticamente en tu dispositivo. El registro remoto no estaba disponible en este momento.',
+    counts: localArchive.counts || {},
+    closedAt: localArchive.closedAt || null
+  };
+
   try {
+    if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore) {
+      renderLocalArchiveCard(fallbackInfo.title, fallbackInfo.subtitle, fallbackInfo.counts, fallbackInfo.closedAt);
+      return;
+    }
+
     const archiveDoc = await db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId).get();
     if (!archiveDoc.exists) {
-      detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFF3E0;color:#EF6C00;font-size:0.78rem;">No se encontró el registro del ciclo ' + escapeHTML(yearId) + ' en Firebase.</div>';
+      renderLocalArchiveCard(fallbackInfo.title, fallbackInfo.subtitle, fallbackInfo.counts, fallbackInfo.closedAt);
       return;
     }
 
     const data = archiveDoc.data() || {};
     const counts = data.counts || {};
     const fecha = data.closedAt ? new Date(data.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const subtitle = 'Al archivar este ciclo, el backup completo (.json) y la bitácora (.txt) se descargaron automáticamente en tu dispositivo. Usa la sección "Importar backup" para restaurar estos datos si lo necesitas.';
 
     detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
       '<div style="padding:12px 13px;border-radius:10px;background:#fff;border:1px solid #E1BEE7;">' +
@@ -24193,12 +24252,12 @@ async function verCicloArchivado(yearId) {
         '<span class="material-icons" style="color:#2E7D32;font-size:20px;margin-top:1px;">download_done</span>' +
         '<div>' +
           '<div style="font-size:0.78rem;font-weight:800;color:#1B5E20;margin-bottom:3px;">Backup completo disponible localmente</div>' +
-          '<div style="font-size:0.73rem;color:#388E3C;">Al archivar este ciclo, el backup completo (<strong>.json</strong>) y la bitácora (<strong>.txt</strong>) se descargaron automáticamente en tu dispositivo. Usa la sección <em>"Importar backup"</em> para restaurar estos datos si lo necesitas.</div>' +
+          '<div style="font-size:0.73rem;color:#388E3C;">' + escapeHTML(subtitle) + '</div>' +
         '</div>' +
       '</div>' +
     '</div>';
   } catch (e) {
-    detailContent.innerHTML = '<div style="padding:12px;border-radius:10px;background:#FFEBEE;color:#C62828;font-size:0.78rem;">Error al cargar el registro archivado: ' + escapeHTML(e.message) + '</div>';
+    renderLocalArchiveCard(fallbackInfo.title, fallbackInfo.subtitle, fallbackInfo.counts, fallbackInfo.closedAt);
   }
 }
 
