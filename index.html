@@ -2502,6 +2502,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.29<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: fallback visual del archivado cuando Firebase no responde</div>
+              <ul class="about-ver-items">
+                <li><strong>Fix aplicado:</strong> al cerrar ciclo y archivar, la vista ya no depende obligatoriamente del documento de Firebase para mostrar el resumen del archivo.</li>
+                <li><strong>Evita el error anterior:</strong> si Firestore no está disponible o el registro remoto llega tarde, la interfaz usa la información local del backup y sigue mostrando un estado útil.</li>
+                <li><strong>Recarga visible:</strong> el caché del PWA fue invalidado para llevar la nueva versión del dashboard y la corrección del flujo de archivado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.28<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4114,7 +4130,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=79', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=80', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {

@@ -5444,7 +5444,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.28',
+      version: '15.29',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -24839,7 +24839,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.28</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.29</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
