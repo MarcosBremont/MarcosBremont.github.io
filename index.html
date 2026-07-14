@@ -2502,6 +2502,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.30<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejora: botón para descargar backup de ciclos cerrados desde Firebase</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo botón:</strong> en el panel de ciclos archivados puedes descargar el backup del ciclo directamente desde la nube.</li>
+                <li><strong>Persistencia reforzada:</strong> los ciclos cerrados quedan guardados por chunks en Firebase y se pueden reconstruir en .json aunque pierdas el archivo local.</li>
+                <li><strong>Cobertura ampliada:</strong> el backup incluye más datos de la app para mantener histórico académico y administrativo de forma más completa.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.29<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4130,7 +4146,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=80', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=81', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {

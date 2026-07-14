@@ -5450,7 +5450,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.29',
+      version: '15.30',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -23676,6 +23676,62 @@ async function archivarCicloActual() {
   }
 }
 
+async function descargarBackupArchivadoDesdeFirebase(yearId) {
+  if (!yearId) {
+    mostrarToast('No se indicó el ciclo a descargar.', 'error');
+    return;
+  }
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) {
+    mostrarToast('Inicia sesión para descargar backups archivados desde Firebase.', 'error');
+    return;
+  }
+
+  try {
+    const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId);
+    const archiveDoc = await archiveRef.get();
+    if (!archiveDoc.exists) {
+      mostrarToast('No existe un backup remoto para este ciclo.', 'warning');
+      return;
+    }
+
+    const chunksSnap = await archiveRef.collection('chunks').get();
+    if (chunksSnap.empty) {
+      mostrarToast('Este ciclo no tiene chunks de backup en Firebase.', 'warning');
+      return;
+    }
+
+    const chunks = chunksSnap.docs
+      .map(doc => ({
+        index: Number(doc.data().chunkIndex),
+        payload: String(doc.data().payload || '')
+      }))
+      .sort((a, b) => a.index - b.index);
+
+    const json = chunks.map(c => c.payload).join('');
+    try {
+      JSON.parse(json);
+    } catch (_e) {
+      mostrarToast('El backup remoto está incompleto o corrupto.', 'error');
+      return;
+    }
+
+    const fecha = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'backup-ciclo-' + yearId + '-firebase-' + fecha + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    mostrarToast('Backup del ciclo ' + yearId + ' descargado desde Firebase.', 'success');
+  } catch (e) {
+    mostrarToast('Error descargando backup remoto: ' + (e.message || String(e)), 'error');
+  }
+}
+
 function _safeParseJson(value, fallback) {
   if (typeof value === 'object' && value !== null) return value;
   try {
@@ -24380,7 +24436,10 @@ function renderizarCiclosAcademicos() {
           '<span style="background:#E3F2FD;color:#1565C0;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.cursos || 0) + ' cursos</span>' +
           '<span style="background:#FFF3E0;color:#E65100;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.sesionesDiarias || 0) + ' sesiones diarias</span>' +
         '</div>' +
-        '<button type="button" data-action="ver-archivo" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#6A1B9A;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Revisar snapshot</button>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button type="button" data-action="ver-archivo" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#6A1B9A;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Revisar snapshot</button>' +
+          '<button type="button" data-action="descargar-archivo-nube" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#1565C0;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Descargar backup nube</button>' +
+        '</div>' +
       '</div>' +
       '<span class="material-icons" style="color:#90A4AE;font-size:20px;">history</span>' +
     '</div>';
@@ -24390,6 +24449,13 @@ function renderizarCiclosAcademicos() {
     button.addEventListener('click', (e) => {
       const yearId = e.currentTarget.dataset.year;
       verCicloArchivado(yearId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-action="descargar-archivo-nube"]').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const yearId = e.currentTarget.dataset.year;
+      await descargarBackupArchivadoDesdeFirebase(yearId);
     });
   });
 }
@@ -24922,7 +24988,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.29</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.30</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
