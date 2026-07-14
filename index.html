@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.37<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ajuste fino: contador de cursos ya no se corta en Ciclos archivados</div>
+              <ul class="about-ver-items">
+                <li><strong>Corrección visual:</strong> el renglón por año usa layout robusto para mantener el badge dentro del contenedor.</li>
+                <li><strong>Compatibilidad móvil:</strong> evita desbordes laterales en resoluciones angostas.</li>
+                <li><strong>Resultado:</strong> el contador (ej. “7 cursos”) se muestra completo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.36<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4244,7 +4260,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=87', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=88', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {
