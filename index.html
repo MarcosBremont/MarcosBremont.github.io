@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.39<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Historial completo de ciclos archivados con visor por secciones</div>
+              <ul class="about-ver-items">
+                <li><strong>Explorador de snapshots:</strong> cada ciclo archivado ahora se abre con calificaciones, blog, horario, planificaciones y demás datos completos.</li>
+                <li><strong>Visión total:</strong> no solo ves conteos, sino el contenido completo almacenado en el backup del ciclo.</li>
+                <li><strong>Recuperación clara:</strong> el docente puede revisar qué quedó archivado sin restaurar el backup entero.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.38<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4276,7 +4292,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=89', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=90', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {

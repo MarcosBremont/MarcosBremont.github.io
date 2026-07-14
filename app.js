@@ -5483,7 +5483,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.38',
+      version: '15.39',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -5649,6 +5649,150 @@ async function _readArchiveSnapshotFromFirebaseData(uid, yearId) {
     .sort((a, b) => a.index - b.index);
 
   return chunks.map(c => c.payload).join('');
+}
+
+async function _readArchiveSnapshotFromFirebase(uid, yearId) {
+  if (!uid || !yearId || !db) return null;
+
+  try {
+    const archiveRef = db.collection('users').doc(uid).collection('archives').doc(yearId);
+    const archiveDoc = await archiveRef.get();
+    if (archiveDoc.exists) {
+      const chunksSnap = await archiveRef.collection('chunks').get();
+      if (!chunksSnap.empty) {
+        const chunks = chunksSnap.docs
+          .map(doc => ({
+            index: Number((doc.data() || {}).chunkIndex),
+            payload: String((doc.data() || {}).payload || '')
+          }))
+          .sort((a, b) => a.index - b.index);
+        const payload = chunks.map(c => c.payload).join('');
+        if (payload) return payload;
+      }
+    }
+  } catch (e) {
+    console.warn('No se pudo leer snapshot en users/{uid}/archives:', e);
+  }
+
+  try {
+    return await _readArchiveSnapshotFromFirebaseData(uid, yearId);
+  } catch (e) {
+    console.warn('No se pudo leer snapshot en users/{uid}/data:', e);
+    return null;
+  }
+}
+
+function _parseArchiveValue(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch { return value; }
+}
+
+function _archiveValueCount(value) {
+  const parsed = _parseArchiveValue(value);
+  if (Array.isArray(parsed)) return parsed.length;
+  if (parsed && typeof parsed === 'object') return Object.keys(parsed).length;
+  if (parsed === null || parsed === undefined || parsed === '') return 0;
+  return 1;
+}
+
+function _archiveValuePreview(value, maxLen = 180) {
+  const parsed = _parseArchiveValue(value);
+  if (parsed === null || parsed === undefined) return '—';
+  if (typeof parsed === 'string') return parsed.length > maxLen ? parsed.slice(0, maxLen) + '…' : parsed;
+  try {
+    const json = JSON.stringify(parsed, null, 2);
+    return json.length > maxLen ? json.slice(0, maxLen) + '…' : json;
+  } catch {
+    return String(parsed);
+  }
+}
+
+function _renderArchiveDetailsSection(title, icon, value, extraInfo) {
+  const parsed = _parseArchiveValue(value);
+  const preview = _archiveValuePreview(parsed, 260);
+  const count = _archiveValueCount(parsed);
+  const json = (() => {
+    try { return JSON.stringify(parsed, null, 2); } catch { return String(parsed); }
+  })();
+
+  return '<details style="background:#fff;border:1px solid #E1D5F6;border-radius:10px;padding:8px 10px;">'
+    + '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;flex-wrap:wrap;">'
+    + '<span style="display:flex;align-items:center;gap:6px;font-size:0.88rem;font-weight:800;color:#4527A0;">'
+    + '<span class="material-icons" style="font-size:16px;color:#6A1B9A;">' + escapeHTML(icon) + '</span>'
+    + escapeHTML(title)
+    + '</span>'
+    + '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
+    + (extraInfo ? '<span style="font-size:0.7rem;color:#7E57C2;">' + escapeHTML(extraInfo) + '</span>' : '')
+    + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;white-space:nowrap;">'
+    + count + ' elem.' + (count !== 1 ? 's' : '') + '</span>'
+    + '</span>'
+    + '</summary>'
+    + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;">'
+    + '<div style="font-size:0.74rem;color:#616161;line-height:1.45;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(preview) + '</div>'
+    + '<div style="background:#FAFAFA;border:1px solid #ECECEC;border-radius:8px;padding:10px;max-height:320px;overflow:auto;">'
+    + '<pre style="margin:0;font-size:0.72rem;line-height:1.45;color:#263238;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(json) + '</pre>'
+    + '</div>'
+    + '</div>'
+    + '</details>';
+}
+
+function _renderArchiveSections(snapshot) {
+  const meta = snapshot._meta || {};
+  const sections = [];
+  const cal = _parseArchiveValue(snapshot.calificaciones) || {};
+  const bib = _parseArchiveValue(snapshot.biblioteca) || {};
+  const blog = _parseArchiveValue(snapshot.blog) || {};
+  const horario = _parseArchiveValue(snapshot.horario) || [];
+  const tareas = _parseArchiveValue(snapshot.tareas) || [];
+  const asistencia = _parseArchiveValue(snapshot.asistencia) || {};
+  const diarias = _parseArchiveValue(snapshot.diarias) || {};
+  const incidencias = _parseArchiveValue(snapshot.incidencias) || {};
+  const recuperaciones = _parseArchiveValue(snapshot.recuperaciones) || {};
+  const libreta = _parseArchiveValue(snapshot.libreta) || {};
+  const participacion = _parseArchiveValue(snapshot.participacion) || {};
+  const reportes = _parseArchiveValue(snapshot.reportes) || [];
+  const stickies = _parseArchiveValue(snapshot.stickies) || [];
+
+  const cursosActivos = Object.values(cal.cursos || {});
+  const cursosArchivados = cal.cursosArchivados || {};
+  const postsActivos = Array.isArray(blog.posts) ? blog.posts : [];
+  const postsArchivados = blog.postsArchivados || {};
+  const itemsBiblio = Array.isArray(bib.items) ? bib.items : [];
+  const sesionesDiarias = diarias && typeof diarias === 'object' ? (diarias.sesiones || {}) : {};
+
+  sections.push('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px;">'
+    + '<div style="padding:10px 11px;border-radius:10px;background:#E8F5E9;color:#1B5E20;"><div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Ciclo</div><div style="font-size:1rem;font-weight:800;margin-top:5px;">' + escapeHTML(meta.schoolYear || meta.exportadoLabel || '—') + '</div></div>'
+    + '<div style="padding:10px 11px;border-radius:10px;background:#E3F2FD;color:#0D47A1;"><div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Cursos</div><div style="font-size:1rem;font-weight:800;margin-top:5px;">' + cursosActivos.length + ' activos / ' + Object.keys(cursosArchivados).length + ' archivados</div></div>'
+    + '<div style="padding:10px 11px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;"><div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Blog</div><div style="font-size:1rem;font-weight:800;margin-top:5px;">' + postsActivos.length + ' activos / ' + Object.keys(postsArchivados).length + ' ciclos</div></div>'
+    + '<div style="padding:10px 11px;border-radius:10px;background:#FFF3E0;color:#E65100;"><div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Planificaciones</div><div style="font-size:1rem;font-weight:800;margin-top:5px;">' + itemsBiblio.length + ' guardadas</div></div>'
+    + '</div>');
+
+  sections.push(_renderArchiveDetailsSection('Calificaciones completas', 'grade', cal, 'Cursos, notas, cursos archivados y curso activo'));
+  sections.push(_renderArchiveDetailsSection('Biblioteca de planificaciones', 'description', bib, 'Planificaciones guardadas en el ciclo'));
+  sections.push(_renderArchiveDetailsSection('Blog del docente', 'article', blog, 'Posts activos y posts archivados por ciclo'));
+  sections.push(_renderArchiveDetailsSection('Horario', 'schedule', horario, 'Horario activo del ciclo'));
+  sections.push(_renderArchiveDetailsSection('Sesiones diarias', 'today', sesionesDiarias, 'Sesiones registradas por fecha'));
+  sections.push(_renderArchiveDetailsSection('Tareas', 'task', tareas, 'Tareas del ciclo'));
+  sections.push(_renderArchiveDetailsSection('Asistencia', 'how_to_reg', asistencia, 'Registros de asistencia'));
+  sections.push(_renderArchiveDetailsSection('Comentarios', 'comment', _parseArchiveValue(snapshot.comentarios) || {}, 'Comentarios por estudiante'));
+  sections.push(_renderArchiveDetailsSection('Notas de clase', 'sticky_note_2', _parseArchiveValue(snapshot.notasClase) || {}, 'Claves notaclase_*'));
+  sections.push(_renderArchiveDetailsSection('Observaciones de estudiantes', 'groups', _parseArchiveValue(snapshot.obsEstudiantes) || {}, 'Claves obs_est_*'));
+  sections.push(_renderArchiveDetailsSection('Escalas de evaluación', 'assessment', _parseArchiveValue(snapshot.evalFormas) || {}, 'Claves eval_*'));
+  sections.push(_renderArchiveDetailsSection('Incidencias', 'report', incidencias, 'Incidencias guardadas'));
+  sections.push(_renderArchiveDetailsSection('Recuperaciones', 'auto_awesome', recuperaciones, 'Recuperaciones generadas'));
+  sections.push(_renderArchiveDetailsSection('Libreta', 'menu_book', libreta, 'Entradas de libreta'));
+  sections.push(_renderArchiveDetailsSection('Participación', 'groups_2', participacion, 'Participación por curso o estudiante'));
+  sections.push(_renderArchiveDetailsSection('Reportes', 'description', reportes, 'Reportes del ciclo'));
+  sections.push(_renderArchiveDetailsSection('Calendario escolar', 'event', _parseArchiveValue(snapshot.calendarioEscolar) || {}, 'Calendario y eventos'));
+  sections.push(_renderArchiveDetailsSection('Notas del docente', 'edit_note', snapshot.notasDocente || '', 'Bitácora personal del docente'));
+  sections.push(_renderArchiveDetailsSection('Stickies', 'sticky_note_2', stickies, 'Notas rápidas del dashboard'));
+  sections.push(_renderArchiveDetailsSection('Copias automáticas de calificaciones', 'history', _parseArchiveValue(snapshot.calBackups) || [], 'Backups automáticos del módulo'));
+  sections.push(_renderArchiveDetailsSection('Preferencias', 'tune', _parseArchiveValue(snapshot.preferencias) || {}, 'Preferencias del usuario'));
+  sections.push(_renderArchiveDetailsSection('Datos locales completos', 'storage', _parseArchiveValue(snapshot.localStorageDump) || {}, 'Mapa crudo de localStorage del ciclo'));
+
+  return '<div style="display:flex;flex-direction:column;gap:8px;">' + sections.join('') + '</div>';
 }
 
 
@@ -24652,66 +24796,56 @@ async function verCicloArchivado(yearId) {
   };
 
   try {
+    const localSnapshotText = localArchive.snapshotJson || null;
+    let snapshotJson = localSnapshotText;
+
     if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore) {
+      if (snapshotJson) {
+        try {
+          const snapshot = JSON.parse(snapshotJson);
+          detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">'
+            + '<div style="padding:12px 13px;border-radius:10px;background:#fff;border:1px solid #E1BEE7;">'
+              + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+                + '<div>'
+                  + '<div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Ciclo archivado</div>'
+                  + '<div style="font-size:1.02rem;font-weight:800;color:#4A148C;margin-top:2px;">' + escapeHTML(fallbackInfo.title) + '</div>'
+                + '</div>'
+                + '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(fallbackInfo.closedAt ? new Date(fallbackInfo.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</div>'
+              + '</div>'
+            + '</div>'
+            + _renderArchiveSections(snapshot)
+          + '</div>';
+          return;
+        } catch (e) {
+          console.warn('Snapshot local corrupto:', e);
+        }
+      }
       renderLocalArchiveCard(fallbackInfo.title, fallbackInfo.subtitle, fallbackInfo.counts, fallbackInfo.closedAt);
       return;
     }
 
-    const archiveDoc = await db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId).get();
-    if (!archiveDoc.exists) {
+    snapshotJson = await _readArchiveSnapshotFromFirebase(window.currentUser.uid, yearId);
+    if (!snapshotJson) {
       renderLocalArchiveCard(fallbackInfo.title, fallbackInfo.subtitle, fallbackInfo.counts, fallbackInfo.closedAt);
       return;
     }
-
-    const data = archiveDoc.data() || {};
-    const counts = data.counts || {};
-    const fecha = data.closedAt ? new Date(data.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-    const subtitle = 'Al archivar este ciclo, el backup completo (.json) y la bitácora (.txt) se descargaron automáticamente en tu dispositivo. Usa la sección "Importar backup" para restaurar estos datos si lo necesitas.';
-
-    detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
-      '<div style="padding:12px 13px;border-radius:10px;background:#fff;border:1px solid #E1BEE7;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
-          '<div>' +
-            '<div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Ciclo archivado</div>' +
-            '<div style="font-size:1.02rem;font-weight:800;color:#4A148C;margin-top:2px;">' + escapeHTML(data.yearLabel || yearId) + '</div>' +
-          '</div>' +
-          '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(fecha) + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#E8F5E9;color:#1B5E20;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Planificaciones</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.planificaciones || 0) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#E3F2FD;color:#0D47A1;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Cursos</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.cursos || 0) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#FFF3E0;color:#E65100;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Sesiones diarias</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.sesionesDiarias || 0) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#F1F8E9;color:#2E7D32;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Tareas</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.tareas || 0) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#F3E5F5;color:#6A1B9A;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Asistencia</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.registrosAsistencia || 0) + '</div>' +
-        '</div>' +
-        '<div style="padding:10px 11px;border-radius:10px;background:#E0F7FA;color:#006064;">' +
-          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Blog</div>' +
-          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.blogPosts || 0) + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div style="padding:12px 13px;border-radius:10px;background:#E8F5E9;border:1px solid #C8E6C9;display:flex;align-items:flex-start;gap:10px;">' +
-        '<span class="material-icons" style="color:#2E7D32;font-size:20px;margin-top:1px;">download_done</span>' +
-        '<div>' +
-          '<div style="font-size:0.78rem;font-weight:800;color:#1B5E20;margin-bottom:3px;">Backup completo disponible localmente</div>' +
-          '<div style="font-size:0.73rem;color:#388E3C;">' + escapeHTML(subtitle) + '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
+    const snapshot = JSON.parse(snapshotJson);
+    const meta = snapshot._meta || {};
+    const counts = localArchive.counts || {};
+    const closedAt = localArchive.closedAt || meta.exportado || null;
+    detailContent.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">'
+      + '<div style="padding:12px 13px;border-radius:10px;background:#fff;border:1px solid #E1BEE7;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+          + '<div>'
+            + '<div style="font-size:0.74rem;font-weight:800;color:#6A1B9A;text-transform:uppercase;letter-spacing:.08em;">Ciclo archivado</div>'
+            + '<div style="font-size:1.02rem;font-weight:800;color:#4A148C;margin-top:2px;">' + escapeHTML(meta.schoolYear || localArchive.yearLabel || yearId) + '</div>'
+          + '</div>'
+          + '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(closedAt ? new Date(closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</div>'
+        + '</div>'
+      + '</div>'
+      + _renderArchiveSections(snapshot)
+    + '</div>';
+    return;
   } catch (e) {
     renderLocalArchiveCard(fallbackInfo.title, fallbackInfo.subtitle, fallbackInfo.counts, fallbackInfo.closedAt);
   }
@@ -25306,7 +25440,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.38</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.39</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
