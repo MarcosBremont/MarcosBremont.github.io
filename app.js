@@ -5441,6 +5441,12 @@ function _saveArchivedYears(list) {
 
 function _buildExportSnapshot() {
   const now = new Date();
+  const localStorageDump = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('planificadorRA_') || k.startsWith('cfg_') || k === 'tinclass_invite_code') {
+      localStorageDump[k] = localStorage.getItem(k);
+    }
+  });
   return {
     _meta: {
       app: 'El Gran Planificador',
@@ -5475,8 +5481,77 @@ function _buildExportSnapshot() {
     stickies: localStorage.getItem(STICKIES_KEY) || '[]',
     calBackups: localStorage.getItem(CAL_BACKUP_KEY) || '[]',
     geminiKey: localStorage.getItem(GEMINI_KEY_STORAGE) || '',
-    preferencias: JSON.stringify(Object.fromEntries(['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana','cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral','planificadorRA_touchMode_v1'].map(k => [k, localStorage.getItem(k)]).filter(([_, v]) => v !== null)))
+    preferencias: JSON.stringify(Object.fromEntries(['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana','cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral','planificadorRA_touchMode_v1'].map(k => [k, localStorage.getItem(k)]).filter(([_, v]) => v !== null))),
+    localStorageDump
   };
+}
+
+async function _collectArchiveRemoteData() {
+  const remote = {
+    reportesComportamiento: [],
+    denunciasPublicas: []
+  };
+
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) {
+    return remote;
+  }
+
+  try {
+    const reportesSnap = await db.collection('public_blogs').doc(window.currentUser.uid).collection('reportes_comportamiento').get();
+    remote.reportesComportamiento = reportesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (e) {
+    console.warn('No se pudieron cargar reportes de comportamiento para el backup archivado:', e);
+  }
+
+  try {
+    const denunciasPublicasSnap = await db.collection('public_blogs').doc(window.currentUser.uid).collection('denuncias').get();
+    remote.denunciasPublicas = denunciasPublicasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (e) {
+    console.warn('No se pudieron cargar denuncias públicas para el backup archivado:', e);
+  }
+
+  return remote;
+}
+
+async function _buildExportSnapshotAsync() {
+  const snapshot = _buildExportSnapshot();
+  const remote = await _collectArchiveRemoteData();
+  if (remote.reportesComportamiento.length) snapshot.reportesComportamiento = remote.reportesComportamiento;
+  if (remote.denunciasPublicas.length) snapshot.denunciasPublicas = remote.denunciasPublicas;
+  return snapshot;
+}
+
+function _chunkLargeStringForFirestore(payload, chunkSizeBytes = 700000) {
+  const chunks = [];
+  for (let i = 0; i < payload.length; i += chunkSizeBytes) {
+    chunks.push(payload.slice(i, i + chunkSizeBytes));
+  }
+  return chunks;
+}
+
+async function _persistArchiveSnapshotToFirebase(archiveRef, snapshotJson, yearId, createdAt) {
+  if (!archiveRef || !snapshotJson || !yearId) return;
+
+  const chunks = _chunkLargeStringForFirestore(snapshotJson);
+  await archiveRef.set({
+    yearId,
+    yearLabel: yearId,
+    createdAt,
+    backupMode: 'chunked',
+    chunkCount: chunks.length,
+    totalSnapshotBytes: snapshotJson.length,
+    snapshotStoredAt: createdAt
+  }, { merge: true });
+
+  const writes = chunks.map((chunk, index) => archiveRef.collection('chunks').doc(String(index)).set({
+    yearId,
+    chunkIndex: index,
+    totalChunks: chunks.length,
+    payload: chunk,
+    createdAt
+  }));
+
+  await Promise.all(writes);
 }
 
 
@@ -23505,7 +23580,7 @@ async function archivarCicloActual() {
   }
 
   try {
-    const snapshot = _buildExportSnapshot();
+    const snapshot = await _buildExportSnapshotAsync();
 
     // Descarga automática del backup completo (.json)
     const ahora = new Date();
@@ -23535,11 +23610,12 @@ async function archivarCicloActual() {
     const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
     const tareas = JSON.parse(localStorage.getItem(TAREAS_KEY) || '[]');
     const asistencia = JSON.parse(localStorage.getItem(ASIST_KEY) || '{}');
+    const createdAt = new Date().toISOString();
 
     const archiveDoc = {
       yearLabel: currentYear,
       yearId: currentYear,
-      closedAt: new Date().toISOString(),
+      closedAt: createdAt,
       counts: {
         planificaciones: Number((biblio.items || []).length) || 0,
         cursos: Number(Object.keys(cal.cursos || {}).length) || 0,
@@ -23547,9 +23623,15 @@ async function archivarCicloActual() {
         tareas: Number(Array.isArray(tareas) ? tareas.length : 0) || 0,
         registrosAsistencia: Number(Object.keys(asistencia || {}).length) || 0
       },
-      // El snapshot completo se descarga localmente en .json; no se guarda en Firestore para evitar el límite de 1MB.
-      // Usamos valores planos y serializables para evitar errores de Firestore con entidades anidadas.
-      createdAt: new Date().toISOString()
+      remoteCounts: {
+        reportesComportamiento: Number(Array.isArray(snapshot.reportesComportamiento) ? snapshot.reportesComportamiento.length : 0) || 0,
+        denunciasPublicas: Number(Array.isArray(snapshot.denunciasPublicas) ? snapshot.denunciasPublicas.length : 0) || 0
+      },
+      createdAt,
+      backupMode: 'chunked',
+      chunkCount: _chunkLargeStringForFirestore(json).length,
+      totalSnapshotBytes: json.length,
+      remoteStorage: 'firestore-archive'
     };
 
     const archivedYears = _loadArchivedYears();
@@ -23576,6 +23658,7 @@ async function archivarCicloActual() {
     let firebaseArchiveOk = false;
     try {
       const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(currentYear);
+      await _persistArchiveSnapshotToFirebase(archiveRef, json, currentYear, createdAt);
       await archiveRef.set(archiveDoc, { merge: true });
       firebaseArchiveOk = true;
     } catch (firebaseErr) {
