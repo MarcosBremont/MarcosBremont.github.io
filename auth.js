@@ -400,15 +400,44 @@ async function _cargarDesdeFirestore(uid) {
         // (evita que localStorage viejo de otro dispositivo sobreescriba datos nuevos de Firebase)
         if (store === 'calificaciones') {
           const localRaw = localStorage.getItem(key);
-          let fbCursos = {}, localCursos = {}, fbTs = 0, localTs = 0;
-          try { const fb = JSON.parse(doc.data().payload); fbCursos = fb.cursos || {}; fbTs = fb._lastModified || 0; } catch(e) {}
-          try { const lc = JSON.parse(localRaw || '{}'); localCursos = lc.cursos || {}; localTs = lc._lastModified || 0; } catch(e) {}
-          // Local más reciente → local gana para cursos en conflicto; Firebase más reciente (o empate) → Firebase gana
-          const merged = localTs > fbTs
-            ? { cursos: { ...fbCursos, ...localCursos }, _lastModified: localTs }
-            : { cursos: { ...localCursos, ...fbCursos }, _lastModified: fbTs };
+          let fbCal = {}, localCal = {}, fbTs = 0, localTs = 0;
+          let fbCursos = {}, localCursos = {};
+          let fbArchivados = {}, localArchivados = {};
+          try {
+            fbCal = JSON.parse(doc.data().payload || '{}') || {};
+            fbCursos = fbCal.cursos || {};
+            fbArchivados = fbCal.cursosArchivados || {};
+            fbTs = fbCal._lastModified || 0;
+          } catch(e) {}
+          try {
+            localCal = JSON.parse(localRaw || '{}') || {};
+            localCursos = localCal.cursos || {};
+            localArchivados = localCal.cursosArchivados || {};
+            localTs = localCal._lastModified || 0;
+          } catch(e) {}
+
+          const localGana = localTs > fbTs;
+          const base = localGana ? { ...fbCal, ...localCal } : { ...localCal, ...fbCal };
+          const cursosMerged = localGana
+            ? { ...fbCursos, ...localCursos }
+            : { ...localCursos, ...fbCursos };
+          const cursosArchivadosMerged = { ...fbArchivados, ...localArchivados };
+
+          const merged = {
+            ...base,
+            cursos: cursosMerged,
+            cursosArchivados: cursosArchivadosMerged,
+            _lastModified: Math.max(localTs, fbTs)
+          };
+
+          if (!merged.cursoActivoId || !merged.cursos?.[merged.cursoActivoId]) {
+            const ids = Object.keys(merged.cursos || {});
+            merged.cursoActivoId = ids.length ? ids[0] : null;
+          }
+
           localStorage.setItem(key, JSON.stringify(merged));
-          if (JSON.stringify(merged.cursos) !== JSON.stringify(fbCursos) && window._syncFirebase) {
+
+          if (JSON.stringify(merged) !== JSON.stringify(fbCal) && window._syncFirebase) {
             window._syncFirebase('calificaciones', merged);
           }
           return;

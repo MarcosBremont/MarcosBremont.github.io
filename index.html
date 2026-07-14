@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.35<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección crítica: sincronización de calificaciones ya no oculta cursos archivados</div>
+              <ul class="about-ver-items">
+                <li><strong>Bug corregido:</strong> al iniciar sesión, la fusión con Firebase ya no descarta <em>cursosArchivados</em>.</li>
+                <li><strong>Estado completo:</strong> se conservan cursos activos, cursos archivados y curso activo al restaurar datos.</li>
+                <li><strong>Resultado:</strong> Mis Planificaciones y Calificaciones mantienen visibles los grupos por ciclo sin desaparecer.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.34<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4212,7 +4228,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=85', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=86', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {
