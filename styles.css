@@ -8298,6 +8298,8 @@ body.dark-mode .mcl-momento-txt {
   border: 1.5px solid #E0E0E0;
   border-radius: 12px;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pln-grupo-header {
@@ -8343,7 +8345,7 @@ body.dark-mode .mcl-momento-txt {
 
 .pln-grupo-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(410px, 1fr));
   gap: 16px;
   padding: 16px;
   background: #FAFBFD;

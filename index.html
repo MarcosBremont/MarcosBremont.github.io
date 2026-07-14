@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.33<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ajuste visual: grupo de planificaciones más ancho para evitar recortes</div>
+              <ul class="about-ver-items">
+                <li><strong>Mejora de layout:</strong> se amplió el ancho base de las tarjetas dentro de <em>pln-grupo</em>.</li>
+                <li><strong>Lectura más cómoda:</strong> el contenido de las cards en ciclos archivados se muestra sin quedar cortado.</li>
+                <li><strong>Compatibilidad:</strong> se mantiene el comportamiento responsive en móvil y escritorio.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.32<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4180,7 +4196,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=83', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=84', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {
