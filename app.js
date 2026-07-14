@@ -5483,7 +5483,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.37',
+      version: '15.38',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -23884,6 +23884,7 @@ async function archivarCicloActual() {
     const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
     const tareas = JSON.parse(localStorage.getItem(TAREAS_KEY) || '[]');
     const asistencia = JSON.parse(localStorage.getItem(ASIST_KEY) || '{}');
+    const blogActual = cargarBlog();
     const horarioActual = Array.isArray(cargarHorario()) ? cargarHorario() : [];
     const createdAt = new Date().toISOString();
 
@@ -23897,6 +23898,7 @@ async function archivarCicloActual() {
         sesionesDiarias: Number(Object.keys(diarias.sesiones || {}).length) || 0,
         horarioClases: Number(Array.isArray(horarioActual) ? horarioActual.length : 0) || 0,
         tareas: Number(Array.isArray(tareas) ? tareas.length : 0) || 0,
+        blogPosts: Number(Array.isArray(blogActual.posts) ? blogActual.posts.length : 0) || 0,
         registrosAsistencia: Number(Object.keys(asistencia || {}).length) || 0
       },
       remoteCounts: {
@@ -23932,7 +23934,8 @@ async function archivarCicloActual() {
     _saveArchivedYears(archivedYears);
 
     const cursosArchivadosCount = _archivarCursosActivosEnCalificaciones(currentYear, createdAt);
-  const horarioArchivadoCount = _archivarHorarioActual(currentYear, createdAt);
+    const horarioArchivadoCount = _archivarHorarioActual(currentYear, createdAt);
+    const blogArchivadoCount = _archivarPostsBlogDocente(currentYear, createdAt);
 
     let firebaseArchiveOk = false;
     let firebaseStorageUsed = 'none';
@@ -23956,12 +23959,12 @@ async function archivarCicloActual() {
 
     if (firebaseArchiveOk) {
       if (firebaseStorageUsed === 'data') {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount, 'success');
       } else {
-      mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount, 'success');
       }
     } else {
-      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
+      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
     abrirBackup();
   } catch (e) {
@@ -24619,6 +24622,10 @@ async function verCicloArchivado(yearId) {
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Asistencia</div>' +
           '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.registrosAsistencia || 0) + '</div>' +
         '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E0F7FA;color:#006064;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Blog</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.blogPosts || 0) + '</div>' +
+        '</div>' +
       '</div>' +
       '<div style="padding:12px 13px;border-radius:10px;background:#E8F5E9;border:1px solid #C8E6C9;display:flex;align-items:flex-start;gap:10px;">' +
         '<span class="material-icons" style="color:#2E7D32;font-size:20px;margin-top:1px;">download_done</span>' +
@@ -24692,6 +24699,10 @@ async function verCicloArchivado(yearId) {
           '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Asistencia</div>' +
           '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.registrosAsistencia || 0) + '</div>' +
         '</div>' +
+        '<div style="padding:10px 11px;border-radius:10px;background:#E0F7FA;color:#006064;">' +
+          '<div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Blog</div>' +
+          '<div style="font-size:1.16rem;font-weight:800;margin-top:5px;">' + (counts.blogPosts || 0) + '</div>' +
+        '</div>' +
       '</div>' +
       '<div style="padding:12px 13px;border-radius:10px;background:#E8F5E9;border:1px solid #C8E6C9;display:flex;align-items:flex-start;gap:10px;">' +
         '<span class="material-icons" style="color:#2E7D32;font-size:20px;margin-top:1px;">download_done</span>' +
@@ -24741,6 +24752,7 @@ function renderizarCiclosAcademicos() {
           '<span style="background:#F1F8E9;color:#2E7D32;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.planificaciones || 0) + ' planificaciones</span>' +
           '<span style="background:#E3F2FD;color:#1565C0;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.cursos || 0) + ' cursos</span>' +
           '<span style="background:#FFF3E0;color:#E65100;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.sesionesDiarias || 0) + ' sesiones diarias</span>' +
+          '<span style="background:#E0F7FA;color:#006064;border-radius:999px;padding:3px 8px;font-weight:700;">' + (counts.blogPosts || 0) + ' posts blog</span>' +
         '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
           '<button type="button" data-action="ver-archivo" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#6A1B9A;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Revisar snapshot</button>' +
@@ -25294,7 +25306,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.37</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.38</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -26443,11 +26455,93 @@ const BLOG_KEY = 'planificadorRA_blog_v1';
 let _blogTempAdjuntos = [];
 
 function cargarBlog() {
-  try { return JSON.parse(localStorage.getItem(BLOG_KEY) || '{"posts":[]}'); } catch { return { posts: [] }; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(BLOG_KEY) || '{"posts":[]}') || {};
+    return {
+      ...raw,
+      posts: Array.isArray(raw.posts) ? raw.posts : [],
+      postsArchivados: raw.postsArchivados && typeof raw.postsArchivados === 'object' ? raw.postsArchivados : {}
+    };
+  } catch {
+    return { posts: [], postsArchivados: {} };
+  }
 }
 function guardarBlog(data) {
   localStorage.setItem(BLOG_KEY, JSON.stringify(data));
   if (window._syncFirebase) _syncFirebase('blog', data);
+}
+
+function _archivarPostsBlogDocente(yearId, closedAt) {
+  const blog = cargarBlog();
+  const postsActivos = Array.isArray(blog.posts) ? blog.posts : [];
+  if (!postsActivos.length) return 0;
+
+  if (!blog.postsArchivados || typeof blog.postsArchivados !== 'object') {
+    blog.postsArchivados = {};
+  }
+
+  blog.postsArchivados[yearId] = {
+    yearId,
+    closedAt: closedAt || new Date().toISOString(),
+    posts: JSON.parse(JSON.stringify(postsActivos))
+  };
+
+  postsActivos
+    .filter(p => p && p.publicado && p.id)
+    .forEach(p => _blogDespublicarEnFirestore(p.id));
+
+  blog.posts = [];
+  guardarBlog(blog);
+  return postsActivos.length;
+}
+
+function _blogRenderArchivados(blog, filtroCurso) {
+  const archivados = blog.postsArchivados || {};
+  const years = Object.keys(archivados).sort((a, b) => String(b).localeCompare(String(a)));
+  if (!years.length) return '';
+
+  const blocks = years.map(yearId => {
+    const reg = archivados[yearId] || {};
+    let posts = Array.isArray(reg.posts) ? reg.posts.slice() : [];
+    if (filtroCurso) posts = posts.filter(p => p.cursoId === filtroCurso);
+    posts.sort((a, b) => new Date(b.creadoEn || 0) - new Date(a.creadoEn || 0));
+    if (!posts.length) return '';
+
+    return '<details style="background:#fff;border:1px solid #D1C4E9;border-radius:10px;padding:8px 10px;">'
+      + '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;flex-wrap:wrap;">'
+      + '<span style="font-size:0.88rem;font-weight:800;color:#4527A0;">' + escapeHTML(yearId) + '</span>'
+      + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;white-space:nowrap;">'
+      + posts.length + ' post' + (posts.length !== 1 ? 's' : '') + '</span>'
+      + '</summary>'
+      + '<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">'
+      + posts.map(p => {
+        const fecha = p.creadoEn ? new Date(p.creadoEn).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        return '<div style="border:1px solid #ECE3F8;border-radius:8px;padding:8px 10px;background:#FCFAFF;">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+          + '<div style="font-size:0.82rem;font-weight:700;color:#4527A0;">' + escapeHTML(p.titulo || 'Post sin título') + '</div>'
+          + '<div style="font-size:0.7rem;color:#7E57C2;">' + escapeHTML(fecha) + '</div>'
+          + '</div>'
+          + '<div style="margin-top:4px;font-size:0.74rem;color:#616161;">'
+          + '<span style="color:#1565C0;font-weight:700;">' + escapeHTML(p.cursoNombre || 'Sin curso') + '</span>'
+          + ' · ' + escapeHTML((p.raLabel || 'Sin RA').substring(0, 85))
+          + '</div>'
+          + '</div>';
+      }).join('')
+      + '</div>'
+      + '</details>';
+  }).filter(Boolean);
+
+  if (!blocks.length) return '';
+
+  return '<div style="border:1px solid #D1C4E9;background:#F7F3FF;border-radius:12px;padding:12px 13px;margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
+    + '<div style="font-size:0.82rem;font-weight:800;color:#5E35B1;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;">'
+    + '<span class="material-icons" style="font-size:16px;">inventory_2</span>Posts archivados por ciclo'
+    + '</div>'
+    + '<div style="font-size:0.74rem;color:#7E57C2;">Se ocultan del ciclo activo, pero siguen en historial</div>'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;">' + blocks.join('') + '</div>'
+    + '</div>';
 }
 
 function abrirBlog() {
@@ -26468,6 +26562,7 @@ function renderizarBlog() {
   if (!cont) return;
   const filtro = document.getElementById('blog-filtro-curso')?.value || '';
   const blog = cargarBlog();
+  const panelArchivados = _blogRenderArchivados(blog, filtro);
   let posts = (blog.posts || []).slice().sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
   if (filtro) posts = posts.filter(p => p.cursoId === filtro);
 
@@ -26498,11 +26593,12 @@ function renderizarBlog() {
   }
 
   if (posts.length === 0) {
-    cont.innerHTML = '<div class="dash-empty-card"><span class="material-icons">article</span>'
+    cont.innerHTML = panelArchivados
+      + '<div class="dash-empty-card"><span class="material-icons">article</span>'
       + '<p>No hay posts todavía.<br>Crea tu primer post con el botón <strong>Nuevo post</strong>.</p></div>';
     return;
   }
-  cont.innerHTML = posts.map(p => _blogRenderCard(p)).join('');
+  cont.innerHTML = panelArchivados + posts.map(p => _blogRenderCard(p)).join('');
 }
 
 function _blogRenderCard(p) {

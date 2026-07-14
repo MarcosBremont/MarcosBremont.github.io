@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.38<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: archivado del Blog del Docente por ciclo escolar</div>
+              <ul class="about-ver-items">
+                <li><strong>Cierre de ciclo mejorado:</strong> al archivar, los posts activos del Blog se mueven al historial del ciclo.</li>
+                <li><strong>Limpieza del año activo:</strong> los posts publicados se despublican del feed público para iniciar el nuevo ciclo limpio.</li>
+                <li><strong>Historial visible:</strong> en el panel Blog ahora aparece “Posts archivados por ciclo” con detalle por año.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.37<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4260,7 +4276,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=88', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=89', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {
