@@ -5450,7 +5450,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.30',
+      version: '15.31',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -9452,7 +9452,11 @@ let calState = {
 
 
 
-  cursoActivoId: null
+  cursoActivoId: null,
+
+
+
+  cursosArchivados: {}
 
 
 
@@ -9484,11 +9488,47 @@ function cargarCalificaciones() {
 
 
 
+    if (!calState || typeof calState !== 'object') {
+
+
+
+      calState = { cursos: {}, cursoActivoId: null, cursosArchivados: {} };
+
+
+
+    }
+
+
+
+    if (!calState.cursos || typeof calState.cursos !== 'object') calState.cursos = {};
+
+
+
+    if (!calState.cursosArchivados || typeof calState.cursosArchivados !== 'object') calState.cursosArchivados = {};
+
+
+
+    if (!calState.cursoActivoId || !calState.cursos[calState.cursoActivoId]) {
+
+
+
+      const ids = Object.keys(calState.cursos);
+
+
+
+      calState.cursoActivoId = ids.length ? ids[0] : null;
+
+
+
+    }
+
+
+
   } catch (e) {
 
 
 
-    calState = { cursos: {}, cursoActivoId: null };
+    calState = { cursos: {}, cursoActivoId: null, cursosArchivados: {} };
 
 
 
@@ -9972,9 +10012,76 @@ function renderizarCalificaciones() {
   const inputEst = document.getElementById('input-estudiantes');
   if (inputEst) inputEst.value = '';
   renderizarTabsCursos();
+  renderizarPanelCursosArchivados();
   renderizarTabsPlanesDelCurso();
   renderizarTablaCalificaciones();
   _actualizarBadgePendientes();
+}
+
+function _archivarCursosActivosEnCalificaciones(yearId, closedAt) {
+  if (!yearId) return 0;
+  const cursosActivos = Object.values(calState.cursos || {});
+  if (!cursosActivos.length) return 0;
+
+  if (!calState.cursosArchivados || typeof calState.cursosArchivados !== 'object') {
+    calState.cursosArchivados = {};
+  }
+
+  const copiaCursos = JSON.parse(JSON.stringify(cursosActivos));
+  calState.cursosArchivados[yearId] = {
+    yearId,
+    closedAt: closedAt || new Date().toISOString(),
+    cursos: copiaCursos
+  };
+
+  calState.cursos = {};
+  calState.cursoActivoId = null;
+  guardarCalificaciones();
+  return copiaCursos.length;
+}
+
+function renderizarPanelCursosArchivados() {
+  const panel = document.getElementById('cal-archived-courses-panel');
+  if (!panel) return;
+
+  const archivados = calState.cursosArchivados || {};
+  const years = Object.keys(archivados).sort((a, b) => String(b).localeCompare(String(a)));
+
+  if (!years.length) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  panel.innerHTML = '<div style="border:1px solid #D1C4E9;background:#F7F3FF;border-radius:12px;padding:12px 13px;margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
+    + '<div style="font-size:0.82rem;font-weight:800;color:#5E35B1;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;">'
+    + '<span class="material-icons" style="font-size:16px;">inventory_2</span>Cursos archivados por ciclo'
+    + '</div>'
+    + '<div style="font-size:0.74rem;color:#7E57C2;">Se ocultan del año activo, pero siguen disponibles en historial</div>'
+    + '</div>'
+    + years.map(year => {
+      const reg = archivados[year] || {};
+      const cursos = Array.isArray(reg.cursos) ? reg.cursos : [];
+      const fecha = reg.closedAt ? new Date(reg.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+      return '<details style="background:#fff;border:1px solid #E1D5F6;border-radius:10px;padding:8px 10px;margin-top:8px;">'
+        + '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;">'
+        + '<span style="font-size:0.9rem;font-weight:800;color:#4527A0;">' + escapeHTML(year) + '</span>'
+        + '<span style="font-size:0.73rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;">' + cursos.length + ' curso' + (cursos.length !== 1 ? 's' : '') + '</span>'
+        + '</summary>'
+        + '<div style="font-size:0.72rem;color:#7E57C2;margin-top:6px;">Archivado: ' + escapeHTML(fecha) + '</div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+        + (cursos.length
+          ? cursos.map(c => '<span style="background:#EDE7F6;color:#5E35B1;border-radius:999px;padding:4px 10px;font-size:0.73rem;font-weight:700;">'
+            + escapeHTML(c.nombre || 'Curso sin nombre')
+            + ' <span style="opacity:.75;font-weight:600;">(' + Number((c.estudiantes || []).length || 0) + ')</span>'
+            + '</span>').join('')
+          : '<span style="font-size:0.74rem;color:#9E9E9E;">Sin cursos en este ciclo.</span>')
+        + '</div>'
+        + '</details>';
+    }).join('')
+    + '</div>';
 }
 
 // ── Pendientes por calificar ─────────────────────────────────────────────────
@@ -23719,6 +23826,8 @@ async function archivarCicloActual() {
     }
     _saveArchivedYears(archivedYears);
 
+    const cursosArchivadosCount = _archivarCursosActivosEnCalificaciones(currentYear, createdAt);
+
     let firebaseArchiveOk = false;
     let firebaseStorageUsed = 'none';
     try {
@@ -23741,12 +23850,12 @@ async function archivarCicloActual() {
 
     if (firebaseArchiveOk) {
       if (firebaseStorageUsed === 'data') {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible)', 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos al historial: ' + cursosArchivadosCount, 'success');
       } else {
-      mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase', 'success');
+      mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos al historial: ' + cursosArchivadosCount, 'success');
       }
     } else {
-      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. La sincronización en Firebase quedó pendiente.', 'warning');
+      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos al historial: ' + cursosArchivadosCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
     abrirBackup();
   } catch (e) {
@@ -25079,7 +25188,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.30</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.31</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

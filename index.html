@@ -1471,6 +1471,8 @@
         </button>
       </div>
 
+      <div id="cal-archived-courses-panel" class="hidden"></div>
+
       <!-- Añadir estudiantes -->
       <div class="cal-add-estudiantes" id="cal-add-estudiantes-area">
         <div class="cal-field-group">
@@ -2498,6 +2500,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.31<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejora: cursos del ciclo cerrado pasan a historial expandible en Calificaciones</div>
+              <ul class="about-ver-items">
+                <li><strong>Flujo nuevo al archivar:</strong> al cerrar ciclo, los cursos activos se quitan del año actual y se guardan en historial por ciclo escolar.</li>
+                <li><strong>Panel expandible:</strong> en Libro de Calificaciones se muestra una sección de cursos archivados con cada año (ej. 2025-2026) y sus cursos.</li>
+                <li><strong>Orden visual:</strong> el año activo queda limpio para iniciar el nuevo ciclo sin mezclar cursos anteriores.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -4146,7 +4164,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=81', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=82', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {
