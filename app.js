@@ -5554,6 +5554,70 @@ async function _persistArchiveSnapshotToFirebase(archiveRef, snapshotJson, yearI
   await Promise.all(writes);
 }
 
+function _getArchiveDataDocIdMeta(yearId) {
+  return 'archive_backup_' + yearId + '_meta';
+}
+
+function _getArchiveDataDocIdChunk(yearId, index) {
+  return 'archive_backup_' + yearId + '_chunk_' + index;
+}
+
+async function _persistArchiveSnapshotToFirebaseData(uid, snapshotJson, yearId, createdAt) {
+  if (!uid || !snapshotJson || !yearId || !db) return;
+
+  const chunks = _chunkLargeStringForFirestore(snapshotJson);
+  const dataCol = db.collection('users').doc(uid).collection('data');
+
+  await dataCol.doc(_getArchiveDataDocIdMeta(yearId)).set({
+    yearId,
+    yearLabel: yearId,
+    createdAt,
+    backupMode: 'chunked',
+    chunkCount: chunks.length,
+    totalSnapshotBytes: snapshotJson.length,
+    snapshotStoredAt: createdAt,
+    storagePath: 'users/' + uid + '/data'
+  }, { merge: true });
+
+  const writes = chunks.map((chunk, index) => dataCol.doc(_getArchiveDataDocIdChunk(yearId, index)).set({
+    yearId,
+    chunkIndex: index,
+    totalChunks: chunks.length,
+    payload: chunk,
+    createdAt
+  }, { merge: true }));
+
+  await Promise.all(writes);
+}
+
+async function _readArchiveSnapshotFromFirebaseData(uid, yearId) {
+  if (!uid || !yearId || !db) return null;
+
+  const dataCol = db.collection('users').doc(uid).collection('data');
+  const metaSnap = await dataCol.doc(_getArchiveDataDocIdMeta(yearId)).get();
+  if (!metaSnap.exists) return null;
+
+  const meta = metaSnap.data() || {};
+  const chunkCount = Number(meta.chunkCount) || 0;
+  if (chunkCount <= 0) return null;
+
+  const reads = [];
+  for (let i = 0; i < chunkCount; i++) {
+    reads.push(dataCol.doc(_getArchiveDataDocIdChunk(yearId, i)).get());
+  }
+  const docs = await Promise.all(reads);
+  if (docs.some(d => !d.exists)) return null;
+
+  const chunks = docs
+    .map(d => ({
+      index: Number((d.data() || {}).chunkIndex),
+      payload: String((d.data() || {}).payload || '')
+    }))
+    .sort((a, b) => a.index - b.index);
+
+  return chunks.map(c => c.payload).join('');
+}
+
 
 
 
@@ -23656,17 +23720,31 @@ async function archivarCicloActual() {
     _saveArchivedYears(archivedYears);
 
     let firebaseArchiveOk = false;
+    let firebaseStorageUsed = 'none';
     try {
       const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(currentYear);
       await _persistArchiveSnapshotToFirebase(archiveRef, json, currentYear, createdAt);
       await archiveRef.set(archiveDoc, { merge: true });
       firebaseArchiveOk = true;
+      firebaseStorageUsed = 'archives';
     } catch (firebaseErr) {
-      console.warn('No se pudo guardar el registro del ciclo en Firebase. El backup local ya quedó descargado:', firebaseErr);
+      console.warn('No se pudo guardar en users/{uid}/archives. Intentando fallback en users/{uid}/data:', firebaseErr);
+      try {
+        await _persistArchiveSnapshotToFirebaseData(window.currentUser.uid, json, currentYear, createdAt);
+        await db.collection('users').doc(window.currentUser.uid).collection('data').doc('archive_summary_' + currentYear).set(archiveDoc, { merge: true });
+        firebaseArchiveOk = true;
+        firebaseStorageUsed = 'data';
+      } catch (fallbackErr) {
+        console.warn('No se pudo guardar el registro del ciclo en Firebase (archives ni data). El backup local ya quedó descargado:', fallbackErr);
+      }
     }
 
     if (firebaseArchiveOk) {
+      if (firebaseStorageUsed === 'data') {
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible)', 'success');
+      } else {
       mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase', 'success');
+      }
     } else {
       mostrarToast('Ciclo ' + currentYear + ' descargado localmente. La sincronización en Firebase quedó pendiente.', 'warning');
     }
@@ -23687,27 +23765,40 @@ async function descargarBackupArchivadoDesdeFirebase(yearId) {
   }
 
   try {
-    const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId);
-    const archiveDoc = await archiveRef.get();
-    if (!archiveDoc.exists) {
-      mostrarToast('No existe un backup remoto para este ciclo.', 'warning');
+    let json = null;
+
+    try {
+      const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId);
+      const archiveDoc = await archiveRef.get();
+      if (archiveDoc.exists) {
+        const chunksSnap = await archiveRef.collection('chunks').get();
+        if (!chunksSnap.empty) {
+          const chunks = chunksSnap.docs
+            .map(doc => ({
+              index: Number(doc.data().chunkIndex),
+              payload: String(doc.data().payload || '')
+            }))
+            .sort((a, b) => a.index - b.index);
+          json = chunks.map(c => c.payload).join('');
+        }
+      }
+    } catch (readArchiveErr) {
+      console.warn('No se pudo leer backup en users/{uid}/archives:', readArchiveErr);
+    }
+
+    if (!json) {
+      try {
+        json = await _readArchiveSnapshotFromFirebaseData(window.currentUser.uid, yearId);
+      } catch (readDataErr) {
+        console.warn('No se pudo leer backup en users/{uid}/data:', readDataErr);
+      }
+    }
+
+    if (!json) {
+      mostrarToast('No existe un backup remoto accesible para este ciclo.', 'warning');
       return;
     }
 
-    const chunksSnap = await archiveRef.collection('chunks').get();
-    if (chunksSnap.empty) {
-      mostrarToast('Este ciclo no tiene chunks de backup en Firebase.', 'warning');
-      return;
-    }
-
-    const chunks = chunksSnap.docs
-      .map(doc => ({
-        index: Number(doc.data().chunkIndex),
-        payload: String(doc.data().payload || '')
-      }))
-      .sort((a, b) => a.index - b.index);
-
-    const json = chunks.map(c => c.payload).join('');
     try {
       JSON.parse(json);
     } catch (_e) {
