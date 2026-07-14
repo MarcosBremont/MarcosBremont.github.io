@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.40<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejora mayor del historial archivado: vista amigable + acceso directo</div>
+              <ul class="about-ver-items">
+                <li><strong>Vista amigable:</strong> el snapshot ya no se muestra en formato JSON crudo, ahora se presenta por tarjetas y resúmenes legibles.</li>
+                <li><strong>Acceso rápido:</strong> se agregó botón “Historial” en el dashboard para abrir directo los cierres de ciclo.</li>
+                <li><strong>Cargas corregidas:</strong> se mejoró el parseo del snapshot para evitar conteos en 0 por formato serializado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.39<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -3896,7 +3912,7 @@
         <div class="backup-divider"></div>
 
         <!-- Ciclos académicos -->
-        <div class="backup-section">
+        <div class="backup-section" id="backup-ciclos-section">
           <div class="backup-section-title">
             <span class="material-icons" style="color:#6A1B9A;">school</span>
             Ciclos académicos archivados
@@ -4292,7 +4308,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=90', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=91', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {

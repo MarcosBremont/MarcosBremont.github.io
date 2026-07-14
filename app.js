@@ -5483,7 +5483,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.39',
+      version: '15.40',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -5686,7 +5686,21 @@ function _parseArchiveValue(value) {
   if (value === null || value === undefined) return value;
   if (typeof value === 'object') return value;
   if (typeof value !== 'string') return value;
-  try { return JSON.parse(value); } catch { return value; }
+
+  let parsed = value;
+  for (let i = 0; i < 3; i++) {
+    if (typeof parsed !== 'string') break;
+    const t = parsed.trim();
+    if (!t) return '';
+    const likelyJson = t.startsWith('{') || t.startsWith('[') || t.startsWith('"');
+    if (!likelyJson) break;
+    try {
+      parsed = JSON.parse(t);
+    } catch {
+      break;
+    }
+  }
+  return parsed;
 }
 
 function _archiveValueCount(value) {
@@ -5697,26 +5711,16 @@ function _archiveValueCount(value) {
   return 1;
 }
 
-function _archiveValuePreview(value, maxLen = 180) {
-  const parsed = _parseArchiveValue(value);
-  if (parsed === null || parsed === undefined) return '—';
-  if (typeof parsed === 'string') return parsed.length > maxLen ? parsed.slice(0, maxLen) + '…' : parsed;
-  try {
-    const json = JSON.stringify(parsed, null, 2);
-    return json.length > maxLen ? json.slice(0, maxLen) + '…' : json;
-  } catch {
-    return String(parsed);
-  }
+function _archiveShortText(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'string') return value.length > 72 ? value.slice(0, 72) + '…' : value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.length + ' elemento' + (value.length !== 1 ? 's' : '');
+  if (typeof value === 'object') return Object.keys(value).length + ' campo' + (Object.keys(value).length !== 1 ? 's' : '');
+  return String(value);
 }
 
-function _renderArchiveDetailsSection(title, icon, value, extraInfo) {
-  const parsed = _parseArchiveValue(value);
-  const preview = _archiveValuePreview(parsed, 260);
-  const count = _archiveValueCount(parsed);
-  const json = (() => {
-    try { return JSON.stringify(parsed, null, 2); } catch { return String(parsed); }
-  })();
-
+function _renderArchiveFriendlySection(title, icon, subtitle, badges, bodyHtml) {
   return '<details style="background:#fff;border:1px solid #E1D5F6;border-radius:10px;padding:8px 10px;">'
     + '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;flex-wrap:wrap;">'
     + '<span style="display:flex;align-items:center;gap:6px;font-size:0.88rem;font-weight:800;color:#4527A0;">'
@@ -5724,17 +5728,11 @@ function _renderArchiveDetailsSection(title, icon, value, extraInfo) {
     + escapeHTML(title)
     + '</span>'
     + '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
-    + (extraInfo ? '<span style="font-size:0.7rem;color:#7E57C2;">' + escapeHTML(extraInfo) + '</span>' : '')
-    + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;white-space:nowrap;">'
-    + count + ' elem.' + (count !== 1 ? 's' : '') + '</span>'
+    + (subtitle ? '<span style="font-size:0.7rem;color:#7E57C2;">' + escapeHTML(subtitle) + '</span>' : '')
+    + (badges || '')
     + '</span>'
     + '</summary>'
-    + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;">'
-    + '<div style="font-size:0.74rem;color:#616161;line-height:1.45;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(preview) + '</div>'
-    + '<div style="background:#FAFAFA;border:1px solid #ECECEC;border-radius:8px;padding:10px;max-height:320px;overflow:auto;">'
-    + '<pre style="margin:0;font-size:0.72rem;line-height:1.45;color:#263238;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(json) + '</pre>'
-    + '</div>'
-    + '</div>'
+    + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;">' + bodyHtml + '</div>'
     + '</details>';
 }
 
@@ -5757,10 +5755,78 @@ function _renderArchiveSections(snapshot) {
 
   const cursosActivos = Object.values(cal.cursos || {});
   const cursosArchivados = cal.cursosArchivados || {};
-  const postsActivos = Array.isArray(blog.posts) ? blog.posts : [];
-  const postsArchivados = blog.postsArchivados || {};
+  const blogObj = Array.isArray(blog) ? { posts: blog, postsArchivados: {} } : blog;
+  const postsActivos = Array.isArray(blogObj.posts) ? blogObj.posts : [];
+  const postsArchivados = blogObj.postsArchivados || {};
   const itemsBiblio = Array.isArray(bib.items) ? bib.items : [];
   const sesionesDiarias = diarias && typeof diarias === 'object' ? (diarias.sesiones || {}) : {};
+
+  const badge = (txt) => '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;white-space:nowrap;">' + escapeHTML(txt) + '</span>';
+  const lista = (items) => {
+    if (!items.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin registros en este apartado.</div>';
+    return '<div style="display:flex;flex-direction:column;gap:6px;">' + items.join('') + '</div>';
+  };
+
+  const totalEstudiantes = cursosActivos.reduce((acc, c) => acc + Number((c.estudiantes || []).length || 0), 0);
+  const totalCursosArchivados = Object.values(cursosArchivados).reduce((acc, y) => acc + Number(((y || {}).cursos || []).length || 0, 0);
+  const totalNotas = cursosActivos.reduce((accCurso, c) => {
+    const notas = c.notas || {};
+    return accCurso + Object.values(notas).reduce((accEst, raObj) => {
+      const porRA = raObj || {};
+      return accEst + Object.values(porRA).reduce((accAct, acts) => {
+        const porAct = acts || {};
+        return accAct + Object.keys(porAct).length;
+      }, 0);
+    }, 0);
+  }, 0);
+
+  const cursosRows = cursosActivos.slice(0, 12).map(c => {
+    const rasCount = Object.keys(c.ras || {}).length;
+    const estCount = (c.estudiantes || []).length;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;">'
+      + '<div style="font-size:0.78rem;color:#4527A0;font-weight:700;">' + escapeHTML(c.nombre || 'Curso sin nombre') + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+      + '<span style="font-size:0.7rem;color:#1565C0;background:#E3F2FD;border-radius:999px;padding:2px 7px;font-weight:700;">' + estCount + ' estudiantes</span>'
+      + '<span style="font-size:0.7rem;color:#5E35B1;background:#EDE7F6;border-radius:999px;padding:2px 7px;font-weight:700;">' + rasCount + ' RAs</span>'
+      + '</div>'
+      + '</div>';
+  });
+
+  const biblioRows = itemsBiblio.slice(0, 10).map(it => {
+    const nombre = it.nombre || it.planificacion?.datosGenerales?.moduloFormativo || 'Planificación';
+    const fecha = it.fechaGuardadoLabel || (it.fechaGuardado ? new Date(it.fechaGuardado).toLocaleDateString('es-DO') : '');
+    return '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;">'
+      + '<div style="font-size:0.78rem;color:#4527A0;font-weight:700;">' + escapeHTML(nombre) + '</div>'
+      + (fecha ? '<div style="font-size:0.7rem;color:#7E57C2;margin-top:2px;">' + escapeHTML(fecha) + '</div>' : '')
+      + '</div>';
+  });
+
+  const postsRows = postsActivos.slice(0, 10).map(p => '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;">'
+    + '<div style="font-size:0.78rem;color:#4527A0;font-weight:700;">' + escapeHTML(p.titulo || 'Post sin título') + '</div>'
+    + '<div style="font-size:0.7rem;color:#7E57C2;margin-top:2px;">' + escapeHTML(p.cursoNombre || 'Sin curso') + ' · ' + escapeHTML(p.raLabel || 'Sin RA') + '</div>'
+    + '</div>');
+
+  const horarioRows = (Array.isArray(horario) ? horario : []).slice(0, 12).map(h => {
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    const diaTxt = typeof h.dia === 'number' ? (dias[h.dia] || '—') : '—';
+    return '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.76rem;color:#4527A0;">'
+      + '<strong>' + escapeHTML(h.seccion || 'Sin sección') + '</strong> · ' + escapeHTML(h.materia || 'Sin materia')
+      + ' · ' + escapeHTML(diaTxt) + ' ' + escapeHTML(h.inicio || '') + ' - ' + escapeHTML(h.fin || '')
+      + '</div>';
+  });
+
+  const genericRows = (obj) => {
+    if (Array.isArray(obj)) {
+      return obj.slice(0, 10).map((v, i) => '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;color:#4527A0;">'
+        + '<strong>#' + (i + 1) + '</strong> ' + escapeHTML(_archiveShortText(v)) + '</div>');
+    }
+    if (obj && typeof obj === 'object') {
+      return Object.entries(obj).slice(0, 10).map(([k, v]) => '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;color:#4527A0;">'
+        + '<strong>' + escapeHTML(k) + ':</strong> ' + escapeHTML(_archiveShortText(v)) + '</div>');
+    }
+    return ['<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;color:#4527A0;">'
+      + escapeHTML(_archiveShortText(obj)) + '</div>'];
+  };
 
   sections.push('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:10px;">'
     + '<div style="padding:10px 11px;border-radius:10px;background:#E8F5E9;color:#1B5E20;"><div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Ciclo</div><div style="font-size:1rem;font-weight:800;margin-top:5px;">' + escapeHTML(meta.schoolYear || meta.exportadoLabel || '—') + '</div></div>'
@@ -5769,28 +5835,49 @@ function _renderArchiveSections(snapshot) {
     + '<div style="padding:10px 11px;border-radius:10px;background:#FFF3E0;color:#E65100;"><div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;opacity:.78;">Planificaciones</div><div style="font-size:1rem;font-weight:800;margin-top:5px;">' + itemsBiblio.length + ' guardadas</div></div>'
     + '</div>');
 
-  sections.push(_renderArchiveDetailsSection('Calificaciones completas', 'grade', cal, 'Cursos, notas, cursos archivados y curso activo'));
-  sections.push(_renderArchiveDetailsSection('Biblioteca de planificaciones', 'description', bib, 'Planificaciones guardadas en el ciclo'));
-  sections.push(_renderArchiveDetailsSection('Blog del docente', 'article', blog, 'Posts activos y posts archivados por ciclo'));
-  sections.push(_renderArchiveDetailsSection('Horario', 'schedule', horario, 'Horario activo del ciclo'));
-  sections.push(_renderArchiveDetailsSection('Sesiones diarias', 'today', sesionesDiarias, 'Sesiones registradas por fecha'));
-  sections.push(_renderArchiveDetailsSection('Tareas', 'task', tareas, 'Tareas del ciclo'));
-  sections.push(_renderArchiveDetailsSection('Asistencia', 'how_to_reg', asistencia, 'Registros de asistencia'));
-  sections.push(_renderArchiveDetailsSection('Comentarios', 'comment', _parseArchiveValue(snapshot.comentarios) || {}, 'Comentarios por estudiante'));
-  sections.push(_renderArchiveDetailsSection('Notas de clase', 'sticky_note_2', _parseArchiveValue(snapshot.notasClase) || {}, 'Claves notaclase_*'));
-  sections.push(_renderArchiveDetailsSection('Observaciones de estudiantes', 'groups', _parseArchiveValue(snapshot.obsEstudiantes) || {}, 'Claves obs_est_*'));
-  sections.push(_renderArchiveDetailsSection('Escalas de evaluación', 'assessment', _parseArchiveValue(snapshot.evalFormas) || {}, 'Claves eval_*'));
-  sections.push(_renderArchiveDetailsSection('Incidencias', 'report', incidencias, 'Incidencias guardadas'));
-  sections.push(_renderArchiveDetailsSection('Recuperaciones', 'auto_awesome', recuperaciones, 'Recuperaciones generadas'));
-  sections.push(_renderArchiveDetailsSection('Libreta', 'menu_book', libreta, 'Entradas de libreta'));
-  sections.push(_renderArchiveDetailsSection('Participación', 'groups_2', participacion, 'Participación por curso o estudiante'));
-  sections.push(_renderArchiveDetailsSection('Reportes', 'description', reportes, 'Reportes del ciclo'));
-  sections.push(_renderArchiveDetailsSection('Calendario escolar', 'event', _parseArchiveValue(snapshot.calendarioEscolar) || {}, 'Calendario y eventos'));
-  sections.push(_renderArchiveDetailsSection('Notas del docente', 'edit_note', snapshot.notasDocente || '', 'Bitácora personal del docente'));
-  sections.push(_renderArchiveDetailsSection('Stickies', 'sticky_note_2', stickies, 'Notas rápidas del dashboard'));
-  sections.push(_renderArchiveDetailsSection('Copias automáticas de calificaciones', 'history', _parseArchiveValue(snapshot.calBackups) || [], 'Backups automáticos del módulo'));
-  sections.push(_renderArchiveDetailsSection('Preferencias', 'tune', _parseArchiveValue(snapshot.preferencias) || {}, 'Preferencias del usuario'));
-  sections.push(_renderArchiveDetailsSection('Datos locales completos', 'storage', _parseArchiveValue(snapshot.localStorageDump) || {}, 'Mapa crudo de localStorage del ciclo'));
+  sections.push(_renderArchiveFriendlySection(
+    'Calificaciones completas',
+    'grade',
+    'Cursos, notas, cursos archivados y curso activo',
+    badge(cursosActivos.length + ' cursos') + badge(totalEstudiantes + ' estudiantes') + badge(totalNotas + ' notas') + badge(totalCursosArchivados + ' cursos archivados'),
+    lista(cursosRows)
+  ));
+
+  sections.push(_renderArchiveFriendlySection(
+    'Biblioteca de planificaciones',
+    'description',
+    'Planificaciones guardadas en el ciclo',
+    badge(itemsBiblio.length + ' planificaciones'),
+    lista(biblioRows)
+  ));
+
+  sections.push(_renderArchiveFriendlySection(
+    'Blog del docente',
+    'article',
+    'Posts activos y posts archivados por ciclo',
+    badge(postsActivos.length + ' posts activos') + badge(Object.keys(postsArchivados).length + ' ciclos archivados'),
+    lista(postsRows)
+  ));
+
+  sections.push(_renderArchiveFriendlySection('Horario', 'schedule', 'Horario activo del ciclo', badge((Array.isArray(horario) ? horario.length : 0) + ' clases'), lista(horarioRows)));
+  sections.push(_renderArchiveFriendlySection('Sesiones diarias', 'today', 'Sesiones registradas por fecha', badge(Object.keys(sesionesDiarias).length + ' fechas'), lista(genericRows(sesionesDiarias))));
+  sections.push(_renderArchiveFriendlySection('Tareas', 'task', 'Tareas del ciclo', badge((Array.isArray(tareas) ? tareas.length : 0) + ' tareas'), lista(genericRows(tareas))));
+  sections.push(_renderArchiveFriendlySection('Asistencia', 'how_to_reg', 'Registros de asistencia', badge(Object.keys(asistencia || {}).length + ' registros'), lista(genericRows(asistencia))));
+  sections.push(_renderArchiveFriendlySection('Comentarios', 'comment', 'Comentarios por estudiante', badge(_archiveValueCount(snapshot.comentarios) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.comentarios) || {}))));
+  sections.push(_renderArchiveFriendlySection('Notas de clase', 'sticky_note_2', 'Claves notaclase_*', badge(_archiveValueCount(snapshot.notasClase) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.notasClase) || {}))));
+  sections.push(_renderArchiveFriendlySection('Observaciones de estudiantes', 'groups', 'Claves obs_est_*', badge(_archiveValueCount(snapshot.obsEstudiantes) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.obsEstudiantes) || {}))));
+  sections.push(_renderArchiveFriendlySection('Escalas de evaluación', 'assessment', 'Claves eval_*', badge(_archiveValueCount(snapshot.evalFormas) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.evalFormas) || {}))));
+  sections.push(_renderArchiveFriendlySection('Incidencias', 'report', 'Incidencias guardadas', badge(_archiveValueCount(incidencias) + ' elementos'), lista(genericRows(incidencias))));
+  sections.push(_renderArchiveFriendlySection('Recuperaciones', 'auto_awesome', 'Recuperaciones generadas', badge(_archiveValueCount(recuperaciones) + ' elementos'), lista(genericRows(recuperaciones))));
+  sections.push(_renderArchiveFriendlySection('Libreta', 'menu_book', 'Entradas de libreta', badge(_archiveValueCount(libreta) + ' elementos'), lista(genericRows(libreta))));
+  sections.push(_renderArchiveFriendlySection('Participación', 'groups_2', 'Participación por curso o estudiante', badge(_archiveValueCount(participacion) + ' elementos'), lista(genericRows(participacion))));
+  sections.push(_renderArchiveFriendlySection('Reportes', 'description', 'Reportes del ciclo', badge((Array.isArray(reportes) ? reportes.length : 0) + ' reportes'), lista(genericRows(reportes))));
+  sections.push(_renderArchiveFriendlySection('Calendario escolar', 'event', 'Calendario y eventos', badge(_archiveValueCount(snapshot.calendarioEscolar) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calendarioEscolar) || {}))));
+  sections.push(_renderArchiveFriendlySection('Notas del docente', 'edit_note', 'Bitácora personal del docente', badge((snapshot.notasDocente || '').trim() ? 'con contenido' : 'vacío'), lista(genericRows(snapshot.notasDocente || ''))));
+  sections.push(_renderArchiveFriendlySection('Stickies', 'sticky_note_2', 'Notas rápidas del dashboard', badge((Array.isArray(stickies) ? stickies.length : 0) + ' notas'), lista(genericRows(stickies))));
+  sections.push(_renderArchiveFriendlySection('Copias automáticas de calificaciones', 'history', 'Backups automáticos del módulo', badge(_archiveValueCount(snapshot.calBackups) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calBackups) || []))));
+  sections.push(_renderArchiveFriendlySection('Preferencias', 'tune', 'Preferencias del usuario', badge(_archiveValueCount(snapshot.preferencias) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.preferencias) || {}))));
+  sections.push(_renderArchiveFriendlySection('Datos locales completos', 'storage', 'Mapa crudo de localStorage del ciclo', badge(_archiveValueCount(snapshot.localStorageDump) + ' claves'), lista(genericRows(_parseArchiveValue(snapshot.localStorageDump) || {}))));
 
   return '<div style="display:flex;flex-direction:column;gap:8px;">' + sections.join('') + '</div>';
 }
@@ -24973,6 +25060,16 @@ function abrirBackup() {
 function cerrarBackup() {
   document.getElementById('backup-overlay').classList.add('hidden');
 }
+
+function abrirHistorialCierres() {
+  abrirBackup();
+  setTimeout(() => {
+    const section = document.getElementById('backup-ciclos-section');
+    if (section && typeof section.scrollIntoView === 'function') {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 80);
+}
 // ════════════════════════════════════════════════════════════════════
 // MÓDULO: CONFIGURACIÓN
 // ════════════════════════════════════════════════════════════════════
@@ -25440,7 +25537,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.39</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.40</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -25462,6 +25559,11 @@ function _renderizarSaludo() {
         <div class="dash-stat-icon"><span class="material-icons">assignment</span></div>
         <div class="dash-stat-num">${nPend + nVenc}</div>
         <div class="dash-stat-lbl">Tareas</div>
+      </div>
+      <div class="dash-stat-pill" title="Historial de cierres de ciclo" onclick="abrirHistorialCierres()" style="cursor:pointer;">
+        <div class="dash-stat-icon"><span class="material-icons">history</span></div>
+        <div class="dash-stat-num">↗</div>
+        <div class="dash-stat-lbl">Historial</div>
       </div>
     </div>`;
 }
