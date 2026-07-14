@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.36<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejora visual: panel de ciclos archivados más amplio y sin recortes</div>
+              <ul class="about-ver-items">
+                <li><strong>Más ancho útil:</strong> las cards de grupos en Planificaciones ahora tienen mayor espacio horizontal.</li>
+                <li><strong>Sin corte en badges:</strong> el resumen del ciclo archivado ajusta correctamente en pantallas estrechas.</li>
+                <li><strong>Resultado:</strong> se evita que el texto o contador de cursos quede truncado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.35<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4228,7 +4244,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=86', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=87', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {

@@ -5483,7 +5483,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.35',
+      version: '15.36',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -17909,9 +17909,9 @@ function renderizarBiblioteca() {
       const courseNames = Object.keys(byCourse).sort();
       const details = document.createElement('details');
       details.style.cssText = 'background:#fff;border:1px solid #E1D5F6;border-radius:10px;padding:8px 10px;margin-bottom:8px;';
-      details.innerHTML = '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;">'
+      details.innerHTML = '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;list-style:none;">'
         + '<span style="font-size:0.88rem;font-weight:800;color:#4527A0;">' + escHTML(yearId) + '</span>'
-        + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;">'
+        + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;white-space:nowrap;margin-left:auto;">'
         + courseNames.length + ' curso' + (courseNames.length !== 1 ? 's' : '') + '</span>'
         + '</summary>';
 
@@ -25294,7 +25294,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.35</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.36</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
