@@ -5450,7 +5450,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.31',
+      version: '15.32',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -17692,28 +17692,49 @@ function renderizarBiblioteca() {
     return;
   }
 
-  // ── Agrupar por curso ─────────────────────────────────────────
-  const grupos = {};          // { cursoNombre: [reg, ...] }
+  // ── Agrupar por curso (activo + archivados por ciclo) ───────────────────
+  const gruposActivos = {};          // { cursoNombre: { cursoId, planes[] } }
+  const gruposArchivados = {};       // { yearId: { cursoNombre: { cursoId, planes[] } } }
   const sinCurso = [];
-  const cursosMap = calState.cursos || {};
+  const cursosActivosMap = calState.cursos || {};
+  const cursosArchivadosMap = calState.cursosArchivados || {};
 
   filtrados.forEach(reg => {
-    const cursosDePlan = Object.values(cursosMap).filter(c => (c.planIds || []).includes(reg.id));
-    if (cursosDePlan.length === 0) {
-      sinCurso.push(reg);
-    } else {
-      cursosDePlan.forEach(c => {
-        if (!grupos[c.nombre]) grupos[c.nombre] = { cursoId: c.id, planes: [] };
+    let encontrado = false;
+
+    const cursosActivosDePlan = Object.values(cursosActivosMap).filter(c => (c.planIds || []).includes(reg.id));
+    if (cursosActivosDePlan.length > 0) {
+      encontrado = true;
+      cursosActivosDePlan.forEach(c => {
+        if (!gruposActivos[c.nombre]) gruposActivos[c.nombre] = { cursoId: c.id, planes: [] };
         const idx = (c.planIds || []).indexOf(reg.id);
-        grupos[c.nombre].planes.push({ reg, esPlanActiva: c.planActivaId === reg.id, idx });
+        gruposActivos[c.nombre].planes.push({ reg, esPlanActiva: c.planActivaId === reg.id, idx });
       });
     }
-  });
-  // Ordenar planes dentro de cada curso por su posición en planIds
-  Object.values(grupos).forEach(g => g.planes.sort((a, b) => a.idx - b.idx));
 
-  // Ordenar grupos alfabéticamente; "Sin curso asignado" al final
-  const nombresCurso = Object.keys(grupos).sort();
+    Object.entries(cursosArchivadosMap).forEach(([yearId, yearData]) => {
+      const cursos = Array.isArray(yearData?.cursos) ? yearData.cursos : [];
+      const cursosDePlan = cursos.filter(c => (c.planIds || []).includes(reg.id));
+      if (!cursosDePlan.length) return;
+      encontrado = true;
+      if (!gruposArchivados[yearId]) gruposArchivados[yearId] = {};
+      cursosDePlan.forEach(c => {
+        if (!gruposArchivados[yearId][c.nombre]) gruposArchivados[yearId][c.nombre] = { cursoId: c.id, planes: [] };
+        const idx = (c.planIds || []).indexOf(reg.id);
+        gruposArchivados[yearId][c.nombre].planes.push({ reg, esPlanActiva: false, idx });
+      });
+    });
+
+    if (!encontrado) sinCurso.push(reg);
+  });
+
+  Object.values(gruposActivos).forEach(g => g.planes.sort((a, b) => a.idx - b.idx));
+  Object.values(gruposArchivados).forEach(byCourse => {
+    Object.values(byCourse).forEach(g => g.planes.sort((a, b) => a.idx - b.idx));
+  });
+
+  const nombresCursoActivos = Object.keys(gruposActivos).sort();
+  const yearsArchivados = Object.keys(gruposArchivados).sort((a, b) => String(b).localeCompare(String(a)));
 
   // ── Renderizar función de card ────────────────────────────────
   const _renderCard = (reg, esPlanActiva, cursoId, raNum, totalPlanes) => {
@@ -17828,11 +17849,60 @@ function renderizarBiblioteca() {
     return section;
   };
 
-  // Cursos con planes
-  nombresCurso.forEach(nombre => {
-    const g = grupos[nombre];
+  // Cursos del ciclo activo (arriba)
+  nombresCursoActivos.forEach(nombre => {
+    const g = gruposActivos[nombre];
     grid.appendChild(_renderGrupo(nombre, 'class', '#1565C0', g.planes, g.cursoId));
   });
+
+  // Cursos archivados por ciclo (panel expandible debajo)
+  if (yearsArchivados.length) {
+    const panel = document.createElement('div');
+    panel.className = 'pln-grupo';
+    panel.style.borderColor = '#D1C4E9';
+    panel.style.background = '#F7F3FF';
+    panel.style.marginTop = '12px';
+    panel.innerHTML = '<div class="pln-grupo-header" style="cursor:default;">'
+      + '<span class="material-icons" style="color:#6A1B9A;">inventory_2</span>'
+      + '<span class="pln-grupo-nombre" style="color:#4A148C;">Ciclos archivados</span>'
+      + '<span class="pln-grupo-count" style="background:#EDE7F6;color:#5E35B1;">' + yearsArchivados.length + ' ciclo' + (yearsArchivados.length !== 1 ? 's' : '') + '</span>'
+      + '</div>';
+
+    const content = document.createElement('div');
+    content.className = 'pln-grupo-cards';
+
+    yearsArchivados.forEach(yearId => {
+      const byCourse = gruposArchivados[yearId] || {};
+      const courseNames = Object.keys(byCourse).sort();
+      const details = document.createElement('details');
+      details.style.cssText = 'background:#fff;border:1px solid #E1D5F6;border-radius:10px;padding:8px 10px;margin-bottom:8px;';
+      details.innerHTML = '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;">'
+        + '<span style="font-size:0.88rem;font-weight:800;color:#4527A0;">' + escHTML(yearId) + '</span>'
+        + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;">'
+        + courseNames.length + ' curso' + (courseNames.length !== 1 ? 's' : '') + '</span>'
+        + '</summary>';
+
+      const wrap = document.createElement('div');
+      wrap.style.marginTop = '8px';
+
+      courseNames.forEach(nombre => {
+        const g = byCourse[nombre];
+        const section = _renderGrupo(nombre, 'class', '#7E57C2', g.planes, g.cursoId);
+        section.style.marginBottom = '8px';
+        wrap.appendChild(section);
+      });
+
+      if (!courseNames.length) {
+        wrap.innerHTML = '<div style="font-size:0.78rem;color:#9E9E9E;padding:6px 4px;">Sin cursos vinculados en este ciclo.</div>';
+      }
+
+      details.appendChild(wrap);
+      content.appendChild(details);
+    });
+
+    panel.appendChild(content);
+    grid.appendChild(panel);
+  }
 
   // Sin curso asignado
   if (sinCurso.length > 0) {
@@ -25188,7 +25258,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.31</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.32</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
