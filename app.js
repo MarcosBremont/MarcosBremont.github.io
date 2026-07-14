@@ -5439,6 +5439,39 @@ function _saveArchivedYears(list) {
   }
 }
 
+function _cargarHorariosArchivados() {
+  try {
+    const raw = localStorage.getItem('planificadorRA_horario_archived_v1');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function _guardarHorariosArchivados(data) {
+  localStorage.setItem('planificadorRA_horario_archived_v1', JSON.stringify(data));
+  if (window._syncFirebase) {
+    window._syncFirebase('horario_archived', data);
+  }
+}
+
+function _archivarHorarioActual(yearId, closedAt) {
+  if (!yearId) return 0;
+  const horarioActual = Array.isArray(cargarHorario()) ? cargarHorario() : [];
+  const total = horarioActual.length;
+  const historial = _cargarHorariosArchivados();
+  historial[yearId] = {
+    yearId,
+    closedAt: closedAt || new Date().toISOString(),
+    horario: horarioActual
+  };
+  _guardarHorariosArchivados(historial);
+  guardarHorario([]);
+  return total;
+}
+
 function _buildExportSnapshot() {
   const now = new Date();
   const localStorageDump = {};
@@ -5450,7 +5483,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: '15.33',
+      version: '15.34',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -23851,6 +23884,7 @@ async function archivarCicloActual() {
     const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
     const tareas = JSON.parse(localStorage.getItem(TAREAS_KEY) || '[]');
     const asistencia = JSON.parse(localStorage.getItem(ASIST_KEY) || '{}');
+    const horarioActual = Array.isArray(cargarHorario()) ? cargarHorario() : [];
     const createdAt = new Date().toISOString();
 
     const archiveDoc = {
@@ -23861,6 +23895,7 @@ async function archivarCicloActual() {
         planificaciones: Number((biblio.items || []).length) || 0,
         cursos: Number(Object.keys(cal.cursos || {}).length) || 0,
         sesionesDiarias: Number(Object.keys(diarias.sesiones || {}).length) || 0,
+        horarioClases: Number(Array.isArray(horarioActual) ? horarioActual.length : 0) || 0,
         tareas: Number(Array.isArray(tareas) ? tareas.length : 0) || 0,
         registrosAsistencia: Number(Object.keys(asistencia || {}).length) || 0
       },
@@ -23897,6 +23932,7 @@ async function archivarCicloActual() {
     _saveArchivedYears(archivedYears);
 
     const cursosArchivadosCount = _archivarCursosActivosEnCalificaciones(currentYear, createdAt);
+  const horarioArchivadoCount = _archivarHorarioActual(currentYear, createdAt);
 
     let firebaseArchiveOk = false;
     let firebaseStorageUsed = 'none';
@@ -23920,12 +23956,12 @@ async function archivarCicloActual() {
 
     if (firebaseArchiveOk) {
       if (firebaseStorageUsed === 'data') {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos al historial: ' + cursosArchivadosCount, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount, 'success');
       } else {
-      mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos al historial: ' + cursosArchivadosCount, 'success');
+      mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount, 'success');
       }
     } else {
-      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos al historial: ' + cursosArchivadosCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
+      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
     abrirBackup();
   } catch (e) {
@@ -25258,7 +25294,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.33</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.34</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

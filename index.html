@@ -2504,6 +2504,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.34<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejora: el horario también se archiva al cerrar ciclo</div>
+              <ul class="about-ver-items">
+                <li><strong>Comportamiento nuevo:</strong> al cerrar ciclo, el horario actual se guarda en el historial del ciclo escolar archivado.</li>
+                <li><strong>Año nuevo limpio:</strong> el horario activo se reinicia para comenzar el nuevo ciclo sin arrastrar bloques anteriores.</li>
+                <li><strong>Respaldo completo:</strong> el conteo de clases del horario queda incluido en el resumen del ciclo archivado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.33<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4196,7 +4212,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=84', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=85', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             if (reg.waiting) {
