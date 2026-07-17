@@ -115,6 +115,34 @@
     </div>
     <span id="splash-texto">Cargando...</span>
   </div>
+  <script>
+    window.__TINCLASS_APP_READY__ = false;
+    window.__TINCLASS_BOOT_FAILED__ = false;
+
+    function _tinclassBootFail(msg) {
+      if (window.__TINCLASS_APP_READY__) return;
+      window.__TINCLASS_BOOT_FAILED__ = true;
+      const txt = document.getElementById('splash-texto');
+      if (txt) {
+        txt.textContent = msg || 'Error al iniciar. Recarga la página.';
+        txt.style.color = '#C62828';
+        txt.style.fontWeight = '700';
+      }
+    }
+
+    window.addEventListener('error', function (ev) {
+      const src = String(ev && ev.filename || '');
+      if (src.includes('/app.js')) {
+        _tinclassBootFail('Error de versión en caché. Presiona Ctrl+F5.');
+      }
+    });
+
+    setTimeout(function () {
+      if (!window.__TINCLASS_APP_READY__) {
+        _tinclassBootFail('Inicio tardando demasiado. Presiona Ctrl+F5.');
+      }
+    }, 12000);
+  </script>
 
   <!-- ===== HEADER ===== -->
   <header class="app-header">
@@ -3977,6 +4005,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
+  <script>
+    window.TINCLASS_BUILD_VERSION = 'v15.42';
+    window.TINCLASS_SW_VERSION = 'v94';
+  </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
   <script src="app.js"></script>
@@ -4054,6 +4086,38 @@
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
           onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.42<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Arranque robusto: evita pantalla infinita en Cargando</div>
+              <ul class="about-ver-items">
+                <li><strong>Detección de fallo:</strong> si app.js no carga o llega corrupto desde caché, el splash muestra mensaje de recuperación.</li>
+                <li><strong>Timeout de seguridad:</strong> se notifica al usuario cuando el inicio excede el tiempo esperado.</li>
+                <li><strong>Publicación forzada:</strong> nueva versión de Service Worker para romper caché vieja y tomar archivos actualizados.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.41<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Detector de versión activo + actualización forzada de Service Worker</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo indicador:</strong> se muestra en el dashboard la build activa y la versión de caché/SW.</li>
+                <li><strong>Diagnóstico rápido:</strong> permite confirmar al instante si el navegador está en la versión correcta.</li>
+                <li><strong>Despliegue más seguro:</strong> el Service Worker se registra con versión nueva para evitar app.js en caché vieja.</li>
+              </ul>
+            </div>
+          </div>
         </button>
       </div>
 
@@ -4308,9 +4372,10 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=91', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=94', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
+            reg.update();
             if (reg.waiting) {
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
@@ -4371,6 +4436,8 @@
       </div>
     </div>
   </div>
+
+  <div id="version-detector" class="version-detector hidden" aria-live="polite"></div>
 
 </body>
 

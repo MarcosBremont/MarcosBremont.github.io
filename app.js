@@ -1,4 +1,5 @@
 function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+window.__TINCLASS_APP_READY__ = true;
 
 // ─── Funciones de gestión de cursos ───────────────────────────────
 function eliminarCurso(id) {
@@ -5768,7 +5769,7 @@ function _renderArchiveSections(snapshot) {
   };
 
   const totalEstudiantes = cursosActivos.reduce((acc, c) => acc + Number((c.estudiantes || []).length || 0), 0);
-  const totalCursosArchivados = Object.values(cursosArchivados).reduce((acc, y) => acc + Number(((y || {}).cursos || []).length || 0, 0);
+  const totalCursosArchivados = Object.values(cursosArchivados).reduce((acc, y) => acc + Number(((y || {}).cursos || []).length || 0), 0);
   const totalNotas = cursosActivos.reduce((accCurso, c) => {
     const notas = c.notas || {};
     return accCurso + Object.values(notas).reduce((accEst, raObj) => {
@@ -25537,7 +25538,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.40</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.42</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -32643,5 +32644,40 @@ renderizarDashboard = function() {
   _origRenderDashboardPagos();
   _verificarAccesoPagos();
 };
+
+function _normalizarVersion(raw) {
+  const txt = String(raw || '').trim();
+  if (!txt) return '';
+  return /^v/i.test(txt) ? txt : ('v' + txt);
+}
+
+async function _actualizarDetectorVersion() {
+  const chip = document.getElementById('version-detector');
+  if (!chip) return;
+
+  const build = _normalizarVersion(window.TINCLASS_BUILD_VERSION) || 'vdev';
+  let swVer = _normalizarVersion(window.TINCLASS_SW_VERSION) || 'vsw';
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      const scriptURL = reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL || '';
+      const match = scriptURL.match(/[?&]v=([^&]+)/i);
+      if (match && match[1]) swVer = _normalizarVersion(match[1]) || swVer;
+    }
+  } catch {}
+
+  chip.textContent = 'Build ' + build + ' · SW ' + swVer;
+  chip.classList.remove('hidden');
+}
+
+window.addEventListener('load', () => {
+  setTimeout(_actualizarDetectorVersion, 250);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      setTimeout(_actualizarDetectorVersion, 150);
+    });
+  }
+});
 
 // ════════════════════════════════════════════════════════════════════
