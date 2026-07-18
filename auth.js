@@ -443,6 +443,41 @@ async function _cargarDesdeFirestore(uid) {
           return;
         }
 
+        // Blog: fusionar por timestamp para evitar que Firebase viejo reescriba
+        // el archivado local recién creado al cerrar ciclo.
+        if (store === 'blog') {
+          const localRaw = localStorage.getItem(key);
+          let fbBlog = {}, localBlog = {}, fbTs = 0, localTs = 0;
+          try {
+            fbBlog = JSON.parse(doc.data().payload || '{}') || {};
+            fbTs = Number(fbBlog._lastModified || 0) || 0;
+          } catch (e) {}
+          try {
+            localBlog = JSON.parse(localRaw || '{}') || {};
+            localTs = Number(localBlog._lastModified || 0) || 0;
+          } catch (e) {}
+
+          const fbPosts = Array.isArray(fbBlog.posts) ? fbBlog.posts : [];
+          const localPosts = Array.isArray(localBlog.posts) ? localBlog.posts : [];
+          const fbArch = fbBlog.postsArchivados && typeof fbBlog.postsArchivados === 'object' ? fbBlog.postsArchivados : {};
+          const localArch = localBlog.postsArchivados && typeof localBlog.postsArchivados === 'object' ? localBlog.postsArchivados : {};
+
+          const localGana = localTs > fbTs;
+          const merged = {
+            ...(localGana ? { ...fbBlog, ...localBlog } : { ...localBlog, ...fbBlog }),
+            posts: localGana ? localPosts : fbPosts,
+            postsArchivados: { ...fbArch, ...localArch },
+            _lastModified: Math.max(localTs, fbTs, Date.now())
+          };
+
+          localStorage.setItem(key, JSON.stringify(merged));
+
+          if (JSON.stringify(merged) !== JSON.stringify(fbBlog) && window._syncFirebase) {
+            window._syncFirebase('blog', merged);
+          }
+          return;
+        }
+
         // Stores dinámicos: el payload es un objeto cuyos keys se restauran individualmente en localStorage
         if (['notas_clase', 'obs_estudiantes', 'eval_formas', 'preferencias'].includes(store)) {
           try {

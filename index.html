@@ -4006,8 +4006,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.43';
-    window.TINCLASS_SW_VERSION = 'v95';
+    window.TINCLASS_BUILD_VERSION = 'v15.44';
+    window.TINCLASS_SW_VERSION = 'v96';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4086,6 +4086,22 @@
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
           onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.44<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección crítica del Blog archivado en cierre de ciclo</div>
+              <ul class="about-ver-items">
+                <li><strong>Sincronización reforzada:</strong> al cerrar ciclo se confirma guardado del blog archivado en Firebase antes de terminar.</li>
+                <li><strong>Anti-reaparición:</strong> al iniciar sesión se fusiona blog local/remoto por fecha para evitar que vuelvan posts viejos al ciclo activo.</li>
+                <li><strong>Consistencia:</strong> los posts archivados por año escolar se mantienen y no deben reaparecer en la lista activa.</li>
+              </ul>
+            </div>
+          </div>
 
           <div class="about-version-row">
             <div>
@@ -4388,7 +4404,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=95', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=96', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

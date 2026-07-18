@@ -24168,6 +24168,13 @@ async function archivarCicloActual() {
     const cursosArchivadosCount = _archivarCursosActivosEnCalificaciones(currentYear, createdAt);
     const horarioArchivadoCount = _archivarHorarioActual(currentYear, createdAt);
     const blogArchivadoCount = _archivarPostsBlogDocente(currentYear, createdAt);
+    if (window._syncFirebaseAwait) {
+      try {
+        await _syncFirebaseAwait('blog', cargarBlog());
+      } catch (syncBlogErr) {
+        console.warn('No se pudo confirmar sincronización del blog archivado:', syncBlogErr);
+      }
+    }
 
     let firebaseArchiveOk = false;
     let firebaseStorageUsed = 'none';
@@ -25538,7 +25545,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.43</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.44</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -26709,8 +26716,14 @@ function cargarBlog() {
   }
 }
 function guardarBlog(data) {
-  localStorage.setItem(BLOG_KEY, JSON.stringify(data));
-  if (window._syncFirebase) _syncFirebase('blog', data);
+  const payload = {
+    ...(data || {}),
+    posts: Array.isArray(data?.posts) ? data.posts : [],
+    postsArchivados: data?.postsArchivados && typeof data.postsArchivados === 'object' ? data.postsArchivados : {},
+    _lastModified: Date.now()
+  };
+  localStorage.setItem(BLOG_KEY, JSON.stringify(payload));
+  if (window._syncFirebase) _syncFirebase('blog', payload);
 }
 
 function _archivarPostsBlogDocente(yearId, closedAt) {
