@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinclass-v97';
+const CACHE_NAME = 'tinclass-v98';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -63,6 +63,12 @@ self.addEventListener('fetch', event => {
   // Solo interceptar GET sobre http/https
   if (request.method !== 'GET') return;
   if (!request.url.startsWith('http')) return;
+
+  // version.json siempre debe venir de red para reflejar la versión publicada.
+  if (url.pathname === '/version.json') {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
 
   // Recursos externos (Firebase, EmailJS, etc.) → solo red
   if (NETWORK_ONLY_ORIGINS.some(origin => url.hostname.includes(origin))) {

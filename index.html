@@ -4006,8 +4006,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.45';
-    window.TINCLASS_SW_VERSION = 'v97';
+    window.TINCLASS_BUILD_VERSION = 'v15.46';
+    window.TINCLASS_SW_VERSION = 'v98';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4086,6 +4086,22 @@
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
           onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.46<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Endpoint automático de versión publicada (version.json)</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo endpoint:</strong> se publica <em>/version.json</em> con versión y fecha de actualización para integración con dashboard maestro.</li>
+                <li><strong>Automatizado:</strong> la generación de <em>version.json</em> ahora se ejecuta en cada despliegue, sin edición manual.</li>
+                <li><strong>Lectura fresca:</strong> el Service Worker no cachea <em>version.json</em> para devolver siempre la versión más reciente.</li>
+              </ul>
+            </div>
+          </div>
 
           <div class="about-version-row">
             <div>
@@ -4420,7 +4436,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=97', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=98', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
