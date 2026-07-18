@@ -25538,7 +25538,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.42</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.43</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -25565,6 +25565,11 @@ function _renderizarSaludo() {
         <div class="dash-stat-icon"><span class="material-icons">history</span></div>
         <div class="dash-stat-num">↗</div>
         <div class="dash-stat-lbl">Historial</div>
+      </div>
+      <div id="btn-dash-force-update" class="dash-stat-pill" title="Forzar actualización de la app" onclick="forzarActualizacionApp()" style="cursor:pointer;display:none;">
+        <div class="dash-stat-icon"><span class="material-icons">system_update_alt</span></div>
+        <div class="dash-stat-num">↻</div>
+        <div class="dash-stat-lbl">Actualizar</div>
       </div>
     </div>`;
 }
@@ -26717,10 +26722,25 @@ function _archivarPostsBlogDocente(yearId, closedAt) {
     blog.postsArchivados = {};
   }
 
+  const prevReg = blog.postsArchivados[yearId] || {};
+  const prevPosts = Array.isArray(prevReg.posts) ? prevReg.posts : [];
+  const nuevosPosts = JSON.parse(JSON.stringify(postsActivos));
+  const merged = [...prevPosts, ...nuevosPosts];
+  const seen = new Set();
+  const dedup = merged.filter((p, idx) => {
+    const key = p && p.id ? ('id:' + p.id) : ('idx:' + idx + ':' + (p?.titulo || '') + ':' + (p?.creadoEn || ''));
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   blog.postsArchivados[yearId] = {
     yearId,
-    closedAt: closedAt || new Date().toISOString(),
-    posts: JSON.parse(JSON.stringify(postsActivos))
+    yearLabel: yearId,
+    closedAt: closedAt || prevReg.closedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    count: dedup.length,
+    posts: dedup
   };
 
   postsActivos
@@ -29974,6 +29994,34 @@ function _verificarAccesoSuperadmin() {
   if (btn) btn.style.display = _esSuperadmin() ? '' : 'none';
 }
 
+let _cacheSuperadminPerfil = { ok: false, at: 0 };
+
+async function _esSuperadminPorPerfil() {
+  if (_esSuperadmin()) return true;
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) return false;
+
+  const now = Date.now();
+  if (now - _cacheSuperadminPerfil.at < 60000) return _cacheSuperadminPerfil.ok;
+
+  let ok = false;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    const rol = doc.exists ? String(doc.data().rol || '').toLowerCase().trim() : '';
+    ok = rol === 'superadmin';
+  } catch {}
+
+  _cacheSuperadminPerfil = { ok, at: now };
+  return ok;
+}
+
+async function _verificarAccesoForzarActualizacion() {
+  const btn = document.getElementById('btn-dash-force-update');
+  if (!btn) return;
+  btn.style.display = 'none';
+  const allowed = await _esSuperadminPorPerfil();
+  btn.style.display = allowed ? '' : 'none';
+}
+
 /** Abre el panel de superadmin */
 function abrirSuperadmin() {
   if (!_esSuperadmin()) { mostrarToast('Acceso denegado', 'error'); return; }
@@ -31205,6 +31253,7 @@ const _origRenderDashboard = renderizarDashboard;
 renderizarDashboard = function() {
   _origRenderDashboard();
   _verificarAccesoSuperadmin();
+  _verificarAccesoForzarActualizacion();
   _verificarAccesoAdminCentro();
   _verificarAccesoDirector();
   _verificarAccesoCoordinadora();
@@ -32669,6 +32718,31 @@ async function _actualizarDetectorVersion() {
 
   chip.textContent = 'Build ' + build + ' · SW ' + swVer;
   chip.classList.remove('hidden');
+}
+
+async function forzarActualizacionApp() {
+  const allowed = await _esSuperadminPorPerfil();
+  if (!allowed) {
+    mostrarToast('Solo superadmin puede forzar actualización.', 'error');
+    return;
+  }
+  if (!confirm('Se limpiará la caché de la app y se recargará la página. ¿Continuar?')) return;
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) {
+    console.warn('No se pudo limpiar completamente la caché/SW:', e);
+  }
+
+  const sep = window.location.href.includes('?') ? '&' : '?';
+  window.location.replace(window.location.href + sep + 'force_update=' + Date.now());
 }
 
 window.addEventListener('load', () => {

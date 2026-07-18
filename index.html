@@ -4006,8 +4006,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.42';
-    window.TINCLASS_SW_VERSION = 'v94';
+    window.TINCLASS_BUILD_VERSION = 'v15.43';
+    window.TINCLASS_SW_VERSION = 'v95';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4086,6 +4086,22 @@
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
           onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.43<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Superadmin: botón de forzar actualización + archivado reforzado del Blog por ciclo</div>
+              <ul class="about-ver-items">
+                <li><strong>Botón protegido:</strong> “Forzar actualización” aparece solo para usuarios con rol <em>superadmin</em>.</li>
+                <li><strong>Limpieza rápida:</strong> el botón reinicia Service Worker/caché y recarga con parámetro anti-caché.</li>
+                <li><strong>Blog archivado por año:</strong> al cerrar ciclo, los posts del Blog del Docente se guardan en el apartado archivado del año escolar y se preservan sin duplicados.</li>
+              </ul>
+            </div>
+          </div>
 
           <div class="about-version-row">
             <div>
@@ -4372,7 +4388,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=94', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=95', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
