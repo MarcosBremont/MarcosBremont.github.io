@@ -4006,8 +4006,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.44';
-    window.TINCLASS_SW_VERSION = 'v96';
+    window.TINCLASS_BUILD_VERSION = 'v15.45';
+    window.TINCLASS_SW_VERSION = 'v97';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4086,6 +4086,22 @@
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
           onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.45<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Reportes y Denuncias: archivado por ciclo escolar</div>
+              <ul class="about-ver-items">
+                <li><strong>Cierre de ciclo completo:</strong> ahora también archiva Reportes de Comportamiento y Denuncias por año escolar.</li>
+                <li><strong>Limpieza del activo:</strong> tras archivar, se vacían las colecciones activas para iniciar ciclo limpio.</li>
+                <li><strong>Historial visible:</strong> en cada módulo se muestra el panel “Archivados por ciclo” para consultar años anteriores.</li>
+              </ul>
+            </div>
+          </div>
 
           <div class="about-version-row">
             <div>
@@ -4404,7 +4420,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=96', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=97', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

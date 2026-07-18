@@ -24168,6 +24168,12 @@ async function archivarCicloActual() {
     const cursosArchivadosCount = _archivarCursosActivosEnCalificaciones(currentYear, createdAt);
     const horarioArchivadoCount = _archivarHorarioActual(currentYear, createdAt);
     const blogArchivadoCount = _archivarPostsBlogDocente(currentYear, createdAt);
+    const convivenciaArchivada = await _archivarConvivenciaPublicaCiclo(
+      currentYear,
+      createdAt,
+      snapshot.reportesComportamiento || [],
+      snapshot.denunciasPublicas || []
+    );
     if (window._syncFirebaseAwait) {
       try {
         await _syncFirebaseAwait('blog', cargarBlog());
@@ -24198,12 +24204,12 @@ async function archivarCicloActual() {
 
     if (firebaseArchiveOk) {
       if (firebaseStorageUsed === 'data') {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
       } else {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
       }
     } else {
-      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
+      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
     abrirBackup();
   } catch (e) {
@@ -25545,7 +25551,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.44</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.45</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -28790,6 +28796,180 @@ function _calEscRestaurarAdmin() {
 // ════════════════════════════════════════════════════════════════════
 // MÓDULO: REPORTES DE COMPORTAMIENTO (ESTUDIANTES)
 // ════════════════════════════════════════════════════════════════════
+
+const CONVIVENCIA_ARCHIVOS_KEY = 'planificadorRA_convivencia_archivada_v1';
+
+function _cargarConvivenciaArchivada() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CONVIVENCIA_ARCHIVOS_KEY) || '{}') || {};
+    return {
+      reportes: raw.reportes && typeof raw.reportes === 'object' ? raw.reportes : {},
+      denuncias: raw.denuncias && typeof raw.denuncias === 'object' ? raw.denuncias : {},
+      _lastModified: Number(raw._lastModified || 0) || 0
+    };
+  } catch {
+    return { reportes: {}, denuncias: {}, _lastModified: 0 };
+  }
+}
+
+function _guardarConvivenciaArchivada(data) {
+  const payload = {
+    reportes: data?.reportes && typeof data.reportes === 'object' ? data.reportes : {},
+    denuncias: data?.denuncias && typeof data.denuncias === 'object' ? data.denuncias : {},
+    _lastModified: Date.now()
+  };
+  localStorage.setItem(CONVIVENCIA_ARCHIVOS_KEY, JSON.stringify(payload));
+  if (window._syncFirebase) _syncFirebase('convivencia_archivada', payload);
+}
+
+function _mergeItemsById(prevItems, newItems) {
+  const prev = Array.isArray(prevItems) ? prevItems : [];
+  const next = Array.isArray(newItems) ? newItems : [];
+  const merged = [...prev, ...next];
+  const seen = new Set();
+  return merged.filter((item, idx) => {
+    const key = item && item.id ? ('id:' + item.id) : ('idx:' + idx + ':' + (item?.creadoEn || item?.fecha || ''));
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function _eliminarDocsPublicosPorLista(colRef, items) {
+  const ids = Array.from(new Set((Array.isArray(items) ? items : []).map(x => x?.id).filter(Boolean)));
+  if (!ids.length) return;
+  const chunkSize = 450;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const batch = db.batch();
+    ids.slice(i, i + chunkSize).forEach(id => batch.delete(colRef.doc(id)));
+    await batch.commit();
+  }
+}
+
+async function _archivarConvivenciaPublicaCiclo(yearId, closedAt, reportesData, denunciasData) {
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) {
+    return { reportes: 0, denuncias: 0 };
+  }
+
+  const reportes = Array.isArray(reportesData) ? reportesData : [];
+  const denuncias = Array.isArray(denunciasData) ? denunciasData : [];
+
+  const arch = _cargarConvivenciaArchivada();
+  const prevRep = arch.reportes[yearId] || {};
+  const prevDen = arch.denuncias[yearId] || {};
+
+  const mergedRep = _mergeItemsById(prevRep.items, reportes);
+  const mergedDen = _mergeItemsById(prevDen.items, denuncias);
+
+  arch.reportes[yearId] = {
+    yearId,
+    yearLabel: yearId,
+    closedAt: closedAt || prevRep.closedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    count: mergedRep.length,
+    items: mergedRep
+  };
+  arch.denuncias[yearId] = {
+    yearId,
+    yearLabel: yearId,
+    closedAt: closedAt || prevDen.closedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    count: mergedDen.length,
+    items: mergedDen
+  };
+
+  _guardarConvivenciaArchivada(arch);
+  if (window._syncFirebaseAwait) {
+    try { await _syncFirebaseAwait('convivencia_archivada', _cargarConvivenciaArchivada()); } catch {}
+  }
+
+  const pbRef = db.collection('public_blogs').doc(window.currentUser.uid);
+  await _eliminarDocsPublicosPorLista(pbRef.collection('reportes_comportamiento'), reportes);
+  await _eliminarDocsPublicosPorLista(pbRef.collection('denuncias'), denuncias);
+
+  window._repCompTodos = [];
+  window._denunciasCache = [];
+
+  return { reportes: reportes.length, denuncias: denuncias.length };
+}
+
+function _panelArchivadosReportesComp(filtroCurso) {
+  const arch = _cargarConvivenciaArchivada();
+  const years = Object.keys(arch.reportes || {}).sort((a, b) => String(b).localeCompare(String(a)));
+  if (!years.length) return '';
+
+  const bloques = years.map(yearId => {
+    const reg = arch.reportes[yearId] || {};
+    let items = Array.isArray(reg.items) ? reg.items.slice() : [];
+    if (filtroCurso) items = items.filter(r => (r.cursoNombre || r.cursoId) === filtroCurso);
+    items.sort((a, b) => new Date(b.creadoEn || b.fecha || 0) - new Date(a.creadoEn || a.fecha || 0));
+    if (!items.length) return '';
+
+    return '<details style="border:1px solid #BBDEFB;border-radius:10px;padding:8px 10px;background:#F8FCFF;">'
+      + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+      + '<span style="font-size:0.83rem;font-weight:800;color:#1565C0;">' + escapeHTML(yearId) + '</span>'
+      + '<span style="font-size:0.72rem;color:#1565C0;background:#E3F2FD;border-radius:999px;padding:3px 8px;font-weight:700;">' + items.length + ' reporte' + (items.length !== 1 ? 's' : '') + '</span>'
+      + '</summary>'
+      + '<div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">'
+      + items.slice(0, 25).map(r => {
+        const fecha = r.fecha ? new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-DO') : '—';
+        return '<div style="border:1px solid #E3F2FD;border-radius:8px;padding:8px 10px;background:#fff;">'
+          + '<div style="font-size:0.76rem;color:#1565C0;font-weight:700;">' + escapeHTML(r.cursoNombre || r.cursoId || 'Sin curso') + ' · ' + escapeHTML(fecha) + '</div>'
+          + '<div style="font-size:0.8rem;color:#37474F;margin-top:4px;">' + escapeHTML((r.descripcion || '').substring(0, 140)) + '</div>'
+          + '</div>';
+      }).join('')
+      + (items.length > 25 ? '<div style="font-size:0.72rem;color:#78909C;text-align:center;">+' + (items.length - 25) + ' más</div>' : '')
+      + '</div></details>';
+  }).filter(Boolean);
+
+  if (!bloques.length) return '';
+
+  return '<div style="border:1px solid #BBDEFB;background:#F4FAFF;border-radius:12px;padding:12px;margin-bottom:12px;">'
+    + '<div style="font-size:0.8rem;color:#1565C0;font-weight:800;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:16px;">inventory_2</span>Reportes archivados por ciclo'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;">' + bloques.join('') + '</div>'
+    + '</div>';
+}
+
+function _panelArchivadosDenuncias(curso) {
+  const arch = _cargarConvivenciaArchivada();
+  const years = Object.keys(arch.denuncias || {}).sort((a, b) => String(b).localeCompare(String(a)));
+  if (!years.length) return '';
+
+  const bloques = years.map(yearId => {
+    const reg = arch.denuncias[yearId] || {};
+    let items = Array.isArray(reg.items) ? reg.items.slice() : [];
+    if (curso) items = items.filter(d => d.curso === curso);
+    items.sort((a, b) => new Date(b.creadoEn || b.fecha || 0) - new Date(a.creadoEn || a.fecha || 0));
+    if (!items.length) return '';
+
+    return '<details style="border:1px solid #CE93D8;border-radius:10px;padding:8px 10px;background:#FCF7FF;">'
+      + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+      + '<span style="font-size:0.83rem;font-weight:800;color:#6A1B9A;">' + escapeHTML(yearId) + '</span>'
+      + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;">' + items.length + ' denuncia' + (items.length !== 1 ? 's' : '') + '</span>'
+      + '</summary>'
+      + '<div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">'
+      + items.slice(0, 25).map(d => {
+        const fecha = d.fecha ? new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-DO') : '—';
+        return '<div style="border:1px solid #EDE7F6;border-radius:8px;padding:8px 10px;background:#fff;">'
+          + '<div style="font-size:0.76rem;color:#6A1B9A;font-weight:700;">' + escapeHTML(d.curso || 'Sin curso') + ' · ' + escapeHTML(fecha) + '</div>'
+          + '<div style="font-size:0.8rem;color:#37474F;margin-top:4px;">' + escapeHTML((d.descripcion || '').substring(0, 140)) + '</div>'
+          + '</div>';
+      }).join('')
+      + (items.length > 25 ? '<div style="font-size:0.72rem;color:#78909C;text-align:center;">+' + (items.length - 25) + ' más</div>' : '')
+      + '</div></details>';
+  }).filter(Boolean);
+
+  if (!bloques.length) return '';
+
+  return '<div style="border:1px solid #CE93D8;background:#FAF5FF;border-radius:12px;padding:12px;margin-bottom:12px;">'
+    + '<div style="font-size:0.8rem;color:#6A1B9A;font-weight:800;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:16px;">inventory_2</span>Denuncias archivadas por ciclo'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;">' + bloques.join('') + '</div>'
+    + '</div>';
+}
 const CUENTAS_EST_KEY = 'planificadorRA_cuentas_estudiantes_v1';
 
 function _cargarCuentasEst() {
@@ -29000,6 +29180,7 @@ async function _renderReportesRecibidos() {
   if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
 
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando reportes...</div>';
+  const panelArchivados = _panelArchivadosReportesComp('');
 
   try {
     const snap = await db.collection('public_blogs').doc(user.uid)
@@ -29008,7 +29189,7 @@ async function _renderReportesRecibidos() {
     const reportes = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
     if (reportes.length === 0) {
-      cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+      cont.innerHTML = panelArchivados + '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
         '<span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span>' +
         '<p>No se han recibido reportes de comportamiento.</p>' +
         '<p style="font-size:0.78rem;margin-top:6px;">Comparte el enlace con tus estudiantes desde la pestaña "Enlace".</p></div>';
@@ -29026,7 +29207,7 @@ async function _renderReportesRecibidos() {
         ).join('') + '</div>';
     }
 
-    cont.innerHTML = filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes) + '</div>';
+    cont.innerHTML = panelArchivados + filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes) + '</div>';
     window._repCompTodos = reportes;
 
   } catch (e) {
@@ -29310,6 +29491,7 @@ async function _renderDenunciasRecibidas() {
   if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
 
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;">hourglass_empty</span>Cargando denuncias...</div>';
+  const panelArchivados = _panelArchivadosDenuncias('');
 
   try {
     const snap = await db.collection('public_blogs').doc(user.uid)
@@ -29319,7 +29501,7 @@ async function _renderDenunciasRecibidas() {
     denuncias.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
     if (denuncias.length === 0) {
-      cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+      cont.innerHTML = panelArchivados + '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
         '<span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;opacity:0.4;">campaign</span>' +
         'No hay denuncias recibidas.</div>';
       return;
@@ -29336,7 +29518,7 @@ async function _renderDenunciasRecibidas() {
     html += '</div>';
     html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias) + '</div>';
 
-    cont.innerHTML = html;
+    cont.innerHTML = panelArchivados + html;
     window._denunciasCache = denuncias;
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error al cargar: ' + escapeHTML(e.message) + '</div>';
