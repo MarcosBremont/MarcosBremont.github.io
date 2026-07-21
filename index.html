@@ -354,6 +354,10 @@
           style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
           <span class="material-icons" style="font-size:16px;">logout</span> Cerrar sesión
         </button>
+        <button onclick="authIniciarSesionPendiente()"
+          style="width:100%;margin-top:10px;background:#1565C0;border:1.5px solid #1565C0;color:#fff;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">login</span> Iniciar sesión
+        </button>
       </div>
     </div>
   </div>
@@ -2532,6 +2536,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.49<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Pantalla de cuenta pendiente: botón Iniciar sesión</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo acceso:</strong> se agregó botón <em>Iniciar sesión</em> debajo de <em>Cerrar sesión</em> en la vista de cuenta pendiente.</li>
+                <li><strong>Flujo más simple:</strong> al pulsarlo, vuelve directo al formulario de login con el correo prellenado.</li>
+                <li><strong>Mejor experiencia:</strong> cuando el administrador aprueba, el docente puede entrar rápido sin pasos extra.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.40<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4006,8 +4026,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.48';
-    window.TINCLASS_SW_VERSION = 'v100';
+    window.TINCLASS_BUILD_VERSION = 'v15.49';
+    window.TINCLASS_SW_VERSION = 'v101';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4452,7 +4472,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=100', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=101', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

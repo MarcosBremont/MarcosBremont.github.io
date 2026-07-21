@@ -178,6 +178,28 @@ async function authCerrarSesionPendiente() {
   location.reload();
 }
 
+/** Volver a iniciar sesión desde pantalla pendiente (cuando ya fue aprobado) */
+async function authIniciarSesionPendiente() {
+  const email = window.currentUser?.email || '';
+  try {
+    await auth.signOut();
+  } catch {}
+
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  const panel = document.getElementById('auth-pending-panel');
+  if (panel) panel.style.display = 'none';
+  document.getElementById('auth-verificacion-panel')?.style.setProperty('display', 'none');
+  document.querySelector('.auth-tabs')?.style.removeProperty('display');
+  authCambiarTab('login');
+
+  const emailInput = document.getElementById('auth-email');
+  if (emailInput) emailInput.value = email;
+  const passInput = document.getElementById('auth-pass');
+  if (passInput) passInput.value = '';
+  setTimeout(() => passInput?.focus(), 100);
+}
+
 /** Verifica si el usuario es superadmin (no necesita centro) */
 function _esSuperadminAuth(email) {
   if (!email) return false;
