@@ -110,9 +110,11 @@ const ADMIN_EMAIL = 'soymarcosbremont@gmail.com';
 //    → conecta tu cuenta → copia el Service ID (ej: service_abc123)
 // 3. En "Email Templates" → Create New Template → elegir "One-Time Password"
 //    → Asunto: "Codigo de verificacion - TinClass"
-//    → La plantilla usa las variables {{passcode}} (código) y {{email}} (destinatario)
+//    → La plantilla debe usar {{passcode}} (código) y como destinatario {{to_email}}.
+//    → También conviene aceptar {{email}} por compatibilidad.
 //    → Guarda y copia el Template ID (ej: template_xyz789)
 // 4. En "Account" → copia tu Public Key (ej: user_AbCdEfGhIj)
+// 5. En EmailJS revisa "Allowed Origins" y agrega https://tinclass.com
 // 5. Pega los tres valores aquí abajo:
 // ================================================================
 const EMAILJS_SERVICE_ID  = 'service_bvrdwji';   // Reemplaza con tu Service ID

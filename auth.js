@@ -731,39 +731,87 @@ async function authRegistrarse() {
   };
 
   // Enviar OTP por correo
-  const enviado = await _enviarEmailOTP(email, otpCode);
+  const envio = await _enviarEmailOTP(email, otpCode);
   _authSetLoading(false, 'reg');
 
-  if (!enviado) {
-    // EmailJS no configurado — modo desarrollo: mostrar código en consola
-    console.info('[OTP Registro] Código:', otpCode, '— Configura EmailJS en firebase-config.js para envío real.');
+  if (!envio.ok) {
+    if (_pendingOtp?.timerInterval) clearInterval(_pendingOtp.timerInterval);
+    _pendingOtp = null;
+    if (_permiteFallbackOTPDebug()) {
+      console.info('[OTP Registro] Código:', otpCode, '— fallback local por fallo de EmailJS:', envio.reason || envio.error || 'sin detalle');
+      _pendingOtp = {
+        code: otpCode,
+        email,
+        pass,
+        nombre,
+        centroId,
+        centroNombre,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+        timerInterval: null,
+      };
+      _mostrarPanelOTP(email, 'No se pudo enviar el correo. Modo local activo: revisa la consola del navegador para ver el código.');
+      return;
+    }
+
+    _authError(_tradErrorOTP(envio), 'reg');
+    return;
   }
 
-  _mostrarPanelOTP(email);
+  _mostrarPanelOTP(email, 'Te enviamos un código de 6 dígitos. Revisa tu bandeja y spam.');
+}
+
+function _permiteFallbackOTPDebug() {
+  return ['localhost', '127.0.0.1'].includes(window.location.hostname);
+}
+
+function _tradErrorOTP(result) {
+  const txt = String(result?.reason || result?.error || '').toLowerCase();
+  if (txt.includes('public key')) return 'La clave pública de EmailJS no es válida.';
+  if (txt.includes('template')) return 'La plantilla de EmailJS no está disponible o está mal configurada.';
+  if (txt.includes('service')) return 'El servicio de EmailJS no está disponible o está mal configurado.';
+  if (txt.includes('domain')) return 'TinClass no está autorizado en la allowlist de EmailJS.';
+  if (txt.includes('forbidden') || txt.includes('403')) return 'EmailJS rechazó la solicitud. Revisa allowlist del dominio y configuración de la cuenta.';
+  if (txt.includes('too many requests') || txt.includes('429')) return 'Se alcanzó el límite temporal de EmailJS. Espera un momento e intenta de nuevo.';
+  if (txt.includes('network')) return 'No se pudo conectar con EmailJS. Verifica la red e intenta de nuevo.';
+  return 'No se pudo enviar el código al correo. Revisa la configuración de EmailJS y la carpeta de spam.';
 }
 
 // ── Enviar OTP vía EmailJS ────────────────────────────────────────
 async function _enviarEmailOTP(email, code) {
   if (typeof EMAILJS_SERVICE_ID === 'undefined' ||
       EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
-    return false; // no configurado
+    return { ok: false, reason: 'EmailJS no configurado' };
   }
   try {
-    await emailjs.send(
+    const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
-      { email: email, passcode: code },
-      EMAILJS_PUBLIC_KEY
+      {
+        email,
+        to_email: email,
+        user_email: email,
+        recipient: email,
+        passcode: code,
+        otp_code: code,
+        code,
+        app_name: 'TinClass'
+      },
+      { publicKey: EMAILJS_PUBLIC_KEY }
     );
-    return true;
+    return { ok: true, status: response?.status || 200, text: response?.text || 'OK' };
   } catch (e) {
     console.error('EmailJS error:', e);
-    return false;
+    return {
+      ok: false,
+      status: e?.status || e?.code || 0,
+      reason: e?.text || e?.message || String(e),
+      error: String(e?.text || e?.message || e || '')
+    };
   }
 }
 
 // ── Mostrar panel OTP ────────────────────────────────────────────
-function _mostrarPanelOTP(email) {
+function _mostrarPanelOTP(email, infoMsg = '') {
   const overlay = document.getElementById('auth-overlay');
   if (overlay) overlay.classList.remove('hidden');
   document.querySelector('.auth-tabs')?.style.setProperty('display', 'none');
@@ -775,7 +823,10 @@ function _mostrarPanelOTP(email) {
   const emailEl = document.getElementById('auth-ver-email');
   if (emailEl) emailEl.textContent = email;
   const msg = document.getElementById('auth-ver-msg');
-  if (msg) msg.textContent = '';
+  if (msg) {
+    msg.textContent = infoMsg || '';
+    msg.style.color = infoMsg ? '#1565C0' : '#C62828';
+  }
   const input = document.getElementById('auth-otp-input');
   if (input) { input.value = ''; setTimeout(() => input.focus(), 120); }
 
@@ -883,16 +934,20 @@ async function authReenviarOTPRegistro() {
   const btn = document.getElementById('auth-btn-otp-reenv');
   if (btn) btn.disabled = true;
 
-  const enviado = await _enviarEmailOTP(email, nuevoCode);
+  const envio = await _enviarEmailOTP(email, nuevoCode);
 
   if (btn) btn.disabled = false;
   _iniciarTimerOTP();
 
-  if (enviado) {
+  if (envio.ok) {
     if (msg) { msg.style.color = '#2E7D32'; msg.textContent = '✓ Nuevo código enviado. Revisa tu correo.'; }
   } else {
-    console.info('[OTP Reenvío] Nuevo código:', nuevoCode);
-    if (msg) { msg.style.color = '#F57F17'; msg.textContent = 'Correo no configurado. Revisa la consola del navegador.'; }
+    if (_permiteFallbackOTPDebug()) {
+      console.info('[OTP Reenvío] Nuevo código:', nuevoCode, '— fallback local por fallo de EmailJS:', envio.reason || envio.error || 'sin detalle');
+      if (msg) { msg.style.color = '#F57F17'; msg.textContent = 'No se pudo enviar el correo. Modo local: revisa la consola para ver el código.'; }
+    } else {
+      if (msg) { msg.style.color = '#C62828'; msg.textContent = _tradErrorOTP(envio); }
+    }
   }
 
   const input = document.getElementById('auth-otp-input');
