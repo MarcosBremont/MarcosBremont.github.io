@@ -25551,7 +25551,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.49</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.50</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -29146,6 +29146,50 @@ async function _syncReportePsicologia(estId, reportes) {
   } catch(e) { console.warn('sync psicologia:', e); }
 }
 
+function _esRolPsicologia(rol) {
+  return ['psicologia', 'psicologa', 'psicologo'].includes((rol || '').toLowerCase());
+}
+
+async function _getRolActual() {
+  if (!window.currentUser) return '';
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    return doc.exists ? (doc.data().rol || '') : '';
+  } catch {
+    return '';
+  }
+}
+
+async function _esVistaGlobalConvivencia() {
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  if (esSA) return true;
+  const rol = await _getRolActual();
+  return _esRolPsicologia(rol);
+}
+
+const _cacheNombresDocentesConvivencia = {};
+
+async function _nombreDocentePorUid(uid) {
+  if (!uid) return '—';
+  if (_cacheNombresDocentesConvivencia[uid]) return _cacheNombresDocentesConvivencia[uid];
+  try {
+    const perfil = await db.collection('perfiles').doc(uid).get();
+    if (perfil.exists && perfil.data().nombre) {
+      _cacheNombresDocentesConvivencia[uid] = perfil.data().nombre;
+      return _cacheNombresDocentesConvivencia[uid];
+    }
+  } catch {}
+  try {
+    const usuario = await db.collection('usuarios').doc(uid).get();
+    if (usuario.exists && usuario.data().nombre) {
+      _cacheNombresDocentesConvivencia[uid] = usuario.data().nombre;
+      return _cacheNombresDocentesConvivencia[uid];
+    }
+  } catch {}
+  _cacheNombresDocentesConvivencia[uid] = uid;
+  return uid;
+}
+
 let _repCompTab = 'reportes';
 
 function abrirReportesComportamiento() {
@@ -29179,20 +29223,42 @@ async function _renderReportesRecibidos() {
   const user = window.currentUser;
   if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
 
+  const vistaGlobal = await _esVistaGlobalConvivencia();
+
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando reportes...</div>';
   const panelArchivados = _panelArchivadosReportesComp('');
 
   try {
-    const snap = await db.collection('public_blogs').doc(user.uid)
-      .collection('reportes_comportamiento').get();
+    let reportes = [];
+    if (vistaGlobal) {
+      const snap = await db.collectionGroup('reportes_comportamiento').get();
+      reportes = [];
+      for (const d of snap.docs) {
+        const raw = d.data() || {};
+        const partes = d.ref.path.split('/');
+        const docenteUid = partes[1] || '';
+        reportes.push({
+          ...raw,
+          id: raw.id || d.id,
+          docenteUid,
+          docenteNombre: await _nombreDocentePorUid(docenteUid)
+        });
+      }
+    } else {
+      const snap = await db.collection('public_blogs').doc(user.uid)
+        .collection('reportes_comportamiento').get();
+      reportes = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
+    }
 
-    const reportes = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+    reportes.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
     if (reportes.length === 0) {
       cont.innerHTML = panelArchivados + '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
         '<span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span>' +
-        '<p>No se han recibido reportes de comportamiento.</p>' +
-        '<p style="font-size:0.78rem;margin-top:6px;">Comparte el enlace con tus estudiantes desde la pestaña "Enlace".</p></div>';
+        (vistaGlobal
+          ? '<p>No hay reportes de comportamiento en los centros.</p>'
+          : '<p>No se han recibido reportes de comportamiento.</p><p style="font-size:0.78rem;margin-top:6px;">Comparte el enlace con tus estudiantes desde la pestaña "Enlace".</p>')
+        + '</div>';
       return;
     }
 
@@ -29207,8 +29273,9 @@ async function _renderReportesRecibidos() {
         ).join('') + '</div>';
     }
 
-    cont.innerHTML = panelArchivados + filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes) + '</div>';
+    cont.innerHTML = panelArchivados + filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes, { vistaGlobal }) + '</div>';
     window._repCompTodos = reportes;
+    window._repCompVistaGlobal = vistaGlobal;
 
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:30px;color:#C62828;">Error al cargar reportes: ' + escapeHTML(e.message) + '</div>';
@@ -29219,7 +29286,7 @@ function _filtrarRepComp(curso) {
   const reportes = window._repCompTodos || [];
   const filtered = curso ? reportes.filter(r => (r.cursoNombre || r.cursoId) === curso) : reportes;
   const lista = document.getElementById('rep-comp-lista');
-  if (lista) lista.innerHTML = _buildReportesHTML(filtered);
+  if (lista) lista.innerHTML = _buildReportesHTML(filtered, { vistaGlobal: !!window._repCompVistaGlobal });
 
   // Actualizar estilos de filtros
   document.querySelectorAll('.rep-filtro-btn').forEach(b => {
@@ -29230,7 +29297,8 @@ function _filtrarRepComp(curso) {
   });
 }
 
-function _buildReportesHTML(reportes) {
+function _buildReportesHTML(reportes, opts = {}) {
+  const vistaGlobal = !!opts.vistaGlobal;
   if (!reportes.length) return '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin reportes para este filtro.</div>';
 
   const tipoLabel = { positivo: 'Positivo', negativo: 'Negativo', neutral: 'Observación' };
@@ -29245,6 +29313,18 @@ function _buildReportesHTML(reportes) {
     const tIcon  = tipoIcon[r.tipo] || 'info';
     const tLabel = tipoLabel[r.tipo] || 'Observación';
 
+    const docenteLinea = vistaGlobal
+      ? '<div style="font-size:0.75rem;color:#6A1B9A;display:flex;align-items:center;gap:4px;margin-bottom:6px;">'
+        + '<span class="material-icons" style="font-size:14px;">badge</span> <strong>Docente:</strong> ' + escapeHTML(r.docenteNombre || r.docenteUid || '—') +
+      '</div>'
+      : '';
+    const accionEliminar = !vistaGlobal
+      ? '<div style="margin-top:8px;text-align:right;">' +
+          '<button onclick="_eliminarReporteComp(\'' + escapeHTML(r.id) + '\')" style="background:none;border:1px solid #FFCDD2;color:#C62828;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
+            '<span class="material-icons" style="font-size:14px;">delete</span> Eliminar</button>' +
+        '</div>'
+      : '';
+
     return '<div style="background:var(--color-fondo-card,#fff);border:1px solid var(--color-borde,#E0E0E0);border-radius:10px;padding:16px;margin-bottom:10px;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
         '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:' + tStyle + ';">' +
@@ -29258,14 +29338,12 @@ function _buildReportesHTML(reportes) {
       '<div style="font-size:0.78rem;color:#616161;display:flex;align-items:center;gap:4px;margin-bottom:6px;">' +
         '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(r.involucrados || '') +
       '</div>' +
+      docenteLinea +
       '<div style="font-size:0.86rem;color:var(--color-texto,#424242);line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(r.descripcion || '') + '</div>' +
       '<div style="font-size:0.72rem;color:#BDBDBD;margin-top:8px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:12px;">person</span> Reportado por: ' + escapeHTML(r.reportadoPor || r.usuario || '') +
       '</div>' +
-      '<div style="margin-top:8px;text-align:right;">' +
-        '<button onclick="_eliminarReporteComp(\'' + escapeHTML(r.id) + '\')" style="background:none;border:1px solid #FFCDD2;color:#C62828;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
-          '<span class="material-icons" style="font-size:14px;">delete</span> Eliminar</button>' +
-      '</div>' +
+      accionEliminar +
     '</div>';
   }).join('');
 }
@@ -29490,20 +29568,39 @@ async function _renderDenunciasRecibidas() {
   const user = window.currentUser;
   if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
 
+  const vistaGlobal = await _esVistaGlobalConvivencia();
+
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;">hourglass_empty</span>Cargando denuncias...</div>';
   const panelArchivados = _panelArchivadosDenuncias('');
 
   try {
-    const snap = await db.collection('public_blogs').doc(user.uid)
-      .collection('denuncias').get();
+    let denuncias = [];
+    if (vistaGlobal) {
+      const snap = await db.collectionGroup('denuncias').get();
+      denuncias = [];
+      for (const d of snap.docs) {
+        const raw = d.data() || {};
+        const partes = d.ref.path.split('/');
+        const docenteUid = partes[1] || '';
+        denuncias.push({
+          ...raw,
+          id: raw.id || d.id,
+          docenteUid,
+          docenteNombre: await _nombreDocentePorUid(docenteUid)
+        });
+      }
+    } else {
+      const snap = await db.collection('public_blogs').doc(user.uid)
+        .collection('denuncias').get();
+      denuncias = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
+    }
 
-    let denuncias = snap.docs.map(d => d.data());
     denuncias.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
     if (denuncias.length === 0) {
       cont.innerHTML = panelArchivados + '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
         '<span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;opacity:0.4;">campaign</span>' +
-        'No hay denuncias recibidas.</div>';
+        (vistaGlobal ? 'No hay denuncias registradas en los centros.' : 'No hay denuncias recibidas.') + '</div>';
       return;
     }
 
@@ -29516,10 +29613,11 @@ async function _renderDenunciasRecibidas() {
       html += '<button onclick="_filtrarDenuncias(\'' + escapeHTML(c) + '\')" class="ra-tab" style="padding:4px 12px;border-radius:16px;border:1px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.75rem;font-weight:600;cursor:pointer;">' + escapeHTML(c) + ' (' + n + ')</button>';
     });
     html += '</div>';
-    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias) + '</div>';
+    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias, { vistaGlobal }) + '</div>';
 
     cont.innerHTML = panelArchivados + html;
     window._denunciasCache = denuncias;
+    window._denunciasVistaGlobal = vistaGlobal;
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error al cargar: ' + escapeHTML(e.message) + '</div>';
   }
@@ -29529,10 +29627,11 @@ function _filtrarDenuncias(curso) {
   const items = document.getElementById('den-lista-items');
   if (!items || !window._denunciasCache) return;
   const filtered = curso ? window._denunciasCache.filter(d => d.curso === curso) : window._denunciasCache;
-  items.innerHTML = _buildDenunciasHTML(filtered);
+  items.innerHTML = _buildDenunciasHTML(filtered, { vistaGlobal: !!window._denunciasVistaGlobal });
 }
 
-function _buildDenunciasHTML(denuncias) {
+function _buildDenunciasHTML(denuncias, opts = {}) {
+  const vistaGlobal = !!opts.vistaGlobal;
   if (!denuncias.length) return '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin denuncias en este filtro.</div>';
 
   const tipoLabels = {
@@ -29551,6 +29650,16 @@ function _buildDenunciasHTML(denuncias) {
       ? new Date(d.fecha + 'T12:00:00').toLocaleDateString('es', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
       : '—';
     const esAnonimo = !d.nombre || d.nombre === 'Anónimo';
+    const docenteLinea = vistaGlobal
+      ? '<div style="font-size:0.74rem;color:#6A1B9A;margin-bottom:5px;display:flex;align-items:center;gap:4px;">'
+        + '<span class="material-icons" style="font-size:13px;">badge</span><strong>Docente:</strong> ' + escapeHTML(d.docenteNombre || d.docenteUid || '—') +
+      '</div>'
+      : '';
+    const accionEliminar = !vistaGlobal
+      ? '<button onclick="_eliminarDenuncia(\'' + d.id + '\')" title="Eliminar" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:4px;">'
+          + '<span class="material-icons" style="font-size:18px;">delete_outline</span></button>'
+      : '';
+
     return '<div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07);padding:16px;margin-bottom:12px;border-left:4px solid ' + color + ';">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
         '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -29559,14 +29668,14 @@ function _buildDenunciasHTML(denuncias) {
           '<span style="font-size:0.72rem;color:#9E9E9E;display:flex;align-items:center;gap:3px;">' +
             '<span class="material-icons" style="font-size:13px;">schedule</span>' + escapeHTML(fechaStr) + '</span>' +
         '</div>' +
-        '<button onclick="_eliminarDenuncia(\'' + d.id + '\')" title="Eliminar" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:4px;">' +
-          '<span class="material-icons" style="font-size:18px;">delete_outline</span></button>' +
+        accionEliminar +
       '</div>' +
       '<div style="font-size:0.78rem;color:#78909C;margin-bottom:4px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:14px;">school</span> ' + escapeHTML(d.curso) +
         ' &nbsp;·&nbsp; <span class="material-icons" style="font-size:14px;">person</span> ' +
         (esAnonimo ? '<em style="color:#BDBDBD;">Anónimo</em>' : escapeHTML(d.nombre)) +
       '</div>' +
+      docenteLinea +
       '<div style="font-size:0.78rem;color:#616161;margin-bottom:6px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(d.involucrados) +
       '</div>' +
@@ -29812,6 +29921,8 @@ async function _renderDocentesCentro() {
         ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>'
         : d.rol === 'coordinadora'
         ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>'
+        : _esRolPsicologia(d.rol)
+        ? '<span style="background:#6A1B9A;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Psicología</span>'
         : d.rol === 'admin_centro'
         ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>'
         : '';
@@ -29836,6 +29947,11 @@ async function _renderDocentesCentro() {
           html += '<button onclick="_promoverCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#00695C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">supervisor_account</span> Hacer Coordinadora</button>';
         } else {
           html += '<button onclick="_quitarCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Coordinadora</button>';
+        }
+        if (!_esRolPsicologia(d.rol)) {
+          html += '<button onclick="_promoverPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#6A1B9A;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">self_improvement</span> Hacer Psicóloga</button>';
+        } else {
+          html += '<button onclick="_quitarPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Psicología</button>';
         }
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">block</span> Revocar</button>';
       } else {
@@ -29906,6 +30022,26 @@ async function _quitarDirector(uid) {
   try {
     await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
     mostrarToast('Rol de Director removido', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Promover a psicología */
+async function _promoverPsicologia(uid) {
+  if (!confirm('¿Asignar el rol de Psicología a este usuario?')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'psicologia' });
+    mostrarToast('Usuario asignado al departamento de Psicología', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Quitar rol de psicología */
+async function _quitarPsicologia(uid) {
+  if (!confirm('¿Quitar el rol de Psicología a este usuario?')) return;
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
+    mostrarToast('Rol de Psicología removido', 'success');
     _renderDocentesCentro();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }

@@ -2536,6 +2536,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.50<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Gestión de Psicología desde Docentes y vista global de convivencia</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo rol:</strong> en Gestión de Docentes ahora puedes asignar y quitar el rol <em>Psicología</em> igual que Director o Coordinadora.</li>
+                <li><strong>Vista global:</strong> usuarios con rol Psicología ven todos los reportes de comportamiento y denuncias del centro, no solo los suyos.</li>
+                <li><strong>Mejor contexto:</strong> en la vista global se muestra el nombre del docente para cada reporte y denuncia.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.49<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4026,8 +4042,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.49';
-    window.TINCLASS_SW_VERSION = 'v101';
+    window.TINCLASS_BUILD_VERSION = 'v15.50';
+    window.TINCLASS_SW_VERSION = 'v102';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4472,7 +4488,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=101', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=102', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
