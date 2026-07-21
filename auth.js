@@ -764,16 +764,32 @@ function _permiteFallbackOTPDebug() {
   return ['localhost', '127.0.0.1'].includes(window.location.hostname);
 }
 
-function _tradErrorOTP(result) {
+function _diagnosticoOTPConsola(result) {
+  const status = Number(result?.status || 0) || 0;
   const txt = String(result?.reason || result?.error || '').toLowerCase();
-  if (txt.includes('public key')) return 'La clave pública de EmailJS no es válida.';
-  if (txt.includes('template')) return 'La plantilla de EmailJS no está disponible o está mal configurada.';
-  if (txt.includes('service')) return 'El servicio de EmailJS no está disponible o está mal configurado.';
-  if (txt.includes('domain')) return 'TinClass no está autorizado en la allowlist de EmailJS.';
-  if (txt.includes('forbidden') || txt.includes('403')) return 'EmailJS rechazó la solicitud. Revisa allowlist del dominio y configuración de la cuenta.';
-  if (txt.includes('too many requests') || txt.includes('429')) return 'Se alcanzó el límite temporal de EmailJS. Espera un momento e intenta de nuevo.';
-  if (txt.includes('network')) return 'No se pudo conectar con EmailJS. Verifica la red e intenta de nuevo.';
-  return 'No se pudo enviar el código al correo. Revisa la configuración de EmailJS y la carpeta de spam.';
+  if (status === 412 || txt.includes('412')) {
+    return 'Precondicion fallida en EmailJS: revisa Allowed Origins de tinclass.com, Service ID, Template ID y destinatario {{to_email}} en la plantilla.';
+  }
+  if (txt.includes('public key')) return 'Public Key invalida o no aceptada por EmailJS.';
+  if (txt.includes('template')) return 'Template ID invalido o plantilla sin variables esperadas.';
+  if (txt.includes('service')) return 'Service ID invalido o servicio desconectado.';
+  if (txt.includes('domain')) return 'Dominio no autorizado en EmailJS Allowed Origins.';
+  if (txt.includes('forbidden') || txt.includes('403')) return 'Solicitud rechazada por EmailJS; revisar seguridad y dominio permitido.';
+  if (txt.includes('too many requests') || txt.includes('429')) return 'Limite temporal de EmailJS alcanzado.';
+  if (txt.includes('network')) return 'Fallo de red al contactar EmailJS.';
+  return 'Revisar configuracion de EmailJS, estado del servicio y carpeta de historial/logs en EmailJS.';
+}
+
+function _tradErrorOTP(result) {
+  const status = Number(result?.status || 0) || 0;
+  const txt = String(result?.reason || result?.error || '').toLowerCase();
+  if (status === 412 || txt.includes('412')) return 'No pudimos enviar tu código por el momento. Inténtalo de nuevo en unos minutos o pulsa Reenviar código.';
+  if (txt.includes('too many requests') || txt.includes('429')) return 'Estamos enviando muchos códigos ahora mismo. Espera un minuto y vuelve a intentarlo.';
+  if (txt.includes('network')) return 'No pudimos conectar con el servicio de correo. Revisa tu internet e inténtalo otra vez.';
+  if (txt.includes('public key') || txt.includes('template') || txt.includes('service') || txt.includes('domain') || txt.includes('forbidden') || txt.includes('403')) {
+    return 'Ahora mismo no pudimos enviar el código. Intenta otra vez en un momento. Si sigue igual, avisa al centro para completar tu registro.';
+  }
+  return 'Ahora mismo no pudimos enviar el código. Intenta otra vez en un momento. Si sigue igual, avisa al centro para completar tu registro.';
 }
 
 // ── Enviar OTP vía EmailJS ────────────────────────────────────────
@@ -800,13 +816,15 @@ async function _enviarEmailOTP(email, code) {
     );
     return { ok: true, status: response?.status || 200, text: response?.text || 'OK' };
   } catch (e) {
-    console.error('EmailJS error:', e);
-    return {
+    const result = {
       ok: false,
       status: e?.status || e?.code || 0,
       reason: e?.text || e?.message || String(e),
       error: String(e?.text || e?.message || e || '')
     };
+    console.error('EmailJS error:', e);
+    console.warn('[OTP] Diagnóstico sugerido:', _diagnosticoOTPConsola(result), result);
+    return result;
   }
 }
 

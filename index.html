@@ -4006,8 +4006,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.47';
-    window.TINCLASS_SW_VERSION = 'v99';
+    window.TINCLASS_BUILD_VERSION = 'v15.48';
+    window.TINCLASS_SW_VERSION = 'v100';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4089,16 +4089,16 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.47<span class="about-ver-fecha">Jul
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.48<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Corrección del envío OTP por correo y diagnóstico real de EmailJS</div>
+              <div class="about-ver-titulo">Mensajes OTP más claros para docentes + diagnóstico técnico del error 412</div>
               <ul class="about-ver-items">
-                <li><strong>SDK corregida:</strong> el envío OTP ahora usa la forma compatible actual de EmailJS con <em>publicKey</em> en options.</li>
-                <li><strong>Más compatibilidad:</strong> se envían alias como <em>to_email</em>, <em>email</em> y <em>code</em> para evitar fallos por variables de plantilla.</li>
-                <li><strong>Sin falsos positivos:</strong> si el correo falla, el sistema ya no dice “enviado” sin confirmación y muestra el motivo probable.</li>
+                <li><strong>Mensaje amable:</strong> los docentes ya no verán referencias técnicas al proveedor de correo.</li>
+                <li><strong>Error 412 identificado:</strong> la consola ahora sugiere revisar dominio permitido, plantilla y destinatario del OTP.</li>
+                <li><strong>Soporte más fácil:</strong> el usuario recibe una instrucción simple y el administrador conserva el detalle técnico.</li>
               </ul>
             </div>
           </div>
@@ -4452,7 +4452,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=99', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=100', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
