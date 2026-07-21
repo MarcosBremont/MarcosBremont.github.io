@@ -2536,6 +2536,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.52<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Dashboard coherente con módulos desactivados y fallback de permisos</div>
+              <ul class="about-ver-items">
+                <li><strong>Tarjetas superiores:</strong> si desactivas planificaciones, cursos, horario o tareas, también se ocultan sus tarjetas rápidas del encabezado.</li>
+                <li><strong>Panel consistente:</strong> se mantiene alineado lo que se puede abrir con lo que está habilitado en opciones.</li>
+                <li><strong>Reportes/denuncias:</strong> se agregó fallback automático cuando Firestore no permite vista global, evitando el error en pantalla.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.51<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4058,8 +4074,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.51';
-    window.TINCLASS_SW_VERSION = 'v103';
+    window.TINCLASS_BUILD_VERSION = 'v15.52';
+    window.TINCLASS_SW_VERSION = 'v104';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4504,7 +4520,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=103', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=104', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

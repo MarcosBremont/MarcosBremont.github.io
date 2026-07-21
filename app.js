@@ -25551,25 +25551,25 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.51</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.52</span></div>
     </div>
     <div class="dash-stats-row">
-      <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
+      <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">folder_special</span></div>
         <div class="dash-stat-num">${nPlans}</div>
         <div class="dash-stat-lbl">Planific.</div>
       </div>
-      <div class="dash-stat-pill" title="Cursos activos" onclick="abrirCalificaciones()" style="cursor:pointer;">
+      <div id="dash-stat-cursos" class="dash-stat-pill" title="Cursos activos" onclick="abrirCalificaciones()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">school</span></div>
         <div class="dash-stat-num">${nCursos}</div>
         <div class="dash-stat-lbl">Cursos</div>
       </div>
-      <div class="dash-stat-pill" title="Clases programadas hoy" onclick="abrirHorario()" style="cursor:pointer;">
+      <div id="dash-stat-clases-hoy" class="dash-stat-pill" title="Clases programadas hoy" onclick="abrirHorario()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">today</span></div>
         <div class="dash-stat-num">${clasesHoy}</div>
         <div class="dash-stat-lbl">Clases hoy</div>
       </div>
-      <div class="dash-stat-pill ${nVenc > 0 ? 'stat-alerta' : nPend > 0 ? 'stat-warning' : ''}" title="Tareas pendientes" onclick="abrirTareas()" style="cursor:pointer;">
+      <div id="dash-stat-tareas" class="dash-stat-pill ${nVenc > 0 ? 'stat-alerta' : nPend > 0 ? 'stat-warning' : ''}" title="Tareas pendientes" onclick="abrirTareas()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">assignment</span></div>
         <div class="dash-stat-num">${nPend + nVenc}</div>
         <div class="dash-stat-lbl">Tareas</div>
@@ -29231,18 +29231,27 @@ async function _renderReportesRecibidos() {
   try {
     let reportes = [];
     if (vistaGlobal) {
-      const snap = await db.collectionGroup('reportes_comportamiento').get();
-      reportes = [];
-      for (const d of snap.docs) {
-        const raw = d.data() || {};
-        const partes = d.ref.path.split('/');
-        const docenteUid = partes[1] || '';
-        reportes.push({
-          ...raw,
-          id: raw.id || d.id,
-          docenteUid,
-          docenteNombre: await _nombreDocentePorUid(docenteUid)
-        });
+      try {
+        const snap = await db.collectionGroup('reportes_comportamiento').get();
+        reportes = [];
+        for (const d of snap.docs) {
+          const raw = d.data() || {};
+          const partes = d.ref.path.split('/');
+          const docenteUid = partes[1] || '';
+          reportes.push({
+            ...raw,
+            id: raw.id || d.id,
+            docenteUid,
+            docenteNombre: await _nombreDocentePorUid(docenteUid)
+          });
+        }
+      } catch (e) {
+        const permiso = (e?.code === 'permission-denied') || /insufficient permissions|permission/i.test(String(e?.message || ''));
+        if (!permiso) throw e;
+        const snap = await db.collection('public_blogs').doc(user.uid)
+          .collection('reportes_comportamiento').get();
+        reportes = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
+        mostrarToast('No se pudo abrir la vista global por permisos de Firestore. Se muestran tus reportes.', 'info');
       }
     } else {
       const snap = await db.collection('public_blogs').doc(user.uid)
@@ -29273,9 +29282,10 @@ async function _renderReportesRecibidos() {
         ).join('') + '</div>';
     }
 
-    cont.innerHTML = panelArchivados + filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes, { vistaGlobal }) + '</div>';
+    const vistaGlobalActiva = vistaGlobal && reportes.some(r => !!r.docenteUid);
+    cont.innerHTML = panelArchivados + filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes, { vistaGlobal: vistaGlobalActiva }) + '</div>';
     window._repCompTodos = reportes;
-    window._repCompVistaGlobal = vistaGlobal;
+    window._repCompVistaGlobal = vistaGlobalActiva;
 
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:30px;color:#C62828;">Error al cargar reportes: ' + escapeHTML(e.message) + '</div>';
@@ -29576,18 +29586,27 @@ async function _renderDenunciasRecibidas() {
   try {
     let denuncias = [];
     if (vistaGlobal) {
-      const snap = await db.collectionGroup('denuncias').get();
-      denuncias = [];
-      for (const d of snap.docs) {
-        const raw = d.data() || {};
-        const partes = d.ref.path.split('/');
-        const docenteUid = partes[1] || '';
-        denuncias.push({
-          ...raw,
-          id: raw.id || d.id,
-          docenteUid,
-          docenteNombre: await _nombreDocentePorUid(docenteUid)
-        });
+      try {
+        const snap = await db.collectionGroup('denuncias').get();
+        denuncias = [];
+        for (const d of snap.docs) {
+          const raw = d.data() || {};
+          const partes = d.ref.path.split('/');
+          const docenteUid = partes[1] || '';
+          denuncias.push({
+            ...raw,
+            id: raw.id || d.id,
+            docenteUid,
+            docenteNombre: await _nombreDocentePorUid(docenteUid)
+          });
+        }
+      } catch (e) {
+        const permiso = (e?.code === 'permission-denied') || /insufficient permissions|permission/i.test(String(e?.message || ''));
+        if (!permiso) throw e;
+        const snap = await db.collection('public_blogs').doc(user.uid)
+          .collection('denuncias').get();
+        denuncias = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
+        mostrarToast('No se pudo abrir la vista global por permisos de Firestore. Se muestran tus denuncias.', 'info');
       }
     } else {
       const snap = await db.collection('public_blogs').doc(user.uid)
@@ -29613,11 +29632,12 @@ async function _renderDenunciasRecibidas() {
       html += '<button onclick="_filtrarDenuncias(\'' + escapeHTML(c) + '\')" class="ra-tab" style="padding:4px 12px;border-radius:16px;border:1px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.75rem;font-weight:600;cursor:pointer;">' + escapeHTML(c) + ' (' + n + ')</button>';
     });
     html += '</div>';
-    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias, { vistaGlobal }) + '</div>';
+    const vistaGlobalActiva = vistaGlobal && denuncias.some(d => !!d.docenteUid);
+    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias, { vistaGlobal: vistaGlobalActiva }) + '</div>';
 
     cont.innerHTML = panelArchivados + html;
     window._denunciasCache = denuncias;
-    window._denunciasVistaGlobal = vistaGlobal;
+    window._denunciasVistaGlobal = vistaGlobalActiva;
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error al cargar: ' + escapeHTML(e.message) + '</div>';
   }
@@ -31464,6 +31484,22 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
         const hBtn = document.getElementById(headerBtnId);
         if (hBtn) hBtn.style.display = 'none';
       }
+    }
+  });
+
+  const mapStats = {
+    planificaciones: 'dash-stat-planificaciones',
+    calificaciones: 'dash-stat-cursos',
+    horario: 'dash-stat-clases-hoy',
+    tareas: 'dash-stat-tareas'
+  };
+
+  Object.entries(mapStats).forEach(([key, statId]) => {
+    const def = defsArray ? defsArray.find(o => o.id === key) : null;
+    const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
+    if (!activo) {
+      const stat = document.getElementById(statId);
+      if (stat) stat.style.display = 'none';
     }
   });
 
