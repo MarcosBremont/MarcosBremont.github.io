@@ -25551,7 +25551,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.50</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.51</span></div>
     </div>
     <div class="dash-stats-row">
       <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -31439,8 +31439,8 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
     notas: 'btn-dash-notas',
     libreta: 'btn-dash-libreta',
     rendimiento: 'btn-dash-rendimiento',
-    ia: 'btn-dash-ia',
     importar: 'btn-dash-importar',
+    ia: 'btn-dash-ia',
     backup: 'btn-dash-backup',
     blog: 'btn-dash-blog',
     calendario: 'btn-dash-calendario',
@@ -31466,6 +31466,25 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
       }
     }
   });
+
+  const mapSeccionesDash = {
+    estado_cursos: 'dash-cursos',
+    estadisticas_dashboard: 'dash-estadisticas'
+  };
+
+  Object.entries(mapSeccionesDash).forEach(([key, contentId]) => {
+    const def = defsArray ? defsArray.find(o => o.id === key) : null;
+    const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
+    if (!activo) {
+      const content = document.getElementById(contentId);
+      if (!content) return;
+      content.style.display = 'none';
+      const label = content.previousElementSibling;
+      if (label && label.classList && label.classList.contains('dash-section-label')) {
+        label.style.display = 'none';
+      }
+    }
+  });
 }
 
 // ── OPCIONES DE VISIBILIDAD PARA PSICOLOGÍA ──────────────────────
@@ -31474,6 +31493,9 @@ const OPCIONES_PSICOLOGIA = [
   { id: 'buscar',          label: 'Buscar Estudiante',      icono: 'search',              desc: 'Buscador global de estudiantes',       defecto: true  },
   { id: 'reportes',        label: 'Reportes Estudiantes',   icono: 'flag',                desc: 'Ver reportes de comportamiento',        defecto: true  },
   { id: 'denuncias',       label: 'Buzón de Denuncias',     icono: 'report',              desc: 'Denuncias anónimas de estudiantes',     defecto: true  },
+  { id: 'importar',        label: 'Importar Planificación', icono: 'upload_file',         desc: 'Importar planificación desde Word',     defecto: true  },
+  { id: 'estado_cursos',   label: 'Estado de cursos',       icono: 'school',              desc: 'Resumen de cursos en el dashboard',     defecto: true  },
+  { id: 'estadisticas_dashboard', label: 'Estadísticas de rendimiento (dashboard)', icono: 'insights', desc: 'Bloque de estadísticas rápidas en dashboard', defecto: true },
   { id: 'calendario',      label: 'Calendario Escolar',     icono: 'event',               desc: 'Calendario de actividades escolares',   defecto: true  },
   { id: 'notas',           label: 'Notas Rápidas',          icono: 'sticky_note_2',       desc: 'Bloc de notas personal',               defecto: true  },
   { id: 'blog',            label: 'Blog Educativo',         icono: 'rss_feed',            desc: 'Blog para comunicación con estudiantes',defecto: false },

@@ -2536,6 +2536,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.51<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Opciones Psicología ampliadas en Superadmin</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevos toggles:</strong> ahora puedes activar o desactivar <em>Importar Planificación</em> desde Opciones Psicología.</li>
+                <li><strong>Dashboard configurable:</strong> se agregó control para el bloque <em>Estado de cursos</em>.</li>
+                <li><strong>Más control visual:</strong> también puedes ocultar o mostrar <em>Estadísticas de rendimiento</em> del dashboard.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.50<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4042,8 +4058,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.50';
-    window.TINCLASS_SW_VERSION = 'v102';
+    window.TINCLASS_BUILD_VERSION = 'v15.51';
+    window.TINCLASS_SW_VERSION = 'v103';
   </script>
   <!-- Script principal -->
   <script src="docx.js"></script>
@@ -4488,7 +4504,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=102', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=103', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
