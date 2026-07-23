@@ -144,6 +144,22 @@
     return payload;
   }
 
+  function _resolveFirestoreDb() {
+    if (window.db && typeof window.db.collection === 'function') return window.db;
+    if (typeof db !== 'undefined' && db && typeof db.collection === 'function') return db;
+    return null;
+  }
+
+  function _resolveFirebaseFieldValue() {
+    if (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) {
+      return window.firebase.firestore.FieldValue;
+    }
+    if (typeof firebase !== 'undefined' && firebase && firebase.firestore && firebase.firestore.FieldValue) {
+      return firebase.firestore.FieldValue;
+    }
+    return null;
+  }
+
   async function _sendByEmail(payload) {
     const hasEmailJs = typeof emailjs !== 'undefined' && emailjs && typeof emailjs.send === 'function';
     const hasConfig = typeof EMAILJS_SERVICE_ID !== 'undefined' && typeof EMAILJS_PUBLIC_KEY !== 'undefined';
@@ -206,13 +222,23 @@
 
   async function _saveInFirestore(payload) {
     try {
-      if (!window.db || typeof db.collection !== 'function') return { ok: false, reason: 'db-not-ready' };
+      let dbRef = _resolveFirestoreDb();
+      if (!dbRef) {
+        // Firebase puede tardar unos instantes en estar disponible tras el boot.
+        for (let i = 0; i < 8 && !dbRef; i += 1) {
+          await new Promise(resolve => setTimeout(resolve, 250));
+          dbRef = _resolveFirestoreDb();
+        }
+      }
+      if (!dbRef) return { ok: false, reason: 'db-not-ready' };
+
+      const fieldValue = _resolveFirebaseFieldValue();
       const doc = Object.assign({}, payload, {
-        createdAt: (window.firebase && firebase.firestore && firebase.firestore.FieldValue)
-          ? firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: fieldValue
+          ? fieldValue.serverTimestamp()
           : new Date().toISOString()
       });
-      await db.collection('error_logs').add(doc);
+      await dbRef.collection('error_logs').add(doc);
       return { ok: true };
     } catch (e) {
       return { ok: false, reason: (e && e.message) ? e.message : String(e) };
