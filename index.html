@@ -2461,6 +2461,49 @@
           </div>
         </div>
 
+        <!-- Alertas de errores (solo superadmin) -->
+        <div class="config-section" id="cfg-error-alerts-section" style="display:none;">
+          <div class="config-section-title"><span class="material-icons">bug_report</span>Alertas de errores</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Reporte de errores activo
+              <small>Captura errores críticos y los procesa para notificación.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-error-alerts-enabled" onchange="_cfgToggleErrorAlertsEnabled(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Enviar correo al administrador
+              <small>Usa EmailJS para enviarte el aviso a tu correo personal.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-error-alerts-email" onchange="_cfgToggleErrorAlertsEmail(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Guardar respaldo en Firestore
+              <small>Guarda cada evento en <em>error_logs</em> para auditoría técnica.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-error-alerts-firestore" onchange="_cfgToggleErrorAlertsFirestore(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div style="margin-top:8px;background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:10px 12px;">
+            <div id="cfg-error-alerts-status" style="font-size:0.8rem;color:#1565C0;line-height:1.5;">Estado del reporter: cargando...</div>
+          </div>
+          <button onclick="probarAlertaErrorCorreo()"
+            style="margin-top:10px;width:100%;background:#B71C1C;border:1.5px solid #EF9A9A;color:#fff;border-radius:8px;padding:10px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">mark_email_read</span>
+            Probar alerta de error ahora
+          </button>
+        </div>
+
         <!-- Seguridad -->
         <div class="config-section">
           <div class="config-section-title"><span class="material-icons">lock</span>Seguridad</div>
@@ -2532,6 +2575,38 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.54<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Prueba guiada de alertas de error por correo para superadmin</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo panel:</strong> en Configuración aparece la sección <em>Alertas de errores</em> para usuarios superadmin.</li>
+                <li><strong>Botón de prueba:</strong> ahora puedes disparar una alerta controlada para verificar correo y log sin causar fallos reales.</li>
+                <li><strong>Control fino:</strong> se añadieron toggles para activar/desactivar correo y respaldo en Firestore.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.53<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Alertas automáticas de errores por correo para respuesta rápida</div>
+              <ul class="about-ver-items">
+                <li><strong>Monitoreo global:</strong> ahora se capturan errores de ejecución y promesas rechazadas no controladas.</li>
+                <li><strong>Notificación inmediata:</strong> los errores críticos se envían al correo del administrador para atención rápida.</li>
+                <li><strong>Trazabilidad:</strong> cada incidencia se guarda también en Firestore para auditoría técnica y diagnóstico.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -4074,9 +4149,10 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.52';
-    window.TINCLASS_SW_VERSION = 'v104';
+    window.TINCLASS_BUILD_VERSION = 'v15.54';
+    window.TINCLASS_SW_VERSION = 'v106';
   </script>
+  <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
   <script src="app.js"></script>
@@ -4520,7 +4596,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=104', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=106', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

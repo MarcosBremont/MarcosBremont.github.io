@@ -25128,10 +25128,104 @@ function abrirConfiguracion() {
   _cfgActualizarEstadoPin();
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  _refrescarPanelAlertasErrorConfig();
 }
 function cerrarConfiguracion() {
   document.getElementById('config-overlay')?.classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+async function _refrescarPanelAlertasErrorConfig() {
+  const section = document.getElementById('cfg-error-alerts-section');
+  if (!section) return;
+
+  let allowed = false;
+  try {
+    allowed = await _esSuperadminPorPerfil();
+  } catch (_) {
+    allowed = false;
+  }
+  section.style.display = allowed ? '' : 'none';
+  if (!allowed) return;
+
+  const hasReporter = !!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.get === 'function');
+  const statusEl = document.getElementById('cfg-error-alerts-status');
+  const chkEnabled = document.getElementById('cfg-error-alerts-enabled');
+  const chkEmail = document.getElementById('cfg-error-alerts-email');
+  const chkFs = document.getElementById('cfg-error-alerts-firestore');
+
+  if (!hasReporter) {
+    if (statusEl) statusEl.textContent = 'Reporter no disponible. Recarga la aplicación para activarlo.';
+    if (chkEnabled) chkEnabled.checked = false;
+    if (chkEmail) chkEmail.checked = false;
+    if (chkFs) chkFs.checked = false;
+    return;
+  }
+
+  const cfg = window.tinclassErrorAlertsConfig.get();
+  if (chkEnabled) chkEnabled.checked = cfg.enabled !== false;
+  if (chkEmail) chkEmail.checked = cfg.sendEmail !== false;
+  if (chkFs) chkFs.checked = cfg.saveFirestore !== false;
+  if (statusEl) {
+    statusEl.textContent = 'Activo: ' + (cfg.enabled ? 'Sí' : 'No')
+      + ' | Correo: ' + (cfg.sendEmail ? 'Sí' : 'No')
+      + ' | Firestore: ' + (cfg.saveFirestore ? 'Sí' : 'No')
+      + ' | Severidad mínima: ' + (cfg.minSeverity || 'high');
+  }
+}
+
+function _cfgToggleErrorAlertsEnabled(on) {
+  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
+    mostrarToast('Reporter de errores no disponible', 'error');
+    return;
+  }
+  window.tinclassErrorAlertsConfig.set({ enabled: !!on });
+  _refrescarPanelAlertasErrorConfig();
+  mostrarToast(on ? 'Alertas de error activadas' : 'Alertas de error desactivadas', 'success');
+}
+
+function _cfgToggleErrorAlertsEmail(on) {
+  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
+    mostrarToast('Reporter de errores no disponible', 'error');
+    return;
+  }
+  window.tinclassErrorAlertsConfig.set({ sendEmail: !!on });
+  _refrescarPanelAlertasErrorConfig();
+  mostrarToast(on ? 'Envío de correo activado' : 'Envío de correo desactivado', 'success');
+}
+
+function _cfgToggleErrorAlertsFirestore(on) {
+  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
+    mostrarToast('Reporter de errores no disponible', 'error');
+    return;
+  }
+  window.tinclassErrorAlertsConfig.set({ saveFirestore: !!on });
+  _refrescarPanelAlertasErrorConfig();
+  mostrarToast(on ? 'Respaldo en Firestore activado' : 'Respaldo en Firestore desactivado', 'success');
+}
+
+async function probarAlertaErrorCorreo() {
+  const allowed = await _esSuperadminPorPerfil();
+  if (!allowed) {
+    mostrarToast('Solo superadmin puede probar alertas', 'error');
+    return;
+  }
+  if (!(typeof window.tinclassReportError === 'function')) {
+    mostrarToast('Reporter no disponible. Recarga la app.', 'error');
+    return;
+  }
+
+  const probeId = 'probe-' + Date.now();
+  const err = new Error('Prueba manual de alerta TinClass #' + probeId);
+  window.tinclassReportError(err, {
+    type: 'manual_test',
+    source: 'settings.probe',
+    module: 'configuracion',
+    action: 'probar_alerta_error_correo',
+    severity: 'high'
+  });
+
+  mostrarToast('Prueba enviada. Revisa tu correo y Firestore (error_logs).', 'success');
 }
 
 function _syncPreferencias() {
@@ -25551,7 +25645,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.52</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.54</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

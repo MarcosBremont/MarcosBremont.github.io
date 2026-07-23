@@ -120,6 +120,9 @@ const ADMIN_EMAIL = 'soymarcosbremont@gmail.com';
 const EMAILJS_SERVICE_ID  = 'service_bvrdwji';   // Reemplaza con tu Service ID
 const EMAILJS_TEMPLATE_ID = 'template_9wj88ub';  // Reemplaza con tu Template ID
 const EMAILJS_PUBLIC_KEY  = 'lxnRazLrE3DNoOV99';   // Reemplaza con tu Public Key
+// Plantilla recomendada para alertas de errores de la app.
+// Si no la configuras, el reporter usa EMAILJS_TEMPLATE_ID como fallback.
+const EMAILJS_ERROR_TEMPLATE_ID = 'template_9wj88ub';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",

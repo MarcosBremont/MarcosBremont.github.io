@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinclass-v104';
+const CACHE_NAME = 'tinclass-v106';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/auth.js',
   '/docx.js',
   '/firebase-config.js',
+  '/error-reporter.js',
   '/LogoTinClass.png',
   '/manifest.json',
   '/reporte.html',

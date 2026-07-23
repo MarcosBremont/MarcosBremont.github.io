@@ -1,0 +1,171 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentRole() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol
+        : null;
+    }
+
+    function hasRole(roles) {
+      return signedIn() && currentRole() in roles;
+    }
+
+    function isOwnerSuperadminEmail() {
+      return signedIn() && request.auth.token.email == 'soymarcosbremont@gmail.com';
+    }
+
+    function isConfiguredSuperadminEmail() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/config/superadmin)
+        && get(/databases/$(database)/documents/config/superadmin).data.emails != null
+        && request.auth.token.email in get(/databases/$(database)/documents/config/superadmin).data.emails;
+    }
+
+    function isSuperadminByEmail() {
+      return isOwnerSuperadminEmail() || isConfiguredSuperadminEmail();
+    }
+
+    function canReadConvivenciaGlobal() {
+      return signedIn() && (
+        isSuperadminByEmail() ||
+        hasRole(['psicologia', 'psicologa', 'psicologo', 'coordinadora', 'director', 'superadmin', 'admin_centro'])
+      );
+    }
+
+    function canReadConvivenciaOwnerOrPsico(ownerUid) {
+      return signedIn() && (
+        request.auth.uid == ownerUid ||
+        canReadConvivenciaGlobal()
+      );
+    }
+
+    match /config/{doc} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /centros/{centroId} {
+      allow read: if true;
+      allow write: if signedIn();
+
+      match /avisos/{avisoId} {
+        allow read, write: if signedIn();
+      }
+
+      match /pagos_config/{doc} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /perfiles/{userId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /avisos/{avisoId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /usuarios/{uid} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /users/{userId}/data/cuentas_estudiantes {
+      allow read: if true;
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/data/{doc} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if hasRole(['coordinadora', 'director', 'superadmin', 'admin_centro']);
+    }
+
+    match /users/{userId}/sessions/{sessionId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /error_logs/{logId} {
+      allow create: if signedIn();
+      allow read: if signedIn() && (isSuperadminByEmail() || hasRole(['superadmin', 'admin_centro', 'director']));
+      allow update, delete: if false;
+    }
+
+    match /public_blogs/{userId}/posts/{postId} {
+      allow read: if true;
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /public_blogs/{userId}/submissions/{subId} {
+      allow create: if true;
+      allow read, update, delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /public_blogs/{userId}/reportes_comportamiento/{repId} {
+      allow create: if true;
+      allow read: if canReadConvivenciaOwnerOrPsico(userId);
+      allow update, delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /public_blogs/{userId}/denuncias/{denId} {
+      allow create: if true;
+      allow read: if canReadConvivenciaOwnerOrPsico(userId);
+      allow update, delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Reglas explícitas para consultas collectionGroup globales
+    // (evita permission-denied cuando existen colecciones con el mismo nombre en otras rutas).
+    match /{path=**}/reportes_comportamiento/{repId} {
+      allow read: if canReadConvivenciaGlobal();
+    }
+
+    match /{path=**}/denuncias/{denId} {
+      allow read: if canReadConvivenciaGlobal();
+    }
+
+    match /public_blogs/{userId}/datos_padre/{estId} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /public_calendar/{doc} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+                   && request.auth.token.email == 'soymarcosbremont@gmail.com';
+    }
+
+    match /examenes/{examenId} {
+      allow read, update, delete: if signedIn()
+                                  && request.auth.uid == resource.data.docenteUid;
+      allow create: if signedIn()
+                    && request.resource.data.docenteUid == request.auth.uid;
+      allow read: if resource.data.activo == true;
+
+      match /respuestas/{respId} {
+        allow create: if true;
+        allow read: if signedIn();
+      }
+    }
+
+    match /links_alumno/{id} {
+      allow read: if true;
+      allow create: if signedIn();
+    }
+
+    match /links_padre/{id} {
+      allow read: if true;
+      allow create: if signedIn();
+    }
+
+    match /{path=**}/datos_padre/{estId} {
+      allow read: if signedIn();
+    }
+  }
+}
