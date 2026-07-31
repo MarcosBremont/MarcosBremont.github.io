@@ -120,9 +120,11 @@ const ADMIN_EMAIL = 'soymarcosbremont@gmail.com';
 const EMAILJS_SERVICE_ID  = 'service_bvrdwji';   // Reemplaza con tu Service ID
 const EMAILJS_TEMPLATE_ID = 'template_9wj88ub';  // Reemplaza con tu Template ID
 const EMAILJS_PUBLIC_KEY  = 'lxnRazLrE3DNoOV99';   // Reemplaza con tu Public Key
-// Plantilla recomendada para alertas de errores de la app.
-// Si no la configuras, el reporter usa EMAILJS_TEMPLATE_ID como fallback.
-const EMAILJS_ERROR_TEMPLATE_ID = 'template_9wj88ub';
+// Plantilla EXCLUSIVA para alertas de errores (debe ser distinta a OTP).
+// Variables recomendadas en la plantilla:
+// {{alert_subject}}, {{alert_title}}, {{error_message}}, {{error_where}}, {{error_when}},
+// {{route_url}}, {{severity}}, {{build_version}}, {{sw_version}}, {{user_uid}}, {{user_email_context}}, {{stack}}
+const EMAILJS_ERROR_TEMPLATE_ID = 'template_tinclass_error_alert';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",

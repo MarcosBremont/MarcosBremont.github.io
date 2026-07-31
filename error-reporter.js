@@ -160,6 +160,24 @@
     return null;
   }
 
+  function _whereLabel(payload) {
+    const f = payload.filename || 'archivo-desconocido';
+    const l = payload.lineno || '-';
+    const c = payload.colno || '-';
+    return f + ':' + l + ':' + c;
+  }
+
+  function _whenLabel(tsIso) {
+    try {
+      return new Date(tsIso).toLocaleString('es-DO', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    } catch (_) {
+      return tsIso || 'fecha-desconocida';
+    }
+  }
+
   async function _sendByEmail(payload) {
     const hasEmailJs = typeof emailjs !== 'undefined' && emailjs && typeof emailjs.send === 'function';
     const hasConfig = typeof EMAILJS_SERVICE_ID !== 'undefined' && typeof EMAILJS_PUBLIC_KEY !== 'undefined';
@@ -168,18 +186,25 @@
     const serviceId = EMAILJS_SERVICE_ID;
     const templateId = (typeof EMAILJS_ERROR_TEMPLATE_ID !== 'undefined' && EMAILJS_ERROR_TEMPLATE_ID)
       ? EMAILJS_ERROR_TEMPLATE_ID
-      : EMAILJS_TEMPLATE_ID;
+      : null;
     const target = (typeof ADMIN_EMAIL !== 'undefined' && ADMIN_EMAIL) ? ADMIN_EMAIL : null;
 
     if (!templateId || !target) return { ok: false, reason: 'email-config-missing' };
+    if (typeof EMAILJS_TEMPLATE_ID !== 'undefined' && templateId === EMAILJS_TEMPLATE_ID) {
+      return { ok: false, reason: 'error-template-must-be-different-from-otp' };
+    }
 
     const shortStack = payload.stack ? String(payload.stack).split('\n').slice(0, 8).join('\n') : 'n/a';
+    const where = _whereLabel(payload);
+    const when = _whenLabel(payload.ts);
+    const subject = '[ALERTA ERROR][' + String(payload.severity || 'high').toUpperCase() + '] ' + String(payload.message || 'Error sin mensaje').slice(0, 120);
     const summary = [
       'Error: ' + payload.message,
       'Severidad: ' + payload.severity,
       'Modulo: ' + (payload.module || 'n/a'),
       'Accion: ' + (payload.action || 'n/a'),
-      'Archivo: ' + (payload.filename || 'n/a') + ':' + (payload.lineno || '-') + ':' + (payload.colno || '-'),
+      'Donde: ' + where,
+      'Cuando: ' + when,
       'UID: ' + (payload.uid || 'n/a'),
       'Usuario: ' + (payload.userEmail || 'n/a'),
       'Build: ' + (payload.appVersion || 'n/a') + ' / SW: ' + (payload.swVersion || 'n/a'),
@@ -195,10 +220,12 @@
       user_email: target,
       recipient: target,
       app_name: 'TinClass',
-      passcode: '[ALERTA] ' + payload.message,
-      otp_code: payload.appVersion || 'TinClass',
-      code: payload.uid || 'sin-uid',
+      report_type: 'error_alert',
+      alert_subject: subject,
+      alert_title: 'Alerta de error en TinClass',
       error_message: payload.message,
+      error_where: where,
+      error_when: when,
       error_summary: summary,
       severity: payload.severity,
       source_file: payload.filename || 'n/a',
