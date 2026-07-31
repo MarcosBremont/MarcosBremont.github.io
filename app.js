@@ -28839,19 +28839,31 @@ function _calEscModalEfemeride(mes, idx, ef) {
   overlay.id = 'cal-esc-modal-ef';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;padding:16px;';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
       <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#212121;">
         ${idx === null ? 'Nueva efeméride' : 'Editar efeméride'} — ${CAL_ESC_MESES_LABEL[mes]}
       </h3>
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Día del mes</label>
-      <input type="number" id="cef-dia" min="1" max="31" value="${ef?.dia || ''}"
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin:4px 0 12px;box-sizing:border-box;" />
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Título</label>
-      <input type="text" id="cef-titulo" value="${ef ? escapeHTML(ef.titulo) : ''}" placeholder="Ej: Día de la Restauración"
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin:4px 0 12px;box-sizing:border-box;" />
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Descripción (opcional)</label>
-      <textarea id="cef-desc" rows="2" placeholder="Breve descripción..."
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 16px;resize:vertical;box-sizing:border-box;">${ef ? escapeHTML(ef.descripcion || '') : ''}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Día del mes</label>
+          <input type="number" id="cef-dia" min="1" max="31" value="${ef?.dia || ''}"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Descripción (opcional)</label>
+          <input type="text" id="cef-desc" value="${ef ? escapeHTML(ef.descripcion || '') : ''}" placeholder="Breve descripción..."
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
+        </div>
+      </div>
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:flex;justify-content:between;align-items:center;">
+        <span>Nombre de la efeméride o efemérides</span>
+        <span style="font-size:0.75rem;font-weight:400;color:#78909C;margin-left:auto;">Puedes pegar múltiples (una por línea)</span>
+      </label>
+      <textarea id="cef-titulo" rows="6" placeholder="Escribe aquí el nombre de la efeméride.&#10;Si pegas múltiples líneas, se agregarán como efemérides con su fecha de forma individual."
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 12px;resize:vertical;box-sizing:border-box;font-family:inherit;min-height:100px;">${ef ? escapeHTML(ef.titulo) : ''}</textarea>
+      <div style="font-size:0.78rem;color:#78909C;line-height:1.4;margin-bottom:16px;">
+        💡 <strong>Sugerencia:</strong> Puedes pegar varias efemérides con sus propias fechas. Cada línea con formato: <em>"DD/MM/AAAA  DD/MM/AAAA  Nombre de la efeméride"</em> (separado por tabulaciones o espacios). El día se asignará automáticamente a cada efeméride.
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="document.getElementById('cal-esc-modal-ef').remove()"
           style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
@@ -28864,19 +28876,71 @@ function _calEscModalEfemeride(mes, idx, ef) {
 }
 
 function _calEscGuardarEfemeride(mes, idx) {
-  const dia    = parseInt(document.getElementById('cef-dia')?.value) || 0;
-  const titulo = document.getElementById('cef-titulo')?.value.trim();
-  const desc   = document.getElementById('cef-desc')?.value.trim();
-  if (!titulo) { mostrarToast('El título es obligatorio', 'error'); return; }
+  const rawDia   = (document.getElementById('cef-dia')?.value || '').trim();
+  const rawTexto = (document.getElementById('cef-titulo')?.value || '').trim();
+  const rawDesc  = (document.getElementById('cef-desc')?.value || '').trim();
+
+  if (!rawTexto) { mostrarToast('El título es obligatorio', 'error'); return; }
+
+  // Dividir texto por saltos de línea
+  const lineas = rawTexto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lineas.length === 0) { mostrarToast('El título es obligatorio', 'error'); return; }
+
   const datos = _calEscGetDatosEditables();
   _calEscAsegurarMes(datos, mes);
-  const obj = { id: uid(), dia, titulo, descripcion: desc || '' };
+
   if (idx === null) {
-    datos.meses[mes].efemerides.push(obj);
+    // Es nueva efeméride (puede ser múltiple)
+    lineas.forEach(linea => {
+      // Intentar extraer fecha desde el texto de la línea
+      // Formato esperado: DD/MM/AAAA  DD/MM/AAAA  Nombre de la efeméride
+      // (separado por tabulaciones o espacios)
+      const dateMatch = linea.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
+      let lineDia, lineTitulo;
+
+      if (dateMatch) {
+        // Fecha extraída de la propia línea: extraer solo el día del mes
+        const fechaParts = dateMatch[1].split('/');
+        lineDia = parseInt(fechaParts[0], 10);
+        lineTitulo = dateMatch[3];
+      } else {
+        // Fallback: usar el día del picker y el texto completo
+        lineDia = parseInt(rawDia) || 0;
+        lineTitulo = linea;
+      }
+
+      datos.meses[mes].efemerides.push({
+        id: uid(),
+        dia: lineDia,
+        titulo: lineTitulo,
+        descripcion: rawDesc || ''
+      });
+    });
+    mostrarToast(lineas.length > 1 ? `${lineas.length} efemérides agregadas ✓` : 'Efeméride agregada ✓', 'success');
   } else {
-    obj.id = datos.meses[mes].efemerides[idx]?.id || obj.id;
-    datos.meses[mes].efemerides[idx] = obj;
+    // Es edición de una efeméride específica
+    const ef = datos.meses[mes].efemerides[idx];
+    if (ef) {
+      // En edición, también intentar extraer fecha de la primera línea
+      const dateMatch = lineas[0].match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
+      let editDia, editTitulo;
+
+      if (dateMatch) {
+        const fechaParts = dateMatch[1].split('/');
+        editDia = parseInt(fechaParts[0], 10);
+        editTitulo = dateMatch[3];
+      } else {
+        editDia = parseInt(rawDia) || 0;
+        editTitulo = lineas[0];
+      }
+
+      ef.dia = editDia;
+      ef.titulo = editTitulo;
+      ef.descripcion = rawDesc || '';
+      mostrarToast('Efeméride actualizada ✓', 'success');
+    }
   }
+
   _calEscSetDatosEditables(datos);
   document.getElementById('cal-esc-modal-ef')?.remove();
   _calEscRenderizarMes();
