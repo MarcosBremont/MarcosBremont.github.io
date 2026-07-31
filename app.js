@@ -25645,7 +25645,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.55</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.56</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -28604,24 +28604,128 @@ function _calEscAsegurarMes(datos, mes) {
 
 // ── CRUD Actividades ─────────────────────────────────────────────────
 function _calEscAgregarActividad(mes) {
-  const texto = prompt(`Nueva actividad para ${CAL_ESC_MESES_LABEL[mes]}:`);
-  if (!texto || !texto.trim()) return;
-  const datos = _calEscGetDatosEditables();
-  _calEscAsegurarMes(datos, mes);
-  datos.meses[mes].actividades.push({ id: uid(), texto: texto.trim() });
-  _calEscSetDatosEditables(datos);
-  _calEscRenderizarMes();
+  _calEscModalActividad(mes, null, null);
 }
 
 function _calEscEditarActividad(mes, idx) {
   const datos = _calEscGetDatosEditables();
   _calEscAsegurarMes(datos, mes);
   const act = datos.meses[mes].actividades[idx];
-  if (!act) return;
-  const nuevo = prompt('Editar actividad:', act.texto);
-  if (!nuevo || !nuevo.trim()) return;
-  act.texto = nuevo.trim();
+  if (act) _calEscModalActividad(mes, idx, act);
+}
+
+function _calEscModalActividad(mes, idx, act) {
+  document.getElementById('cal-esc-modal-act')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'cal-esc-modal-act';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;padding:16px;';
+  
+  // Si tiene formato de rango "del DD/MM/AAAA al DD/MM/AAAA", intentar parsear para prellenar
+  let fDesde = '', fHasta = '', desc = act?.texto || '';
+  if (act && act.texto) {
+    const rMatch = act.texto.match(/^[Dd]el\s+(\d{2}\/\d{2}\/\d{4})\s+al\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
+    const uMatch = act.texto.match(/^[Dd]ía\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
+    if (rMatch) {
+      fDesde = rMatch[1];
+      fHasta = rMatch[2];
+      desc = rMatch[3];
+    } else if (uMatch) {
+      fDesde = uMatch[1];
+      fHasta = uMatch[1];
+      desc = uMatch[2];
+    }
+  }
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
+      <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#212121;">
+        ${idx === null ? 'Nueva actividad' : 'Editar actividad'} — ${CAL_ESC_MESES_LABEL[mes]}
+      </h3>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Fecha de inicio</label>
+          <input type="text" id="cact-desde" value="${fDesde}" placeholder="DD/MM/AAAA"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Fecha de fin (opcional)</label>
+          <input type="text" id="cact-hasta" value="${fHasta}" placeholder="DD/MM/AAAA"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
+        </div>
+      </div>
+
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:flex;justify-content:between;align-items:center;">
+        <span>Enunciado de la actividad o actividades</span>
+        <span style="font-size:0.75rem;font-weight:400;color:#78909C;margin-left:auto;">Puedes pegar múltiples juntas (una por línea)</span>
+      </label>
+      <textarea id="cact-texto" rows="6" placeholder="Escribe aquí tu actividad.&#10;Si pegas múltiples líneas, se agregarán como actividades con la misma fecha de forma individual."
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 16px;resize:vertical;box-sizing:border-box;font-family:inherit;min-height:100px;">${desc}</textarea>
+      
+      <div style="font-size:0.78rem;color:#78909C;line-height:1.4;margin-bottom:16px;">
+        💡 <strong>Sugerencia:</strong> Si pones fechas, la guardará en formato: <em>"Del DD/MM/AAAA al DD/MM/AAAA: Actividad"</em> de manera automática.
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('cal-esc-modal-act').remove()"
+          style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
+        <button onclick="_calEscGuardarActividad('${mes}',${JSON.stringify(idx)})"
+          style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _calEscGuardarActividad(mes, idx) {
+  const desde = (document.getElementById('cact-desde')?.value || '').trim();
+  const hasta = (document.getElementById('cact-hasta')?.value || '').trim();
+  const rawText = (document.getElementById('cact-texto')?.value || '').trim();
+
+  if (!rawText) {
+    mostrarToast('Por favor escribe un enunciado', 'error');
+    return;
+  }
+
+  // Dividir texto por saltos de línea para soportar guardado / pegado múltiple
+  const lineas = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lineas.length === 0) {
+    mostrarToast('Por favor escribe al menos un enunciado', 'error');
+    return;
+  }
+
+  // Darle formato con fecha
+  let fechadoLabel = '';
+  if (desde) {
+    if (hasta && hasta !== desde) {
+      fechadoLabel = `Del ${desde} al ${hasta}: `;
+    } else {
+      fechadoLabel = `Día ${desde}: `;
+    }
+  }
+
+  const datos = _calEscGetDatosEditables();
+  _calEscAsegurarMes(datos, mes);
+
+  if (idx === null) {
+    // Es nueva actividad (puede ser múltiple)
+    lineas.forEach(linea => {
+      datos.meses[mes].actividades.push({
+        id: uid(),
+        texto: fechadoLabel + linea
+      });
+    });
+    mostrarToast(lineas.length > 1 ? `${lineas.length} actividades agregadas ✓` : 'Actividad agregada ✓', 'success');
+  } else {
+    // Es edición de una actividad específica (se asume primera línea si pegara varias)
+    const act = datos.meses[mes].actividades[idx];
+    if (act) {
+      act.texto = fechadoLabel + lineas[0];
+      mostrarToast('Actividad actualizada ✓', 'success');
+    }
+  }
+
   _calEscSetDatosEditables(datos);
+  document.getElementById('cal-esc-modal-act')?.remove();
   _calEscRenderizarMes();
 }
 

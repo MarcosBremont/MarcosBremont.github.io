@@ -2579,19 +2579,26 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.55<span class="about-ver-fecha">Jul
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.56<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Plantilla exclusiva de errores en EmailJS</div>
+              <div class="about-ver-titulo">Calendario escolar: Rangos de fecha y pegado en lote</div>
               <ul class="about-ver-items">
-                <li><strong>Plantilla dedicada:</strong> las alertas ya no usan ni sobreescriben la plantilla del código de verificación (OTP).</li>
-                <li><strong>Mayor detalle:</strong> los correos ahora desglosan claramente qué error ocurrió, en qué archivo/línea (dónde) y en qué momento preciso (cuándo), junto con la traza de pila (stack trace) corta, navegador, sistema operativo y usuario activo.</li>
-                <li><strong>Anti-colisión:</strong> previene que las alertas de error de la plataforma se confundan con plantillas de registro o inicio de sesión.</li>
+                <li><strong>Agregar en lote:</strong> el modal de actividades ahora permite pegar un bloque de texto con múltiples actividades (una por línea) para guardarlas todas en la misma fecha simultáneamente.</li>
+                <li><strong>Asistente de fecha:</strong> campos de rango opcional ("Fecha de inicio" y "Fecha de fin") que formatean el enunciado de forma inteligente como "Del DD/MM/AAAA al DD/MM/AAAA: ...".</li>
+                <li><strong>Smart parser:</strong> al editar, detecta y desglosa automáticamente la fecha de inicio, fin y descripción previos si coinciden con el formato.</li>
               </ul>
             </div>
           </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.55<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
 
           <div class="about-version-row">
             <div>
@@ -4156,8 +4163,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.55';
-    window.TINCLASS_SW_VERSION = 'v107';
+    window.TINCLASS_BUILD_VERSION = 'v15.56';
+    window.TINCLASS_SW_VERSION = 'v108';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4603,7 +4610,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=107', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=108', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
