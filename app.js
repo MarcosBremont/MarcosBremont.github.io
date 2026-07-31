@@ -28676,7 +28676,7 @@ function _calEscModalActividad(mes, idx, act) {
         style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 16px;resize:vertical;box-sizing:border-box;font-family:inherit;min-height:100px;">${desc}</textarea>
       
       <div style="font-size:0.78rem;color:#78909C;line-height:1.4;margin-bottom:16px;">
-        💡 <strong>Sugerencia:</strong> Si pones fechas, la guardará en formato: <em>"Del DD/MM/AAAA al DD/MM/AAAA: Actividad"</em> de manera automática.
+        💡 <strong>Sugerencia:</strong> Puedes pegar varias actividades con sus propias fechas. Cada línea con formato: <em>"DD/MM/AAAA  DD/MM/AAAA  Descripción de la actividad"</em> (separado por tabulaciones o espacios). Las fechas se asignarán automáticamente a cada actividad.
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -28709,8 +28709,18 @@ function _calEscGuardarActividad(mes, idx) {
     return '';
   };
 
-  const desde = isoToDmy(rawDesde);
-  const hasta = isoToDmy(rawHasta);
+  // Función para convertir DD/MM/AAAA a YYYY-MM-DD
+  const dmyToIso = (dStr) => {
+    if (!dStr) return '';
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return '';
+  };
+
+  const desdePicker = isoToDmy(rawDesde);
+  const hastaPicker = isoToDmy(rawHasta);
 
   // Dividir texto por saltos de línea para soportar guardado / pegado múltiple
   const lineas = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -28719,25 +28729,43 @@ function _calEscGuardarActividad(mes, idx) {
     return;
   }
 
-  // Darle formato con fecha
-  let fechadoLabel = '';
-  if (desde) {
-    if (hasta && hasta !== desde) {
-      fechadoLabel = `Del ${desde} al ${hasta}: `;
-    } else {
-      fechadoLabel = `Día ${desde}: `;
-    }
-  }
-
   const datos = _calEscGetDatosEditables();
   _calEscAsegurarMes(datos, mes);
 
   if (idx === null) {
     // Es nueva actividad (puede ser múltiple)
     lineas.forEach(linea => {
+      // Intentar extraer fechas desde el texto de la línea
+      // Formato esperado: DD/MM/AAAA  DD/MM/AAAA  Descripción de la actividad
+      // (separado por tabulaciones o espacios)
+      const dateMatch = linea.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
+      let lineDesde, lineHasta, lineDesc;
+
+      if (dateMatch) {
+        // Fechas extraídas de la propia línea
+        lineDesde = dateMatch[1];
+        lineHasta = dateMatch[2];
+        lineDesc = dateMatch[3];
+      } else {
+        // Fallback: usar las fechas de los pickers (comportamiento anterior)
+        lineDesde = desdePicker;
+        lineHasta = hastaPicker;
+        lineDesc = linea;
+      }
+
+      // Construir el label con fechas
+      let lineFechadoLabel = '';
+      if (lineDesde) {
+        if (lineHasta && lineHasta !== lineDesde) {
+          lineFechadoLabel = `Del ${lineDesde} al ${lineHasta}: `;
+        } else {
+          lineFechadoLabel = `Día ${lineDesde}: `;
+        }
+      }
+
       datos.meses[mes].actividades.push({
         id: uid(),
-        texto: fechadoLabel + linea
+        texto: lineFechadoLabel + lineDesc
       });
     });
     mostrarToast(lineas.length > 1 ? `${lineas.length} actividades agregadas ✓` : 'Actividad agregada ✓', 'success');
@@ -28745,7 +28773,29 @@ function _calEscGuardarActividad(mes, idx) {
     // Es edición de una actividad específica (se asume primera línea si pegara varias)
     const act = datos.meses[mes].actividades[idx];
     if (act) {
-      act.texto = fechadoLabel + lineas[0];
+      // En edición, también intentar extraer fechas de la primera línea
+      const dateMatch = lineas[0].match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
+      let editDesde, editHasta, editDesc;
+
+      if (dateMatch) {
+        editDesde = dateMatch[1];
+        editHasta = dateMatch[2];
+        editDesc = dateMatch[3];
+      } else {
+        editDesde = desdePicker;
+        editHasta = hastaPicker;
+        editDesc = lineas[0];
+      }
+
+      let editFechadoLabel = '';
+      if (editDesde) {
+        if (editHasta && editHasta !== editDesde) {
+          editFechadoLabel = `Del ${editDesde} al ${editHasta}: `;
+        } else {
+          editFechadoLabel = `Día ${editDesde}: `;
+        }
+      }
+      act.texto = editFechadoLabel + editDesc;
       mostrarToast('Actividad actualizada ✓', 'success');
     }
   }
