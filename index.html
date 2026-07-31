@@ -2579,7 +2579,22 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.56<span class="about-ver-fecha">Jul
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.57<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Date Pickers visuales en el Calendario</div>
+              <ul class="about-ver-items">
+                <li><strong>Calendarios interactivos:</strong> Se reemplazaron los campos de texto plano de las fechas por controles visuales tipo calendario nativo de fecha (`input-date`), mejorando significativamente la velocidad de llenado y evitando errores de escritura.</li>
+                <li><strong>Conversión transparente:</strong> Las fechas seleccionadas visualmente se parsean automáticamente al formato estándar local de la República Dominicana (`DD/MM/AAAA`) al guardar y se cargan correctamente al editar una actividad.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#546E7A;">v15.56<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
             </div>
@@ -4163,8 +4178,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.56';
-    window.TINCLASS_SW_VERSION = 'v108';
+    window.TINCLASS_BUILD_VERSION = 'v15.57';
+    window.TINCLASS_SW_VERSION = 'v109';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4610,7 +4625,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=108', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=109', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

@@ -28636,6 +28636,19 @@ function _calEscModalActividad(mes, idx, act) {
     }
   }
 
+  // Convertir formato DD/MM/AAAA a YYYY-MM-DD para el input type="date"
+  const dToIso = (dStr) => {
+    if (!dStr) return '';
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return '';
+  };
+
+  const isoDesde = dToIso(fDesde);
+  const isoHasta = dToIso(fHasta);
+
   overlay.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
       <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#212121;">
@@ -28644,14 +28657,14 @@ function _calEscModalActividad(mes, idx, act) {
       
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
         <div>
-          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Fecha de inicio</label>
-          <input type="text" id="cact-desde" value="${fDesde}" placeholder="DD/MM/AAAA"
-            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Desde</label>
+          <input type="date" id="cact-desde" value="${isoDesde}"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;font-family:inherit;color:#212121;background:#fff;" />
         </div>
         <div>
-          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Fecha de fin (opcional)</label>
-          <input type="text" id="cact-hasta" value="${fHasta}" placeholder="DD/MM/AAAA"
-            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
+          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Hasta (opcional)</label>
+          <input type="date" id="cact-hasta" value="${isoHasta}"
+            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;font-family:inherit;color:#212121;background:#fff;" />
         </div>
       </div>
 
@@ -28677,14 +28690,27 @@ function _calEscModalActividad(mes, idx, act) {
 }
 
 function _calEscGuardarActividad(mes, idx) {
-  const desde = (document.getElementById('cact-desde')?.value || '').trim();
-  const hasta = (document.getElementById('cact-hasta')?.value || '').trim();
+  const rawDesde = (document.getElementById('cact-desde')?.value || '').trim();
+  const rawHasta = (document.getElementById('cact-hasta')?.value || '').trim();
   const rawText = (document.getElementById('cact-texto')?.value || '').trim();
 
   if (!rawText) {
     mostrarToast('Por favor escribe un enunciado', 'error');
     return;
   }
+
+  // Convertir formato YYYY-MM-DD a DD/MM/AAAA para guardar de forma estándar
+  const isoToDmy = (isoStr) => {
+    if (!isoStr) return '';
+    const parts = isoStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return '';
+  };
+
+  const desde = isoToDmy(rawDesde);
+  const hasta = isoToDmy(rawHasta);
 
   // Dividir texto por saltos de línea para soportar guardado / pegado múltiple
   const lineas = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
