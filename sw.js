@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tinclass-v113';
+const CACHE_NAME = 'tinclass-v114';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [

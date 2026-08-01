@@ -25646,7 +25646,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.61</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.62</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -33711,6 +33711,63 @@ function _normalizarVersion(raw) {
   return /^v/i.test(txt) ? txt : ('v' + txt);
 }
 
+const _iaHealthCache = {
+  data: null,
+  ts: 0,
+};
+
+async function _fetchConTimeout(url, opts = {}, timeoutMs = 4500) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+async function _estadoProveedorIA(nombre, key) {
+  if (!key) return { nombre, estado: 'Sin clave' };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return { nombre, estado: 'Sin internet' };
+  }
+
+  try {
+    let resp;
+    if (nombre === 'Groq') {
+      resp = await _fetchConTimeout('https://api.groq.com/openai/v1/models', {
+        headers: { Authorization: `Bearer ${key}` }
+      });
+    } else if (nombre === 'Google Gemini') {
+      resp = await _fetchConTimeout(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+    } else {
+      resp = await _fetchConTimeout('https://openrouter.ai/api/v1/models', {
+        headers: { Authorization: `Bearer ${key}` }
+      });
+    }
+    return { nombre, estado: resp.ok ? 'En linea' : 'Sin conexión' };
+  } catch (e) {
+    return { nombre, estado: 'Sin conexión' };
+  }
+}
+
+async function _obtenerEstadoIAs() {
+  const now = Date.now();
+  if (_iaHealthCache.data && (now - _iaHealthCache.ts) < 120000) {
+    return _iaHealthCache.data;
+  }
+
+  const estados = await Promise.all([
+    _estadoProveedorIA('Groq', getGroqKey()),
+    _estadoProveedorIA('Google Gemini', getGeminiKey()),
+    _estadoProveedorIA('OpenRouter', getOpenRouterKey())
+  ]);
+
+  _iaHealthCache.data = estados;
+  _iaHealthCache.ts = now;
+  return estados;
+}
+
 async function _actualizarDetectorVersion() {
   const chip = document.getElementById('version-detector');
   if (!chip) return;
@@ -33727,8 +33784,25 @@ async function _actualizarDetectorVersion() {
     }
   } catch {}
 
-  chip.textContent = 'Build ' + build + ' · SW ' + swVer;
+  chip.innerHTML = `
+    <div class="version-detector-title">Version ${build.replace(/^v/i, '')}</div>
+    <div class="version-detector-row">Groq - Verificando...</div>
+    <div class="version-detector-row">Google Gemini - Verificando...</div>
+    <div class="version-detector-row">OpenRouter - Verificando...</div>
+    <div class="version-detector-foot">SW ${swVer}</div>
+  `;
+  chip.title = 'Estado de IA y versión. Clic para abrir Config. IA';
+  chip.onclick = () => abrirConfigIA();
   chip.classList.remove('hidden');
+
+  try {
+    const estados = await _obtenerEstadoIAs();
+    chip.innerHTML = `
+      <div class="version-detector-title">Version ${build.replace(/^v/i, '')}</div>
+      ${estados.map(e => `<div class="version-detector-row">${e.nombre} - ${e.estado}</div>`).join('')}
+      <div class="version-detector-foot">SW ${swVer}</div>
+    `;
+  } catch (e) {}
 }
 
 async function forzarActualizacionApp() {

@@ -83,32 +83,55 @@ body {
 
 .version-detector {
   position: fixed;
-  left: 12px;
-  bottom: 12px;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 9998;
   background: rgba(13, 71, 161, 0.92);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 0.74rem;
+  font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  max-width: calc(100vw - 24px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: min(260px, calc(100vw - 20px));
+  line-height: 1.35;
+  cursor: pointer;
+  user-select: none;
+}
+
+.version-detector-title {
+  font-size: 0.79rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.version-detector-row {
+  font-size: 0.72rem;
+  opacity: 0.96;
+}
+
+.version-detector-foot {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 0.68rem;
+  opacity: 0.88;
 }
 
 @media (max-width: 600px) {
   .version-detector {
-    left: 8px;
-    bottom: 8px;
-    font-size: 0.66rem;
-    padding: 5px 8px;
+    left: 6px;
+    top: auto;
+    bottom: 10px;
+    transform: none;
+    font-size: 0.68rem;
+    padding: 8px 10px;
+    max-width: min(240px, calc(100vw - 12px));
   }
 }
 
