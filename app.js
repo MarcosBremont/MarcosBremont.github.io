@@ -3627,6 +3627,33 @@ function _logElementosRequeridos(origen, ids) {
   return estado;
 }
 
+function _logHeaderBotonesVisibles(origen) {
+  const ids = [
+    'btn-notificaciones',
+    'btn-buscar-est',
+    'btn-config-ia',
+    'btn-backup',
+    'btn-configuracion',
+    'btn-acercade',
+  ];
+  const estado = {};
+  ids.forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) {
+      estado[id] = 'missing';
+      return;
+    }
+    const style = window.getComputedStyle(btn);
+    estado[id] = {
+      display: style.display,
+      visibility: style.visibility,
+      pointerEvents: style.pointerEvents,
+      disabled: !!btn.disabled,
+    };
+  });
+  console.log('[TinClass modals]', origen, { header: estado });
+}
+
 function _instalarLogsHeaderModales() {
   const botones = [
     'btn-notificaciones',
@@ -3655,6 +3682,8 @@ if (document.readyState === 'loading') {
 } else {
   _instalarLogsHeaderModales();
 }
+
+setTimeout(() => _logHeaderBotonesVisibles('header:init'), 0);
 
 
 
