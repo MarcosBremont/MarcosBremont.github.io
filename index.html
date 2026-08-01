@@ -2579,6 +2579,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.60<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Festivos superpuestos: prioridad al motivo más específico</div>
+              <ul class="about-ver-items">
+                <li><strong>Corrección de solapados:</strong> cuando pegas un rango y luego un día puntual dentro del rango, la fecha puntual ya no queda con motivo genérico.</li>
+                <li><strong>Regla aplicada:</strong> en fechas repetidas, ahora se conserva la última descripción pegada (por ejemplo, “Viernes Santo” sobre “Semana Santa”).</li>
+                <li><strong>Carga masiva más confiable:</strong> se mantienen los rangos largos, pero con motivos precisos en cada día especial.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.59<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4210,8 +4226,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.59';
-    window.TINCLASS_SW_VERSION = 'v111';
+    window.TINCLASS_BUILD_VERSION = 'v15.60';
+    window.TINCLASS_SW_VERSION = 'v112';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4657,7 +4673,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=111', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=112', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

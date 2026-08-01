@@ -25645,7 +25645,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.59</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.60</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -29190,29 +29190,42 @@ function _calEscGuardarFestivo() {
   const importados = _calEscExtraerFestivosDesdeTexto(motivoRaw);
   const datos = _calEsc.adminDatos || _calEscDatosVacios();
   if (!datos.festivos) datos.festivos = [];
-  const ya = datos.festivos.map(f => f.fecha);
+  const idxPorFecha = new Map();
+  datos.festivos.forEach((f, i) => idxPorFecha.set(f.fecha, i));
 
   if (importados.length) {
     let agregados = 0;
+    let actualizados = 0;
     importados.forEach(item => {
       _calEscRangoDias(item.desde, item.hasta).forEach(fecha => {
-        if (ya.includes(fecha)) return;
-        datos.festivos.push({ id: uid(), fecha, motivo: item.motivo || '' });
-        ya.push(fecha);
+        const idxExistente = idxPorFecha.get(fecha);
+        if (idxExistente !== undefined) {
+          const motivoNuevo = (item.motivo || '').trim();
+          if (motivoNuevo && datos.festivos[idxExistente].motivo !== motivoNuevo) {
+            datos.festivos[idxExistente].motivo = motivoNuevo;
+            actualizados += 1;
+          }
+          return;
+        }
+        datos.festivos.push({ id: uid(), fecha, motivo: (item.motivo || '').trim() });
+        idxPorFecha.set(fecha, datos.festivos.length - 1);
         agregados += 1;
       });
     });
-    if (!agregados) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
+    if (!agregados && !actualizados) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
     _calEsc.adminDatos = datos;
     document.getElementById('cal-esc-modal-fest')?.remove();
     _calEscRenderizarFestivos();
-    mostrarToast(`${agregados} día${agregados !== 1 ? 's' : ''} festivo${agregados !== 1 ? 's' : ''} agregado${agregados !== 1 ? 's' : ''}. Recuerda publicar los cambios.`, 'success');
+    const msgPartes = [];
+    if (agregados) msgPartes.push(`${agregados} día${agregados !== 1 ? 's' : ''} agregado${agregados !== 1 ? 's' : ''}`);
+    if (actualizados) msgPartes.push(`${actualizados} motivo${actualizados !== 1 ? 's' : ''} actualizado${actualizados !== 1 ? 's' : ''}`);
+    mostrarToast(`${msgPartes.join(' y ')}. Recuerda publicar los cambios.`, 'success');
     return;
   }
 
   if (!desde || !hasta) { mostrarToast('Selecciona las fechas', 'error'); return; }
   if (hasta < desde) { mostrarToast('La fecha "Hasta" debe ser igual o posterior a "Desde"', 'error'); return; }
-  const dias = _calEscRangoDias(desde, hasta).filter(d => !ya.includes(d));
+  const dias = _calEscRangoDias(desde, hasta).filter(d => !idxPorFecha.has(d));
   if (!dias.length) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
   dias.forEach(fecha => datos.festivos.push({ id: uid(), fecha, motivo: motivoRaw.trim() || '' }));
   _calEsc.adminDatos = datos;
