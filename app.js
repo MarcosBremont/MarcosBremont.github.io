@@ -25645,7 +25645,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.56</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.58</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -29028,9 +29028,12 @@ function _calEscModalFestivo() {
 
       <div id="cfest-preview" style="min-height:32px;margin-bottom:12px;font-size:0.78rem;color:#546E7A;"></div>
 
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Motivo / descripción (opcional)</label>
-      <input type="text" id="cfest-motivo" placeholder="Ej: Semana Santa, Vacaciones de Pascua…"
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;" />
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Motivo / descripción</label>
+      <textarea id="cfest-motivo" rows="5" placeholder="Ej: Semana Santa, Vacaciones de Pascua…\nO pega entradas como: 16/08/2026&#96;16/08/2026&#96;Día de la Restauración (Fiesta Nacional / Día Festivo)"
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:10px;box-sizing:border-box;resize:vertical;min-height:110px;font-family:inherit;"></textarea>
+      <div style="font-size:0.76rem;color:#78909C;line-height:1.45;margin-bottom:16px;">
+        Puedes pegar una o varias líneas. Formatos válidos: <strong>DD/MM/AAAA&#96;DD/MM/AAAA&#96;Descripción</strong> o <strong>DD/MM/AAAA DD/MM/AAAA Descripción</strong>. Si detecta fechas en este campo, se crean automáticamente sin usar los selectores.
+      </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="document.getElementById('cal-esc-modal-fest').remove()"
@@ -29045,11 +29048,88 @@ function _calEscModalFestivo() {
   setTimeout(() => { _calEscPreviewFestivos(); document.getElementById('cfest-desde')?.focus(); }, 50);
 }
 
+function _calEscNormalizarFechaDmy(valor) {
+  const texto = String(valor || '').trim();
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) return '';
+  const [dia, mes, anio] = texto.split('/').map(n => parseInt(n, 10));
+  const fecha = new Date(`${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}T00:00:00`);
+  if (Number.isNaN(fecha.getTime()) || fecha.getDate() !== dia || fecha.getMonth() + 1 !== mes || fecha.getFullYear() !== anio) return '';
+  return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
+}
+
+function _calEscExtraerFestivosDesdeTexto(texto) {
+  const fuente = String(texto || '').trim();
+  if (!fuente) return [];
+
+  const resultados = [];
+  const patron = /`?(\d{2}\/\d{2}\/\d{4})`?\s*`?(\d{2}\/\d{2}\/\d{4})`?\s*([\s\S]*?)(?=(?:`?\d{2}\/\d{2}\/\d{4}`?\s*`?\d{2}\/\d{2}\/\d{4}`?)|$)/g;
+  let match;
+
+  while ((match = patron.exec(fuente)) !== null) {
+    const desde = _calEscNormalizarFechaDmy(match[1]);
+    const hasta = _calEscNormalizarFechaDmy(match[2]);
+    const motivo = (match[3] || '').trim();
+    if (desde && hasta) {
+      resultados.push({ desde, hasta, motivo });
+    }
+    if (patron.lastIndex === match.index) patron.lastIndex += 1;
+  }
+
+  if (resultados.length) return resultados;
+
+  const lineas = fuente.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  lineas.forEach(linea => {
+    const lineMatch = linea.match(/^`?(\d{2}\/\d{2}\/\d{4})`?\s+`?(\d{2}\/\d{2}\/\d{4})`?\s+(.*)$/);
+    if (!lineMatch) return;
+    const desde = _calEscNormalizarFechaDmy(lineMatch[1]);
+    const hasta = _calEscNormalizarFechaDmy(lineMatch[2]);
+    const motivo = (lineMatch[3] || '').trim();
+    if (desde && hasta) resultados.push({ desde, hasta, motivo });
+  });
+
+  return resultados;
+}
+
 function _calEscPreviewFestivos() {
   const desde  = document.getElementById('cfest-desde')?.value;
   const hasta  = document.getElementById('cfest-hasta')?.value;
+  const rawMotivo = document.getElementById('cfest-motivo')?.value || '';
   const prev   = document.getElementById('cfest-preview');
   if (!prev) return;
+
+  const importados = _calEscExtraerFestivosDesdeTexto(rawMotivo);
+  if (importados.length) {
+    const ya = new Set((_calEsc.adminDatos?.festivos || []).map(f => f.fecha));
+    let nuevos = 0;
+    let repetidos = 0;
+    const etiquetas = [];
+
+    importados.forEach(item => {
+      const dias = _calEscRangoDias(item.desde, item.hasta);
+      dias.forEach(fecha => {
+        if (ya.has(fecha)) {
+          repetidos += 1;
+          return;
+        }
+        ya.add(fecha);
+        nuevos += 1;
+        if (etiquetas.length < 6) {
+          const f = new Date(fecha + 'T00:00:00');
+          etiquetas.push(f.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' }));
+        }
+      });
+    });
+
+    const mas = nuevos > 6 ? ` y ${nuevos - 6} más` : '';
+    prev.innerHTML = `
+      <div style="background:#FFF3E0;border-radius:8px;padding:8px 10px;border:1px solid #FFCC80;">
+        <strong style="color:#E65100;">${nuevos} día${nuevos !== 1 ? 's' : ''}</strong> listos para agregar desde el texto.
+        <span style="color:#546E7A;">${etiquetas.join(', ')}${mas}</span>
+        ${repetidos ? `<br><span style="color:#9E9E9E;font-size:0.74rem;">(${repetidos} ya registrado${repetidos !== 1 ? 's' : ''}, se omitirán)</span>` : ''}
+      </div>`;
+    return;
+  }
+
   if (!desde || !hasta || hasta < desde) {
     prev.innerHTML = '<span style="color:#E53935;">La fecha "Hasta" debe ser igual o posterior a "Desde".</span>';
     return;
@@ -29086,15 +29166,35 @@ function _calEscRangoDias(desde, hasta) {
 function _calEscGuardarFestivo() {
   const desde  = document.getElementById('cfest-desde')?.value;
   const hasta  = document.getElementById('cfest-hasta')?.value;
-  const motivo = document.getElementById('cfest-motivo')?.value.trim();
-  if (!desde || !hasta) { mostrarToast('Selecciona las fechas', 'error'); return; }
-  if (hasta < desde) { mostrarToast('La fecha "Hasta" debe ser igual o posterior a "Desde"', 'error'); return; }
+  const motivoRaw = document.getElementById('cfest-motivo')?.value || '';
+  const importados = _calEscExtraerFestivosDesdeTexto(motivoRaw);
   const datos = _calEsc.adminDatos || _calEscDatosVacios();
   if (!datos.festivos) datos.festivos = [];
   const ya = datos.festivos.map(f => f.fecha);
+
+  if (importados.length) {
+    let agregados = 0;
+    importados.forEach(item => {
+      _calEscRangoDias(item.desde, item.hasta).forEach(fecha => {
+        if (ya.includes(fecha)) return;
+        datos.festivos.push({ id: uid(), fecha, motivo: item.motivo || '' });
+        ya.push(fecha);
+        agregados += 1;
+      });
+    });
+    if (!agregados) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
+    _calEsc.adminDatos = datos;
+    document.getElementById('cal-esc-modal-fest')?.remove();
+    _calEscRenderizarFestivos();
+    mostrarToast(`${agregados} día${agregados !== 1 ? 's' : ''} festivo${agregados !== 1 ? 's' : ''} agregado${agregados !== 1 ? 's' : ''}. Recuerda publicar los cambios.`, 'success');
+    return;
+  }
+
+  if (!desde || !hasta) { mostrarToast('Selecciona las fechas', 'error'); return; }
+  if (hasta < desde) { mostrarToast('La fecha "Hasta" debe ser igual o posterior a "Desde"', 'error'); return; }
   const dias = _calEscRangoDias(desde, hasta).filter(d => !ya.includes(d));
   if (!dias.length) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
-  dias.forEach(fecha => datos.festivos.push({ id: uid(), fecha, motivo: motivo || '' }));
+  dias.forEach(fecha => datos.festivos.push({ id: uid(), fecha, motivo: motivoRaw.trim() || '' }));
   _calEsc.adminDatos = datos;
   document.getElementById('cal-esc-modal-fest')?.remove();
   _calEscRenderizarFestivos();

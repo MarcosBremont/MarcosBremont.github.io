@@ -2579,6 +2579,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.58<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Calendario escolar: importación automática de festivos desde descripción</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo formato rápido:</strong> en “Días festivos / No lectivos” ya puedes pegar texto con formato <em>DD/MM/AAAA`DD/MM/AAAA`Descripción</em> y se registran las fechas automáticamente.</li>
+                <li><strong>Carga por lotes:</strong> acepta múltiples entradas pegadas seguidas o por líneas, ideal para cargar varios festivos de una vez sin usar los datepickers.</li>
+                <li><strong>Compatibilidad total:</strong> si no se detectan fechas en el texto, el flujo tradicional con “Desde/Hasta” sigue funcionando igual.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.57<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4178,8 +4194,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.57';
-    window.TINCLASS_SW_VERSION = 'v109';
+    window.TINCLASS_BUILD_VERSION = 'v15.58';
+    window.TINCLASS_SW_VERSION = 'v110';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4625,7 +4641,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=109', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=110', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
