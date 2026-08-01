@@ -3594,6 +3594,13 @@ function cerrarModalBtn() {
   if (footer) footer.style.display = 'none';
 }
 
+function _cerrarTodosLosModales() {
+  document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.classList.add('hidden'));
+  document.body.style.overflow = '';
+  const footer = document.getElementById('modal-footer');
+  if (footer) footer.style.display = 'none';
+}
+
 
 
 
@@ -13972,6 +13979,7 @@ function _renderReporte(body) {
 let _buscarSeleccionado = null; // { cursoId, estId }
 
 function abrirBuscadorEstudiante() {
+  _cerrarTodosLosModales();
   const overlay = document.getElementById('buscar-overlay');
   if (!overlay) return;
   overlay.classList.remove('hidden');
@@ -14984,6 +14992,7 @@ function actualizarBadgeNotificaciones() {
 
 // ── Abrir/cerrar modal ───────────────────────────────────────────
 function abrirNotificaciones() {
+  _cerrarTodosLosModales();
   const overlay = document.getElementById('notif-overlay');
   if (!overlay) return;
   overlay.classList.remove('hidden');
@@ -22145,6 +22154,7 @@ async function generarConGemini(dg, ra, fechasClase) {
 
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
+  _cerrarTodosLosModales();
   const groqKeyActual = getGroqKey();
   const geminiKeyActual = getGeminiKey();
   const openrouterKeyActual = getOpenRouterKey();
@@ -25014,6 +25024,7 @@ function renderizarCiclosAcademicos() {
 }
 
 function abrirBackup() {
+  _cerrarTodosLosModales();
   _backupFileData = null;
   document.getElementById('backup-overlay').classList.remove('hidden');
   document.getElementById('backup-file-name').textContent = 'Seleccionar archivo .json';
@@ -25088,6 +25099,7 @@ function abrirHistorialCierres() {
 // MÓDULO: CONFIGURACIÓN
 // ════════════════════════════════════════════════════════════════════
 function abrirConfiguracion() {
+  _cerrarTodosLosModales();
   const overlay = document.getElementById('config-overlay');
   if (!overlay) return;
   // Cargar valores guardados en los toggles
@@ -25429,6 +25441,7 @@ document.addEventListener('touchstart', function (e) {
 // MÓDULO: ACERCA DE
 // ════════════════════════════════════════════════════════════════════
 function abrirAcercaDe() {
+  _cerrarTodosLosModales();
   document.getElementById('acercade-overlay')?.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
