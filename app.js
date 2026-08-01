@@ -3601,6 +3601,54 @@ function _cerrarTodosLosModales() {
   if (footer) footer.style.display = 'none';
 }
 
+function _estadoOverlay(id) {
+  const overlay = document.getElementById(id);
+  if (!overlay) return 'missing';
+  return overlay.classList.contains('hidden') ? 'hidden' : 'visible';
+}
+
+function _logEstadoModales(origen, extra = {}) {
+  console.log('[TinClass modals]', origen, {
+    bodyOverflow: document.body.style.overflow || '(empty)',
+    modal: _estadoOverlay('modal-overlay'),
+    notif: _estadoOverlay('notif-overlay'),
+    buscar: _estadoOverlay('buscar-overlay'),
+    backup: _estadoOverlay('backup-overlay'),
+    config: _estadoOverlay('config-overlay'),
+    acercade: _estadoOverlay('acercade-overlay'),
+    ...extra,
+  });
+}
+
+function _instalarLogsHeaderModales() {
+  const botones = [
+    'btn-notificaciones',
+    'btn-buscar-est',
+    'btn-config-ia',
+    'btn-backup',
+    'btn-configuracion',
+    'btn-acercade',
+  ];
+
+  botones.forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn || btn.dataset.tinclassDebugLog === '1') return;
+    btn.dataset.tinclassDebugLog = '1';
+    btn.addEventListener('click', () => {
+      _logEstadoModales('click:' + id, {
+        display: btn.style.display || '(auto)',
+        disabled: !!btn.disabled,
+      });
+    }, true);
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _instalarLogsHeaderModales, { once: true });
+} else {
+  _instalarLogsHeaderModales();
+}
+
 
 
 
@@ -13981,7 +14029,11 @@ let _buscarSeleccionado = null; // { cursoId, estId }
 function abrirBuscadorEstudiante() {
   _cerrarTodosLosModales();
   const overlay = document.getElementById('buscar-overlay');
-  if (!overlay) return;
+  if (!overlay) {
+    _logEstadoModales('abrirBuscadorEstudiante:missing-overlay');
+    return;
+  }
+  _logEstadoModales('abrirBuscadorEstudiante:before');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   _buscarSeleccionado = null;
@@ -13999,6 +14051,7 @@ function abrirBuscadorEstudiante() {
   _buscarVolverListaMovil();
   // Si hay cursos, mostrar todos los estudiantes inicialmente
   buscarEstudiante('');
+  _logEstadoModales('abrirBuscadorEstudiante:after');
 }
 
 function cerrarBuscadorEstudiante() {
@@ -14994,7 +15047,11 @@ function actualizarBadgeNotificaciones() {
 function abrirNotificaciones() {
   _cerrarTodosLosModales();
   const overlay = document.getElementById('notif-overlay');
-  if (!overlay) return;
+  if (!overlay) {
+    _logEstadoModales('abrirNotificaciones:missing-overlay');
+    return;
+  }
+  _logEstadoModales('abrirNotificaciones:before');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   // Marcar como leído: guardar IDs de lo que está visible ahora
@@ -15005,6 +15062,7 @@ function abrirNotificaciones() {
   _renderizarNotificaciones();
   _renderizarAvisosYNovedades();
   setTimeout(actualizarBadgeNotificaciones, 200);
+  _logEstadoModales('abrirNotificaciones:after');
 }
 function cerrarNotificaciones() {
   document.getElementById('notif-overlay')?.classList.add('hidden');
@@ -22219,6 +22277,7 @@ function abrirConfigIA() {
   _usarFooterDinamico('');
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  _logEstadoModales('abrirConfigIA:after');
   setTimeout(() => document.getElementById('input-groq-key')?.focus(), 100);
 }
 
@@ -25026,7 +25085,13 @@ function renderizarCiclosAcademicos() {
 function abrirBackup() {
   _cerrarTodosLosModales();
   _backupFileData = null;
-  document.getElementById('backup-overlay').classList.remove('hidden');
+  const overlay = document.getElementById('backup-overlay');
+  if (!overlay) {
+    _logEstadoModales('abrirBackup:missing-overlay');
+    return;
+  }
+  _logEstadoModales('abrirBackup:before');
+  overlay.classList.remove('hidden');
   document.getElementById('backup-file-name').textContent = 'Seleccionar archivo .json';
   document.getElementById('backup-preview').classList.add('hidden');
   document.getElementById('backup-preview').innerHTML = '';
@@ -25080,6 +25145,7 @@ function abrirBackup() {
       }).join('');
     }
   }
+  _logEstadoModales('abrirBackup:after');
 }
 
 function cerrarBackup() {
@@ -25101,7 +25167,11 @@ function abrirHistorialCierres() {
 function abrirConfiguracion() {
   _cerrarTodosLosModales();
   const overlay = document.getElementById('config-overlay');
-  if (!overlay) return;
+  if (!overlay) {
+    _logEstadoModales('abrirConfiguracion:missing-overlay');
+    return;
+  }
+  _logEstadoModales('abrirConfiguracion:before');
   // Cargar valores guardados en los toggles
   const dark = localStorage.getItem('cfg_dark_mode') === 'true';
   const grande = localStorage.getItem('cfg_fuente_grande') === 'true';
@@ -25141,6 +25211,7 @@ function abrirConfiguracion() {
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   _refrescarPanelAlertasErrorConfig();
+  _logEstadoModales('abrirConfiguracion:after');
 }
 function cerrarConfiguracion() {
   document.getElementById('config-overlay')?.classList.add('hidden');
@@ -25442,8 +25513,15 @@ document.addEventListener('touchstart', function (e) {
 // ════════════════════════════════════════════════════════════════════
 function abrirAcercaDe() {
   _cerrarTodosLosModales();
-  document.getElementById('acercade-overlay')?.classList.remove('hidden');
+  const overlay = document.getElementById('acercade-overlay');
+  if (!overlay) {
+    _logEstadoModales('abrirAcercaDe:missing-overlay');
+    return;
+  }
+  _logEstadoModales('abrirAcercaDe:before');
+  overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  _logEstadoModales('abrirAcercaDe:after');
 }
 
 function cerrarAcercaDe() {
