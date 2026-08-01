@@ -3637,10 +3637,12 @@ function _logHeaderBotonesVisibles(origen) {
     'btn-acercade',
   ];
   const estado = {};
+  const ocultos = [];
   ids.forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) {
       estado[id] = 'missing';
+      ocultos.push(id + ':missing');
       return;
     }
     const style = window.getComputedStyle(btn);
@@ -3650,8 +3652,14 @@ function _logHeaderBotonesVisibles(origen) {
       pointerEvents: style.pointerEvents,
       disabled: !!btn.disabled,
     };
+    if (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none' || btn.disabled) {
+      ocultos.push(id + ':' + [style.display, style.visibility, style.pointerEvents, btn.disabled ? 'disabled' : 'enabled'].join('/'));
+    }
   });
   console.log('[TinClass modals]', origen, { header: estado });
+  if (ocultos.length) {
+    console.warn('[TinClass modals]', origen + ':ocultos', ocultos.join(', '));
+  }
 }
 
 function _instalarLogsHeaderModales() {
