@@ -2582,6 +2582,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.68<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix de visibilidad en modales del header</div>
+              <ul class="about-ver-items">
+                <li><strong>Overlays reforzados:</strong> antes de abrir, se reubican en el body para evitar contenedores ocultos.</li>
+                <li><strong>Apertura estable:</strong> Avisos, Buscar, Config. IA, Mis datos, Configuración e Info comparten la misma base de visibilidad.</li>
+                <li><strong>Diagnóstico activo:</strong> se mantiene trazabilidad en consola para verificar estado y detectar bloqueos restantes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.67<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4325,8 +4341,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.67';
-    window.TINCLASS_SW_VERSION = 'v119';
+    window.TINCLASS_BUILD_VERSION = 'v15.68';
+    window.TINCLASS_SW_VERSION = 'v120';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4772,7 +4788,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=119', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=120', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

@@ -3607,6 +3607,16 @@ function _estadoOverlay(id) {
   return overlay.classList.contains('hidden') ? 'hidden' : 'visible';
 }
 
+function _resolverOverlay(id) {
+  const overlay = document.getElementById(id);
+  if (!overlay) return null;
+  if (overlay.parentElement !== document.body) {
+    document.body.appendChild(overlay);
+    console.warn('[TinClass modals] overlay reubicado en body:', id);
+  }
+  return overlay;
+}
+
 function _logEstadoModales(origen, extra = {}) {
   console.log('[TinClass modals]', origen, {
     bodyOverflow: document.body.style.overflow || '(empty)',
@@ -14075,7 +14085,7 @@ function abrirBuscadorEstudiante() {
   _logElementosRequeridos('abrirBuscadorEstudiante:dom', [
     'buscar-overlay', 'buscar-input', 'buscar-lista', 'buscar-perfil', 'buscar-resultados-count'
   ]);
-  const overlay = document.getElementById('buscar-overlay');
+  const overlay = _resolverOverlay('buscar-overlay');
   if (!overlay) {
     _logEstadoModales('abrirBuscadorEstudiante:missing-overlay');
     return;
@@ -15096,7 +15106,7 @@ function abrirNotificaciones() {
   _logElementosRequeridos('abrirNotificaciones:dom', [
     'notif-overlay', 'notif-top-body', 'notif-modal-body', 'notif-count-header', 'notif-badge'
   ]);
-  const overlay = document.getElementById('notif-overlay');
+  const overlay = _resolverOverlay('notif-overlay');
   if (!overlay) {
     _logEstadoModales('abrirNotificaciones:missing-overlay');
     return;
@@ -22266,6 +22276,11 @@ function abrirConfigIA() {
   _logElementosRequeridos('abrirConfigIA:dom', [
     'modal-overlay', 'modal-title', 'modal-body', 'modal-footer'
   ]);
+  const modalOverlay = _resolverOverlay('modal-overlay');
+  if (!modalOverlay) {
+    _logEstadoModales('abrirConfigIA:missing-overlay');
+    return;
+  }
   const groqKeyActual = getGroqKey();
   const geminiKeyActual = getGeminiKey();
   const openrouterKeyActual = getOpenRouterKey();
@@ -22328,7 +22343,7 @@ function abrirConfigIA() {
       </div>
     </div>`;
   _usarFooterDinamico('');
-  document.getElementById('modal-overlay').classList.remove('hidden');
+  modalOverlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   _logEstadoModales('abrirConfigIA:after');
   setTimeout(() => document.getElementById('input-groq-key')?.focus(), 100);
@@ -25142,7 +25157,7 @@ function abrirBackup() {
     'backup-file-input', 'backup-resumen', 'backup-cal-historial', 'backup-archivar-btn', 'recup-lista'
   ]);
   _backupFileData = null;
-  const overlay = document.getElementById('backup-overlay');
+  const overlay = _resolverOverlay('backup-overlay');
   if (!overlay) {
     _logEstadoModales('abrirBackup:missing-overlay');
     return;
@@ -25228,7 +25243,7 @@ function abrirConfiguracion() {
     'cfg-umbral-asist', 'cfg-umbral-riesgo', 'cfg-umbral-acts', 'cfg-touch-mode',
     'cfg-asistencia-activa', 'cfg-asistencia-umbral-row', 'cfg-invite-code-actual'
   ]);
-  const overlay = document.getElementById('config-overlay');
+  const overlay = _resolverOverlay('config-overlay');
   if (!overlay) {
     _logEstadoModales('abrirConfiguracion:missing-overlay');
     return;
@@ -25576,7 +25591,7 @@ document.addEventListener('touchstart', function (e) {
 function abrirAcercaDe() {
   _cerrarTodosLosModales();
   _logElementosRequeridos('abrirAcercaDe:dom', ['acercade-overlay']);
-  const overlay = document.getElementById('acercade-overlay');
+  const overlay = _resolverOverlay('acercade-overlay');
   if (!overlay) {
     _logEstadoModales('abrirAcercaDe:missing-overlay');
     return;
