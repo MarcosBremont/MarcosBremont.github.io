@@ -2579,6 +2579,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.59<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: guardado de festivos por pegado en lote</div>
+              <ul class="about-ver-items">
+                <li><strong>Problema resuelto:</strong> al pegar líneas con formato <em>DD/MM/AAAA DD/MM/AAAA Descripción</em>, el botón Guardar ahora sí registra los días correctamente.</li>
+                <li><strong>Compatibilidad ampliada:</strong> el cálculo interno de rangos acepta fechas tanto en formato local <em>DD/MM/AAAA</em> como en formato ISO.</li>
+                <li><strong>Rangos largos funcionales:</strong> periodos como vacaciones o Semana Santa se expanden y agregan día por día sin bloquear el guardado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.58<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4194,8 +4210,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.58';
-    window.TINCLASS_SW_VERSION = 'v110';
+    window.TINCLASS_BUILD_VERSION = 'v15.59';
+    window.TINCLASS_SW_VERSION = 'v111';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4641,7 +4657,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=110', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=111', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

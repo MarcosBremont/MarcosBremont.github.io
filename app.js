@@ -25645,7 +25645,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.58</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.59</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -29057,6 +29057,22 @@ function _calEscNormalizarFechaDmy(valor) {
   return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
 }
 
+function _calEscFechaToIso(valor) {
+  const texto = String(valor || '').trim();
+  if (!texto) return '';
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    const f = new Date(texto + 'T00:00:00');
+    if (Number.isNaN(f.getTime())) return '';
+    return texto;
+  }
+
+  const dmy = _calEscNormalizarFechaDmy(texto);
+  if (!dmy) return '';
+  const [dia, mes, anio] = dmy.split('/');
+  return `${anio}-${mes}-${dia}`;
+}
+
 function _calEscExtraerFestivosDesdeTexto(texto) {
   const fuente = String(texto || '').trim();
   if (!fuente) return [];
@@ -29153,9 +29169,13 @@ function _calEscPreviewFestivos() {
 }
 
 function _calEscRangoDias(desde, hasta) {
+  const desdeIso = _calEscFechaToIso(desde);
+  const hastaIso = _calEscFechaToIso(hasta);
+  if (!desdeIso || !hastaIso || hastaIso < desdeIso) return [];
+
   const dias = [];
-  const cursor = new Date(desde + 'T00:00:00');
-  const fin    = new Date(hasta + 'T00:00:00');
+  const cursor = new Date(desdeIso + 'T00:00:00');
+  const fin    = new Date(hastaIso + 'T00:00:00');
   while (cursor <= fin) {
     dias.push(cursor.toISOString().slice(0, 10));
     cursor.setDate(cursor.getDate() + 1);
