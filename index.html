@@ -2582,16 +2582,16 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.69<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.70<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Fix de estructura en modal “Mi cuenta”</div>
+              <div class="about-ver-titulo">Acerca de ordenado + cierre inferior removido</div>
               <ul class="about-ver-items">
-                <li><strong>HTML saneado:</strong> se eliminó contenido de versiones que quedó incrustado dentro del botón “Ver historial de sesiones”.</li>
-                <li><strong>Modal limpio:</strong> ya no se muestran botones o elementos fuera del contenedor del modal.</li>
-                <li><strong>Comportamiento estable:</strong> el panel “Mis datos” y los demás overlays no heredan elementos visuales fuera de lugar.</li>
+                <li><strong>Botón oculto:</strong> se removió el botón inferior “Cerrar” para evitar superposición visual en móviles.</li>
+                <li><strong>Historial reparado:</strong> se reconstruyeron filas rotas de versiones que destruían el layout del modal.</li>
+                <li><strong>Lectura limpia:</strong> las tarjetas vuelven a mostrarse en orden vertical y sin columnas partidas.</li>
               </ul>
             </div>
           </div>
@@ -2777,6 +2777,15 @@
                   2026</span>
               </div>
             </div>
+            <div>
+              <div class="about-ver-titulo">Correcciones clave del calendario escolar y pegado en lote</div>
+              <ul class="about-ver-items">
+                <li><strong>Flujo más estable:</strong> se corrigieron bloqueos al guardar varias actividades desde texto pegado.</li>
+                <li><strong>Mejor lectura:</strong> el contenido ingresado en lote ahora conserva mejor el formato esperado por actividad.</li>
+                <li><strong>Validación reforzada:</strong> se reducen errores por líneas vacías o texto mal estructurado durante el guardado.</li>
+              </ul>
+            </div>
+          </div>
 
           <div class="about-version-row">
             <div>
@@ -2784,6 +2793,15 @@
                   2026</span>
               </div>
             </div>
+            <div>
+              <div class="about-ver-titulo">Refuerzo de usabilidad en calendario y edición de actividades</div>
+              <ul class="about-ver-items">
+                <li><strong>Edición más clara:</strong> se mejoró la carga de datos al reabrir actividades del calendario escolar.</li>
+                <li><strong>Consistencia visual:</strong> ajustes de presentación para evitar desorden en listados extensos.</li>
+                <li><strong>Menos fricción:</strong> se optimizó el flujo para docentes al registrar y actualizar actividades.</li>
+              </ul>
+            </div>
+          </div>
 
           <div class="about-version-row">
             <div>
@@ -3942,9 +3960,7 @@
 
         </div>
       </div>
-      <div class="modal-footer" style="position:sticky;bottom:0;">
-        <button class="btn-siguiente" onclick="cerrarAcercaDe()">Cerrar</button>
-      </div>
+
     </div>
   </div>
 
@@ -4341,8 +4357,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.69';
-    window.TINCLASS_SW_VERSION = 'v121';
+    window.TINCLASS_BUILD_VERSION = 'v15.70';
+    window.TINCLASS_SW_VERSION = 'v122';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4676,7 +4692,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=121', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=122', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
