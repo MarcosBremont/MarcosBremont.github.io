@@ -2582,6 +2582,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.65<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Diagnóstico de modales: logs de apertura y estado de overlays</div>
+              <ul class="about-ver-items">
+                <li><strong>Registro fino:</strong> cada botón del encabezado deja trazas en consola para confirmar si el click llega al handler.</li>
+                <li><strong>Estado visible:</strong> se imprime el estado de Avisos, Buscar, Mis datos, Config. IA, Configuración y Acerca de antes y después de abrir.</li>
+                <li><strong>Depuración rápida:</strong> facilita localizar si el bloqueo ocurre en el click, en la función de apertura o en una capa superpuesta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.64<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4293,8 +4309,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.64';
-    window.TINCLASS_SW_VERSION = 'v116';
+    window.TINCLASS_BUILD_VERSION = 'v15.65';
+    window.TINCLASS_SW_VERSION = 'v117';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4740,7 +4756,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=116', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=117', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

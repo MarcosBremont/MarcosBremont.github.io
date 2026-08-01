@@ -3620,6 +3620,13 @@ function _logEstadoModales(origen, extra = {}) {
   });
 }
 
+function _logElementosRequeridos(origen, ids) {
+  const estado = {};
+  ids.forEach(id => { estado[id] = !!document.getElementById(id); });
+  console.log('[TinClass modals]', origen, { elementos: estado });
+  return estado;
+}
+
 function _instalarLogsHeaderModales() {
   const botones = [
     'btn-notificaciones',
@@ -14028,6 +14035,9 @@ let _buscarSeleccionado = null; // { cursoId, estId }
 
 function abrirBuscadorEstudiante() {
   _cerrarTodosLosModales();
+  _logElementosRequeridos('abrirBuscadorEstudiante:dom', [
+    'buscar-overlay', 'buscar-input', 'buscar-lista', 'buscar-perfil', 'buscar-resultados-count'
+  ]);
   const overlay = document.getElementById('buscar-overlay');
   if (!overlay) {
     _logEstadoModales('abrirBuscadorEstudiante:missing-overlay');
@@ -15046,6 +15056,9 @@ function actualizarBadgeNotificaciones() {
 // ── Abrir/cerrar modal ───────────────────────────────────────────
 function abrirNotificaciones() {
   _cerrarTodosLosModales();
+  _logElementosRequeridos('abrirNotificaciones:dom', [
+    'notif-overlay', 'notif-top-body', 'notif-modal-body', 'notif-count-header', 'notif-badge'
+  ]);
   const overlay = document.getElementById('notif-overlay');
   if (!overlay) {
     _logEstadoModales('abrirNotificaciones:missing-overlay');
@@ -22213,6 +22226,9 @@ async function generarConGemini(dg, ra, fechasClase) {
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
   _cerrarTodosLosModales();
+  _logElementosRequeridos('abrirConfigIA:dom', [
+    'modal-overlay', 'modal-title', 'modal-body', 'modal-footer'
+  ]);
   const groqKeyActual = getGroqKey();
   const geminiKeyActual = getGeminiKey();
   const openrouterKeyActual = getOpenRouterKey();
@@ -25084,6 +25100,10 @@ function renderizarCiclosAcademicos() {
 
 function abrirBackup() {
   _cerrarTodosLosModales();
+  _logElementosRequeridos('abrirBackup:dom', [
+    'backup-overlay', 'backup-file-name', 'backup-preview', 'backup-btn-importar',
+    'backup-file-input', 'backup-resumen', 'backup-cal-historial', 'backup-archivar-btn', 'recup-lista'
+  ]);
   _backupFileData = null;
   const overlay = document.getElementById('backup-overlay');
   if (!overlay) {
@@ -25166,6 +25186,11 @@ function abrirHistorialCierres() {
 // ════════════════════════════════════════════════════════════════════
 function abrirConfiguracion() {
   _cerrarTodosLosModales();
+  _logElementosRequeridos('abrirConfiguracion:dom', [
+    'config-overlay', 'cfg-dark-mode', 'cfg-fuente-grande', 'cfg-alertas', 'cfg-manana',
+    'cfg-umbral-asist', 'cfg-umbral-riesgo', 'cfg-umbral-acts', 'cfg-touch-mode',
+    'cfg-asistencia-activa', 'cfg-asistencia-umbral-row', 'cfg-invite-code-actual'
+  ]);
   const overlay = document.getElementById('config-overlay');
   if (!overlay) {
     _logEstadoModales('abrirConfiguracion:missing-overlay');
@@ -25513,6 +25538,7 @@ document.addEventListener('touchstart', function (e) {
 // ════════════════════════════════════════════════════════════════════
 function abrirAcercaDe() {
   _cerrarTodosLosModales();
+  _logElementosRequeridos('abrirAcercaDe:dom', ['acercade-overlay']);
   const overlay = document.getElementById('acercade-overlay');
   if (!overlay) {
     _logEstadoModales('abrirAcercaDe:missing-overlay');
