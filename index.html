@@ -409,6 +409,9 @@
       <!-- ── Saludo + stats ── -->
       <div class="dash-greeting" id="dash-greeting"></div>
 
+      <!-- ── Avisos de calendario escolar ── -->
+      <div id="dash-calendario-banner" style="display:none;margin-top:8px;"></div>
+
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">apps</span>Accesos rápidos
@@ -2579,6 +2582,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.61<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Dashboard: avisos anticipados del calendario escolar</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo banner:</strong> se agregó un aviso encima de Accesos rápidos con próximos eventos del calendario escolar.</li>
+                <li><strong>Anticipación inteligente:</strong> muestra festivos desde 4 días antes y actividades/efemérides desde 2 días antes.</li>
+                <li><strong>Lectura rápida:</strong> cada alerta indica tipo, fecha y tiempo restante (hoy, mañana o en X días), con acceso directo al calendario.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.60<span class="about-ver-fecha">Jul
                   2026</span>
               </div>
@@ -4226,8 +4245,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.60';
-    window.TINCLASS_SW_VERSION = 'v112';
+    window.TINCLASS_BUILD_VERSION = 'v15.61';
+    window.TINCLASS_SW_VERSION = 'v113';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4673,7 +4692,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=112', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=113', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();

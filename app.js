@@ -25599,6 +25599,7 @@ function abrirDashboard() {
 function renderizarDashboard() {
   _actualizarPlanActivaPorFechas();
   _renderizarSaludo();
+  _renderizarBannerCalendarioDashboard();
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
@@ -25645,7 +25646,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.60</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.61</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
@@ -25677,6 +25678,156 @@ function _renderizarSaludo() {
         <div class="dash-stat-icon"><span class="material-icons">system_update_alt</span></div>
         <div class="dash-stat-num">↻</div>
         <div class="dash-stat-lbl">Actualizar</div>
+      </div>
+    </div>`;
+}
+
+let _dashCalBannerFetchInFlight = false;
+
+function _dashFechaDiffDias(hoy, fecha) {
+  const a = new Date(hoy); a.setHours(0, 0, 0, 0);
+  const b = new Date(fecha); b.setHours(0, 0, 0, 0);
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+function _dashParseDmyFecha(dmy) {
+  const m = String(dmy || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const fecha = new Date(`${m[3]}-${m[2]}-${m[1]}T12:00:00`);
+  if (Number.isNaN(fecha.getTime())) return null;
+  if (fecha.getDate() !== parseInt(m[1], 10) || (fecha.getMonth() + 1) !== parseInt(m[2], 10)) return null;
+  return fecha;
+}
+
+function _dashFechaCorta(fecha) {
+  return fecha.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' });
+}
+
+function _dashEtiquetaAnticipacion(dias) {
+  if (dias === 0) return 'Hoy';
+  if (dias === 1) return 'Mañana';
+  return `En ${dias} días`;
+}
+
+function _dashObtenerDatosCalendario() {
+  if (_calEsc.modo === 'personal' && _calEsc.personalDatos) return _calEsc.personalDatos;
+  if (_calEsc.adminDatos) return _calEsc.adminDatos;
+  try {
+    const raw = localStorage.getItem(CAL_ESC_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && parsed.meses) return parsed;
+  } catch (e) {}
+  return _calEscDatosVacios();
+}
+
+function _dashAsegurarCalendarioAdminBanner() {
+  if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') return;
+  _dashCalBannerFetchInFlight = true;
+  _calEscCargarAdmin()
+    .then(() => _renderizarBannerCalendarioDashboard())
+    .finally(() => { _dashCalBannerFetchInFlight = false; });
+}
+
+function _dashParseActividadConFecha(texto) {
+  const t = String(texto || '').trim();
+  if (!t) return null;
+
+  let m = t.match(/^[Dd]el\s+(\d{2}\/\d{2}\/\d{4})\s+al\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
+  if (m) return { fechaDmy: m[1], titulo: m[3] || 'Actividad escolar' };
+
+  m = t.match(/^[Dd][íi]a\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
+  if (m) return { fechaDmy: m[1], titulo: m[2] || 'Actividad escolar' };
+
+  m = t.match(/^`?(\d{2}\/\d{2}\/\d{4})`?\s+`?(\d{2}\/\d{2}\/\d{4})`?\s+(.*)$/);
+  if (m) return { fechaDmy: m[1], titulo: m[3] || 'Actividad escolar' };
+
+  return null;
+}
+
+function _dashConstruirAvisosCalendario(datos) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const avisos = [];
+
+  const pushAviso = (tipo, fecha, titulo, icono, anticipacionDias) => {
+    const diff = _dashFechaDiffDias(hoy, fecha);
+    if (diff < 0 || diff > anticipacionDias) return;
+    avisos.push({ tipo, fecha, titulo: String(titulo || '').trim(), icono, diff });
+  };
+
+  (_calEsc.adminDatos?.festivos || datos.festivos || []).forEach(f => {
+    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(f.fecha || '')) ? new Date(f.fecha + 'T12:00:00') : null;
+    if (!fecha || Number.isNaN(fecha.getTime())) return;
+    pushAviso('Festivo', fecha, f.motivo || 'Día festivo / no lectivo', 'event_busy', 4);
+  });
+
+  const mesNum = {
+    enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+    julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12
+  };
+
+  Object.entries(datos.meses || {}).forEach(([mesKey, mesData]) => {
+    (mesData.actividades || []).forEach(a => {
+      const parsed = _dashParseActividadConFecha(a.texto);
+      if (!parsed) return;
+      const fecha = _dashParseDmyFecha(parsed.fechaDmy);
+      if (!fecha) return;
+      pushAviso('Actividad', fecha, parsed.titulo, 'task_alt', 2);
+    });
+
+    (mesData.efemerides || []).forEach(e => {
+      const dia = parseInt(e.dia, 10);
+      const mes = mesNum[mesKey];
+      if (!mes || !dia) return;
+
+      const y = hoy.getFullYear();
+      const cands = [new Date(y, mes - 1, dia, 12), new Date(y + 1, mes - 1, dia, 12)]
+        .filter(d => d.getMonth() === (mes - 1) && d.getDate() === dia)
+        .sort((a, b) => a - b);
+
+      const prox = cands.find(d => _dashFechaDiffDias(hoy, d) >= 0);
+      if (!prox) return;
+      pushAviso('Efeméride', prox, e.titulo || e.descripcion || 'Efeméride escolar', 'auto_stories', 2);
+    });
+  });
+
+  const prioridadTipo = { Festivo: 1, Actividad: 2, 'Efeméride': 3 };
+  avisos.sort((a, b) => (a.diff - b.diff) || ((prioridadTipo[a.tipo] || 9) - (prioridadTipo[b.tipo] || 9)) || a.titulo.localeCompare(b.titulo));
+  return avisos;
+}
+
+function _renderizarBannerCalendarioDashboard() {
+  const el = document.getElementById('dash-calendario-banner');
+  if (!el) return;
+
+  const datos = _dashObtenerDatosCalendario();
+  const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 6);
+
+  if (!avisos.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    _dashAsegurarCalendarioAdminBanner();
+    return;
+  }
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,#FFF8E1 0%,#FFF3E0 100%);border:1.5px solid #FFCC80;border-radius:12px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:0.83rem;font-weight:700;color:#E65100;">
+          <span class="material-icons" style="font-size:17px;">notifications_active</span>
+          Próximos avisos del calendario escolar
+        </div>
+        <button onclick="abrirCalendarioEscolar()" style="background:none;border:none;color:#1565C0;font-size:0.76rem;font-weight:700;cursor:pointer;">Ver calendario →</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${avisos.map(a => `
+          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
+            <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : '#6A1B9A'};">${a.icono}</span>
+            <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff)} · ${_dashFechaCorta(a.fecha)}</span>
+            <span style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
+          </div>
+        `).join('')}
       </div>
     </div>`;
 }
