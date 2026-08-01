@@ -2582,16 +2582,16 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.68<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.69<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Fix de visibilidad en modales del header</div>
+              <div class="about-ver-titulo">Fix de estructura en modal “Mi cuenta”</div>
               <ul class="about-ver-items">
-                <li><strong>Overlays reforzados:</strong> antes de abrir, se reubican en el body para evitar contenedores ocultos.</li>
-                <li><strong>Apertura estable:</strong> Avisos, Buscar, Config. IA, Mis datos, Configuración e Info comparten la misma base de visibilidad.</li>
-                <li><strong>Diagnóstico activo:</strong> se mantiene trazabilidad en consola para verificar estado y detectar bloqueos restantes.</li>
+                <li><strong>HTML saneado:</strong> se eliminó contenido de versiones que quedó incrustado dentro del botón “Ver historial de sesiones”.</li>
+                <li><strong>Modal limpio:</strong> ya no se muestran botones o elementos fuera del contenedor del modal.</li>
+                <li><strong>Comportamiento estable:</strong> el panel “Mis datos” y los demás overlays no heredan elementos visuales fuera de lugar.</li>
               </ul>
             </div>
           </div>
@@ -4341,8 +4341,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.68';
-    window.TINCLASS_SW_VERSION = 'v120';
+    window.TINCLASS_BUILD_VERSION = 'v15.69';
+    window.TINCLASS_SW_VERSION = 'v121';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4422,118 +4422,6 @@
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
           onclick="cerrarMiCuenta();abrirHistorialSesiones()">
           <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.48<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Mensajes OTP más claros para docentes + diagnóstico técnico del error 412</div>
-              <ul class="about-ver-items">
-                <li><strong>Mensaje amable:</strong> los docentes ya no verán referencias técnicas al proveedor de correo.</li>
-                <li><strong>Error 412 identificado:</strong> la consola ahora sugiere revisar dominio permitido, plantilla y destinatario del OTP.</li>
-                <li><strong>Soporte más fácil:</strong> el usuario recibe una instrucción simple y el administrador conserva el detalle técnico.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.46<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Endpoint automático de versión publicada (version.json)</div>
-              <ul class="about-ver-items">
-                <li><strong>Nuevo endpoint:</strong> se publica <em>/version.json</em> con versión y fecha de actualización para integración con dashboard maestro.</li>
-                <li><strong>Automatizado:</strong> la generación de <em>version.json</em> ahora se ejecuta en cada despliegue, sin edición manual.</li>
-                <li><strong>Lectura fresca:</strong> el Service Worker no cachea <em>version.json</em> para devolver siempre la versión más reciente.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.45<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Reportes y Denuncias: archivado por ciclo escolar</div>
-              <ul class="about-ver-items">
-                <li><strong>Cierre de ciclo completo:</strong> ahora también archiva Reportes de Comportamiento y Denuncias por año escolar.</li>
-                <li><strong>Limpieza del activo:</strong> tras archivar, se vacían las colecciones activas para iniciar ciclo limpio.</li>
-                <li><strong>Historial visible:</strong> en cada módulo se muestra el panel “Archivados por ciclo” para consultar años anteriores.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.44<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Corrección crítica del Blog archivado en cierre de ciclo</div>
-              <ul class="about-ver-items">
-                <li><strong>Sincronización reforzada:</strong> al cerrar ciclo se confirma guardado del blog archivado en Firebase antes de terminar.</li>
-                <li><strong>Anti-reaparición:</strong> al iniciar sesión se fusiona blog local/remoto por fecha para evitar que vuelvan posts viejos al ciclo activo.</li>
-                <li><strong>Consistencia:</strong> los posts archivados por año escolar se mantienen y no deben reaparecer en la lista activa.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.43<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Superadmin: botón de forzar actualización + archivado reforzado del Blog por ciclo</div>
-              <ul class="about-ver-items">
-                <li><strong>Botón protegido:</strong> “Forzar actualización” aparece solo para usuarios con rol <em>superadmin</em>.</li>
-                <li><strong>Limpieza rápida:</strong> el botón reinicia Service Worker/caché y recarga con parámetro anti-caché.</li>
-                <li><strong>Blog archivado por año:</strong> al cerrar ciclo, los posts del Blog del Docente se guardan en el apartado archivado del año escolar y se preservan sin duplicados.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.42<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Arranque robusto: evita pantalla infinita en Cargando</div>
-              <ul class="about-ver-items">
-                <li><strong>Detección de fallo:</strong> si app.js no carga o llega corrupto desde caché, el splash muestra mensaje de recuperación.</li>
-                <li><strong>Timeout de seguridad:</strong> se notifica al usuario cuando el inicio excede el tiempo esperado.</li>
-                <li><strong>Publicación forzada:</strong> nueva versión de Service Worker para romper caché vieja y tomar archivos actualizados.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="about-version-row">
-            <div>
-              <div class="about-ver-badge" style="background:#1B5E20;">v15.41<span class="about-ver-fecha">Jul
-                  2026</span>
-              </div>
-            </div>
-            <div>
-              <div class="about-ver-titulo">Detector de versión activo + actualización forzada de Service Worker</div>
-              <ul class="about-ver-items">
-                <li><strong>Nuevo indicador:</strong> se muestra en el dashboard la build activa y la versión de caché/SW.</li>
-                <li><strong>Diagnóstico rápido:</strong> permite confirmar al instante si el navegador está en la versión correcta.</li>
-                <li><strong>Despliegue más seguro:</strong> el Service Worker se registra con versión nueva para evitar app.js en caché vieja.</li>
-              </ul>
-            </div>
-          </div>
         </button>
       </div>
 
@@ -4788,7 +4676,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=120', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=121', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
