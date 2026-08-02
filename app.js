@@ -9431,6 +9431,7 @@ function abrirPortafolio() {
 function cerrarPortafolio() { abrirDashboard(); }
 
 const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
+const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1';
 
 function cargarPortafolioBase() {
   try {
@@ -9462,6 +9463,166 @@ function _guardarPortafolioBase(data) {
   localStorage.setItem(PORTAFOLIO_BASE_KEY, JSON.stringify(payload));
   if (window._syncFirebase) _syncFirebase('portafolio_base', payload);
   return payload;
+}
+
+function cargarPortafolioEvidencias() {
+  try {
+    const raw = localStorage.getItem(PORTAFOLIO_EVIDENCIAS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function _guardarPortafolioEvidencias(items) {
+  const payload = Array.isArray(items) ? items : [];
+  localStorage.setItem(PORTAFOLIO_EVIDENCIAS_KEY, JSON.stringify(payload));
+  if (window._syncFirebase) _syncFirebase('portafolio_evidencias', payload);
+  return payload;
+}
+
+function _portafolioTipoEvidenciaLabel(tipo) {
+  const labels = {
+    planificacion: 'Planificación',
+    diaria: 'Planificación diaria',
+    instrumento: 'Instrumento',
+    diario: 'Diario reflexivo',
+    reunion: 'Reunión',
+    seguimiento: 'Seguimiento',
+    ficha: 'Ficha de acompañamiento',
+    evidencia: 'Evidencia',
+    otro: 'Otro'
+  };
+  return labels[tipo] || 'Evidencia';
+}
+
+function renderizarPortafolioEvidencias() {
+  const cont = document.getElementById('portafolio-evidencias');
+  if (!cont) return;
+  const items = cargarPortafolioEvidencias().sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+  const plan = planificacion?.datosGenerales || {};
+  const planLabel = plan.moduloFormativo || plan.nombreCentro || '';
+  const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
+  const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:90px;';
+
+  const lista = items.length ? items.map(item => `
+    <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+            <span style="font-size:0.7rem;font-weight:700;color:#1B5E20;background:#E8F5E9;border-radius:20px;padding:2px 8px;">${escapeHTML(_portafolioTipoEvidenciaLabel(item.tipo))}</span>
+            ${item.origen ? `<span style="font-size:0.7rem;color:#546E7A;background:#ECEFF1;border-radius:20px;padding:2px 8px;">${escapeHTML(item.origen)}</span>` : ''}
+          </div>
+          <div style="font-weight:700;color:#37474F;margin-bottom:5px;">${escapeHTML(item.titulo || 'Sin título')}</div>
+          <div style="font-size:0.85rem;color:#455A64;line-height:1.55;white-space:pre-wrap;">${escapeHTML(item.descripcion || '')}</div>
+          ${item.archivo ? `<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;">Archivo: ${escapeHTML(item.archivo)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          <div style="font-size:0.72rem;color:#90A4AE;">${item.fecha ? new Date(item.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+          <button class="btn-secundario" onclick="_eliminarPortafolioEvidencia('${item.id}')" style="padding:6px 10px;font-size:0.75rem;color:#C62828;border-color:#FFCDD2;">
+            <span class="material-icons" style="font-size:14px;">delete_outline</span> Quitar
+          </button>
+        </div>
+      </div>
+    </div>`).join('') : '<div style="padding:14px 16px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:12px;color:#78909C;font-size:0.85rem;">Aún no hay evidencias registradas para este portafolio.</div>';
+
+  cont.innerHTML = `
+    <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="font-weight:800;color:#37474F;display:flex;align-items:center;gap:8px;">
+          <span class="material-icons" style="font-size:18px;color:#455A64;">collections_bookmark</span> Evidencias iniciales
+        </div>
+        <button class="btn-secundario" onclick="_cargarEvidenciaDesdePlanificacionActiva()" style="font-size:0.8rem;padding:7px 12px;">
+          <span class="material-icons">sync</span> Tomar de la planificación activa
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Tipo</label>
+          <select id="pf-evi-tipo" style="${inputStyle}">
+            <option value="evidencia">Evidencia</option>
+            <option value="planificacion">Planificación</option>
+            <option value="diaria">Planificación diaria</option>
+            <option value="instrumento">Instrumento</option>
+            <option value="diario">Diario reflexivo</option>
+            <option value="reunion">Reunión</option>
+            <option value="seguimiento">Seguimiento</option>
+            <option value="ficha">Ficha de acompañamiento</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Fecha</label>
+          <input id="pf-evi-fecha" type="date" value="${new Date().toISOString().split('T')[0]}" style="${inputStyle}">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Origen / vínculo</label>
+          <input id="pf-evi-origen" type="text" value="${escapeHTML(planLabel || '')}" placeholder="Planificación, diario, reunión, etc." style="${inputStyle}">
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título de la evidencia</label>
+        <input id="pf-evi-titulo" type="text" placeholder="Ej: Planificación diaria del 12 de agosto" style="${inputStyle}">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Descripción</label>
+        <textarea id="pf-evi-descripcion" placeholder="Describe qué evidencia aporta y por qué es relevante..." style="${textareaStyle}"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+        <button class="btn-siguiente" onclick="guardarPortafolioEvidenciaDesdeUI()"><span class="material-icons">add_circle</span> Agregar evidencia</button>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:800;color:#37474F;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span class="material-icons" style="font-size:18px;color:#455A64;">list_alt</span> Registro de evidencias
+      </div>
+      ${lista}
+    </div>`;
+}
+
+function guardarPortafolioEvidenciaDesdeUI() {
+  const titulo = (document.getElementById('pf-evi-titulo')?.value || '').trim();
+  const descripcion = (document.getElementById('pf-evi-descripcion')?.value || '').trim();
+  const tipo = document.getElementById('pf-evi-tipo')?.value || 'evidencia';
+  const fecha = document.getElementById('pf-evi-fecha')?.value || new Date().toISOString().split('T')[0];
+  const origen = (document.getElementById('pf-evi-origen')?.value || '').trim();
+  if (!titulo || !descripcion) {
+    mostrarToast('Escribe un título y una descripción para la evidencia', 'error');
+    return;
+  }
+
+  const items = cargarPortafolioEvidencias();
+  items.unshift({ id: uid(), tipo, titulo, descripcion, fecha, origen, archivo: '' });
+  _guardarPortafolioEvidencias(items);
+  renderizarPortafolioEvidencias();
+  mostrarToast('Evidencia agregada al portafolio', 'success');
+}
+
+function _cargarEvidenciaDesdePlanificacionActiva() {
+  const dg = planificacion?.datosGenerales || {};
+  const ra = planificacion?.ra || {};
+  const titulo = [dg.moduloFormativo, ra.resultado].filter(Boolean).join(' · ') || 'Planificación activa';
+  const descripcion = [
+    dg.unidadCompetencia ? 'UC: ' + dg.unidadCompetencia : '',
+    ra.descripcion ? 'RA: ' + ra.descripcion : '',
+    dg.propositoAnual ? 'Propósito: ' + dg.propositoAnual : ''
+  ].filter(Boolean).join('\n');
+
+  const tituloEl = document.getElementById('pf-evi-titulo');
+  const descEl = document.getElementById('pf-evi-descripcion');
+  const origenEl = document.getElementById('pf-evi-origen');
+  if (tituloEl) tituloEl.value = titulo;
+  if (descEl) descEl.value = descripcion || 'Evidencia tomada de la planificación activa.';
+  if (origenEl) origenEl.value = dg.moduloFormativo || 'Planificación activa';
+  mostrarToast('Datos de evidencia cargados desde la planificación activa', 'success');
+}
+
+function _eliminarPortafolioEvidencia(id) {
+  if (!confirm('¿Eliminar esta evidencia del portafolio?')) return;
+  const items = cargarPortafolioEvidencias().filter(e => e.id !== id);
+  _guardarPortafolioEvidencias(items);
+  renderizarPortafolioEvidencias();
+  mostrarToast('Evidencia eliminada', 'success');
 }
 
 function renderizarPortafolio() {
@@ -9518,6 +9679,12 @@ function renderizarPortafolio() {
       <button class="btn-secundario" onclick="_portafolioRestaurarDemo()"><span class="material-icons">auto_fix_high</span> Plantilla base</button>
       <button class="btn-siguiente" onclick="guardarPortafolioBaseDesdeUI()"><span class="material-icons">save</span> Guardar datos base</button>
     </div>`;
+
+  const extra = document.createElement('div');
+  extra.id = 'portafolio-evidencias';
+  extra.style.marginTop = '18px';
+  cont.appendChild(extra);
+  renderizarPortafolioEvidencias();
 }
 
 function _cargarPortafolioDesdePlanificacionActiva() {
@@ -9530,6 +9697,7 @@ function _cargarPortafolioDesdePlanificacionActiva() {
   data.centro.propositoAnual = dg.propositoAnual || data.centro.propositoAnual || '';
   _guardarPortafolioBase(data);
   renderizarPortafolio();
+  renderizarPortafolioEvidencias();
   mostrarToast('Datos tomados de la planificación activa', 'success');
 }
 
@@ -9541,6 +9709,7 @@ function _portafolioRestaurarDemo() {
   };
   _guardarPortafolioBase(demo);
   renderizarPortafolio();
+  renderizarPortafolioEvidencias();
   mostrarToast('Plantilla base cargada', 'success');
 }
 
@@ -9562,6 +9731,7 @@ function guardarPortafolioBaseDesdeUI() {
 
   _guardarPortafolioBase(data);
   renderizarPortafolio();
+  renderizarPortafolioEvidencias();
   mostrarToast('Datos base del portafolio guardados', 'success');
 }
 

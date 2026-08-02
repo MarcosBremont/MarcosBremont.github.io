@@ -2612,6 +2612,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.79<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente con evidencias iniciales</div>
+              <ul class="about-ver-items">
+                <li><strong>Evidencias registrables:</strong> ya se pueden agregar, listar y eliminar evidencias del portafolio.</li>
+                <li><strong>Vínculo con planificación:</strong> el formulario puede tomar datos de la planificación activa para acelerar el llenado.</li>
+                <li><strong>Continuidad:</strong> la base del portafolio sigue lista para ampliar a planificaciones, instrumentos y diarios.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#546E7A;">v15.78<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4515,8 +4531,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.78';
-    window.TINCLASS_SW_VERSION = 'v130';
+    window.TINCLASS_BUILD_VERSION = 'v15.79';
+    window.TINCLASS_SW_VERSION = 'v131';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4850,7 +4866,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=130', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=131', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
