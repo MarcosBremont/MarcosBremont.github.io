@@ -9625,64 +9625,72 @@ function _eliminarEntradaLibreta(entryId) {
   mostrarToast('Anotación eliminada', 'success');
 }
 
-function imprimirRegistrosLibreta() {
+function descargarWordRegistrosLibretaDia() {
   const data = cargarLibreta();
-  const entries = (data.entries || []).slice();
+  const fecha = _libretaDiaSeleccionado || new Date().toISOString().split('T')[0];
+  const entries = (data.entries || []).filter(e => e.fecha === fecha);
   if (!entries.length) {
-    mostrarToast('No hay registros en Mi Libreta para imprimir.', 'error');
+    mostrarToast('No hay registros en el dia seleccionado.', 'error');
     return;
   }
 
   entries.sort((a, b) => {
-    const byFecha = String(b.fecha || '').localeCompare(String(a.fecha || ''));
-    if (byFecha !== 0) return byFecha;
-    return String(b.hora || '').localeCompare(String(a.hora || ''));
+    return String(a.hora || '').localeCompare(String(b.hora || ''));
   });
 
   const tipoLabel = (v) => (_LIBRETA_TIPOS.find(t => t.value === (v || 'general')) || _LIBRETA_TIPOS[0]).label;
-  const fechaLabel = (iso) => {
-    if (!iso) return '—';
-    return new Date(iso + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
-  };
+  const fechaLabel = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  const rows = entries.map(e =>
-    '<tr>' +
-      '<td>' + escapeHTML(fechaLabel(e.fecha)) + '</td>' +
-      '<td>' + escapeHTML(e.hora || '—') + '</td>' +
-      '<td>' + escapeHTML(tipoLabel(e.tipo)) + '</td>' +
-      '<td>' + escapeHTML(e.cursoNombre || '—') + '</td>' +
-      '<td>' + escapeHTML(e.titulo || '—') + '</td>' +
-      '<td style="white-space:pre-wrap;">' + escapeHTML(e.texto || '—') + '</td>' +
-    '</tr>'
-  ).join('');
+  const bloques = entries.map((e, idx) => {
+    return '<div class="entry">'
+      + '<div class="entry-top">'
+      + '<span class="entry-num">Registro ' + (idx + 1) + '</span>'
+      + '<span class="entry-hora">' + escapeHTML(e.hora || '—') + '</span>'
+      + '</div>'
+      + '<div class="entry-meta">Tipo: ' + escapeHTML(tipoLabel(e.tipo)) + ' · Curso: ' + escapeHTML(e.cursoNombre || '—') + '</div>'
+      + '<div class="entry-titulo">' + escapeHTML(e.titulo || 'Sin titulo') + '</div>'
+      + '<div class="entry-texto">' + escapeHTML(e.texto || '—') + '</div>'
+      + '</div>';
+  }).join('');
 
   const now = new Date();
-  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
-    '<title>Mi Libreta - Registros</title>' +
+  const html = '<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="es"><head><meta charset="UTF-8">' +
+    '<meta name="ProgId" content="Word.Document">' +
+    '<meta name="Generator" content="Microsoft Word 15">' +
+    '<meta name="Originator" content="Microsoft Word 15">' +
+    '<title>Mi Libreta - ' + escapeHTML(fecha) + '</title>' +
     '<style>' +
-      'body{font-family:Arial,sans-serif;margin:16mm;color:#263238;}' +
-      'h1{font-size:16pt;margin:0 0 4px;}' +
-      '.meta{font-size:9pt;color:#607D8B;margin-bottom:12px;}' +
-      'table{width:100%;border-collapse:collapse;font-size:10pt;}' +
-      'th,td{border:1px solid #B0BEC5;padding:6px;vertical-align:top;text-align:left;}' +
-      'th{background:#E0F2F1;color:#004D40;font-weight:700;}' +
-      '.no-print{margin-bottom:12px;}' +
-      '@media print{.no-print{display:none!important;}}' +
+      'body{font-family:Calibri,Arial,sans-serif;color:#263238;font-size:11pt;line-height:1.45;}' +
+      'h1{font-size:18pt;margin:0 0 6px;color:#004D40;}' +
+      '.meta{font-size:10pt;color:#607D8B;margin-bottom:14px;}' +
+      '.entry{border:1px solid #CFE8E4;border-left:4px solid #00695C;border-radius:6px;padding:10px 12px;margin-bottom:10px;}' +
+      '.entry-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;}' +
+      '.entry-num{font-weight:700;color:#00695C;}' +
+      '.entry-hora{font-size:9pt;color:#78909C;}' +
+      '.entry-meta{font-size:9pt;color:#546E7A;margin-bottom:5px;}' +
+      '.entry-titulo{font-weight:700;color:#1B5E20;margin-bottom:4px;}' +
+      '.entry-texto{white-space:pre-wrap;}' +
     '</style></head><body>' +
-    '<div class="no-print"><button onclick="window.print()" style="padding:8px 14px;border:none;border-radius:6px;background:#00695C;color:#fff;cursor:pointer;">Imprimir / Guardar PDF</button></div>' +
-    '<h1>Mi Libreta - Registros</h1>' +
-    '<div class="meta">Total: ' + entries.length + ' registro(s) · Generado: ' + now.toLocaleString('es-DO') + '</div>' +
-    '<table><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Curso</th><th>Título</th><th>Anotación</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-    '<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>' +
+    '<h1>Mi Libreta - Registros del dia</h1>' +
+    '<div class="meta">Fecha: ' + escapeHTML(fechaLabel) + ' · Total: ' + entries.length + ' registro(s) · Generado: ' + now.toLocaleString('es-DO') + '</div>' +
+    bloques +
     '</body></html>';
 
-  const w = window.open('', '_blank', 'width=1100,height=800');
-  if (!w) {
-    mostrarToast('El navegador bloqueó la ventana de impresión.', 'error');
-    return;
-  }
-  w.document.write(html);
-  w.document.close();
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const safeFecha = String(fecha || 'dia').replace(/[^0-9-]/g, '');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'libreta-' + safeFecha + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  mostrarToast('Word descargado del dia seleccionado', 'success');
+}
+
+function imprimirRegistrosLibreta() {
+  descargarWordRegistrosLibretaDia();
 }
 
 // ═══════════════════════════════════════════════════════════════════
