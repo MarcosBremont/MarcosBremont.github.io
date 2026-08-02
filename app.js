@@ -9226,7 +9226,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -9242,7 +9242,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -9422,6 +9422,12 @@ function abrirLibreta() {
 }
 
 function cerrarLibreta() { abrirDashboard(); }
+
+function abrirPortafolio() {
+  _mostrarPanel('panel-portafolio');
+}
+
+function cerrarPortafolio() { abrirDashboard(); }
 
 function renderizarLibreta() {
   _renderizarListaDiasLibreta();
@@ -32502,6 +32508,7 @@ const OPCIONES_DOCENTES = [
   { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas y entregas' },
   { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas del docente' },
   { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación' },
+  { id: 'portafolio', label: 'Portafolio Docente', icono: 'workspace_premium', desc: 'Organizar evidencias pedagógicas y documentos docentes' },
   { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento' },
   { id: 'ia', label: 'Generación con IA', icono: 'auto_awesome', desc: 'Generar contenido con inteligencia artificial' },
   { id: 'importar', label: 'Importar Planificación', icono: 'upload_file', desc: 'Importar planificación desde archivo' },
@@ -32594,6 +32601,7 @@ const OPCIONES_COORDINADORA = [
   { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas', defecto: true },
   { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas', defecto: true },
   { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación', defecto: true },
+  { id: 'portafolio', label: 'Portafolio Docente', icono: 'workspace_premium', desc: 'Organizar evidencias pedagógicas y documentos docentes', defecto: true },
   { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento', defecto: true },
   { id: 'ia', label: 'Configurar IA', icono: 'auto_awesome', desc: 'Configuración de inteligencia artificial', defecto: false },
   { id: 'importar', label: 'Importar Planificación', icono: 'upload_file', desc: 'Importar planificación desde archivo', defecto: false },
@@ -32700,6 +32708,7 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
     tareas: 'btn-dash-tareas',
     notas: 'btn-dash-notas',
     libreta: 'btn-dash-libreta',
+    portafolio: 'btn-dash-portafolio',
     rendimiento: 'btn-dash-rendimiento',
     importar: 'btn-dash-importar',
     ia: 'btn-dash-ia',
