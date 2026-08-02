@@ -5063,6 +5063,110 @@ async function _getPlantillaDiariaCentro() {
   }
 }
 
+/** Obtiene la plantilla de reportes de psicología del centro del usuario actual */
+async function _getPlantillaReportePsicologiaCentro() {
+  if (!window.currentUser) return null;
+  try {
+    let centroId = null;
+    const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+    if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+    if (!centroId) {
+      const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+      if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+    }
+    if (centroId) {
+      const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+      if (centroDoc.exists && centroDoc.data().plantillaReportePsicologiaBase64) {
+        const centro = centroDoc.data();
+        return { base64: centro.plantillaReportePsicologiaBase64, centroId, centroNombre: centro.nombre || '' };
+      }
+    }
+    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaReportePsicologiaBase64', '!=', '').limit(1).get();
+    if (!snap.empty) {
+      const centro = snap.docs[0].data();
+      return { base64: centro.plantillaReportePsicologiaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+    }
+    return null;
+  } catch (e) {
+    console.warn('[PlantillaPsicologia] Error obteniendo centro:', e);
+    return null;
+  }
+}
+
+/** Exporta un reporte individual de Psicología a Word usando la plantilla del centro */
+async function exportarReportePsicologiaDocx(id, estId) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) {
+    mostrarToast('No se puede generar Word: faltan librerías de plantilla.', 'error');
+    return false;
+  }
+
+  const info = await _getPlantillaReportePsicologiaCentro();
+  if (!info) {
+    mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error');
+    return false;
+  }
+
+  const data = cargarReportes();
+  const rep = (data[estId] || []).find(r => r.id === id);
+  if (!rep) {
+    mostrarToast('No se encontró el reporte.', 'error');
+    return false;
+  }
+
+  mostrarToast('Exportando reporte de Psicología...', 'info');
+
+  const binaryStr = atob(info.base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  const zip = new PizZip(bytes.buffer);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{', end: '}' },
+    nullGetter: () => ''
+  });
+
+  const fecha = rep.fechaReporte || '';
+  const fechaBonita = fecha
+    ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '';
+
+  doc.render({
+    estudiante_nombre: rep.estudianteNombre || '',
+    grado_cursa: rep.gradoCursa || rep.cursoNombre || '',
+    fecha_reporte: fechaBonita || fecha,
+    detalles_evento: rep.detallesEvento || '',
+    medidas_docente: rep.medidasDocente || '',
+    seguimiento_repetitiva: rep.seguimientoRepetitiva || '',
+    firma_estudiante: rep.firmaEstudiante || '',
+    celular_estudiante: rep.celularEstudiante || '',
+    firma_docente: rep.firmaDocente || '',
+    firma_coordinacion: rep.firmaCoordenacion || '',
+    firma_psicologia: rep.firmaPsicologia || '',
+    firma_tutor: rep.firmaTutor || '',
+    telefono_tutor: rep.telefonoTutor || '',
+    nombre_centro: info.centroNombre || '',
+    nombre_docente: rep.nombreDocente || '',
+    curso_nombre: rep.cursoNombre || rep.gradoCursa || ''
+  });
+
+  const out = doc.getZip().generate({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+
+  const link = document.createElement('a');
+  const safeName = (rep.estudianteNombre || 'reporte').replace(/\s+/g, '_').replace(/[^\w\-]+/g, '_');
+  link.href = URL.createObjectURL(out);
+  link.download = 'Reporte_Psicologia_' + safeName + '.docx';
+  link.click();
+  URL.revokeObjectURL(link.href);
+  mostrarToast('Reporte exportado en Word', 'success');
+  return true;
+}
+
 /** Genera XML de tabla Word para un instrumento de evaluación */
 function _generarInstTablaXml(inst) {
   if (!inst || !inst.criterios || !inst.criterios.length) return '<w:p><w:r><w:t>\u2014</w:t></w:r></w:p>';
@@ -28167,6 +28271,7 @@ function guardarReporteNuevo(estId) {
     id:                    uid(),
     ts:                    Date.now(),
     fechaReporte:          document.getElementById('rep-f-fecha')?.value || new Date().toISOString().split('T')[0],
+    nombreDocente:         (window.currentUser?.displayName || window.currentUser?.email || '').trim(),
     cursoNombre:           (document.getElementById('rep-f-grado')?.value || '').trim(),
     estudianteNombre:      (document.getElementById('rep-f-nombre')?.value || '').trim(),
     gradoCursa:            (document.getElementById('rep-f-grado')?.value || '').trim(),
@@ -29880,7 +29985,7 @@ function renderPsicologia() {
   }
 
   const totalRep = datos.reduce((s, d) => s + d.reportes.length, 0);
-  let html = `<div style="font-size:0.78rem;color:#9E9E9E;margin-bottom:14px;">${datos.length} estudiante${datos.length !== 1 ? 's' : ''} · ${totalRep} reporte${totalRep !== 1 ? 's' : ''}</div>`;
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:0.78rem;color:#9E9E9E;margin-bottom:14px;">${datos.length} estudiante${datos.length !== 1 ? 's' : ''} · ${totalRep} reporte${totalRep !== 1 ? 's' : ''}<button class="btn-secundario" onclick="_mostrarGuiaPlaceholdersPsicologia()" style="padding:6px 10px;font-size:0.75rem;border-radius:8px;">Ver placeholders Word</button></div>`;
 
   datos.forEach(d => {
     html += `
@@ -29912,6 +30017,9 @@ function renderPsicologia() {
               <span class="material-icons" style="font-size:11px;">description</span> Reporte formal
             </span>
             <span style="font-size:0.78rem;font-weight:600;color:#37474F;">${escapeHTML(fecha)}</span>
+            <button class="btn-icon-sm" title="Exportar a Word" onclick="exportarReportePsicologiaDocx('${r.id}','${d.estId}')" style="margin-left:auto;color:#6A1B9A;">
+              <span class="material-icons" style="font-size:16px;">description</span>
+            </button>
           </div>
           ${campos.map(c => `
             <div style="margin-bottom:4px;">
@@ -31613,6 +31721,20 @@ async function _mostrarFormCentro(centroId) {
       : '')
     + '<input type="file" id="sa-centro-plantilla-diaria" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #6A1B9A;border-radius:10px;background:#F3E5F5;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#4A148C;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Reportes de Psicología (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para los reportes académicos y disciplinarios que imprime Psicología. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersPsicologia();" style="color:#6A1B9A;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (centro.plantillaReportePsicologiaBase64
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaReportePsicologiaNombre || 'plantilla_reportes_psicologia.docx') + '</span>'
+        + '<button onclick="_eliminarPlantillaReportePsicologiaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '')
+    + '<input type="file" id="sa-centro-plantilla-reportes-psicologia" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -31671,6 +31793,19 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  const fileInputReportesPsicologia = document.getElementById('sa-centro-plantilla-reportes-psicologia');
+  const fileReportesPsicologia = fileInputReportesPsicologia?.files?.[0];
+  if (fileReportesPsicologia) {
+    if (!fileReportesPsicologia.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla de reportes de Psicología', 'error');
+      return;
+    }
+    if (fileReportesPsicologia.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla de reportes de Psicología no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -31716,6 +31851,20 @@ async function _guardarCentro(centroId) {
       });
     }
 
+    if (fileReportesPsicologia && finalId) {
+      mostrarToast('Guardando plantilla de reportes de Psicología...', 'info');
+      const readerP = new FileReader();
+      const base64P = await new Promise((resolve, reject) => {
+        readerP.onload = () => resolve(readerP.result.split(',')[1]);
+        readerP.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerP.readAsDataURL(fileReportesPsicologia);
+      });
+      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
+        plantillaReportePsicologiaBase64: base64P,
+        plantillaReportePsicologiaNombre: fileReportesPsicologia.name
+      });
+    }
+
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
   } catch (e) {
@@ -31751,6 +31900,21 @@ async function _eliminarPlantillaDiariaCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla diaria: ' + e.message, 'error');
+  }
+}
+
+/** Elimina plantilla de reportes de Psicología del centro */
+async function _eliminarPlantillaReportePsicologiaCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de reportes de Psicología de este centro?')) return;
+  try {
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
+      plantillaReportePsicologiaBase64: firebase.firestore.FieldValue.delete(),
+      plantillaReportePsicologiaNombre: firebase.firestore.FieldValue.delete()
+    });
+    mostrarToast('Plantilla de Psicología eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla de Psicología: ' + e.message, 'error');
   }
 }
 
@@ -31889,6 +32053,46 @@ function _mostrarGuiaPlaceholders() {
     + '<tbody>' + rows + '</tbody></table></div>'
     + tablaInfo
     + '<p style="font-size:0.75rem;color:#9E9E9E;margin-top:10px;">Tip: En tu archivo Word, simplemente escribe el placeholder (ej: <code>{familia_profesional}</code>) donde quieras que aparezca el dato.</p>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+/** Muestra guía de placeholders para la plantilla de reportes de Psicología */
+function _mostrarGuiaPlaceholdersPsicologia() {
+  const placeholders = [
+    ['{estudiante_nombre}', 'Nombre y apellido del estudiante'],
+    ['{grado_cursa}', 'Grado o curso del estudiante'],
+    ['{fecha_reporte}', 'Fecha del reporte'],
+    ['{detalles_evento}', 'Detalles del evento o situación'],
+    ['{medidas_docente}', 'Medidas trabajadas por el docente en el aula'],
+    ['{seguimiento_repetitiva}', 'Seguimiento si la falta es repetitiva'],
+    ['{firma_estudiante}', 'Firma / nombre del estudiante'],
+    ['{celular_estudiante}', 'Número celular del estudiante'],
+    ['{firma_docente}', 'Firma del docente'],
+    ['{firma_coordinacion}', 'Firma de coordinación pedagógica'],
+    ['{firma_psicologia}', 'Firma de psicología'],
+    ['{firma_tutor}', 'Firma del padre, madre o tutor'],
+    ['{telefono_tutor}', 'Teléfono del padre, madre o tutor'],
+    ['{nombre_centro}', 'Nombre del centro educativo'],
+    ['{nombre_docente}', 'Nombre del docente (opcional)'],
+    ['{curso_nombre}', 'Nombre del curso / grupo (opcional)']
+  ];
+
+  const rows = placeholders.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#4A148C;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Reportes de Psicología';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Usa estos placeholders en la plantilla Word de reportes para que se rellenen con los datos reales guardados en cada reporte:</p>'
+    + '<div style="max-height:420px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#6A1B9A;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #6A1B9A;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#6A1B9A;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #6A1B9A;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + '<div style="margin-top:14px;padding:12px;background:#F3E5F5;border-radius:8px;border:1px solid #E1BEE7;">'
+    + '<strong style="color:#4A148C;font-size:0.82rem;">Sugerencia de diseño:</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">La plantilla puede seguir el formato del formulario impreso: encabezado institucional, tabla de datos del estudiante, bloques para detalles, medidas y firmas.</p>'
+    + '</div>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 

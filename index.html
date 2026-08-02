@@ -2582,6 +2582,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v15.71<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Reportes de Psicología exportables en Word</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo upload:</strong> Superadmin puede cargar una plantilla .docx específica para reportes psicológicos.</li>
+                <li><strong>Placeholders propios:</strong> el modal de ayuda muestra los campos del reporte formal de estudiantes.</li>
+                <li><strong>Exportación directa:</strong> cada reporte ahora puede descargarse en Word desde el panel de Psicología.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.70<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4357,8 +4373,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.70';
-    window.TINCLASS_SW_VERSION = 'v122';
+    window.TINCLASS_BUILD_VERSION = 'v15.71';
+    window.TINCLASS_SW_VERSION = 'v123';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4692,7 +4708,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=122', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=123', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
