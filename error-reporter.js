@@ -8,7 +8,7 @@
 
   const DEFAULT_CFG = {
     enabled: true,
-    minSeverity: 'high',
+    minSeverity: 'medium',
     sendEmail: true,
     saveFirestore: true,
     includeUserAgent: true,
@@ -68,6 +68,78 @@
     }
   }
 
+  function _toSafeString(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (value instanceof Error) return (value.stack || value.message || String(value));
+    if (typeof value === 'object') {
+      if (typeof value.message === 'string' && value.message) {
+        return value.stack ? (value.message + '\n' + value.stack) : value.message;
+      }
+      try {
+        return JSON.stringify(value);
+      } catch (_) {
+        return String(value);
+      }
+    }
+    return String(value);
+  }
+
+  function _argsToMessage(args) {
+    return (args || []).map(_toSafeString).join(' | ').slice(0, 1200) || 'sin-detalle';
+  }
+
+  function _extractStackFromArgs(args) {
+    const list = args || [];
+    for (let i = 0; i < list.length; i += 1) {
+      const item = list[i];
+      if (item instanceof Error && item.stack) return String(item.stack).slice(0, 4000);
+      if (item && typeof item === 'object' && typeof item.stack === 'string') return String(item.stack).slice(0, 4000);
+    }
+    return null;
+  }
+
+  function _shouldReportWarnMessage(msg) {
+    const s = String(msg || '').toLowerCase();
+    if (!s) return false;
+    if (s.includes('[errorreporter]')) return false;
+    return (
+      s.includes('error') ||
+      s.includes('failed') ||
+      s.includes('fail') ||
+      s.includes('exception') ||
+      s.includes('reject') ||
+      s.includes('timeout') ||
+      s.includes('network') ||
+      s.includes('firebase') ||
+      s.includes('firestore') ||
+      s.includes('storage') ||
+      s.includes('auth') ||
+      s.includes('cors') ||
+      s.includes('5xx') ||
+      s.includes('4xx')
+    );
+  }
+
+  function _sanitizeUrl(url) {
+    try {
+      const u = new URL(String(url || ''));
+      u.search = '';
+      return u.toString();
+    } catch (_) {
+      return String(url || '');
+    }
+  }
+
+  function _inferModuleFromUrl(url) {
+    const u = String(url || '').toLowerCase();
+    if (!u) return 'network';
+    if (u.includes('firestore') || u.includes('firebase')) return 'firebase';
+    if (u.includes('emailjs')) return 'emailjs';
+    if (u.includes('openrouter') || u.includes('groq') || u.includes('generativelanguage')) return 'ia';
+    return 'network';
+  }
+
   function _pickSeverity(message, type) {
     const msg = String(message || '').toLowerCase();
     if (type === 'unhandledrejection') return 'high';
@@ -84,6 +156,7 @@
     if (msg.includes('resizeobserver loop limit exceeded')) return true;
     if (msg.includes('non-error promise rejection captured')) return true;
     if (msg.includes('the operation was aborted')) return true;
+    if (msg.includes('[errorreporter]')) return true;
     if (file.includes('extensions/')) return true;
 
     return false;
@@ -329,6 +402,111 @@
     });
   }
 
+  function _onResourceError(event) {
+    if (_isReporting) return;
+    const target = event && event.target ? event.target : null;
+    if (!target || target === window) return;
+    const src = target.currentSrc || target.src || target.href || null;
+    const tag = target.tagName ? String(target.tagName).toLowerCase() : 'resource';
+
+    _dispatchReport({
+      type: 'resource_error',
+      source: 'window.resourceerror',
+      message: 'No se pudo cargar recurso <' + tag + '>',
+      filename: src ? _sanitizeUrl(src) : null,
+      severity: 'high',
+      module: 'assets',
+      action: tag
+    });
+  }
+
+  function _setupConsoleHooks() {
+    if (typeof console === 'undefined') return;
+    if (console.__tinclassReporterPatched) return;
+
+    const originalError = typeof console.error === 'function' ? console.error.bind(console) : null;
+    const originalWarn = typeof console.warn === 'function' ? console.warn.bind(console) : null;
+
+    if (originalError) {
+      console.error = function () {
+        const args = Array.prototype.slice.call(arguments);
+        _dispatchReport({
+          type: 'console_error',
+          source: 'console.error',
+          severity: 'high',
+          module: 'console',
+          message: _argsToMessage(args),
+          stack: _extractStackFromArgs(args)
+        });
+        return originalError.apply(console, args);
+      };
+    }
+
+    if (originalWarn) {
+      console.warn = function () {
+        const args = Array.prototype.slice.call(arguments);
+        const msg = _argsToMessage(args);
+        if (_shouldReportWarnMessage(msg)) {
+          _dispatchReport({
+            type: 'console_warn',
+            source: 'console.warn',
+            severity: 'medium',
+            module: 'console',
+            message: msg,
+            stack: _extractStackFromArgs(args)
+          });
+        }
+        return originalWarn.apply(console, args);
+      };
+    }
+
+    console.__tinclassReporterPatched = true;
+  }
+
+  function _setupFetchHook() {
+    if (typeof window.fetch !== 'function') return;
+    if (window.fetch.__tinclassReporterPatched) return;
+
+    const originalFetch = window.fetch.bind(window);
+    const patchedFetch = async function (input, init) {
+      const url = typeof input === 'string'
+        ? input
+        : (input && input.url ? input.url : 'unknown-url');
+      const method = (init && init.method) || (input && input.method) || 'GET';
+
+      try {
+        const response = await originalFetch(input, init);
+        if (!response.ok) {
+          _dispatchReport({
+            type: 'fetch_http_error',
+            source: 'fetch.response',
+            severity: response.status >= 500 ? 'high' : 'medium',
+            module: _inferModuleFromUrl(url),
+            action: method,
+            message: 'HTTP ' + response.status + ' ' + (response.statusText || 'Error') + ' en ' + _sanitizeUrl(url),
+            filename: _sanitizeUrl(url)
+          });
+        }
+        return response;
+      } catch (err) {
+        _dispatchReport({
+          type: 'fetch_exception',
+          source: 'fetch.catch',
+          severity: 'high',
+          module: _inferModuleFromUrl(url),
+          action: method,
+          message: _toStringError(err) + ' en ' + _sanitizeUrl(url),
+          filename: _sanitizeUrl(url),
+          stack: err && err.stack ? err.stack : null
+        });
+        throw err;
+      }
+    };
+
+    patchedFetch.__tinclassReporterPatched = true;
+    window.fetch = patchedFetch;
+  }
+
   function _manualReport(error, context) {
     const err = error instanceof Error ? error : null;
     const ctx = context || {};
@@ -358,5 +536,8 @@
   window.tinclassReportError = _manualReport;
 
   window.addEventListener('error', _onWindowError);
+  window.addEventListener('error', _onResourceError, true);
   window.addEventListener('unhandledrejection', _onUnhandledRejection);
+  _setupConsoleHooks();
+  _setupFetchHook();
 })();

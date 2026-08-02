@@ -9625,6 +9625,66 @@ function _eliminarEntradaLibreta(entryId) {
   mostrarToast('Anotación eliminada', 'success');
 }
 
+function imprimirRegistrosLibreta() {
+  const data = cargarLibreta();
+  const entries = (data.entries || []).slice();
+  if (!entries.length) {
+    mostrarToast('No hay registros en Mi Libreta para imprimir.', 'error');
+    return;
+  }
+
+  entries.sort((a, b) => {
+    const byFecha = String(b.fecha || '').localeCompare(String(a.fecha || ''));
+    if (byFecha !== 0) return byFecha;
+    return String(b.hora || '').localeCompare(String(a.hora || ''));
+  });
+
+  const tipoLabel = (v) => (_LIBRETA_TIPOS.find(t => t.value === (v || 'general')) || _LIBRETA_TIPOS[0]).label;
+  const fechaLabel = (iso) => {
+    if (!iso) return '—';
+    return new Date(iso + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+
+  const rows = entries.map(e =>
+    '<tr>' +
+      '<td>' + escapeHTML(fechaLabel(e.fecha)) + '</td>' +
+      '<td>' + escapeHTML(e.hora || '—') + '</td>' +
+      '<td>' + escapeHTML(tipoLabel(e.tipo)) + '</td>' +
+      '<td>' + escapeHTML(e.cursoNombre || '—') + '</td>' +
+      '<td>' + escapeHTML(e.titulo || '—') + '</td>' +
+      '<td style="white-space:pre-wrap;">' + escapeHTML(e.texto || '—') + '</td>' +
+    '</tr>'
+  ).join('');
+
+  const now = new Date();
+  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+    '<title>Mi Libreta - Registros</title>' +
+    '<style>' +
+      'body{font-family:Arial,sans-serif;margin:16mm;color:#263238;}' +
+      'h1{font-size:16pt;margin:0 0 4px;}' +
+      '.meta{font-size:9pt;color:#607D8B;margin-bottom:12px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:10pt;}' +
+      'th,td{border:1px solid #B0BEC5;padding:6px;vertical-align:top;text-align:left;}' +
+      'th{background:#E0F2F1;color:#004D40;font-weight:700;}' +
+      '.no-print{margin-bottom:12px;}' +
+      '@media print{.no-print{display:none!important;}}' +
+    '</style></head><body>' +
+    '<div class="no-print"><button onclick="window.print()" style="padding:8px 14px;border:none;border-radius:6px;background:#00695C;color:#fff;cursor:pointer;">Imprimir / Guardar PDF</button></div>' +
+    '<h1>Mi Libreta - Registros</h1>' +
+    '<div class="meta">Total: ' + entries.length + ' registro(s) · Generado: ' + now.toLocaleString('es-DO') + '</div>' +
+    '<table><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Curso</th><th>Título</th><th>Anotación</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>' +
+    '</body></html>';
+
+  const w = window.open('', '_blank', 'width=1100,height=800');
+  if (!w) {
+    mostrarToast('El navegador bloqueó la ventana de impresión.', 'error');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // RENDIMIENTO — Gráficas por curso
 // ═══════════════════════════════════════════════════════════════════
@@ -16392,10 +16452,13 @@ function editarCeldaHorario(diaIdx, periodoId) {
   const key = `${diaIdx}-${periodoId}`;
   const existente = data.find(e => e.dia === diaIdx && e.periodo === periodoId) || {};
   const periodo = PERIODOS.find(p => p.id === periodoId);
+  const defaultDupDia = diaIdx < (DIAS.length - 1) ? (diaIdx + 1) : diaIdx;
 
   // Obtener lista de materias ya usadas para sugerencias
   const materiasUsadas = [...new Set(data.map(e => e.materia).filter(Boolean))];
   const datalistOpts = materiasUsadas.map(m => `<option value="${escapeHTML(m)}">`).join('');
+  const diasOpts = DIAS.map((d, i) => `<option value="${i}" ${i === defaultDupDia ? 'selected' : ''}>${escapeHTML(d)}</option>`).join('');
+  const periodosOpts = PERIODOS.map(p => `<option value="${p.id}" ${p.id === periodoId ? 'selected' : ''}>Período ${p.id} (${p.hora})</option>`).join('');
 
   document.getElementById('modal-title').textContent = `${DIAS[diaIdx]} — Período ${periodoId} (${periodo.hora})`;
   document.getElementById('modal-body').innerHTML = `
@@ -16424,6 +16487,20 @@ function editarCeldaHorario(diaIdx, periodoId) {
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Notas (opcional)</label>
         <input id="hor-inp-notas" placeholder="Ej: Trae USB" value="${escapeHTML(existente.notas || '')}"
           style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+      </div>
+      <div style="background:#F5F8FF;border:1px solid #DCE6FF;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#1E3A8A;display:block;">Duplicar esta clase en:</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+          <select id="hor-dup-dia" style="width:100%;padding:8px 10px;border:1px solid #BFD2FF;border-radius:8px;font-size:0.85rem;">
+            ${diasOpts}
+          </select>
+          <select id="hor-dup-periodo" style="width:100%;padding:8px 10px;border:1px solid #BFD2FF;border-radius:8px;font-size:0.85rem;">
+            ${periodosOpts}
+          </select>
+          <button class="btn-secundario" onclick="duplicarCeldaHorario(${diaIdx},${periodoId})" style="white-space:nowrap;color:#1E3A8A;border-color:#BFD2FF;">
+            <span class="material-icons">content_copy</span> Duplicar
+          </button>
+        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #E0E0E0;flex-wrap:wrap;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
@@ -16454,6 +16531,51 @@ function guardarCeldaHorario(diaIdx, periodoId) {
   cerrarModalBtn();
   renderizarHorario();
   mostrarToast(materia ? 'Período guardado' : 'Período borrado', 'success');
+}
+
+function duplicarCeldaHorario(diaOrigen, periodoOrigen) {
+  const materia = document.getElementById('hor-inp-materia')?.value.trim();
+  const seccion = document.getElementById('hor-inp-seccion')?.value.trim();
+  const aula = document.getElementById('hor-inp-aula')?.value.trim();
+  const notas = document.getElementById('hor-inp-notas')?.value.trim();
+  const destDia = Number(document.getElementById('hor-dup-dia')?.value);
+  const destPeriodo = Number(document.getElementById('hor-dup-periodo')?.value);
+
+  if (!materia) {
+    mostrarToast('Escribe la materia antes de duplicar.', 'error');
+    return;
+  }
+  if (!Number.isInteger(destDia) || destDia < 0 || destDia >= DIAS.length) {
+    mostrarToast('Selecciona un día válido.', 'error');
+    return;
+  }
+  if (!Number.isInteger(destPeriodo) || !PERIODOS.some(p => p.id === destPeriodo)) {
+    mostrarToast('Selecciona un período válido.', 'error');
+    return;
+  }
+  if (destDia === diaOrigen && destPeriodo === periodoOrigen) {
+    mostrarToast('El destino no puede ser la misma celda.', 'error');
+    return;
+  }
+
+  const data = cargarHorario();
+  const destExistente = data.find(e => e.dia === destDia && e.periodo === destPeriodo);
+  if (destExistente && !confirm(`La celda destino ya tiene "${destExistente.materia || 'una clase'}". ¿Deseas reemplazarla?`)) {
+    return;
+  }
+
+  const limpia = data.filter(e => !(
+    (e.dia === diaOrigen && e.periodo === periodoOrigen) ||
+    (e.dia === destDia && e.periodo === destPeriodo)
+  ));
+
+  const payload = { materia, seccion, aula, notas };
+  limpia.push({ dia: diaOrigen, periodo: periodoOrigen, ...payload });
+  limpia.push({ dia: destDia, periodo: destPeriodo, ...payload });
+
+  guardarHorario(limpia);
+  renderizarHorario();
+  mostrarToast(`Clase duplicada a ${DIAS[destDia]} · P${destPeriodo}`, 'success');
 }
 
 function borrarCeldaHorario(diaIdx, periodoId) {
@@ -25985,6 +26107,7 @@ function _renderizarSaludo() {
   const tareas = cargarTareas();
   const nPend = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
   const nVenc = tareas.filter(t => _estadoTarea(t) === 'vencida').length;
+  const buildBadge = String(window.TINCLASS_BUILD_VERSION || 'vdev');
 
   // Clases hoy desde horario
   const horario = cargarHorario();
@@ -25998,7 +26121,7 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.62</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">${buildBadge}</span></div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">

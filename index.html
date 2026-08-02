@@ -1427,6 +1427,9 @@
         <span class="material-icons section-icon" style="background:#E0F2F1;color:#00695C;">menu_book</span>
         <h2>Mi Libreta</h2>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <button class="btn-secundario" onclick="imprimirRegistrosLibreta()" style="font-size:0.82rem;padding:8px 14px;">
+            <span class="material-icons">print</span> Imprimir registros
+          </button>
           <button class="btn-siguiente" onclick="_abrirFormLibreta(null)" style="font-size:0.82rem;padding:8px 16px;">
             <span class="material-icons">add</span> Nueva anotación
           </button>
@@ -2578,6 +2581,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#004D40;">v15.74<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Monitoreo de errores reforzado + productividad en libreta y horario</div>
+              <ul class="about-ver-items">
+                <li><strong>Alertas de error ampliadas:</strong> ahora se reportan tambien fallos de recursos, errores HTTP/fetch y errores relevantes de consola para aviso temprano por correo.</li>
+                <li><strong>Mi Horario mas rapido:</strong> se agrego duplicacion de clases desde el modal para copiar materia, seccion, aula y notas a otro dia/periodo.</li>
+                <li><strong>Mi Libreta imprimible:</strong> nuevo boton para imprimir registros en formato limpio o guardar PDF.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -4405,8 +4424,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.73';
-    window.TINCLASS_SW_VERSION = 'v125';
+    window.TINCLASS_BUILD_VERSION = 'v15.74';
+    window.TINCLASS_SW_VERSION = 'v126';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4740,7 +4759,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=125', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=126', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
