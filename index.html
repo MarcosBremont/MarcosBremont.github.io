@@ -2612,6 +2612,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#546E7A;">v15.78<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente publicado con captura base</div>
+              <ul class="about-ver-items">
+                <li><strong>Panel nuevo:</strong> el módulo ya abre desde el dashboard principal.</li>
+                <li><strong>Datos base:</strong> ahora guarda datos del docente y del centro en un bloque funcional.</li>
+                <li><strong>Base preparada:</strong> la estructura queda lista para evidencias, planificaciones y seguimiento.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#37474F;">v15.77<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4499,8 +4515,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.77';
-    window.TINCLASS_SW_VERSION = 'v129';
+    window.TINCLASS_BUILD_VERSION = 'v15.78';
+    window.TINCLASS_SW_VERSION = 'v130';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4834,7 +4850,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=129', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=130', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
