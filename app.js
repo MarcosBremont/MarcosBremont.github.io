@@ -9425,9 +9425,145 @@ function cerrarLibreta() { abrirDashboard(); }
 
 function abrirPortafolio() {
   _mostrarPanel('panel-portafolio');
+  renderizarPortafolio();
 }
 
 function cerrarPortafolio() { abrirDashboard(); }
+
+const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
+
+function cargarPortafolioBase() {
+  try {
+    const raw = localStorage.getItem(PORTAFOLIO_BASE_KEY);
+    if (!raw) return {
+      docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
+      centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
+      metadata: { actualizadoEn: null }
+    };
+    const parsed = JSON.parse(raw);
+    return {
+      docente: Object.assign({ nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' }, parsed.docente || {}),
+      centro: Object.assign({ nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' }, parsed.centro || {}),
+      metadata: Object.assign({ actualizadoEn: null }, parsed.metadata || {})
+    };
+  } catch {
+    return {
+      docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
+      centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
+      metadata: { actualizadoEn: null }
+    };
+  }
+}
+
+function _guardarPortafolioBase(data) {
+  const payload = Object.assign({}, data, {
+    metadata: Object.assign({}, data.metadata || {}, { actualizadoEn: new Date().toISOString() })
+  });
+  localStorage.setItem(PORTAFOLIO_BASE_KEY, JSON.stringify(payload));
+  if (window._syncFirebase) _syncFirebase('portafolio_base', payload);
+  return payload;
+}
+
+function renderizarPortafolio() {
+  const cont = document.getElementById('portafolio-contenido');
+  if (!cont) return;
+  const data = cargarPortafolioBase();
+  const docente = data.docente || {};
+  const centro = data.centro || {};
+  const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
+  const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:92px;';
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="font-size:0.85rem;color:#607D8B;">Actualizado: ${data.metadata?.actualizadoEn ? new Date(data.metadata.actualizadoEn).toLocaleString('es-DO') : 'Sin guardar aún'}</div>
+      <button class="btn-secundario" onclick="_cargarPortafolioDesdePlanificacionActiva()" style="font-size:0.8rem;padding:7px 12px;">
+        <span class="material-icons">sync</span> Tomar datos de la planificación activa
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
+        <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <span class="material-icons" style="font-size:18px;color:#455A64;">badge</span> Datos del docente
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Nombre completo</label><input id="pf-docente-nombre" style="${inputStyle}" value="${escapeHTML(docente.nombre || '')}" placeholder="Nombre del docente"></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título universitario</label><input id="pf-docente-titulo" style="${inputStyle}" value="${escapeHTML(docente.titulo || '')}" placeholder="Lic., Mag., Ing., etc."></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Cédula</label><input id="pf-docente-cedula" style="${inputStyle}" value="${escapeHTML(docente.cedula || '')}" placeholder="000-0000000-0"></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Cargo / Área</label><input id="pf-docente-cargo" style="${inputStyle}" value="${escapeHTML(docente.cargo || '')}" placeholder="Docente de..."></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Centro educativo</label><input id="pf-docente-centro" style="${inputStyle}" value="${escapeHTML(docente.centro || '')}" placeholder="Nombre del centro"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Correo</label><input id="pf-docente-correo" style="${inputStyle}" value="${escapeHTML(docente.correo || '')}" placeholder="correo@ejemplo.com"></div>
+            <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Teléfono</label><input id="pf-docente-telefono" style="${inputStyle}" value="${escapeHTML(docente.telefono || '')}" placeholder="809-000-0000"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
+        <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <span class="material-icons" style="font-size:18px;color:#455A64;">domain</span> Identidad del centro
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Nombre del centro</label><input id="pf-centro-nombre" style="${inputStyle}" value="${escapeHTML(centro.nombre || '')}" placeholder="Centro educativo"></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Lema / filosofía</label><input id="pf-centro-lema" style="${inputStyle}" value="${escapeHTML(centro.lema || '')}" placeholder="Un lema breve del centro"></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Misión</label><textarea id="pf-centro-mision" style="${textareaStyle}" placeholder="Misión institucional">${escapeHTML(centro.mision || '')}</textarea></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Visión</label><textarea id="pf-centro-vision" style="${textareaStyle}" placeholder="Visión institucional">${escapeHTML(centro.vision || '')}</textarea></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Valores</label><textarea id="pf-centro-valores" style="${textareaStyle}" placeholder="Valores institucionales">${escapeHTML(centro.valores || '')}</textarea></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Propósito del año escolar</label><textarea id="pf-centro-proposito" style="${textareaStyle}" placeholder="Propósito del año escolar">${escapeHTML(centro.propositoAnual || '')}</textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+      <button class="btn-secundario" onclick="_portafolioRestaurarDemo()"><span class="material-icons">auto_fix_high</span> Plantilla base</button>
+      <button class="btn-siguiente" onclick="guardarPortafolioBaseDesdeUI()"><span class="material-icons">save</span> Guardar datos base</button>
+    </div>`;
+}
+
+function _cargarPortafolioDesdePlanificacionActiva() {
+  const dg = planificacion?.datosGenerales || {};
+  const data = cargarPortafolioBase();
+  data.docente.nombre = dg.nombreDocente || data.docente.nombre || '';
+  data.docente.centro = dg.nombreCentro || data.docente.centro || '';
+  data.docente.cargo = dg.moduloFormativo || data.docente.cargo || '';
+  data.centro.nombre = dg.nombreCentro || data.centro.nombre || '';
+  data.centro.propositoAnual = dg.propositoAnual || data.centro.propositoAnual || '';
+  _guardarPortafolioBase(data);
+  renderizarPortafolio();
+  mostrarToast('Datos tomados de la planificación activa', 'success');
+}
+
+function _portafolioRestaurarDemo() {
+  const demo = {
+    docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
+    centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
+    metadata: { actualizadoEn: null }
+  };
+  _guardarPortafolioBase(demo);
+  renderizarPortafolio();
+  mostrarToast('Plantilla base cargada', 'success');
+}
+
+function guardarPortafolioBaseDesdeUI() {
+  const data = cargarPortafolioBase();
+  data.docente.nombre = document.getElementById('pf-docente-nombre')?.value.trim() || '';
+  data.docente.titulo = document.getElementById('pf-docente-titulo')?.value.trim() || '';
+  data.docente.cedula = document.getElementById('pf-docente-cedula')?.value.trim() || '';
+  data.docente.cargo = document.getElementById('pf-docente-cargo')?.value.trim() || '';
+  data.docente.centro = document.getElementById('pf-docente-centro')?.value.trim() || '';
+  data.docente.correo = document.getElementById('pf-docente-correo')?.value.trim() || '';
+  data.docente.telefono = document.getElementById('pf-docente-telefono')?.value.trim() || '';
+  data.centro.nombre = document.getElementById('pf-centro-nombre')?.value.trim() || '';
+  data.centro.lema = document.getElementById('pf-centro-lema')?.value.trim() || '';
+  data.centro.mision = document.getElementById('pf-centro-mision')?.value.trim() || '';
+  data.centro.vision = document.getElementById('pf-centro-vision')?.value.trim() || '';
+  data.centro.valores = document.getElementById('pf-centro-valores')?.value.trim() || '';
+  data.centro.propositoAnual = document.getElementById('pf-centro-proposito')?.value.trim() || '';
+
+  _guardarPortafolioBase(data);
+  renderizarPortafolio();
+  mostrarToast('Datos base del portafolio guardados', 'success');
+}
 
 function renderizarLibreta() {
   _renderizarListaDiasLibreta();
@@ -32793,6 +32929,7 @@ const OPCIONES_PSICOLOGIA = [
   { id: 'calificaciones',  label: 'Libro de Calificaciones',icono: 'grade',               desc: 'Registro de notas por curso',           defecto: false },
   { id: 'horario',         label: 'Mi Horario',             icono: 'calendar_view_week',  desc: 'Horario semanal de clases',             defecto: false },
   { id: 'tareas',          label: 'Tareas',                 icono: 'assignment',          desc: 'Gestión de tareas',                     defecto: false },
+  { id: 'portafolio',      label: 'Portafolio Docente',     icono: 'workspace_premium',   desc: 'Organizar evidencias pedagógicas y documentos docentes', defecto: true },
   { id: 'rendimiento',     label: 'Rendimiento',            icono: 'bar_chart',           desc: 'Gráficas de rendimiento académico',     defecto: false },
   { id: 'auditoria',       label: 'Auditoría',              icono: 'history',             desc: 'Historial de cambios del sistema',      defecto: false },
 ];

@@ -1464,27 +1464,15 @@
           <div style="font-size:0.82rem;color:#607D8B;margin-top:4px;">Organiza evidencias pedagógicas, currículo, documentos y seguimiento profesional</div>
         </div>
       </div>
-      <div style="padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
-        <div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;">
-          <div style="font-weight:700;color:#37474F;margin-bottom:6px;">1. Datos base</div>
-          <div style="font-size:0.85rem;color:#546E7A;line-height:1.55;">Datos del maestro, título universitario, cédula, misión, visión, valores y propósito del año escolar.</div>
-        </div>
-        <div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;">
-          <div style="font-weight:700;color:#37474F;margin-bottom:6px;">2. Contexto del centro</div>
-          <div style="font-size:0.85rem;color:#546E7A;line-height:1.55;">Calendario escolar, efemérides, consejo de curso y comité de padres conectados al sistema.</div>
-        </div>
-        <div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;">
-          <div style="font-weight:700;color:#37474F;margin-bottom:6px;">3. Evidencias</div>
-          <div style="font-size:0.85rem;color:#546E7A;line-height:1.55;">Planificaciones, instrumentos, diario reflexivo, reuniones de padres y acompañamiento profesional.</div>
-        </div>
-        <div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;">
-          <div style="font-weight:700;color:#37474F;margin-bottom:6px;">4. Comunidad educativa</div>
-          <div style="font-size:0.85rem;color:#546E7A;line-height:1.55;">Listado de estudiantes, padres y vínculos familiares para sustentar el seguimiento del grupo.</div>
+      <div style="padding:20px 24px 0;">
+        <div style="background:#E8F5E9;border-left:4px solid #2E7D32;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.85rem;color:#1B5E20;line-height:1.5;">
+          Primera fase del portafolio: captura los datos base del docente y la identidad del centro. Después seguiremos con evidencias, planificaciones, diarios y acompañamiento.
         </div>
       </div>
+      <div id="portafolio-contenido" style="padding:0 24px 20px;"></div>
       <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
         <button class="btn-secundario" onclick="abrirDashboard()"><span class="material-icons">arrow_back</span> Volver</button>
-        <button class="btn-siguiente" onclick="mostrarToast('El Portafolio Docente se construirá por secciones en la siguiente fase.', 'info')"><span class="material-icons">construction</span> Próxima fase</button>
+        <button class="btn-siguiente" onclick="mostrarToast('La siguiente fase incluirá evidencias, planificaciones e instrumentos.', 'info')"><span class="material-icons">construction</span> Próxima fase</button>
       </div>
     </div>
   </div>
@@ -2620,6 +2608,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#37474F;">v15.77<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente con datos base del docente y del centro</div>
+              <ul class="about-ver-items">
+                <li><strong>Formulario inicial:</strong> el módulo ya permite guardar nombre, título, cédula, cargo, correo y teléfono del docente.</li>
+                <li><strong>Identidad institucional:</strong> se agregó la captura de misión, visión, valores y propósito anual del centro.</li>
+                <li><strong>Base lista:</strong> el módulo queda preparado para la siguiente fase de evidencias, planificaciones e instrumentos.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -4495,8 +4499,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.76';
-    window.TINCLASS_SW_VERSION = 'v128';
+    window.TINCLASS_BUILD_VERSION = 'v15.77';
+    window.TINCLASS_SW_VERSION = 'v129';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4830,7 +4834,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=128', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=129', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
