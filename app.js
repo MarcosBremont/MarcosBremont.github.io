@@ -9496,6 +9496,79 @@ function _portafolioTipoEvidenciaLabel(tipo) {
   return labels[tipo] || 'Evidencia';
 }
 
+function _leerDiariasPortafolio() {
+  try {
+    const raw = localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}';
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : { sesiones: {} };
+  } catch {
+    return { sesiones: {} };
+  }
+}
+
+function renderizarPortafolioResumenPedagogico() {
+  const cont = document.getElementById('portafolio-resumen-pedagogico');
+  if (!cont) return;
+
+  const biblio = cargarBiblioteca();
+  const items = Array.isArray(biblio?.items) ? biblio.items.slice() : [];
+  const totalPlanes = items.length;
+  const totalActividades = items.reduce((acc, reg) => acc + ((reg.planificacion?.actividades || []).length), 0);
+  const totalInstrumentos = items.reduce((acc, reg) => {
+    const acts = reg.planificacion?.actividades || [];
+    return acc + acts.filter(a => !!a?.instrumento).length;
+  }, 0);
+
+  const diarias = _leerDiariasPortafolio();
+  const sesionesDiarias = Object.keys(diarias.sesiones || {}).length;
+
+  const recientes = items
+    .sort((a, b) => String(b.fechaGuardado || '').localeCompare(String(a.fechaGuardado || '')))
+    .slice(0, 5)
+    .map(reg => {
+      const dg = reg.planificacion?.datosGenerales || {};
+      const ra = reg.planificacion?.ra || {};
+      const modulo = dg.moduloFormativo || 'Sin módulo';
+      const raTxt = ra.resultado || ra.descripcion || 'Sin RA';
+      const fecha = reg.fechaGuardadoLabel || (reg.fechaGuardado ? new Date(reg.fechaGuardado).toLocaleDateString('es-DO') : '—');
+      const acts = (reg.planificacion?.actividades || []).length;
+      return `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:10px 12px;">
+        <div style="font-size:0.8rem;color:#78909C;margin-bottom:4px;">${escapeHTML(fecha)}</div>
+        <div style="font-weight:700;color:#37474F;font-size:0.88rem;margin-bottom:3px;">${escapeHTML(modulo)}</div>
+        <div style="font-size:0.8rem;color:#546E7A;line-height:1.45;">${escapeHTML(raTxt)}</div>
+        <div style="font-size:0.75rem;color:#90A4AE;margin-top:4px;">${acts} actividad(es)</div>
+      </div>`;
+    }).join('');
+
+  cont.innerHTML = `
+    <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
+      <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span class="material-icons" style="font-size:18px;color:#455A64;">analytics</span>
+        Resumen pedagógico del año
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">
+        <div style="background:#ECEFF1;border-radius:10px;padding:10px 12px;">
+          <div style="font-size:0.72rem;color:#607D8B;">Planificaciones</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#37474F;">${totalPlanes}</div>
+        </div>
+        <div style="background:#E8F5E9;border-radius:10px;padding:10px 12px;">
+          <div style="font-size:0.72rem;color:#2E7D32;">Actividades</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#1B5E20;">${totalActividades}</div>
+        </div>
+        <div style="background:#E3F2FD;border-radius:10px;padding:10px 12px;">
+          <div style="font-size:0.72rem;color:#1565C0;">Instrumentos</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#0D47A1;">${totalInstrumentos}</div>
+        </div>
+        <div style="background:#F3E5F5;border-radius:10px;padding:10px 12px;">
+          <div style="font-size:0.72rem;color:#6A1B9A;">Sesiones diarias</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#4A148C;">${sesionesDiarias}</div>
+        </div>
+      </div>
+      <div style="font-size:0.82rem;font-weight:700;color:#546E7A;margin-bottom:8px;">Planificaciones recientes</div>
+      ${recientes || '<div style="padding:10px 12px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:10px;color:#78909C;font-size:0.84rem;">Aún no hay planificaciones guardadas para mostrar.</div>'}
+    </div>`;
+}
+
 function renderizarPortafolioEvidencias() {
   const cont = document.getElementById('portafolio-evidencias');
   if (!cont) return;
@@ -9684,7 +9757,14 @@ function renderizarPortafolio() {
   extra.id = 'portafolio-evidencias';
   extra.style.marginTop = '18px';
   cont.appendChild(extra);
+
+  const resumen = document.createElement('div');
+  resumen.id = 'portafolio-resumen-pedagogico';
+  resumen.style.marginTop = '18px';
+  cont.appendChild(resumen);
+
   renderizarPortafolioEvidencias();
+  renderizarPortafolioResumenPedagogico();
 }
 
 function _cargarPortafolioDesdePlanificacionActiva() {
@@ -9698,6 +9778,7 @@ function _cargarPortafolioDesdePlanificacionActiva() {
   _guardarPortafolioBase(data);
   renderizarPortafolio();
   renderizarPortafolioEvidencias();
+  renderizarPortafolioResumenPedagogico();
   mostrarToast('Datos tomados de la planificación activa', 'success');
 }
 
@@ -9710,6 +9791,7 @@ function _portafolioRestaurarDemo() {
   _guardarPortafolioBase(demo);
   renderizarPortafolio();
   renderizarPortafolioEvidencias();
+  renderizarPortafolioResumenPedagogico();
   mostrarToast('Plantilla base cargada', 'success');
 }
 
@@ -9732,6 +9814,7 @@ function guardarPortafolioBaseDesdeUI() {
   _guardarPortafolioBase(data);
   renderizarPortafolio();
   renderizarPortafolioEvidencias();
+  renderizarPortafolioResumenPedagogico();
   mostrarToast('Datos base del portafolio guardados', 'success');
 }
 

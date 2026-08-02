@@ -2612,6 +2612,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.80<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente con resumen pedagógico automático</div>
+              <ul class="about-ver-items">
+                <li><strong>Resumen del año:</strong> se muestran automáticamente planificaciones, actividades, instrumentos y sesiones diarias.</li>
+                <li><strong>Vista rápida:</strong> se añadieron tarjetas de métricas para lectura inmediata del avance pedagógico.</li>
+                <li><strong>Planificaciones recientes:</strong> el portafolio lista las últimas planificaciones guardadas como evidencia activa.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1B5E20;">v15.79<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4531,8 +4547,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.79';
-    window.TINCLASS_SW_VERSION = 'v131';
+    window.TINCLASS_BUILD_VERSION = 'v15.80';
+    window.TINCLASS_SW_VERSION = 'v132';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4866,7 +4882,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=131', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=132', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
