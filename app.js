@@ -5167,6 +5167,91 @@ async function exportarReportePsicologiaDocx(id, estId) {
   return true;
 }
 
+function _datosReportePsicologiaDocx(rep, info) {
+  const fecha = rep.fechaReporte || '';
+  const fechaBonita = fecha
+    ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '';
+
+  return {
+    estudiante_nombre: rep.estudianteNombre || '',
+    grado_cursa: rep.gradoCursa || rep.cursoNombre || '',
+    fecha_reporte: fechaBonita || fecha,
+    detalles_evento: rep.detallesEvento || '',
+    medidas_docente: rep.medidasDocente || '',
+    seguimiento_repetitiva: rep.seguimientoRepetitiva || '',
+    firma_estudiante: rep.firmaEstudiante || '',
+    celular_estudiante: rep.celularEstudiante || '',
+    firma_docente: rep.firmaDocente || '',
+    firma_coordinacion: rep.firmaCoordenacion || '',
+    firma_psicologia: rep.firmaPsicologia || '',
+    firma_tutor: rep.firmaTutor || '',
+    telefono_tutor: rep.telefonoTutor || '',
+    nombre_centro: info?.centroNombre || '',
+    nombre_docente: rep.nombreDocente || '',
+    curso_nombre: rep.cursoNombre || rep.gradoCursa || ''
+  };
+}
+
+async function _generarBlobReportePsicologiaDocx(rep) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return null;
+
+  const info = await _getPlantillaReportePsicologiaCentro();
+  if (!info) return null;
+
+  const binaryStr = atob(info.base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  const zip = new PizZip(bytes.buffer);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{', end: '}' },
+    nullGetter: () => ''
+  });
+
+  doc.render(_datosReportePsicologiaDocx(rep, info));
+  const out = doc.getZip().generate({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  const nombre = 'Reporte_Psicologia_' + (rep.estudianteNombre || 'reporte').replace(/\s+/g, '_').replace(/[^\w\-]+/g, '_') + '.docx';
+  return { blob: out, nombre };
+}
+
+async function _blobToBase64(blob) {
+  const buffer = await blob.arrayBuffer();
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function _generarYGuardarDocxReportePsicologia(estId, rep) {
+  try {
+    const generado = await _generarBlobReportePsicologiaDocx(rep);
+    if (!generado) return;
+    const base64 = await _blobToBase64(generado.blob);
+    const data = cargarReportes();
+    const lista = data[estId] || [];
+    const idx = lista.findIndex(r => r.id === rep.id);
+    if (idx !== -1) {
+      lista[idx].reporteDocxBase64 = base64;
+      lista[idx].reporteDocxNombre = generado.nombre;
+      data[estId] = lista;
+      guardarReportes(data);
+      renderizarReportes(estId);
+    }
+  } catch (e) {
+    console.warn('[PlantillaPsicologia] No se pudo generar/guardar el docx:', e);
+  }
+}
+
 /** Genera XML de tabla Word para un instrumento de evaluación */
 function _generarInstTablaXml(inst) {
   if (!inst || !inst.criterios || !inst.criterios.length) return '<w:p><w:r><w:t>\u2014</w:t></w:r></w:p>';
@@ -28294,6 +28379,7 @@ function guardarReporteNuevo(estId) {
   registrarCambio('Reporte académico guardado — ' + nuevo.estudianteNombre);
   mostrarToast('Reporte guardado', 'success');
   renderizarReportes(estId);
+  _generarYGuardarDocxReportePsicologia(estId, nuevo);
 }
 
 function eliminarReporte(id, estId) {
@@ -28303,6 +28389,23 @@ function eliminarReporte(id, estId) {
   guardarReportes(data);
   registrarCambio('Reporte académico eliminado');
   renderizarReportes(estId);
+}
+
+function descargarReportePsicologiaGuardado(estId, id) {
+  const data = cargarReportes();
+  const rep = (data[estId] || []).find(r => r.id === id);
+  if (!rep || !rep.reporteDocxBase64) {
+    mostrarToast('Este reporte aún no tiene Word guardado.', 'error');
+    return;
+  }
+  const link = document.createElement('a');
+  const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  link.href = URL.createObjectURL(blob);
+  link.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function imprimirReporte(id, estId) {
@@ -30020,6 +30123,7 @@ function renderPsicologia() {
             <button class="btn-icon-sm" title="Exportar a Word" onclick="exportarReportePsicologiaDocx('${r.id}','${d.estId}')" style="margin-left:auto;color:#6A1B9A;">
               <span class="material-icons" style="font-size:16px;">description</span>
             </button>
+            ${r.reporteDocxBase64 ? `<button class="btn-icon-sm" title="Descargar Word guardado" onclick="descargarReportePsicologiaGuardado('${d.estId}','${r.id}')" style="color:#1565C0;"><span class="material-icons" style="font-size:16px;">download</span></button>` : ''}
           </div>
           ${campos.map(c => `
             <div style="margin-bottom:4px;">

@@ -2582,6 +2582,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v15.72<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Reporte de Psicología autogenerado al guardar</div>
+              <ul class="about-ver-items">
+                <li><strong>Word automático:</strong> al guardar un reporte desde Calificaciones, se genera y almacena el .docx con la plantilla del centro.</li>
+                <li><strong>Descarga inmediata:</strong> Psicología puede descargar el Word guardado desde cada tarjeta del panel.</li>
+                <li><strong>Datos unificados:</strong> el mismo contenido se usa para guardar, exportar y mantener el archivo adjunto.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#6A1B9A;">v15.71<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4373,8 +4389,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.71';
-    window.TINCLASS_SW_VERSION = 'v123';
+    window.TINCLASS_BUILD_VERSION = 'v15.72';
+    window.TINCLASS_SW_VERSION = 'v124';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4708,7 +4724,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=123', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=124', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
