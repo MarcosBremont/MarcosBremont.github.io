@@ -5102,16 +5102,15 @@ async function exportarReportePsicologiaDocx(id, estId) {
     return false;
   }
 
-  const info = await _getPlantillaReportePsicologiaCentro();
-  if (!info) {
-    mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error');
+  const rep = _obtenerReporteVistaPsicologia(estId, id);
+  if (!rep) {
+    mostrarToast('No se encontró el reporte.', 'error');
     return false;
   }
 
-  const data = cargarReportes();
-  const rep = (data[estId] || []).find(r => r.id === id);
-  if (!rep) {
-    mostrarToast('No se encontró el reporte.', 'error');
+  const info = await _getPlantillaReportePsicologiaCentro();
+  if (!info) {
+    mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error');
     return false;
   }
 
@@ -5165,6 +5164,15 @@ async function exportarReportePsicologiaDocx(id, estId) {
   URL.revokeObjectURL(link.href);
   mostrarToast('Reporte exportado en Word', 'success');
   return true;
+}
+
+function _obtenerReporteVistaPsicologia(estId, id) {
+  for (const estudiante of (_psicoDatos || [])) {
+    if (estId && estudiante.estId !== estId) continue;
+    const rep = (estudiante.reportes || []).find(r => r.id === id);
+    if (rep) return rep;
+  }
+  return null;
 }
 
 function _datosReportePsicologiaDocx(rep, info) {
@@ -5283,20 +5291,6 @@ function _generarInstTablaXml(inst) {
   } else if (inst.tipo === 'rubrica') {
     const niveles = inst.niveles || [{ nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }];
     xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + niveles.map(n => mkCell(n.nombre, 1400, true, true)).join(''));
-    (inst.criterios || []).forEach((c, i) => {
-      const descs = c.descriptores || [];
-      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + niveles.map((_, ni) => mkCell(descs[ni] || '', 1400)).join(''));
-    });
-  } else if (inst.niveles && inst.niveles.length) {
-    xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + inst.niveles.map(n => mkCell(n.nombre, 1200, true, true)).join(''));
-    (inst.criterios || []).forEach((c, i) => {
-      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + inst.niveles.map(() => mkCell('', 1200, false, true)).join(''));
-    });
-  } else {
-    // Fallback: solo lista
-    (inst.criterios || []).forEach((c, i) => {
-      xml += mkRow(mkCell(String(i + 1), 500, false, true) + mkCell(c.criterio || c.indicador || c.texto || c));
-    });
   }
 
   xml += '</w:tbl>';
@@ -28392,20 +28386,36 @@ function eliminarReporte(id, estId) {
 }
 
 function descargarReportePsicologiaGuardado(estId, id) {
-  const data = cargarReportes();
-  const rep = (data[estId] || []).find(r => r.id === id);
-  if (!rep || !rep.reporteDocxBase64) {
-    mostrarToast('Este reporte aún no tiene Word guardado.', 'error');
+  const rep = _obtenerReporteVistaPsicologia(estId, id);
+  if (!rep) {
+    mostrarToast('No se encontró el reporte.', 'error');
     return;
   }
-  const link = document.createElement('a');
-  const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+  if (rep.reporteDocxBase64) {
+    const link = document.createElement('a');
+    const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    link.href = URL.createObjectURL(blob);
+    link.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    return;
+  }
+
+  _generarBlobReportePsicologiaDocx(rep).then(generado => {
+    if (!generado) {
+      mostrarToast('No se pudo generar el Word del reporte.', 'error');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(generado.blob);
+    link.download = generado.nombre;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    mostrarToast('Reporte exportado en Word', 'success');
   });
-  link.href = URL.createObjectURL(blob);
-  link.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
-  link.click();
-  URL.revokeObjectURL(link.href);
 }
 
 function imprimirReporte(id, estId) {
@@ -30123,7 +30133,9 @@ function renderPsicologia() {
             <button class="btn-icon-sm" title="Exportar a Word" onclick="exportarReportePsicologiaDocx('${r.id}','${d.estId}')" style="margin-left:auto;color:#6A1B9A;">
               <span class="material-icons" style="font-size:16px;">description</span>
             </button>
-            ${r.reporteDocxBase64 ? `<button class="btn-icon-sm" title="Descargar Word guardado" onclick="descargarReportePsicologiaGuardado('${d.estId}','${r.id}')" style="color:#1565C0;"><span class="material-icons" style="font-size:16px;">download</span></button>` : ''}
+            <button class="btn-icon-sm" title="Descargar Word" onclick="descargarReportePsicologiaGuardado('${d.estId}','${r.id}')" style="color:#1565C0;">
+              <span class="material-icons" style="font-size:16px;">download</span>
+            </button>
           </div>
           ${campos.map(c => `
             <div style="margin-bottom:4px;">
