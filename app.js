@@ -5879,7 +5879,7 @@ function _buildExportSnapshot() {
     tareas: localStorage.getItem(TAREAS_KEY) || '[]',
     asistencia: localStorage.getItem(ASIST_KEY) || '{}',
     comentarios: localStorage.getItem(COMENT_KEY) || '{}',
-    notasClase: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_')))),
+    notasClase: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')))),
     obsEstudiantes: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_')))),
     evalFormas: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('eval_')))),
     diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
@@ -15002,8 +15002,25 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
   // ── Notas de clase escritas para este estudiante (vía sección del curso) ──
   // Las notas son por clase (no por estudiante), pero podemos mostrar cuántas hay
   const notasClase = Object.entries(localStorage)
-    .filter(([k]) => k.startsWith(`notaclase_`) && k.includes(`_${curso.nombre}_`))
-    .sort(([a], [b]) => b.localeCompare(a)) // más reciente primero
+    .filter(([k, v]) => {
+      if (!(k.startsWith('notaclase_') || k.startsWith('notaclasev2_'))) return false;
+      if (!(v || '').trim()) return false;
+      const meta = _extraerMetaNotaClase(k);
+      if (!meta) return false;
+      if (meta.tipo === 'v2') {
+        const scopeCurso = (_scopeNotaClase(curso.nombre, '') || '').split('__')[0];
+        return String(meta.scopeId || '').startsWith(scopeCurso + '__');
+      }
+      return k.includes(`_${curso.nombre}_`);
+    })
+    .sort(([a], [b]) => {
+      const ma = _extraerMetaNotaClase(a);
+      const mb = _extraerMetaNotaClase(b);
+      const fa = ma?.fecha || '';
+      const fb = mb?.fecha || '';
+      if (fa === fb) return b.localeCompare(a);
+      return fb.localeCompare(fa);
+    })
     .slice(0, 5);
 
   // ── Observaciones guardadas (clave por estudiante) ──
@@ -15109,14 +15126,14 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
         <span class="material-icons">edit_note</span>Notas recientes de clase (${escapeHTML(curso.nombre)})
       </div>
       ${notasClase.map(([k, v]) => {
-    const parts = k.split('_'); // notaclase_FECHA_SECCION_PERIODO
-    const fecha = parts[1] || '';
-    const periodo = parts[3] || '';
+    const meta = _extraerMetaNotaClase(k) || {};
+    const fecha = meta.fecha || '';
+    const periodo = meta.periodo || '';
     const fechaFmt = fecha ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' }) : '';
     return `<div class="perfil-nota-clase">
           <div class="perfil-nota-meta">
             <span class="material-icons" style="font-size:13px;">today</span>
-            ${fechaFmt}${periodo ? ` · P${periodo}` : ''}
+            ${fechaFmt}${periodo ? ` · P${periodo}` : ' · Nota compartida'}
           </div>
           <div class="perfil-nota-txt">${escapeHTML(v.substring(0, 160))}${v.length > 160 ? '…' : ''}</div>
         </div>`;
@@ -27130,24 +27147,80 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
 }
 
 function _extraerMetaNotaClase(key) {
-  const m = String(key || '').match(/^notaclase_(\d{4}-\d{2}-\d{2})_(.+)_(\d+)$/);
+  const k = String(key || '');
+  const mV2 = k.match(/^notaclasev2_(\d{4}-\d{2}-\d{2})_(.+)$/);
+  if (mV2) {
+    return { key: k, fecha: mV2[1], scopeId: mV2[2], periodo: '', tipo: 'v2' };
+  }
+
+  const m = k.match(/^notaclase_(\d{4}-\d{2}-\d{2})_(.+)_(\d+)$/);
   if (!m) return null;
-  return { key, fecha: m[1], seccion: m[2], periodo: m[3] };
+  return { key: k, fecha: m[1], seccion: m[2], periodo: m[3], tipo: 'legacy' };
 }
 
-function _obtenerHistorialNotasClase(seccion, periodo) {
-  const out = [];
+function _normalizarTextoNotaClase(txt) {
+  return String(txt || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function _scopeNotaClase(seccion, materia) {
+  const s = _normalizarTextoNotaClase(seccion) || 'sin_seccion';
+  const m = _normalizarTextoNotaClase(materia) || 'sin_materia';
+  return s + '__' + m;
+}
+
+function _notaClaseKeyV2(fecha, seccion, materia) {
+  return `notaclasev2_${fecha}_${_scopeNotaClase(seccion, materia)}`;
+}
+
+function _buscarNotaLegacyMismaClase(fecha, seccion) {
+  if (!fecha || !seccion) return '';
+  const pref = `notaclase_${fecha}_${seccion}_`;
+  let mejor = '';
   try {
     Object.keys(localStorage)
-      .filter(k => k.startsWith('notaclase_'))
+      .filter(k => k.startsWith(pref))
+      .sort((a, b) => b.localeCompare(a))
+      .forEach((k) => {
+        if (mejor) return;
+        const txt = (localStorage.getItem(k) || '').trim();
+        if (txt) mejor = txt;
+      });
+  } catch { }
+  return mejor;
+}
+
+function _obtenerHistorialNotasClase(seccion, materia) {
+  const out = [];
+  const scopeId = _scopeNotaClase(seccion, materia);
+  const agregado = new Set();
+
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_'))
       .forEach((k) => {
         const meta = _extraerMetaNotaClase(k);
         if (!meta) return;
-        if (seccion && meta.seccion !== seccion) return;
-        if (periodo && String(meta.periodo) !== String(periodo)) return;
+
+        if (meta.tipo === 'v2') {
+          if (meta.scopeId !== scopeId) return;
+        } else {
+          // Compatibilidad: mostrar notas antiguas por sección aunque sean del esquema por período.
+          if (seccion && meta.seccion !== seccion) return;
+        }
+
         const texto = (localStorage.getItem(k) || '').trim();
         if (!texto) return;
-        out.push({ ...meta, texto });
+
+        const dedupeKey = `${meta.fecha}__${texto}`;
+        if (agregado.has(dedupeKey)) return;
+        agregado.add(dedupeKey);
+
+        out.push({ ...meta, texto, scopeId });
       });
   } catch (e) {
     console.warn('Error leyendo historial de notas de clase:', e);
@@ -27172,8 +27245,8 @@ function _diasTranscurridosDesde(fechaISO) {
   }
 }
 
-function _renderHistorialNotasClaseHTML(seccion, periodo, fechaActual, color) {
-  const historial = _obtenerHistorialNotasClase(seccion, periodo);
+function _renderHistorialNotasClaseHTML(seccion, materia, fechaActual, color) {
+  const historial = _obtenerHistorialNotasClase(seccion, materia);
   if (!historial.length) {
     return `<div style="padding:10px 12px;border:1px dashed #CFD8DC;border-radius:8px;background:#FAFAFA;color:#90A4AE;font-size:0.78rem;">
       Todavía no hay notas guardadas para esta clase.
@@ -27190,7 +27263,7 @@ function _renderHistorialNotasClaseHTML(seccion, periodo, fechaActual, color) {
         <span style="font-size:0.73rem;color:#546E7A;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
           <span class="material-icons" style="font-size:13px;">event</span>${escapeHTML(fechaFmt)}
         </span>
-        <span style="font-size:0.69rem;background:#ECEFF1;color:#455A64;border-radius:10px;padding:2px 8px;font-weight:700;">P${escapeHTML(String(n.periodo || ''))}</span>
+        ${n.periodo ? `<span style="font-size:0.69rem;background:#ECEFF1;color:#455A64;border-radius:10px;padding:2px 8px;font-weight:700;">P${escapeHTML(String(n.periodo))}</span>` : '<span style="font-size:0.69rem;background:#E3F2FD;color:#1565C0;border-radius:10px;padding:2px 8px;font-weight:700;">Compartida</span>'}
         ${esHoy ? '<span style="font-size:0.68rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-weight:700;">Hoy</span>' : (dias !== null ? '<span style="font-size:0.68rem;background:#FFF3E0;color:#E65100;border-radius:10px;padding:2px 8px;font-weight:700;">Hace ' + dias + ' día' + (dias === 1 ? '' : 's') + '</span>' : '')}
         <span style="margin-left:auto;font-size:0.68rem;color:#90A4AE;">${n.texto.length} caracteres</span>
       </div>
@@ -27237,11 +27310,18 @@ function abrirModalClase(encodedData) {
   ];
 
   const evalKey = `eval_${d.fecha}_${d.seccion}_${d.periodo}`;
-  const notaKey = `notaclase_${d.fecha}_${d.seccion}_${d.periodo}`;
+  const notaKey = _notaClaseKeyV2(d.fecha, d.seccion || '', d.materia || '');
   let savedEval = {};
   let savedNota = '';
   try { savedEval = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch { }
   try { savedNota = localStorage.getItem(notaKey) || ''; } catch { }
+  if (!savedNota) {
+    const legacy = _buscarNotaLegacyMismaClase(d.fecha, d.seccion || '');
+    if (legacy) {
+      savedNota = legacy;
+      try { localStorage.setItem(notaKey, legacy); } catch { }
+    }
+  }
 
   const asistModuloActivo = localStorage.getItem('cfg_asistencia_activa') !== 'false';
   const asistData = cargarAsistencia();
@@ -27511,10 +27591,10 @@ function abrirModalClase(encodedData) {
         <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #E0E0E0;">
           <div style="font-size:0.74rem;font-weight:700;color:#607D8B;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
             <span class="material-icons" style="font-size:14px;">history</span>
-            Historial de esta clase (${escapeHTML(d.seccion || '')} · P${escapeHTML(String(d.periodo || ''))})
+            Historial de esta clase (${escapeHTML(d.seccion || '')} · ${escapeHTML(d.materia || 'Módulo')})
           </div>
-          <p style="font-size:0.72rem;color:#90A4AE;margin:0 0 7px;">Aquí puedes ver todo lo que anotaste en clases anteriores para este mismo grupo y período.</p>
-          ${_renderHistorialNotasClaseHTML(d.seccion || '', d.periodo || '', d.fecha || '', color)}
+          <p style="font-size:0.72rem;color:#90A4AE;margin:0 0 7px;">Aquí puedes ver todo lo que anotaste en clases anteriores para este mismo grupo y módulo (P1/P2 comparten notas).</p>
+          ${_renderHistorialNotasClaseHTML(d.seccion || '', d.materia || '', d.fecha || '', color)}
         </div>
       </div>
 
@@ -27561,7 +27641,7 @@ function guardarNotaClaseDebounce(key, valor) {
     if (ind) { ind.style.display = 'inline'; }
     if (window._syncFirebase) {
       const data = {};
-      Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
+      Object.keys(localStorage).filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')).forEach(k => { data[k] = localStorage.getItem(k); });
       _syncFirebase('notas_clase', data);
     }
   }, 600);
@@ -27575,7 +27655,7 @@ function borrarNotaClase(key) {
   mostrarToast('Nota borrada', 'success');
   if (window._syncFirebase) {
     const data = {};
-    Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
+    Object.keys(localStorage).filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')).forEach(k => { data[k] = localStorage.getItem(k); });
     _syncFirebase('notas_clase', data);
   }
 }

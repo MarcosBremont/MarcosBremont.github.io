@@ -620,7 +620,7 @@ async function _migrarDatosLocales(uid) {
       // Stores dinámicos: recolectar claves individuales en un objeto
       if (store === 'notas_clase') {
         const data = {};
-        Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
+        Object.keys(localStorage).filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')).forEach(k => { data[k] = localStorage.getItem(k); });
         if (Object.keys(data).length) await base.doc(store).set({ payload: JSON.stringify(data) });
         return;
       }
