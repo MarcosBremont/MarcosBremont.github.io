@@ -27129,6 +27129,96 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   }).join('');
 }
 
+function _extraerMetaNotaClase(key) {
+  const m = String(key || '').match(/^notaclase_(\d{4}-\d{2}-\d{2})_(.+)_(\d+)$/);
+  if (!m) return null;
+  return { key, fecha: m[1], seccion: m[2], periodo: m[3] };
+}
+
+function _obtenerHistorialNotasClase(seccion, periodo) {
+  const out = [];
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('notaclase_'))
+      .forEach((k) => {
+        const meta = _extraerMetaNotaClase(k);
+        if (!meta) return;
+        if (seccion && meta.seccion !== seccion) return;
+        if (periodo && String(meta.periodo) !== String(periodo)) return;
+        const texto = (localStorage.getItem(k) || '').trim();
+        if (!texto) return;
+        out.push({ ...meta, texto });
+      });
+  } catch (e) {
+    console.warn('Error leyendo historial de notas de clase:', e);
+  }
+
+  out.sort((a, b) => {
+    if (a.fecha === b.fecha) return Number(b.periodo) - Number(a.periodo);
+    return b.fecha.localeCompare(a.fecha);
+  });
+
+  return out;
+}
+
+function _diasTranscurridosDesde(fechaISO) {
+  try {
+    const hoy = new Date();
+    const d = new Date(fechaISO + 'T12:00:00');
+    const diff = Math.floor((hoy - d) / (1000 * 60 * 60 * 24));
+    return Number.isFinite(diff) ? Math.max(0, diff) : null;
+  } catch {
+    return null;
+  }
+}
+
+function _renderHistorialNotasClaseHTML(seccion, periodo, fechaActual, color) {
+  const historial = _obtenerHistorialNotasClase(seccion, periodo);
+  if (!historial.length) {
+    return `<div style="padding:10px 12px;border:1px dashed #CFD8DC;border-radius:8px;background:#FAFAFA;color:#90A4AE;font-size:0.78rem;">
+      Todavía no hay notas guardadas para esta clase.
+    </div>`;
+  }
+
+  return `<div style="display:flex;flex-direction:column;gap:8px;">${historial.map((n) => {
+    const fechaFmt = new Date(n.fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    const esHoy = n.fecha === fechaActual;
+    const dias = _diasTranscurridosDesde(n.fecha);
+    const textoEnc = encodeURIComponent(n.texto);
+    return `<div style="border:1px solid #E0E0E0;border-radius:9px;padding:9px 10px;background:#fff;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
+        <span style="font-size:0.73rem;color:#546E7A;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+          <span class="material-icons" style="font-size:13px;">event</span>${escapeHTML(fechaFmt)}
+        </span>
+        <span style="font-size:0.69rem;background:#ECEFF1;color:#455A64;border-radius:10px;padding:2px 8px;font-weight:700;">P${escapeHTML(String(n.periodo || ''))}</span>
+        ${esHoy ? '<span style="font-size:0.68rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-weight:700;">Hoy</span>' : (dias !== null ? '<span style="font-size:0.68rem;background:#FFF3E0;color:#E65100;border-radius:10px;padding:2px 8px;font-weight:700;">Hace ' + dias + ' día' + (dias === 1 ? '' : 's') + '</span>' : '')}
+        <span style="margin-left:auto;font-size:0.68rem;color:#90A4AE;">${n.texto.length} caracteres</span>
+      </div>
+      <div style="font-size:0.81rem;color:#37474F;line-height:1.45;white-space:pre-wrap;border-left:3px solid ${color}33;padding-left:8px;">${escapeHTML(n.texto)}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+        <button onclick="_cargarNotaHistoricaEnModal('${textoEnc}')"
+          style="background:none;border:1px solid #BBDEFB;color:#1565C0;border-radius:12px;padding:3px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;">
+          <span class="material-icons" style="font-size:13px;">history</span> Cargar en nota actual
+        </button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function _cargarNotaHistoricaEnModal(textoCodificado) {
+  const ta = document.getElementById('mcl-nota-textarea');
+  if (!ta) return;
+  let texto = '';
+  try { texto = decodeURIComponent(textoCodificado || ''); } catch { texto = textoCodificado || ''; }
+  ta.value = texto;
+  ta.focus();
+  const key = ta.getAttribute('data-nota-key') || '';
+  if (key) guardarNotaClaseDebounce(key, texto);
+  const ind = document.getElementById('mcl-nota-guardada');
+  if (ind) ind.style.display = 'none';
+  mostrarToast('Nota anterior cargada en la nota actual', 'success');
+}
+
 // ── Modal de detalle de clase ────────────────────────────────────
 function abrirModalClase(encodedData) {
   let d;
@@ -27401,6 +27491,7 @@ function abrirModalClase(encodedData) {
           Lo que pasó realmente en clase, observaciones, pendientes para la próxima vez…
         </p>
         <textarea id="mcl-nota-textarea"
+          data-nota-key="${notaKey}"
           placeholder="Ej: Los estudiantes llegaron tarde. Cubrimos el tema hasta la sección 2. Pendiente: traer material de práctica el jueves..."
           style="width:100%;min-height:110px;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:9px;
                  font-size:0.85rem;font-family:inherit;resize:vertical;line-height:1.5;
@@ -27416,6 +27507,15 @@ function abrirModalClase(encodedData) {
             <span class="material-icons" style="font-size:13px;">delete_outline</span> Borrar nota
           </button>
         </div>` : ''}
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #E0E0E0;">
+          <div style="font-size:0.74rem;font-weight:700;color:#607D8B;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+            <span class="material-icons" style="font-size:14px;">history</span>
+            Historial de esta clase (${escapeHTML(d.seccion || '')} · P${escapeHTML(String(d.periodo || ''))})
+          </div>
+          <p style="font-size:0.72rem;color:#90A4AE;margin:0 0 7px;">Aquí puedes ver todo lo que anotaste en clases anteriores para este mismo grupo y período.</p>
+          ${_renderHistorialNotasClaseHTML(d.seccion || '', d.periodo || '', d.fecha || '', color)}
+        </div>
       </div>
 
       <!-- Ir a calificaciones -->
