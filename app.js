@@ -32339,6 +32339,7 @@ async function _mostrarFormCentro(centroId) {
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
         + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaNombre || 'plantilla.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'planificacion\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
       : '')
@@ -32353,6 +32354,7 @@ async function _mostrarFormCentro(centroId) {
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
         + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaDiariaNombre || 'plantilla_diaria.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'diaria\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaDiariaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
       : '')
@@ -32367,6 +32369,7 @@ async function _mostrarFormCentro(centroId) {
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
         + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaReportePsicologiaNombre || 'plantilla_reportes_psicologia.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'psicologia\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaReportePsicologiaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
       : '')
@@ -32552,6 +32555,52 @@ async function _eliminarPlantillaReportePsicologiaCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla de Psicología: ' + e.message, 'error');
+  }
+}
+
+/** Descarga una plantilla .docx del centro desde su base64 guardado */
+async function _descargarPlantillaCentro(centroId, tipo) {
+  if (!centroId) {
+    mostrarToast('Guarda el centro primero para poder descargar la plantilla', 'error');
+    return;
+  }
+
+  const campos = {
+    planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
+    diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
+    psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' }
+  };
+
+  const cfg = campos[tipo] || campos.planificacion;
+
+  try {
+    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (!doc.exists) {
+      mostrarToast('No se encontró el centro', 'error');
+      return;
+    }
+
+    const centro = doc.data() || {};
+    const base64 = centro[cfg.base64];
+    if (!base64) {
+      mostrarToast('No hay plantilla para descargar', 'error');
+      return;
+    }
+
+    const nombre = (centro[cfg.nombre] || cfg.fallback || 'plantilla.docx').trim();
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Error descargando plantilla:', e);
+    mostrarToast('Error al descargar plantilla: ' + (e.message || e), 'error');
   }
 }
 
