@@ -4867,6 +4867,86 @@ function _nombreArchivoRA(ext) {
   return `Planificacion ${codigoRA} ${modulo}.${ext}`;
 }
 
+function _toSnakeCasePlaceholderKey(key) {
+  return String(key || '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[\s\-./]+/g, '_')
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+}
+
+function _placeholderValueToString(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    const simple = value
+      .map(v => (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') ? String(v) : '')
+      .filter(Boolean);
+    return simple.join(', ');
+  }
+  return '';
+}
+
+function _isPlainObject(value) {
+  return Object.prototype.toString.call(value) === '[object Object]';
+}
+
+function _setPlaceholderIfEmpty(target, key, value) {
+  if (!key) return;
+  if (target[key] === undefined || target[key] === '') target[key] = value;
+}
+
+function _agregarPlaceholdersDinamicos(target, source, opts) {
+  if (!_isPlainObject(source)) return;
+
+  const prefix = _toSnakeCasePlaceholderKey((opts && opts.prefix) || '');
+
+  const walk = (node, pathSnake, pathRaw) => {
+    if (node == null) return;
+
+    if (Array.isArray(node)) {
+      const simpleJoined = _placeholderValueToString(node);
+      if (simpleJoined) {
+        const snakePath = pathSnake.join('_');
+        const rawPath = pathRaw.join('_');
+        _setPlaceholderIfEmpty(target, snakePath, simpleJoined);
+        _setPlaceholderIfEmpty(target, rawPath, simpleJoined);
+        if (prefix) {
+          _setPlaceholderIfEmpty(target, prefix + '_' + snakePath, simpleJoined);
+          _setPlaceholderIfEmpty(target, prefix + '_' + rawPath, simpleJoined);
+        }
+      }
+      return;
+    }
+
+    if (_isPlainObject(node)) {
+      Object.keys(node).forEach((rawKey) => {
+        const snakeKey = _toSnakeCasePlaceholderKey(rawKey);
+        if (!snakeKey) return;
+        walk(node[rawKey], pathSnake.concat(snakeKey), pathRaw.concat(String(rawKey)));
+      });
+      return;
+    }
+
+    const textValue = _placeholderValueToString(node);
+    if (textValue === '') return;
+
+    const snakePath = pathSnake.join('_');
+    const rawPath = pathRaw.join('_');
+    _setPlaceholderIfEmpty(target, snakePath, textValue);
+    _setPlaceholderIfEmpty(target, rawPath, textValue);
+    if (prefix) {
+      _setPlaceholderIfEmpty(target, prefix + '_' + snakePath, textValue);
+      _setPlaceholderIfEmpty(target, prefix + '_' + rawPath, textValue);
+    }
+  };
+
+  walk(source, [], []);
+}
+
 /** Exporta usando la plantilla .docx del centro con docxtemplater */
 async function _exportarConPlantillaCentro() {
   const DocxModule = window.docxtemplater || window.Docxtemplater;
@@ -4891,6 +4971,7 @@ async function _exportarConPlantillaCentro() {
   const ra = planificacion.ra || {};
   const acts = planificacion.actividades || [];
   const ecs = planificacion.elementosCapacidad || [];
+  const ahora = new Date();
 
   // Construir tabla de EC + Actividades
   // Construir filas para loop de docxtemplater (tabla en Word)
@@ -4940,6 +5021,11 @@ async function _exportarConPlantillaCentro() {
     criterios_evaluacion: ra.criterios || '',
     recursos_didacticos: ra.recursos || ra.recursosDid || '',
     centro_educativo: info.centroNombre || '',
+    codigo_ra: ((ra.descripcion || '').match(/^([A-Za-z]{1,4}[\w.]+)/) || [])[1] || '',
+    cantidad_actividades: String(acts.length || 0),
+    cantidad_ec: String(ecs.length || 0),
+    fecha_exportacion: ahora.toLocaleDateString('es-DO'),
+    hora_exportacion: ahora.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }),
     // Array para loop en tabla: {#actividades}...{/actividades}
     actividades: actividades
   };
@@ -4960,6 +5046,12 @@ async function _exportarConPlantillaCentro() {
   });
   data.prio_total_valor = totalValPrio ? String(totalValPrio) : '';
   data.prio_total_tiempo = allNum && totalTiempoPrio ? String(totalTiempoPrio) : '';
+
+  // Placeholders dinámicos: acepta nuevos campos del sistema sin tocar código.
+  // Ejemplos: {dg_nombreDirector}, {ra_criterios}, {dg_campo_nuevo}, etc.
+  _agregarPlaceholdersDinamicos(data, dg, { prefix: 'dg' });
+  _agregarPlaceholdersDinamicos(data, ra, { prefix: 'ra' });
+  _agregarPlaceholdersDinamicos(data, planificacion, { prefix: 'plan' });
 
   // Procesar con docxtemplater
   const zip = new PizZip(arrayBuffer);
@@ -32690,6 +32782,11 @@ function _mostrarGuiaPlaceholders() {
     ['{criterios_evaluacion}', 'Criterios de evaluación del currículo'],
     ['{recursos_didacticos}', 'Recursos didácticos disponibles'],
     ['{centro_educativo}', 'Nombre del centro educativo'],
+    ['{codigo_ra}', 'Código extraído del RA (ej: RA0208)'],
+    ['{cantidad_actividades}', 'Cantidad total de actividades de la planificación'],
+    ['{cantidad_ec}', 'Cantidad total de elementos de capacidad'],
+    ['{fecha_exportacion}', 'Fecha en que se exporta el documento'],
+    ['{hora_exportacion}', 'Hora en que se exporta el documento'],
     ['{ra1_tiempo} ... {ra10_tiempo}', 'Tiempo del RA1 al RA10 (priorización)'],
     ['{ra1_valor} ... {ra10_valor}', 'Valor del RA1 al RA10 (priorización)'],
     ['{prio_total_tiempo}', 'Total tiempo (priorización)'],
@@ -32731,6 +32828,13 @@ function _mostrarGuiaPlaceholders() {
   ).join('');
 
   document.getElementById('modal-title').textContent = 'Placeholders para Plantilla Word';
+  const dinamicoInfo = '<div style="margin-top:14px;padding:12px;background:#E8F5E9;border-radius:8px;border:1px solid #C8E6C9;">'
+    + '<strong style="color:#2E7D32;font-size:0.82rem;">Placeholders dinámicos (nuevo):</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0;">Ahora puedes usar campos nuevos sin tocar código. Si el dato existe en el sistema, la plantilla lo acepta automáticamente.</p>'
+    + '<p style="font-size:0.76rem;color:#616161;margin:4px 0;"><strong>Formato recomendado:</strong> <code>{dg_campo}</code> para Datos Generales y <code>{ra_campo}</code> para datos del RA.</p>'
+    + '<p style="font-size:0.74rem;color:#757575;margin:4px 0 0;">Ejemplos: <code>{dg_nombreDocente}</code>, <code>{dg_nombre_docente}</code>, <code>{ra_descripcion}</code>, <code>{dg_codigoModulo}</code>.</p>'
+    + '</div>';
+
   document.getElementById('modal-body').innerHTML =
     '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Escribe estos placeholders dentro de tu plantilla .docx y el sistema los reemplazará con los datos reales al exportar:</p>'
     + '<div style="max-height:400px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
@@ -32738,6 +32842,7 @@ function _mostrarGuiaPlaceholders() {
     + '<th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Dato que inserta</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table></div>'
     + tablaInfo
+    + dinamicoInfo
     + '<p style="font-size:0.75rem;color:#9E9E9E;margin-top:10px;">Tip: En tu archivo Word, simplemente escribe el placeholder (ej: <code>{familia_profesional}</code>) donde quieras que aparezca el dato.</p>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
