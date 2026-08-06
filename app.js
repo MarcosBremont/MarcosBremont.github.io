@@ -9614,13 +9614,8 @@ function renderizarPortafolioEvidencias() {
           <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Tipo</label>
           <select id="pf-evi-tipo" style="${inputStyle}">
             <option value="evidencia">Evidencia</option>
-            <option value="planificacion">Planificación</option>
-            <option value="diaria">Planificación diaria</option>
-            <option value="instrumento">Instrumento</option>
-            <option value="diario">Diario reflexivo</option>
             <option value="reunion">Reunión</option>
             <option value="seguimiento">Seguimiento</option>
-            <option value="ficha">Ficha de acompañamiento</option>
             <option value="otro">Otro</option>
           </select>
         </div>
