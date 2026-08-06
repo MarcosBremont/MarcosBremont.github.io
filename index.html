@@ -2612,7 +2612,23 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#2E7D32;">v15.80<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.81<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Notas de clase compartidas entre períodos</div>
+              <ul class="about-ver-items">
+                <li><strong>Historial unificado:</strong> las notas de clase ahora se guardan por sección y módulo, no por período, así que P1 y P2 de la misma materia comparten la misma nota e historial.</li>
+                <li><strong>Migración automática:</strong> las notas guardadas con el esquema anterior se recuperan y aparecen en el historial compartido.</li>
+                <li><strong>Sincronización:</strong> corregido el respaldo y la sincronización con Firebase para incluir las notas guardadas con el nuevo esquema.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.80<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
@@ -4548,7 +4564,7 @@
   <script src="firebase-config.js"></script>
   <script>
     window.TINCLASS_BUILD_VERSION = 'v15.81';
-    window.TINCLASS_SW_VERSION = 'v133';
+    window.TINCLASS_SW_VERSION = 'v134';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4882,7 +4898,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=133', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=134', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
