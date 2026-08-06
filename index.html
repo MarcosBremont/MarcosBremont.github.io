@@ -4547,13 +4547,13 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.80';
-    window.TINCLASS_SW_VERSION = 'v132';
+    window.TINCLASS_BUILD_VERSION = 'v15.81';
+    window.TINCLASS_SW_VERSION = 'v133';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=15.81"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 
@@ -4882,7 +4882,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=132', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=133', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
