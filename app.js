@@ -26749,20 +26749,13 @@ function _dashObtenerDatosCalendario() {
 }
 
 function _dashAsegurarCalendarioAdminBanner() {
-  console.log('[CalBanner] ensure() llamado. fetchInFlight=', _dashCalBannerFetchInFlight, 'adminDatos=', _calEsc.adminDatos, 'db?', typeof db !== 'undefined');
-  if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') {
-    console.log('[CalBanner] ensure() abortado por guard (ya hay adminDatos, fetch en curso, o sin db).');
-    return;
-  }
+  if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') return;
   _dashCalBannerFetchInFlight = true;
   (async () => {
-    console.log('[CalBanner] currentUser al iniciar fetch:', window.currentUser?.uid, window.currentUser?.email);
     if (!_calEsc.centroId) {
       _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
-      console.log('[CalBanner] centroId resuelto:', _calEsc.centroId);
     }
     await _calEscCargarAdmin();
-    console.log('[CalBanner] adminDatos cargado:', JSON.stringify(_calEsc.adminDatos)?.slice(0, 300));
     _renderizarBannerCalendarioDashboard();
   })().finally(() => { _dashCalBannerFetchInFlight = false; });
 }
@@ -26850,7 +26843,6 @@ function _renderizarBannerCalendarioDashboard() {
 
   const datos = _dashObtenerDatosCalendario();
   const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 6);
-  console.log('[CalBanner] render: festivos=', datos.festivos?.length || 0, 'meses con datos=', Object.keys(datos.meses || {}).length, 'avisos totales=', avisos.length, avisos.map(a => a.tipo + ':' + a.titulo));
 
   if (!avisos.length) {
     el.style.display = 'none';
@@ -29899,38 +29891,28 @@ function _calEscEsAdmin() {
 // Resuelve el centroId del usuario logueado (docente/admin_centro/director/coordinadora),
 // leyendo su perfil y, si no tiene centroId propio, buscandolo en centros.admins.
 async function _obtenerCentroIdDeUsuarioActual() {
-  if (!window.currentUser || typeof db === 'undefined') {
-    console.log('[CalBanner] _obtenerCentroIdDeUsuarioActual: sin currentUser o sin db, devuelvo null.');
-    return null;
-  }
+  if (!window.currentUser || typeof db === 'undefined') return null;
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    console.log('[CalBanner] usuarios/' + window.currentUser.uid + ' existe?', doc.exists, 'centroId=', doc.data()?.centroId, 'rol=', doc.data()?.rol);
     if (doc.exists && doc.data().centroId) return doc.data().centroId;
-  } catch (e) { console.warn('[CalBanner] error leyendo usuarios/uid:', e.code || e.message); }
+  } catch {}
   try {
     const email = window.currentUser.email?.toLowerCase();
     if (email) {
       const snap = await db.collection('centros').get();
-      console.log('[CalBanner] total centros en la coleccion:', snap.size);
       const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
-      console.log('[CalBanner] centro donde soy admin (por email):', centro?.id || 'ninguno');
       if (centro) return centro.id;
     }
-  } catch (e) { console.warn('[CalBanner] error buscando en centros.admins:', e.code || e.message); }
+  } catch {}
   // Superadmin sin centro propio: usar el primer centro registrado como referencia por
   // defecto (mismo criterio que el selector del editor de calendario), para que su propio
   // dashboard muestre avisos en vez de quedar vacío.
   try {
-    const esSA = await _esSuperadminPorPerfil();
-    console.log('[CalBanner] es superadmin?', esSA);
-    if (esSA) {
+    if (await _esSuperadminPorPerfil()) {
       const snap = await db.collection('centros').orderBy('nombre').limit(1).get();
-      console.log('[CalBanner] fallback superadmin, primer centro encontrado:', snap.empty ? 'NINGUNO (coleccion centros vacia)' : snap.docs[0].id);
       if (!snap.empty) return snap.docs[0].id;
     }
-  } catch (e) { console.warn('[CalBanner] error en fallback superadmin:', e.code || e.message); }
-  console.log('[CalBanner] _obtenerCentroIdDeUsuarioActual: no se pudo resolver ningun centroId, devuelvo null.');
+  } catch {}
   return null;
 }
 
@@ -29972,18 +29954,11 @@ function _calEscDatosVacios() {
 async function _calEscCargarAdmin(centroId) {
   if (typeof db === 'undefined') return;
   const cid = centroId || _calEsc.centroId;
-  console.log('[CalBanner] _calEscCargarAdmin con cid=', cid, '(param=', centroId, ', _calEsc.centroId=', _calEsc.centroId, ')');
-  if (!cid) {
-    console.log('[CalBanner] sin cid, adminDatos queda vacio.');
-    _calEsc.adminDatos = _calEscDatosVacios();
-    return;
-  }
+  if (!cid) { _calEsc.adminDatos = _calEscDatosVacios(); return; }
   try {
     const doc = await db.collection('centros').doc(cid).collection('calendario').doc('main').get();
-    console.log('[CalBanner] centros/' + cid + '/calendario/main existe?', doc.exists, 'tiene meses?', !!doc.data()?.meses, 'festivos=', doc.data()?.festivos?.length || 0);
     _calEsc.adminDatos = (doc.exists && doc.data()?.meses) ? doc.data() : _calEscDatosVacios();
   } catch (e) {
-    console.warn('[CalBanner] error leyendo centros/' + cid + '/calendario/main:', e.code || e.message);
     _calEsc.adminDatos = _calEscDatosVacios();
   }
 }
@@ -30001,6 +29976,29 @@ async function _calEscGuardarAdmin() {
     } else {
       mostrarToast('Error al guardar en Firestore: ' + (e.message || e.code), 'error');
     }
+  }
+}
+
+// ── Copia unica del calendario global anterior (public_calendar/main) al centro actual.
+// Solo relevante para instalaciones que ya tenian datos antes de pasar a un calendario
+// por centro; no crea ningun vinculo permanente entre centros.
+async function _calEscMigrarCalendarioAntiguo() {
+  if (!_calEscEsAdmin() || !_calEsc.centroId || typeof db === 'undefined') return;
+  if (!confirm('Esto copiará el calendario compartido anterior (festivos, actividades, efemérides) al centro seleccionado. ¿Continuar?')) return;
+  try {
+    const doc = await db.collection('public_calendar').doc('main').get();
+    if (!doc.exists || !doc.data()?.meses) {
+      mostrarToast('No hay calendario anterior para copiar.', 'error');
+      return;
+    }
+    const datos = doc.data();
+    await db.collection('centros').doc(_calEsc.centroId).collection('calendario').doc('main').set(datos);
+    _calEsc.adminDatos = datos;
+    mostrarToast('Calendario anterior copiado a este centro ✓', 'success');
+    _calEscRenderizar();
+    _renderizarBannerCalendarioDashboard();
+  } catch (e) {
+    mostrarToast('Error copiando calendario: ' + (e.message || e.code), 'error');
   }
 }
 
@@ -30074,7 +30072,15 @@ function _calEscRenderizarBanner() {
           ${_calEsc.listaCentros.map(c => `<option value="${c.id}" ${c.id === _calEsc.centroId ? 'selected' : ''}>${escapeHTML(c.nombre)}</option>`).join('')}
         </select>`
       : '';
-    txt.innerHTML    = 'Editando el calendario del centro:' + selectorCentro;
+    const calendarioVacio = !(_calEsc.adminDatos?.festivos?.length) &&
+      !Object.values(_calEsc.adminDatos?.meses || {}).some(m => (m.actividades || []).length || (m.efemerides || []).length);
+    const avisoMigrar = calendarioVacio
+      ? `<br><button onclick="_calEscMigrarCalendarioAntiguo()"
+           style="margin-top:6px;background:none;border:1px solid #2E7D32;color:#2E7D32;border-radius:14px;padding:3px 10px;font-size:0.72rem;cursor:pointer;">
+          <span class="material-icons" style="font-size:12px;vertical-align:middle;">history</span> Copiar calendario compartido anterior a este centro
+        </button>`
+      : '';
+    txt.innerHTML    = 'Editando el calendario del centro:' + selectorCentro + avisoMigrar;
     btns.innerHTML   = `<button onclick="_calEscGuardarAdmin()"
       style="background:#2E7D32;color:#fff;border:none;border-radius:20px;padding:6px 14px;
              font-size:0.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">

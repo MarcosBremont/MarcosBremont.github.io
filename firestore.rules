@@ -169,6 +169,14 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.uid == userId;
     }
 
+    // Calendario global heredado (reemplazado por centros/{id}/calendario). Se deja de
+    // solo lectura unicamente para poder copiar sus datos al centro correspondiente;
+    // ya no acepta escrituras nuevas.
+    match /public_calendar/{doc} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /examenes/{examenId} {
       allow read, update, delete: if signedIn()
                                   && request.auth.uid == resource.data.docenteUid;
