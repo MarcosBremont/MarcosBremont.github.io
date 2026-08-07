@@ -2657,7 +2657,23 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#2E7D32;">v15.81<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.82<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cumpleaños de estudiantes y plataforma multi-centro</div>
+              <ul class="about-ver-items">
+                <li><strong>Cumpleaños:</strong> nuevo apartado para registrar la fecha de nacimiento de cada estudiante, con aviso anticipado en el dashboard.</li>
+                <li><strong>Calendario y correo por centro:</strong> cada centro educativo puede tener su propio calendario escolar y su propia cuenta de correo para el código de verificación al registrarse.</li>
+                <li><strong>Seguridad:</strong> se reforzó el aislamiento de datos entre centros educativos distintos.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.81<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
@@ -4608,8 +4624,8 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.81';
-    window.TINCLASS_SW_VERSION = 'v134';
+    window.TINCLASS_BUILD_VERSION = 'v15.82';
+    window.TINCLASS_SW_VERSION = 'v135';
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
@@ -4945,7 +4961,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=134', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=135', { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
