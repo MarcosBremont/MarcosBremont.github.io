@@ -490,6 +490,11 @@
           <span class="material-icons">cake</span>
           <span>Cumpleaños</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-compartir" onclick="abrirCompartidos()"
+          style="--accent:#00838F;">
+          <span class="material-icons">folder_shared</span>
+          <span>Compartir</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()"
           style="--accent:#C62828;">
           <span class="material-icons">assignment_late</span>
@@ -1873,6 +1878,26 @@
     </div>
   </div>
 
+  <!-- ===== PANEL: COMPARTIR ENTRE DOCENTES ===== -->
+  <div id="panel-compartidos" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E0F7FA;color:#00838F;">folder_shared</span>
+        <h2>Compartir</h2>
+      </div>
+      <p style="font-size:0.8rem;color:#78909C;margin:0 0 16px;">
+        Comparte enlaces o documentos con los demás docentes de tu centro — a todos, o solo a quien elijas.
+      </p>
+
+      <div id="compartir-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarCompartidos()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
   <!-- ===== PANEL: REPORTES DE COMPORTAMIENTO (ESTUDIANTES) ===== -->
   <div id="panel-denuncias" class="cal-panel hidden">
     <div class="section-card">
@@ -2657,7 +2682,23 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#2E7D32;">v15.83<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.86<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Compartir entre docentes y doble rol</div>
+              <ul class="about-ver-items">
+                <li><strong>Compartir:</strong> nuevo apartado para compartir enlaces y documentos con los demás docentes de tu centro — a todos, o solo a quien elijas.</li>
+                <li><strong>Doble rol:</strong> en Admin Centro se puede dar acceso de Docente a alguien con otro rol (ej. Psicología), sin que pierda ninguno de los dos.</li>
+                <li><strong>Cuentas de estudiantes:</strong> si no tienes cursos creados, el curso ya no es obligatorio para crear una cuenta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.83<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
@@ -4655,7 +4696,7 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=15.85"></script>
+  <script src="app.js?v=15.86"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 

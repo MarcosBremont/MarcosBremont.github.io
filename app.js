@@ -9524,7 +9524,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -9540,7 +9540,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -30148,6 +30148,220 @@ function renderizarCumpleanos() {
         </div>
       </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: COMPARTIR ENTRE DOCENTES
+// ════════════════════════════════════════════════════════════════════
+
+const COMPARTIR_MAX_BYTES = 700 * 1024;
+
+let _compartirCentroId = null;
+let _compartirDocentes = [];
+
+async function abrirCompartidos() {
+  _mostrarPanel('panel-compartidos');
+  const cont = document.getElementById('compartir-container');
+  if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando...</div>';
+
+  _compartirCentroId = await _obtenerCentroIdDeUsuarioActual();
+  if (!_compartirCentroId) {
+    if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;">No se pudo determinar tu centro educativo.</div>';
+    return;
+  }
+  try {
+    _compartirDocentes = await _coordGetDocentes(_compartirCentroId);
+  } catch { _compartirDocentes = []; }
+
+  renderizarCompartidos();
+}
+function cerrarCompartidos() { abrirDashboard(); }
+
+async function renderizarCompartidos() {
+  const cont = document.getElementById('compartir-container');
+  if (!cont || !_compartirCentroId) return;
+
+  let items = [];
+  try {
+    const snap = await db.collection('centros').doc(_compartirCentroId).collection('compartidos').orderBy('fecha', 'desc').get();
+    items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('Error cargando compartidos:', e);
+  }
+
+  const misUid = window.currentUser?.uid;
+
+  const composer = '<div style="margin-bottom:16px;">'
+    + '<button onclick="_toggleComposerCompartir()" class="btn-siguiente" style="font-size:0.82rem;padding:8px 16px;">'
+    + '<span class="material-icons">add</span> Compartir algo nuevo</button>'
+    + '<div id="compartir-composer" class="hidden" style="margin-top:12px;background:#fff;border:1.5px solid #E3F2FD;border-radius:10px;padding:16px;">'
+    + '<div style="display:flex;gap:16px;margin-bottom:12px;">'
+    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="compartir-tipo" value="link" checked onchange="_actualizarTipoCompartir()"> Enlace</label>'
+    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="compartir-tipo" value="documento" onchange="_actualizarTipoCompartir()"> Documento</label>'
+    + '</div>'
+    + '<input id="compartir-titulo" type="text" placeholder="Título *" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;margin-bottom:8px;box-sizing:border-box;">'
+    + '<div id="compartir-campo-url">'
+    + '<input id="compartir-url" type="text" placeholder="https://... *" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;margin-bottom:8px;box-sizing:border-box;">'
+    + '</div>'
+    + '<div id="compartir-campo-archivo" class="hidden">'
+    + '<input id="compartir-archivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="margin-bottom:8px;">'
+    + '<div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:8px;">Máximo 700 KB. PDF, Word, Excel o imagen.</div>'
+    + '</div>'
+    + '<textarea id="compartir-descripcion" placeholder="Descripción (opcional)" style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;margin-bottom:12px;box-sizing:border-box;resize:vertical;"></textarea>'
+    + '<div style="font-size:0.82rem;font-weight:700;color:#37474F;margin-bottom:6px;">¿Quién puede verlo?</div>'
+    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;"><input type="radio" name="compartir-vis" value="todos" checked onchange="_actualizarVisibilidadCompartir()"> Todos los docentes del centro</label>'
+    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:8px;"><input type="radio" name="compartir-vis" value="especificos" onchange="_actualizarVisibilidadCompartir()"> Solo docentes específicos</label>'
+    + '<div id="compartir-destinatarios" class="hidden" style="max-height:150px;overflow-y:auto;border:1px solid #E0E0E0;border-radius:6px;padding:8px;margin-bottom:12px;">'
+    + (_compartirDocentes.filter(d => d.uid !== misUid).map(d =>
+        '<label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:3px 0;cursor:pointer;">'
+        + '<input type="checkbox" class="compartir-dest-check" value="' + escapeHTML(d.uid) + '"> ' + escapeHTML(d.nombre || d.email || d.uid)
+        + '</label>'
+      ).join('') || '<div style="font-size:0.8rem;color:#9E9E9E;">No hay otros docentes en tu centro todavía.</div>')
+    + '</div>'
+    + '<div id="compartir-error" style="color:#C62828;font-size:0.8rem;min-height:18px;"></div>'
+    + '<button onclick="_compartirNuevo()" class="btn-siguiente" style="font-size:0.85rem;padding:9px 18px;">'
+    + '<span class="material-icons">send</span> Compartir</button>'
+    + '</div></div>';
+
+  if (!items.length) {
+    cont.innerHTML = composer + '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">folder_shared</span>Nadie ha compartido nada todavía.</div>';
+    return;
+  }
+
+  cont.innerHTML = composer + '<div style="display:flex;flex-direction:column;gap:10px;">' + items.map(it => {
+    const fecha = it.fecha?.toDate ? it.fecha.toDate().toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+    const icono = it.tipo === 'documento' ? 'description' : 'link';
+    const visBadge = it.visibilidad === 'todos'
+      ? '<span style="background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-size:0.7rem;font-weight:700;">Todos</span>'
+      : '<span style="background:#FFF3E0;color:#E65100;border-radius:10px;padding:2px 8px;font-size:0.7rem;font-weight:700;">Privado (' + (it.destinatarios?.length || 0) + ')</span>';
+    const accion = it.tipo === 'documento'
+      ? '<button onclick="_descargarCompartido(\'' + it.id + '\')" style="background:none;border:1px solid #90CAF9;color:#1565C0;border-radius:16px;padding:4px 12px;font-size:0.78rem;cursor:pointer;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">download</span> Descargar</button>'
+      : '<a href="' + escapeHTML(it.url || '#') + '" target="_blank" rel="noopener" style="background:none;border:1px solid #90CAF9;color:#1565C0;border-radius:16px;padding:4px 12px;font-size:0.78rem;text-decoration:none;display:inline-flex;align-items:center;gap:3px;"><span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir enlace</a>';
+    const eliminarBtn = it.autorUid === misUid
+      ? '<button onclick="_eliminarCompartido(\'' + it.id + '\')" style="background:none;border:none;color:#BDBDBD;cursor:pointer;" title="Eliminar"><span class="material-icons" style="font-size:16px;">delete_outline</span></button>'
+      : '';
+    return '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:12px 14px;">'
+      + '<div style="display:flex;align-items:flex-start;gap:10px;">'
+      + '<span class="material-icons" style="color:#1565C0;font-size:22px;">' + icono + '</span>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      + '<span style="font-weight:700;font-size:0.9rem;color:#212121;">' + escapeHTML(it.titulo || 'Sin título') + '</span>' + visBadge
+      + '</div>'
+      + (it.descripcion ? '<div style="font-size:0.82rem;color:#607D8B;margin-top:4px;">' + escapeHTML(it.descripcion) + '</div>' : '')
+      + '<div style="font-size:0.72rem;color:#B0BEC5;margin-top:6px;">' + escapeHTML(it.autorNombre || it.autorEmail || 'Docente') + ' · ' + fecha + '</div>'
+      + '<div style="margin-top:8px;">' + accion + '</div>'
+      + '</div>' + eliminarBtn
+      + '</div></div>';
+  }).join('') + '</div>';
+}
+
+function _toggleComposerCompartir() {
+  document.getElementById('compartir-composer')?.classList.toggle('hidden');
+}
+
+function _actualizarTipoCompartir() {
+  const tipo = document.querySelector('input[name="compartir-tipo"]:checked')?.value;
+  document.getElementById('compartir-campo-url')?.classList.toggle('hidden', tipo !== 'link');
+  document.getElementById('compartir-campo-archivo')?.classList.toggle('hidden', tipo !== 'documento');
+}
+
+function _actualizarVisibilidadCompartir() {
+  const vis = document.querySelector('input[name="compartir-vis"]:checked')?.value;
+  document.getElementById('compartir-destinatarios')?.classList.toggle('hidden', vis !== 'especificos');
+}
+
+async function _compartirNuevo() {
+  const errEl = document.getElementById('compartir-error');
+  if (errEl) errEl.textContent = '';
+  if (!_compartirCentroId || !window.currentUser) return;
+
+  const tipo = document.querySelector('input[name="compartir-tipo"]:checked')?.value || 'link';
+  const titulo = (document.getElementById('compartir-titulo')?.value || '').trim();
+  const descripcion = (document.getElementById('compartir-descripcion')?.value || '').trim();
+  const url = (document.getElementById('compartir-url')?.value || '').trim();
+  const fileInput = document.getElementById('compartir-archivo');
+  const file = fileInput?.files?.[0];
+  const vis = document.querySelector('input[name="compartir-vis"]:checked')?.value || 'todos';
+  const destinatarios = vis === 'especificos'
+    ? Array.from(document.querySelectorAll('.compartir-dest-check:checked')).map(c => c.value)
+    : [];
+
+  if (!titulo) { if (errEl) errEl.textContent = 'Ponle un título.'; return; }
+  if (tipo === 'link' && !/^https?:\/\//i.test(url)) { if (errEl) errEl.textContent = 'Escribe un link válido (empieza con http:// o https://).'; return; }
+  if (tipo === 'documento' && !file) { if (errEl) errEl.textContent = 'Selecciona un archivo.'; return; }
+  if (tipo === 'documento' && file.size > COMPARTIR_MAX_BYTES) { if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB.'; return; }
+  if (vis === 'especificos' && !destinatarios.length) { if (errEl) errEl.textContent = 'Elige al menos un docente.'; return; }
+
+  const data = {
+    tipo, titulo, descripcion,
+    autorUid: window.currentUser.uid,
+    autorNombre: window.currentUser.displayName || '',
+    autorEmail: window.currentUser.email || '',
+    visibilidad: vis,
+    destinatarios,
+    fecha: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (tipo === 'link') {
+    data.url = url;
+  } else {
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
+      data.archivoBase64 = base64;
+      data.archivoNombre = file.name;
+      data.archivoMime = file.type || 'application/octet-stream';
+    } catch (e) {
+      if (errEl) errEl.textContent = 'No se pudo leer el archivo.';
+      return;
+    }
+  }
+
+  try {
+    await db.collection('centros').doc(_compartirCentroId).collection('compartidos').add(data);
+    mostrarToast('Compartido correctamente', 'success');
+    document.getElementById('compartir-composer')?.classList.add('hidden');
+    renderizarCompartidos();
+  } catch (e) {
+    if (errEl) errEl.textContent = 'Error al compartir: ' + (e.message || e);
+  }
+}
+
+async function _descargarCompartido(itemId) {
+  if (!_compartirCentroId) return;
+  try {
+    const doc = await db.collection('centros').doc(_compartirCentroId).collection('compartidos').doc(itemId).get();
+    if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
+    const it = doc.data();
+    if (!it.archivoBase64) { mostrarToast('Este item no tiene archivo', 'error'); return; }
+    const bytes = Uint8Array.from(atob(it.archivoBase64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = it.archivoNombre || 'archivo';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
+  }
+}
+
+async function _eliminarCompartido(itemId) {
+  if (!_compartirCentroId) return;
+  if (!confirm('¿Eliminar este item compartido?')) return;
+  try {
+    await db.collection('centros').doc(_compartirCentroId).collection('compartidos').doc(itemId).delete();
+    mostrarToast('Eliminado', 'success');
+    renderizarCompartidos();
+  } catch (e) {
+    mostrarToast('Error al eliminar: ' + (e.message || e), 'error');
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════

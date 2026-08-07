@@ -101,6 +101,20 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
       }
+
+      // Compartir entre docentes del mismo centro (links/documentos), con visibilidad
+      // por destinatario. Aislado por centro (a diferencia de avisos, que no lo esta).
+      match /compartidos/{itemId} {
+        allow read: if signedIn() && (isSuperadminByEmail() || miCentroId() == centroId) && (
+          resource.data.visibilidad == 'todos' ||
+          resource.data.autorUid == request.auth.uid ||
+          request.auth.uid in resource.data.get('destinatarios', [])
+        );
+        allow create: if signedIn() && (isSuperadminByEmail() || miCentroId() == centroId)
+                      && request.resource.data.autorUid == request.auth.uid;
+        allow delete: if signedIn() && resource.data.autorUid == request.auth.uid;
+        allow update: if false;
+      }
     }
 
     match /perfiles/{userId} {
