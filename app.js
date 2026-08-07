@@ -26832,13 +26832,17 @@ function _renderizarBannerCalendarioDashboard() {
   const el = document.getElementById('dash-calendario-banner');
   if (!el) return;
 
+  // Asegura que el calendario admin (Firestore) se cargue en segundo plano y
+  // vuelva a renderizar el banner cuando llegue, sin importar si ya hay avisos
+  // (p.ej. cumpleaños, que están disponibles de inmediato desde datos locales).
+  _dashAsegurarCalendarioAdminBanner();
+
   const datos = _dashObtenerDatosCalendario();
   const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 6);
 
   if (!avisos.length) {
     el.style.display = 'none';
     el.innerHTML = '';
-    _dashAsegurarCalendarioAdminBanner();
     return;
   }
 
