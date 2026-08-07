@@ -30182,11 +30182,13 @@ async function renderizarCompartidos() {
   if (!cont || !_compartirCentroId) return;
 
   let items = [];
+  let cargaError = null;
   try {
     const snap = await db.collection('centros').doc(_compartirCentroId).collection('compartidos').orderBy('fecha', 'desc').get();
     items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) {
     console.warn('Error cargando compartidos:', e);
+    cargaError = e;
   }
 
   const misUid = window.currentUser?.uid;
@@ -30222,6 +30224,11 @@ async function renderizarCompartidos() {
     + '<button onclick="_compartirNuevo()" class="btn-siguiente" style="font-size:0.85rem;padding:9px 18px;">'
     + '<span class="material-icons">send</span> Compartir</button>'
     + '</div></div>';
+
+  if (cargaError) {
+    cont.innerHTML = composer + '<div style="text-align:center;padding:30px;color:#C62828;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">error_outline</span>No se pudo cargar lo compartido (permisos de Firestore). Verifica que las reglas actualizadas estén publicadas en Firebase Console.<div style="font-size:0.72rem;color:#9E9E9E;margin-top:6px;">' + escapeHTML(cargaError.message || String(cargaError)) + '</div></div>';
+    return;
+  }
 
   if (!items.length) {
     cont.innerHTML = composer + '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">folder_shared</span>Nadie ha compartido nada todavía.</div>';
