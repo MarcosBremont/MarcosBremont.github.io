@@ -2657,7 +2657,23 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#2E7D32;">v15.82<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.83<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ciclos archivados navegables y versión centralizada</div>
+              <ul class="about-ver-items">
+                <li><strong>Ciclos archivados:</strong> ahora se pueden ver las calificaciones reales de un curso de un año anterior y traerlo al ciclo activo (con el mismo grupo de estudiantes, boletín en blanco). Asistencia, comentarios, incidencias, recuperaciones, tareas y libreta también se pueden consultar filtradas por ciclo.</li>
+                <li><strong>Dashboard:</strong> el contador de planificaciones ya solo cuenta las del ciclo activo, no las de años archivados.</li>
+                <li><strong>Versión del sistema:</strong> ahora se controla desde un único archivo (<code>version.json</code>), evitando desincronizaciones entre el badge de versión y el Service Worker.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.82<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
@@ -4624,13 +4640,22 @@
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
   <script>
-    window.TINCLASS_BUILD_VERSION = 'v15.82';
-    window.TINCLASS_SW_VERSION = 'v135';
+    // La version real vive en version.json (fuente unica de verdad) -- ver
+    // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
+    window.TINCLASS_BUILD_VERSION = 'vdev';
+    window.TINCLASS_SW_VERSION = 'vsw';
+    fetch('/version.json?_=' + Date.now())
+      .then(r => r.json())
+      .then(v => {
+        if (v && v.version) window.TINCLASS_BUILD_VERSION = 'v' + v.version;
+        if (v && v.sw) window.TINCLASS_SW_VERSION = 'v' + v.sw;
+      })
+      .catch(() => {});
   </script>
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=15.81"></script>
+  <script src="app.js?v=15.83"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 
@@ -4961,7 +4986,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=135', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=' + (window.TINCLASS_SW_VERSION || 'vsw').replace(/^v/i, ''), { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
             reg.update();
