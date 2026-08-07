@@ -12,8 +12,15 @@ service cloud.firestore {
         : null;
     }
 
+    // Lista de roles del usuario actual. Si tiene el campo "roles" (multi-rol) lo usa;
+    // si no (cuentas viejas, migracion perezosa), cae al campo singular "rol".
+    function misRoles() {
+      let perfil = signedIn() ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data : null;
+      return perfil == null ? [] : (perfil.get('roles', null) != null ? perfil.roles : [perfil.get('rol', null)]);
+    }
+
     function hasRole(roles) {
-      return signedIn() && currentRole() in roles;
+      return signedIn() && misRoles().hasAny(roles);
     }
 
     function isOwnerSuperadminEmail() {

@@ -231,10 +231,12 @@ async function _onLogin(user) {
     const esSA = _esSuperadminAuth(user.email);
     const esAdmin = !esSA && await _esAdminCentro(user.email);
     if (esSA || esAdmin) {
+      const rolAuto = esSA ? 'superadmin' : 'admin_centro';
       await _crearPerfilUsuario(user.uid, {
         nombre: user.displayName || '',
         email: user.email,
-        rol: esSA ? 'superadmin' : 'admin_centro',
+        rol: rolAuto,
+        roles: [rolAuto],
         centroId: '',
         centroNombre: '',
         estado: 'aprobado',
@@ -247,6 +249,7 @@ async function _onLogin(user) {
         nombre: user.displayName || '',
         email: user.email,
         rol: 'docente',
+        roles: ['docente'],
         centroId: '',
         centroNombre: '',
         estado: 'pendiente',
@@ -955,6 +958,7 @@ async function authVerificarOTPRegistro() {
       nombre: nombre || '',
       email: email,
       rol: 'docente',
+      roles: ['docente'],
       centroId: centroId || '',
       centroNombre: centroNombre || '',
       estado: 'pendiente',
@@ -1060,6 +1064,7 @@ async function _confirmarCodigoGoogle() {
         nombre: result.user.displayName || '',
         email: result.user.email,
         rol: 'docente',
+        roles: ['docente'],
         centroId: window._pendingGoogleCentro.centroId,
         centroNombre: window._pendingGoogleCentro.centroNombre,
         estado: 'pendiente',

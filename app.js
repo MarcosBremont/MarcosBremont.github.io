@@ -31550,6 +31550,15 @@ function _esRolPsicologia(rol) {
   return ['psicologia', 'psicologa', 'psicologo'].includes((rol || '').toLowerCase());
 }
 
+// Un usuario puede tener varios roles (campo `roles`, arreglo). Las cuentas viejas que
+// todavia no tienen ese campo caen al singular `rol`.
+function _tieneRol(perfil, rolBuscado) {
+  if (!perfil) return false;
+  const roles = Array.isArray(perfil.roles) ? perfil.roles : [perfil.rol];
+  if (rolBuscado === 'psicologia') return roles.some(r => _esRolPsicologia(r));
+  return roles.includes(rolBuscado);
+}
+
 async function _getRolActual() {
   if (!window.currentUser) return '';
   try {
@@ -32348,16 +32357,15 @@ async function _renderDocentesCentro() {
       const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
       html += '<div style="width:44px;height:44px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.1rem;">' + inicial + '</div>';
 
-      // Info + badge de rol
-      const rolBadge = d.rol === 'director'
-        ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>'
-        : d.rol === 'coordinadora'
-        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>'
-        : _esRolPsicologia(d.rol)
-        ? '<span style="background:#6A1B9A;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Psicología</span>'
-        : d.rol === 'admin_centro'
-        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>'
-        : '';
+      // Info + badge de rol (un usuario puede tener varios roles a la vez)
+      const rolesDocente = Array.isArray(d.roles) ? d.roles : [d.rol];
+      const rolBadge = [
+        rolesDocente.includes('director') ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>' : '',
+        rolesDocente.includes('coordinadora') ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>' : '',
+        rolesDocente.some(r => _esRolPsicologia(r)) ? '<span style="background:#6A1B9A;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Psicología</span>' : '',
+        rolesDocente.includes('admin_centro') ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>' : '',
+        rolesDocente.includes('docente') ? '<span style="background:#1565C0;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Docente</span>' : ''
+      ].join('');
       html += '<div style="flex:1;min-width:150px;">'
         + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + (d.nombre || 'Sin nombre') + rolBadge + '</div>'
         + '<div style="font-size:0.82rem;color:#78909C;">' + (d.email || '') + '</div>'
@@ -32370,20 +32378,25 @@ async function _renderDocentesCentro() {
         html += '<button onclick="_aprobarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>';
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">close</span> Rechazar</button>';
       } else if (tab === 'aprobados') {
-        if (d.rol !== 'director') {
+        if (!rolesDocente.includes('director')) {
           html += '<button onclick="_promoverDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#4A148C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star</span> Hacer Director</button>';
         } else {
           html += '<button onclick="_quitarDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star_border</span> Quitar Director</button>';
         }
-        if (d.rol !== 'coordinadora') {
+        if (!rolesDocente.includes('coordinadora')) {
           html += '<button onclick="_promoverCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#00695C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">supervisor_account</span> Hacer Coordinadora</button>';
         } else {
           html += '<button onclick="_quitarCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Coordinadora</button>';
         }
-        if (!_esRolPsicologia(d.rol)) {
+        if (!rolesDocente.some(r => _esRolPsicologia(r))) {
           html += '<button onclick="_promoverPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#6A1B9A;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">self_improvement</span> Hacer Psicóloga</button>';
         } else {
           html += '<button onclick="_quitarPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Psicología</button>';
+        }
+        if (!rolesDocente.includes('docente')) {
+          html += '<button onclick="_promoverDocente(\'' + d.uid + '\')" title="Da acceso a Planificaciones y Calificaciones ademas de sus otros roles" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">school</span> Hacer Docente</button>';
+        } else {
+          html += '<button onclick="_quitarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Docente</button>';
         }
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">block</span> Revocar</button>';
       } else {
@@ -32419,63 +32432,77 @@ async function _rechazarDocente(uid) {
 }
 
 /** Promover a director */
-async function _promoverDirector(uid) {
-  if (!confirm('¿Promover este usuario a Director del centro?')) return;
+// Orden de jerarquia para decidir el "rol principal" (campo singular `rol`) cuando un
+// usuario tiene varios roles a la vez -- se mantiene por compatibilidad con cualquier
+// lectura vieja que todavia compare `rol` como string exacto en vez del arreglo `roles`.
+const ORDEN_PRIORIDAD_ROLES = ['superadmin', 'admin_centro', 'director', 'coordinadora', 'psicologia', 'docente'];
+function _rolPrincipalDeRoles(roles) {
+  for (const r of ORDEN_PRIORIDAD_ROLES) { if (roles.includes(r)) return r; }
+  return roles[0] || 'docente';
+}
+
+/** Agrega/quita un rol del arreglo `roles` de un usuario (multi-rol), sincronizando el
+ * campo singular `rol` con el de mayor jerarquia para compatibilidad hacia atras. */
+async function _toggleRolDocente(uid, rolKey, activar, successMsg) {
   try {
-    await db.collection('usuarios').doc(uid).update({ rol: 'director' });
-    mostrarToast('Usuario promovido a Director', 'success');
+    const doc = await db.collection('usuarios').doc(uid).get();
+    const data = doc.data() || {};
+    let roles = Array.isArray(data.roles) ? data.roles.slice() : [data.rol || 'docente'];
+    if (activar) {
+      if (!roles.includes(rolKey)) roles.push(rolKey);
+    } else {
+      roles = roles.filter(r => r !== rolKey);
+    }
+    if (!roles.length) roles = ['docente'];
+    await db.collection('usuarios').doc(uid).update({ roles, rol: _rolPrincipalDeRoles(roles) });
+    mostrarToast(successMsg || 'Rol actualizado', 'success');
     _renderDocentesCentro();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _promoverDirector(uid) {
+  if (!confirm('¿Promover este usuario a Director del centro?')) return;
+  await _toggleRolDocente(uid, 'director', true, 'Usuario promovido a Director');
 }
 
 /** Promover a coordinadora */
 async function _promoverCoordinadora(uid) {
   if (!confirm('¿Asignar el rol de Coordinadora a este usuario?')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ rol: 'coordinadora' });
-    mostrarToast('Usuario asignado como Coordinadora', 'success');
-    _renderDocentesCentro();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+  await _toggleRolDocente(uid, 'coordinadora', true, 'Usuario asignado como Coordinadora');
 }
 
 /** Quitar rol de coordinadora */
 async function _quitarCoordinadora(uid) {
   if (!confirm('¿Quitar el rol de Coordinadora a este usuario?')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
-    mostrarToast('Rol de Coordinadora removido', 'success');
-    _renderDocentesCentro();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+  await _toggleRolDocente(uid, 'coordinadora', false, 'Rol de Coordinadora removido');
 }
 
 /** Quitar rol de director */
 async function _quitarDirector(uid) {
   if (!confirm('¿Quitar el rol de Director a este usuario?')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
-    mostrarToast('Rol de Director removido', 'success');
-    _renderDocentesCentro();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+  await _toggleRolDocente(uid, 'director', false, 'Rol de Director removido');
 }
 
 /** Promover a psicología */
 async function _promoverPsicologia(uid) {
   if (!confirm('¿Asignar el rol de Psicología a este usuario?')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ rol: 'psicologia' });
-    mostrarToast('Usuario asignado al departamento de Psicología', 'success');
-    _renderDocentesCentro();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+  await _toggleRolDocente(uid, 'psicologia', true, 'Usuario asignado al departamento de Psicología');
 }
 
 /** Quitar rol de psicología */
 async function _quitarPsicologia(uid) {
   if (!confirm('¿Quitar el rol de Psicología a este usuario?')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
-    mostrarToast('Rol de Psicología removido', 'success');
-    _renderDocentesCentro();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+  await _toggleRolDocente(uid, 'psicologia', false, 'Rol de Psicología removido');
+}
+
+/** Dar/quitar acceso de Docente (Planificaciones/Calificaciones) -- esto es lo que permite
+ * que alguien con otro rol (ej. Psicología) tambien pueda dar clases. */
+async function _promoverDocente(uid) {
+  await _toggleRolDocente(uid, 'docente', true, 'Acceso de Docente activado');
+}
+async function _quitarDocente(uid) {
+  if (!confirm('¿Quitar el acceso de Docente a este usuario? Ya no vera Planificaciones ni Calificaciones.')) return;
+  await _toggleRolDocente(uid, 'docente', false, 'Acceso de Docente removido');
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -32487,7 +32514,7 @@ async function _esDirector() {
   if (!window.currentUser) return false;
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && doc.data().rol === 'director';
+    return doc.exists && _tieneRol(doc.data(), 'director');
   } catch { return false; }
 }
 
@@ -34209,12 +34236,13 @@ async function _aplicarOpcionesDocente() {
   if (esDir) return;
   const esCoord = await _esCoordinadora();
   if (esCoord) return;
-  // Usuarios de psicología tienen sus propias restricciones
+  // Usuarios de psicología tienen sus propias restricciones -- salvo que ADEMAS tengan
+  // el rol de docente (doble rol), en cuyo caso si les aplican las restricciones de docente.
   if (window.currentUser) {
     try {
       const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-      const rol = doc.exists ? (doc.data().rol || '') : '';
-      if (['psicologia', 'psicologa', 'psicologo'].includes(rol)) return;
+      const perfil = doc.exists ? doc.data() : null;
+      if (perfil && _tieneRol(perfil, 'psicologia') && !_tieneRol(perfil, 'docente')) return;
     } catch {}
   }
 
@@ -34292,7 +34320,7 @@ async function _esCoordinadora() {
   if (!window.currentUser) return false;
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && doc.data().rol === 'coordinadora';
+    return doc.exists && _tieneRol(doc.data(), 'coordinadora');
   } catch { return false; }
 }
 
@@ -34302,9 +34330,9 @@ async function _verificarAccesoPsicologia() {
   if (!window.currentUser) { btn.style.display = 'none'; return; }
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    const rol = doc.exists ? (doc.data().rol || '') : '';
+    const perfil = doc.exists ? doc.data() : null;
     const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-    const visible = ['psicologia', 'psicologa', 'psicologo', 'director', 'superadmin'].includes(rol) || esSA;
+    const visible = (perfil && (_tieneRol(perfil, 'psicologia') || _tieneRol(perfil, 'director') || _tieneRol(perfil, 'superadmin'))) || esSA;
     btn.style.display = visible ? '' : 'none';
   } catch { btn.style.display = 'none'; }
 }
