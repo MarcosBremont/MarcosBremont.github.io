@@ -31782,6 +31782,7 @@ function _renderCuentasEstudiantes() {
 
   // Obtener cursos disponibles
   const cursos = Object.values(calState?.cursos || {});
+  const sinCursos = cursos.length === 0;
 
   let html = '<div style="background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;color:#0D47A1;display:flex;align-items:center;gap:8px;">' +
     '<span class="material-icons" style="font-size:18px;">info</span>' +
@@ -31796,11 +31797,13 @@ function _renderCuentasEstudiantes() {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
       '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Nombre del estudiante *</label>' +
         '<input id="ce-nombre" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: Juan Pérez"></div>' +
-      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Curso asignado *</label>' +
-        '<select id="ce-curso" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;">' +
-          (cursos.length === 0 ? '<option value="">— Sin cursos —</option>' :
-           cursos.map(c => '<option value="' + escapeHTML(c.id) + '" data-nombre="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>').join('')) +
-        '</select></div>' +
+      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Curso asignado' + (sinCursos ? ' (opcional)' : ' *') + '</label>' +
+        (sinCursos
+          ? '<input id="ce-curso-texto" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: 4to A (opcional, no tienes cursos creados)">'
+          : '<select id="ce-curso" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;">' +
+              cursos.map(c => '<option value="' + escapeHTML(c.id) + '" data-nombre="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>').join('') +
+            '</select>'
+        ) + '</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">' +
       '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Usuario *</label>' +
@@ -31823,7 +31826,7 @@ function _renderCuentasEstudiantes() {
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto,#212121);">' + escapeHTML(c.nombre) + '</div>' +
           '<div style="font-size:0.75rem;color:#757575;">Usuario: <strong>' + escapeHTML(c.usuario) + '</strong> · Contraseña: <strong>' + escapeHTML(c.password) + '</strong></div>' +
-          '<div style="font-size:0.72rem;color:#9E9E9E;">' + escapeHTML(c.cursoNombre || c.cursoId) + '</div>' +
+          '<div style="font-size:0.72rem;color:#9E9E9E;">' + escapeHTML(c.cursoNombre || c.cursoId || 'Sin curso asignado') + '</div>' +
         '</div>' +
         '<button onclick="_toggleCuentaEst(' + i + ')" title="' + (activo ? 'Desactivar' : 'Activar') + '" style="background:none;border:1px solid ' + (activo ? '#FFCDD2' : '#C8E6C9') + ';color:' + (activo ? '#C62828' : '#2E7D32') + ';border-radius:6px;padding:4px 8px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
           '<span class="material-icons" style="font-size:14px;">' + (activo ? 'block' : 'check_circle') + '</span>' + (activo ? 'Desactivar' : 'Activar') +
@@ -31847,12 +31850,21 @@ function _crearCuentaEstudiante() {
   const usuario = (document.getElementById('ce-usuario')?.value || '').trim().toLowerCase();
   const pass    = (document.getElementById('ce-pass')?.value || '').trim();
   const cursoSel = document.getElementById('ce-curso');
+  const cursoTexto = document.getElementById('ce-curso-texto');
+  // Si hay <select> (el usuario tiene cursos), el curso es obligatorio. Si no hay
+  // cursos creados (p.ej. psicologo sin rol de docente), el campo es un texto libre opcional.
   const cursoId = cursoSel?.value || '';
-  const cursoNombre = cursoSel?.selectedOptions[0]?.dataset?.nombre || cursoId;
+  const cursoNombre = cursoSel
+    ? (cursoSel.selectedOptions[0]?.dataset?.nombre || cursoId)
+    : (cursoTexto?.value || '').trim();
   const errEl   = document.getElementById('ce-error');
 
-  if (!nombre || !usuario || !pass || !cursoId) {
+  if (!nombre || !usuario || !pass) {
     if (errEl) errEl.textContent = 'Completa todos los campos.';
+    return;
+  }
+  if (cursoSel && !cursoId) {
+    if (errEl) errEl.textContent = 'Selecciona un curso.';
     return;
   }
   if (usuario.length < 3) {

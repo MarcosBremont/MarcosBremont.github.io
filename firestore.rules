@@ -37,14 +37,17 @@ service cloud.firestore {
 
     // Compara mi centro contra el centro del dueño de un doc ubicado en users/{otroUid}/... o usuarios/{otroUid}
     function mismoCentro(otroUid) {
-      return miCentroId() != null &&
+      return otroUid != null && miCentroId() != null &&
              miCentroId() == get(/databases/$(database)/documents/usuarios/$(otroUid)).data.centroId;
     }
 
     // Compara mi centro contra un campo centroId estampado en el propio documento leido.
     // Si el documento no tiene centroId (p.ej. enviado de forma anonima), no se filtra por centro.
+    // Usa .get() con valor por defecto: leer un campo ausente directamente (resource.data.centroId)
+    // hace fallar la evaluacion de la regla para ESE documento en consultas collectionGroup,
+    // y como ningun reportes_comportamiento/denuncia tiene centroId hoy, eso bloqueaba TODO.
     function mismoCentroOSinCentro() {
-      return resource.data.centroId == null || resource.data.centroId == miCentroId();
+      return resource.data.get('centroId', null) == null || resource.data.get('centroId', null) == miCentroId();
     }
 
     function canReadConvivenciaGlobal(ownerUid) {
@@ -127,7 +130,7 @@ service cloud.firestore {
       allow create: if signedIn();
       allow read: if signedIn() && (
         isSuperadminByEmail() || currentRole() == 'superadmin' ||
-        (hasRole(['admin_centro', 'director']) && mismoCentro(resource.data.uid))
+        (hasRole(['admin_centro', 'director']) && mismoCentro(resource.data.get('uid', null)))
       );
       allow update, delete: if false;
     }
