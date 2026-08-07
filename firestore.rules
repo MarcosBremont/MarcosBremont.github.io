@@ -31,17 +31,42 @@ service cloud.firestore {
       return isOwnerSuperadminEmail() || isConfiguredSuperadminEmail();
     }
 
-    function canReadConvivenciaGlobal() {
+    function miCentroId() {
+      return signedIn() ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.centroId : null;
+    }
+
+    // Compara mi centro contra el centro del dueño de un doc ubicado en users/{otroUid}/... o usuarios/{otroUid}
+    function mismoCentro(otroUid) {
+      return miCentroId() != null &&
+             miCentroId() == get(/databases/$(database)/documents/usuarios/$(otroUid)).data.centroId;
+    }
+
+    // Compara mi centro contra un campo centroId estampado en el propio documento leido.
+    // Si el documento no tiene centroId (p.ej. enviado de forma anonima), no se filtra por centro.
+    function mismoCentroOSinCentro() {
+      return resource.data.centroId == null || resource.data.centroId == miCentroId();
+    }
+
+    function canReadConvivenciaGlobal(ownerUid) {
       return signedIn() && (
-        isSuperadminByEmail() ||
-        hasRole(['psicologia', 'psicologa', 'psicologo', 'coordinadora', 'director', 'superadmin', 'admin_centro'])
+        isSuperadminByEmail() || currentRole() == 'superadmin' ||
+        (hasRole(['psicologia', 'psicologa', 'psicologo', 'coordinadora', 'director', 'admin_centro']) && mismoCentro(ownerUid))
+      );
+    }
+
+    // Variante para rutas collectionGroup donde el uid del dueno no esta disponible en la ruta
+    // (el comodin ** se lo come); se compara contra un centroId estampado en el propio documento.
+    function canReadConvivenciaGlobalPorDoc() {
+      return signedIn() && (
+        isSuperadminByEmail() || currentRole() == 'superadmin' ||
+        (hasRole(['psicologia', 'psicologa', 'psicologo', 'coordinadora', 'director', 'admin_centro']) && mismoCentroOSinCentro())
       );
     }
 
     function canReadConvivenciaOwnerOrPsico(ownerUid) {
       return signedIn() && (
         request.auth.uid == ownerUid ||
-        canReadConvivenciaGlobal()
+        canReadConvivenciaGlobal(ownerUid)
       );
     }
 
@@ -61,6 +86,11 @@ service cloud.firestore {
       match /pagos_config/{doc} {
         allow read, write: if signedIn();
       }
+
+      match /calendario/{doc} {
+        allow read: if signedIn();
+        allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
+      }
     }
 
     match /perfiles/{userId} {
@@ -74,7 +104,7 @@ service cloud.firestore {
     }
 
     match /usuarios/{uid} {
-      allow read: if true;
+      allow read: if signedIn();
       allow write: if signedIn();
     }
 
@@ -85,7 +115,8 @@ service cloud.firestore {
 
     match /users/{userId}/data/{doc} {
       allow read, write: if signedIn() && request.auth.uid == userId;
-      allow read: if hasRole(['coordinadora', 'director', 'superadmin', 'admin_centro']);
+      allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                     (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
     }
 
     match /users/{userId}/sessions/{sessionId} {
@@ -94,7 +125,10 @@ service cloud.firestore {
 
     match /error_logs/{logId} {
       allow create: if signedIn();
-      allow read: if signedIn() && (isSuperadminByEmail() || hasRole(['superadmin', 'admin_centro', 'director']));
+      allow read: if signedIn() && (
+        isSuperadminByEmail() || currentRole() == 'superadmin' ||
+        (hasRole(['admin_centro', 'director']) && mismoCentro(resource.data.uid))
+      );
       allow update, delete: if false;
     }
 
@@ -123,22 +157,16 @@ service cloud.firestore {
     // Reglas explícitas para consultas collectionGroup globales
     // (evita permission-denied cuando existen colecciones con el mismo nombre en otras rutas).
     match /{path=**}/reportes_comportamiento/{repId} {
-      allow read: if canReadConvivenciaGlobal();
+      allow read: if canReadConvivenciaGlobalPorDoc();
     }
 
     match /{path=**}/denuncias/{denId} {
-      allow read: if canReadConvivenciaGlobal();
+      allow read: if canReadConvivenciaGlobalPorDoc();
     }
 
     match /public_blogs/{userId}/datos_padre/{estId} {
       allow read: if signedIn();
       allow write: if signedIn() && request.auth.uid == userId;
-    }
-
-    match /public_calendar/{doc} {
-      allow read: if signedIn();
-      allow write: if signedIn()
-                   && request.auth.token.email == 'soymarcosbremont@gmail.com';
     }
 
     match /examenes/{examenId} {

@@ -26751,9 +26751,13 @@ function _dashObtenerDatosCalendario() {
 function _dashAsegurarCalendarioAdminBanner() {
   if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') return;
   _dashCalBannerFetchInFlight = true;
-  _calEscCargarAdmin()
-    .then(() => _renderizarBannerCalendarioDashboard())
-    .finally(() => { _dashCalBannerFetchInFlight = false; });
+  (async () => {
+    if (!_calEsc.centroId) {
+      _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
+    }
+    await _calEscCargarAdmin();
+    _renderizarBannerCalendarioDashboard();
+  })().finally(() => { _dashCalBannerFetchInFlight = false; });
 }
 
 function _dashParseActividadConFecha(texto) {
@@ -29871,14 +29875,58 @@ const CAL_ESC_MESES_LABEL = {
 
 let _calEsc = {
   modo: 'admin',        // 'admin' | 'personal'
-  adminDatos: null,     // datos del calendario del admin (Firestore)
+  adminDatos: null,     // datos del calendario del admin (Firestore, del centro actual)
   personalDatos: null,  // datos del usuario (localStorage)
   mesActivo: 'agosto',
   cargando: false,
+  esAdmin: false,        // solo superadmin puede editar el calendario de un centro
+  centroId: null,        // centro cuyo calendario se esta viendo/editando
+  listaCentros: [],       // solo se llena para superadmin (selector de centro)
 };
 
 function _calEscEsAdmin() {
-  return !!(window.currentUser && typeof ADMIN_EMAIL !== 'undefined' && window.currentUser.email === ADMIN_EMAIL);
+  return !!_calEsc.esAdmin;
+}
+
+// Resuelve el centroId del usuario logueado (docente/admin_centro/director/coordinadora),
+// leyendo su perfil y, si no tiene centroId propio, buscandolo en centros.admins.
+async function _obtenerCentroIdDeUsuarioActual() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (doc.exists && doc.data().centroId) return doc.data().centroId;
+  } catch {}
+  try {
+    const email = window.currentUser.email?.toLowerCase();
+    if (email) {
+      const snap = await db.collection('centros').get();
+      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      if (centro) return centro.id;
+    }
+  } catch {}
+  return null;
+}
+
+async function _calEscCargarSelectorCentros() {
+  try {
+    const snap = await db.collection('centros').orderBy('nombre').get();
+    _calEsc.listaCentros = snap.docs.map(d => ({ id: d.id, nombre: d.data().nombre || d.id }));
+  } catch (e) {
+    _calEsc.listaCentros = [];
+  }
+  if (!_calEsc.centroId && _calEsc.listaCentros.length) {
+    _calEsc.centroId = _calEsc.listaCentros[0].id;
+  }
+}
+
+function _calEscCambiarCentro(centroId) {
+  _calEsc.centroId = centroId;
+  _calEsc.cargando = true;
+  _calEscRenderizar();
+  _calEscCargarAdmin(centroId).then(() => {
+    _calEsc.cargando = false;
+    _calEscRenderizar();
+  });
 }
 
 function _calEscDatosActuales() {
@@ -29893,27 +29941,29 @@ function _calEscDatosVacios() {
   return { meses: d, festivos: [] };
 }
 
-// ── Cargar calendario del admin desde Firestore ──────────────────────
-async function _calEscCargarAdmin() {
+// ── Cargar calendario del admin desde Firestore (del centro actual) ──
+async function _calEscCargarAdmin(centroId) {
   if (typeof db === 'undefined') return;
+  const cid = centroId || _calEsc.centroId;
+  if (!cid) { _calEsc.adminDatos = _calEscDatosVacios(); return; }
   try {
-    const doc = await db.collection('public_calendar').doc('main').get();
+    const doc = await db.collection('centros').doc(cid).collection('calendario').doc('main').get();
     _calEsc.adminDatos = (doc.exists && doc.data()?.meses) ? doc.data() : _calEscDatosVacios();
   } catch (e) {
     _calEsc.adminDatos = _calEscDatosVacios();
   }
 }
 
-// ── Guardar calendario del admin en Firestore ────────────────────────
+// ── Guardar calendario del admin en Firestore (del centro actual) ────
 async function _calEscGuardarAdmin() {
-  if (!_calEscEsAdmin() || typeof db === 'undefined') return;
+  if (!_calEscEsAdmin() || typeof db === 'undefined' || !_calEsc.centroId) return;
   try {
-    await db.collection('public_calendar').doc('main').set(_calEsc.adminDatos || _calEscDatosVacios());
-    mostrarToast('Calendario publicado para todos los docentes ✓', 'success');
+    await db.collection('centros').doc(_calEsc.centroId).collection('calendario').doc('main').set(_calEsc.adminDatos || _calEscDatosVacios());
+    mostrarToast('Calendario publicado para el centro ✓', 'success');
   } catch (e) {
     console.error('[Calendario] Error Firestore:', e.code, e.message);
     if (e.code === 'permission-denied') {
-      mostrarToast('Sin permisos en Firestore. Verifica las reglas de public_calendar en Firebase Console.', 'error');
+      mostrarToast('Sin permisos en Firestore. Verifica las reglas de centros/{id}/calendario en Firebase Console.', 'error');
     } else {
       mostrarToast('Error al guardar en Firestore: ' + (e.message || e.code), 'error');
     }
@@ -29942,6 +29992,14 @@ async function abrirCalendarioEscolar() {
   if (c) c.innerHTML = `<div style="text-align:center;padding:40px;color:#9E9E9E;">
     <span class="material-icons" style="font-size:36px;display:block;margin-bottom:8px;">hourglass_empty</span>
     Cargando calendario...</div>`;
+
+  _calEsc.esAdmin = await _esSuperadminPorPerfil();
+
+  if (_calEsc.esAdmin) {
+    await _calEscCargarSelectorCentros();
+  } else if (!_calEsc.centroId) {
+    _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
+  }
 
   await _calEscCargarAdmin();
   _calEscCargarPersonal();
@@ -29976,7 +30034,13 @@ function _calEscRenderizarBanner() {
   if (_calEscEsAdmin()) {
     banner.style.cssText += ';background:#E8F5E9;color:#1B5E20;border-color:#A5D6A7;';
     icon.textContent = 'admin_panel_settings';
-    txt.textContent  = 'Eres el administrador. Los cambios que hagas aquí se publican para todos los docentes.';
+    const selectorCentro = _calEsc.listaCentros.length
+      ? `<select onchange="_calEscCambiarCentro(this.value)"
+           style="margin-left:8px;padding:4px 8px;border-radius:8px;border:1.5px solid #A5D6A7;font-size:0.78rem;font-weight:700;color:#1B5E20;background:#fff;">
+          ${_calEsc.listaCentros.map(c => `<option value="${c.id}" ${c.id === _calEsc.centroId ? 'selected' : ''}>${escapeHTML(c.nombre)}</option>`).join('')}
+        </select>`
+      : '';
+    txt.innerHTML    = 'Editando el calendario del centro:' + selectorCentro;
     btns.innerHTML   = `<button onclick="_calEscGuardarAdmin()"
       style="background:#2E7D32;color:#fff;border:none;border-radius:20px;padding:6px 14px;
              font-size:0.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
@@ -32776,7 +32840,7 @@ async function _renderCentrosEducativos() {
 
 /** Muestra formulario para crear/editar centro */
 async function _mostrarFormCentro(centroId) {
-  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [] };
+  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '' };
 
   if (centroId) {
     try {
@@ -32797,6 +32861,16 @@ async function _mostrarFormCentro(centroId) {
     + _inputCentro('sa-centro-telefono', 'Teléfono', centro.telefono, 'Ej: 809-555-1234')
     + _inputCentro('sa-centro-email', 'Email del Centro', centro.email, 'Ej: info@liceo.edu.do')
     + _inputCentro('sa-centro-logo', 'URL del Logo', centro.logoUrl, 'https://ejemplo.com/logo.png')
+    + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #1565C0;border-radius:10px;background:#E3F2FD;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#0D47A1;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">mark_email_read</span> Correo OTP de registro (EmailJS) — opcional</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Si este centro necesita su propia cuenta de EmailJS para el código de verificación al registrarse (para no compartir el cupo con otros centros), complétalo aquí. Déjalo vacío para usar la cuenta compartida por defecto.</p>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">'
+    + _inputCentro('sa-centro-emailjs-service', 'EmailJS Service ID', centro.emailjsServiceId, 'service_xxxxxxx')
+    + _inputCentro('sa-centro-emailjs-template', 'EmailJS Template ID (OTP)', centro.emailjsTemplateId, 'template_xxxxxxx')
+    + _inputCentro('sa-centro-emailjs-public-key', 'EmailJS Public Key', centro.emailjsPublicKey, 'xxxxxxxxxxxxxxxxx')
+    + '</div>'
     + '</div>'
     + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #7C4DFF;border-radius:10px;background:#F3E5F5;">'
     + '<label style="font-size:0.82rem;font-weight:600;color:#4527A0;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
@@ -32870,6 +32944,9 @@ async function _guardarCentro(centroId) {
     telefono: document.getElementById('sa-centro-telefono')?.value?.trim() || '',
     email: document.getElementById('sa-centro-email')?.value?.trim() || '',
     logoUrl: document.getElementById('sa-centro-logo')?.value?.trim() || '',
+    emailjsServiceId: document.getElementById('sa-centro-emailjs-service')?.value?.trim() || '',
+    emailjsTemplateId: document.getElementById('sa-centro-emailjs-template')?.value?.trim() || '',
+    emailjsPublicKey: document.getElementById('sa-centro-emailjs-public-key')?.value?.trim() || '',
     updatedAt: new Date().toISOString()
   };
 

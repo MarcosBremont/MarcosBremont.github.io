@@ -754,7 +754,7 @@ async function authRegistrarse() {
   };
 
   // Enviar OTP por correo
-  const envio = await _enviarEmailOTP(email, otpCode);
+  const envio = await _enviarEmailOTP(email, otpCode, centroId);
   _authSetLoading(false, 'reg');
 
   if (!envio.ok) {
@@ -816,15 +816,34 @@ function _tradErrorOTP(result) {
 }
 
 // ── Enviar OTP vía EmailJS ────────────────────────────────────────
-async function _enviarEmailOTP(email, code) {
+// Si el centro tiene su propia cuenta de EmailJS configurada (Superadmin > Centros
+// Educativos), se usa esa en vez de la compartida por defecto de firebase-config.js.
+async function _enviarEmailOTP(email, code, centroId) {
   if (typeof EMAILJS_SERVICE_ID === 'undefined' ||
       EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
     return { ok: false, reason: 'EmailJS no configurado' };
   }
+
+  let serviceId = EMAILJS_SERVICE_ID;
+  let templateId = EMAILJS_TEMPLATE_ID;
+  let publicKey = EMAILJS_PUBLIC_KEY;
+
+  if (centroId && typeof db !== 'undefined') {
+    try {
+      const centroDoc = await db.collection('centros').doc(centroId).get();
+      if (centroDoc.exists) {
+        const c = centroDoc.data() || {};
+        if (c.emailjsServiceId) serviceId = c.emailjsServiceId;
+        if (c.emailjsTemplateId) templateId = c.emailjsTemplateId;
+        if (c.emailjsPublicKey) publicKey = c.emailjsPublicKey;
+      }
+    } catch (e) { /* si falla la lectura, se sigue con la cuenta global por defecto */ }
+  }
+
   try {
     const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
+      serviceId,
+      templateId,
       {
         email,
         to_email: email,
@@ -835,7 +854,7 @@ async function _enviarEmailOTP(email, code) {
         code,
         app_name: 'TinClass'
       },
-      { publicKey: EMAILJS_PUBLIC_KEY }
+      { publicKey: publicKey }
     );
     return { ok: true, status: response?.status || 200, text: response?.text || 'OK' };
   } catch (e) {
@@ -975,7 +994,7 @@ async function authReenviarOTPRegistro() {
   const btn = document.getElementById('auth-btn-otp-reenv');
   if (btn) btn.disabled = true;
 
-  const envio = await _enviarEmailOTP(email, nuevoCode);
+  const envio = await _enviarEmailOTP(email, nuevoCode, _pendingOtp?.centroId);
 
   if (btn) btn.disabled = false;
   _iniciarTimerOTP();
