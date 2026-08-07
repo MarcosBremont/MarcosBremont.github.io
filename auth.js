@@ -24,6 +24,7 @@ const FIREBASE_STORES = [
   { store: 'reportes',              key: 'planificadorRA_reportes_v1' },
   { store: 'convivencia_archivada', key: 'planificadorRA_convivencia_archivada_v1' },
   { store: 'calendario_escolar',    key: 'planificadorRA_calendario_escolar_v1' },
+  { store: 'cumpleanos',            key: 'planificadorRA_cumpleanos_v1' },
   { store: 'cuentas_estudiantes',  key: 'planificadorRA_cuentas_estudiantes_v1' },
   { store: 'groqKey',              key: 'planificadorRA_groqKey' },
   { store: 'geminiKey',            key: 'planificadorRA_geminiKey' },

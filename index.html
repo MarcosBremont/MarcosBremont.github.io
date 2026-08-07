@@ -485,6 +485,11 @@
           <span class="material-icons">event_note</span>
           <span>Calendario Escolar</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-cumpleanos" onclick="abrirCumpleanos()"
+          style="--accent:#AD1457;">
+          <span class="material-icons">cake</span>
+          <span>Cumpleaños</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()"
           style="--accent:#C62828;">
           <span class="material-icons">assignment_late</span>
@@ -1837,6 +1842,32 @@
     </div>
     <div class="nav-buttons">
       <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: CUMPLEAÑOS ===== -->
+  <div id="panel-cumpleanos" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#FCE4EC;color:#AD1457;">cake</span>
+        <h2>Cumpleaños</h2>
+        <div style="margin-left:auto;">
+          <select id="cumple-filtro-curso" onchange="renderizarCumpleanos()"
+            style="padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:20px;font-size:0.8rem;background:#fff;color:#424242;cursor:pointer;">
+            <option value="">Todos los cursos</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:#78909C;margin:0 0 16px;">
+        Registra la fecha de nacimiento de cada estudiante para anticipar sus cumpleaños en los avisos del calendario escolar.
+      </p>
+
+      <div id="cumpleanos-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarCumpleanos()">
         <span class="material-icons">arrow_back</span> Volver
       </button>
     </div>

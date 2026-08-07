@@ -5896,6 +5896,7 @@ function _buildExportSnapshot() {
     blog: localStorage.getItem(BLOG_KEY) || '[]',
     reportes: localStorage.getItem(REPORTES_KEY) || '[]',
     calendarioEscolar: localStorage.getItem(CAL_ESC_KEY) || '{}',
+    cumpleanos: localStorage.getItem(CUMPLE_KEY) || '{}',
     stickies: localStorage.getItem(STICKIES_KEY) || '[]',
     calBackups: localStorage.getItem(CAL_BACKUP_KEY) || '[]',
     geminiKey: localStorage.getItem(GEMINI_KEY_STORAGE) || '',
@@ -6258,6 +6259,7 @@ function _renderArchiveSections(snapshot) {
   sections.push(_renderArchiveFriendlySection('Participación', 'groups_2', 'Participación por curso o estudiante', badge(_archiveValueCount(participacion) + ' elementos'), lista(genericRows(participacion))));
   sections.push(_renderArchiveFriendlySection('Reportes', 'description', 'Reportes del ciclo', badge((Array.isArray(reportes) ? reportes.length : 0) + ' reportes'), lista(genericRows(reportes))));
   sections.push(_renderArchiveFriendlySection('Calendario escolar', 'event', 'Calendario y eventos', badge(_archiveValueCount(snapshot.calendarioEscolar) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calendarioEscolar) || {}))));
+  sections.push(_renderArchiveFriendlySection('Cumpleaños', 'cake', 'Fechas de nacimiento por estudiante', badge(_archiveValueCount(snapshot.cumpleanos) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.cumpleanos) || {}))));
   sections.push(_renderArchiveFriendlySection('Notas del docente', 'edit_note', 'Bitácora personal del docente', badge((snapshot.notasDocente || '').trim() ? 'con contenido' : 'vacío'), lista(genericRows(snapshot.notasDocente || ''))));
   sections.push(_renderArchiveFriendlySection('Stickies', 'sticky_note_2', 'Notas rápidas del dashboard', badge((Array.isArray(stickies) ? stickies.length : 0) + ' notas'), lista(genericRows(stickies))));
   sections.push(_renderArchiveFriendlySection('Copias automáticas de calificaciones', 'history', 'Backups automáticos del módulo', badge(_archiveValueCount(snapshot.calBackups) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calBackups) || []))));
@@ -9318,7 +9320,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -9334,7 +9336,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -26539,6 +26541,7 @@ function importarDatos() {
     if (d.blog) localStorage.setItem(BLOG_KEY, d.blog);
     if (d.reportes) localStorage.setItem(REPORTES_KEY, d.reportes);
     if (d.calendarioEscolar) localStorage.setItem(CAL_ESC_KEY, d.calendarioEscolar);
+    if (d.cumpleanos) localStorage.setItem(CUMPLE_KEY, d.cumpleanos);
     if (d.stickies) localStorage.setItem(STICKIES_KEY, d.stickies);
     if (d.calBackups) localStorage.setItem(CAL_BACKUP_KEY, d.calBackups);
     if (d.geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, d.geminiKey);
@@ -26773,7 +26776,11 @@ function _dashConstruirAvisosCalendario(datos) {
     });
   });
 
-  const prioridadTipo = { Festivo: 1, Actividad: 2, 'Efeméride': 3 };
+  _listaCumpleanosOrdenada(10).forEach(c => {
+    pushAviso('Cumpleaños', c.fecha, `Cumpleaños de ${c.nombre}`, 'cake', 10);
+  });
+
+  const prioridadTipo = { Festivo: 1, 'Cumpleaños': 2, Actividad: 3, 'Efeméride': 4 };
   avisos.sort((a, b) => (a.diff - b.diff) || ((prioridadTipo[a.tipo] || 9) - (prioridadTipo[b.tipo] || 9)) || a.titulo.localeCompare(b.titulo));
   return avisos;
 }
@@ -26805,7 +26812,7 @@ function _renderizarBannerCalendarioDashboard() {
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${avisos.map(a => `
           <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
-            <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : '#6A1B9A'};">${a.icono}</span>
+            <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
             <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff)} · ${_dashFechaCorta(a.fecha)}</span>
             <span style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
           </div>
@@ -29656,6 +29663,148 @@ function _presElegirCurso(cursoId) {
   const detectado = _presDetectarClase();
   const periodoId = (detectado && detectado.cursoId === cursoId) ? detectado.periodoId : null;
   _presCargarCurso(cursoId, periodoId);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: CUMPLEAÑOS
+// ════════════════════════════════════════════════════════════════════
+
+const CUMPLE_KEY = 'planificadorRA_cumpleanos_v1';
+
+function cargarCumpleanos() {
+  try {
+    const raw = localStorage.getItem(CUMPLE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch { return {}; }
+}
+
+function _guardarCumpleanosData(data) {
+  localStorage.setItem(CUMPLE_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('cumpleanos', data);
+}
+
+// Próxima ocurrencia (este año o el siguiente) de una fecha guardada como 'YYYY-MM-DD'
+function _proximaFechaCumple(fechaISO) {
+  const m = String(fechaISO || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const mes = parseInt(m[1], 10), dia = parseInt(m[2], 10);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const y = hoy.getFullYear();
+  const cands = [new Date(y, mes - 1, dia, 12), new Date(y + 1, mes - 1, dia, 12)]
+    .filter(d => d.getMonth() === (mes - 1) && d.getDate() === dia)
+    .sort((a, b) => a - b);
+  return cands.find(d => _dashFechaDiffDias(hoy, d) >= 0) || null;
+}
+
+// Lista de estudiantes (de todos los cursos activos) con cumpleaños registrado,
+// ordenada por proximidad. diasAnticipacion=null devuelve todos.
+function _listaCumpleanosOrdenada(diasAnticipacion) {
+  const data = cargarCumpleanos();
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const out = [];
+  Object.values(calState.cursos || {}).forEach(curso => {
+    (curso.estudiantes || []).forEach(est => {
+      const fechaISO = data[est.id];
+      if (!fechaISO) return;
+      const prox = _proximaFechaCumple(fechaISO);
+      if (!prox) return;
+      const diff = _dashFechaDiffDias(hoy, prox);
+      if (diasAnticipacion != null && diff > diasAnticipacion) return;
+      out.push({ estId: est.id, nombre: est.nombre, curso: curso.nombre, fechaISO, fecha: prox, diff });
+    });
+  });
+  out.sort((a, b) => a.diff - b.diff || a.nombre.localeCompare(b.nombre));
+  return out;
+}
+
+function guardarCumpleanosEstudiante(estId, fechaISO) {
+  const data = cargarCumpleanos();
+  if (fechaISO) data[estId] = fechaISO; else delete data[estId];
+  _guardarCumpleanosData(data);
+  registrarCambio('Cumpleaños actualizado');
+  renderizarCumpleanos();
+  _renderizarBannerCalendarioDashboard();
+  mostrarToast(fechaISO ? 'Cumpleaños guardado' : 'Fecha eliminada', 'success');
+}
+
+function abrirCumpleanos() {
+  _mostrarPanel('panel-cumpleanos');
+  const sel = document.getElementById('cumple-filtro-curso');
+  if (sel) {
+    const cursos = Object.values(calState.cursos || {}).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todos los cursos</option>'
+      + cursos.map(c => `<option value="${escapeHTML(c.id)}" ${cur === c.id ? 'selected' : ''}>${escapeHTML(c.nombre)}</option>`).join('');
+  }
+  renderizarCumpleanos();
+}
+function cerrarCumpleanos() { abrirDashboard(); }
+
+function renderizarCumpleanos() {
+  const cont = document.getElementById('cumpleanos-container');
+  if (!cont) return;
+  const filtroCurso = document.getElementById('cumple-filtro-curso')?.value || '';
+  const data = cargarCumpleanos();
+
+  const proximos = _listaCumpleanosOrdenada(30);
+  const resumenHTML = proximos.length ? `
+    <div style="background:linear-gradient(135deg,#FCE4EC 0%,#F3E5F5 100%);border:1.5px solid #F8BBD0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <div style="font-size:0.8rem;font-weight:700;color:#AD1457;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span class="material-icons" style="font-size:17px;">cake</span> Próximos cumpleaños (30 días)
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${proximos.map(p => `
+          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #F8BBD0;border-radius:18px;padding:5px 9px;">
+            <span style="font-size:0.75rem;color:#880E4F;font-weight:700;">${escapeHTML(_dashEtiquetaAnticipacion(p.diff))}</span>
+            <span style="font-size:0.78rem;color:#424242;">${escapeHTML(p.nombre)}</span>
+            <span style="font-size:0.7rem;color:#9E9E9E;">· ${escapeHTML(p.curso)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : `
+    <div style="padding:10px 12px;border:1px dashed #CFD8DC;border-radius:8px;background:#FAFAFA;color:#90A4AE;font-size:0.8rem;margin-bottom:16px;">
+      Sin cumpleaños próximos en los siguientes 30 días.
+    </div>`;
+
+  const cursos = Object.values(calState.cursos || {})
+    .filter(c => !filtroCurso || c.id === filtroCurso)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  if (!cursos.length) {
+    cont.innerHTML = resumenHTML + `<div style="text-align:center;padding:30px;color:#9E9E9E;">No hay cursos registrados todavía.</div>`;
+    return;
+  }
+
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+
+  cont.innerHTML = resumenHTML + cursos.map(curso => {
+    const ests = [...(curso.estudiantes || [])].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    if (!ests.length) return '';
+    return `
+      <div style="margin-bottom:18px;">
+        <div style="font-size:0.78rem;font-weight:800;color:#546E7A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${escapeHTML(curso.nombre)}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${ests.map(est => {
+            const fechaISO = data[est.id] || '';
+            const prox = fechaISO ? _proximaFechaCumple(fechaISO) : null;
+            const diff = prox ? _dashFechaDiffDias(hoy, prox) : null;
+            return `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #E0E0E0;border-radius:8px;background:#fff;flex-wrap:wrap;">
+              <span class="material-icons" style="color:#AD1457;font-size:18px;">cake</span>
+              <span style="flex:1;min-width:120px;font-size:0.85rem;color:#37474F;">${escapeHTML(est.nombre)}</span>
+              <input type="date" value="${escapeHTML(fechaISO)}" id="cumple-input-${est.id}"
+                onchange="guardarCumpleanosEstudiante('${est.id}', this.value)"
+                style="padding:6px 8px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;">
+              <span style="font-size:0.72rem;font-weight:700;color:#AD1457;min-width:70px;">${diff !== null ? escapeHTML(_dashEtiquetaAnticipacion(diff)) : ''}</span>
+              ${fechaISO ? `<button onclick="guardarCumpleanosEstudiante('${est.id}','')" title="Borrar fecha" style="background:none;border:none;color:#BDBDBD;cursor:pointer;display:flex;align-items:center;">
+                <span class="material-icons" style="font-size:16px;">close</span>
+              </button>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ════════════════════════════════════════════════════════════════════
