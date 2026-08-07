@@ -82,11 +82,6 @@ body {
 }
 
 .version-detector {
-  position: fixed;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 9998;
   background: rgba(13, 71, 161, 0.92);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.25);
@@ -125,10 +120,6 @@ body {
 
 @media (max-width: 600px) {
   .version-detector {
-    left: 6px;
-    top: auto;
-    bottom: 10px;
-    transform: none;
     font-size: 0.68rem;
     padding: 8px 10px;
     max-width: min(240px, calc(100vw - 12px));
