@@ -347,30 +347,33 @@
 
   async function _dispatchReport(basePayload) {
     const cfg = _getCfg();
-    if (!cfg.enabled) return;
+    if (!cfg.enabled) return { ok: false, reason: 'reporter-disabled' };
 
     const payload = _buildPayload(basePayload);
-    if (_shouldIgnore(payload)) return;
-    if (_isDuplicate(payload)) return;
+    if (_shouldIgnore(payload)) return { ok: false, reason: 'ignored' };
+    if (_isDuplicate(payload)) return { ok: false, reason: 'duplicate' };
 
-    if (_severityWeight(payload.severity) < _severityWeight(cfg.minSeverity)) return;
-    if (!_withinBurstLimit()) return;
+    if (_severityWeight(payload.severity) < _severityWeight(cfg.minSeverity)) return { ok: false, reason: 'below-min-severity' };
+    if (!_withinBurstLimit()) return { ok: false, reason: 'burst-limit' };
 
-    if (_isReporting) return;
+    if (_isReporting) return { ok: false, reason: 'already-reporting' };
     _isReporting = true;
+    const result = { ok: false, email: null, firestore: null };
     try {
       if (cfg.sendEmail) {
-        const mailResult = await _sendByEmail(payload);
-        if (!mailResult.ok) {
-          console.warn('[ErrorReporter] Fallo enviando correo:', mailResult.reason || mailResult.status || 'desconocido');
+        result.email = await _sendByEmail(payload);
+        if (!result.email.ok) {
+          console.warn('[ErrorReporter] Fallo enviando correo:', result.email.reason || result.email.status || 'desconocido');
         }
       }
       if (cfg.saveFirestore) {
-        const logResult = await _saveInFirestore(payload);
-        if (!logResult.ok) {
-          console.warn('[ErrorReporter] Fallo guardando log en Firestore:', logResult.reason || 'desconocido');
+        result.firestore = await _saveInFirestore(payload);
+        if (!result.firestore.ok) {
+          console.warn('[ErrorReporter] Fallo guardando log en Firestore:', result.firestore.reason || 'desconocido');
         }
       }
+      result.ok = !!((result.email && result.email.ok) || (result.firestore && result.firestore.ok));
+      return result;
     } finally {
       _isReporting = false;
     }
@@ -510,7 +513,7 @@
   function _manualReport(error, context) {
     const err = error instanceof Error ? error : null;
     const ctx = context || {};
-    _dispatchReport({
+    return _dispatchReport({
       type: ctx.type || 'manual',
       source: ctx.source || 'manual',
       module: ctx.module || null,

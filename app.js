@@ -26191,7 +26191,8 @@ async function probarAlertaErrorCorreo() {
 
   const probeId = 'probe-' + Date.now();
   const err = new Error('Prueba manual de alerta TinClass #' + probeId);
-  window.tinclassReportError(err, {
+  mostrarToast('Enviando prueba...', 'info');
+  const resultado = await window.tinclassReportError(err, {
     type: 'manual_test',
     source: 'settings.probe',
     module: 'configuracion',
@@ -26199,7 +26200,35 @@ async function probarAlertaErrorCorreo() {
     severity: 'high'
   });
 
-  mostrarToast('Prueba enviada. Revisa tu correo y Firestore (error_logs).', 'success');
+  const motivosSkip = {
+    'reporter-disabled': 'El reporte de errores está desactivado (activa el interruptor de arriba).',
+    'duplicate': 'Prueba ignorada por deduplicación, espera un par de minutos e intenta de nuevo.',
+    'below-min-severity': 'La severidad mínima configurada bloqueó la prueba.',
+    'burst-limit': 'Se alcanzó el límite de envíos por hora.',
+    'already-reporting': 'Ya hay un reporte en curso, intenta de nuevo en un momento.'
+  };
+
+  if (!resultado) {
+    mostrarToast('No se obtuvo respuesta del reporter. Revisa la consola.', 'error');
+    return;
+  }
+  if (!resultado.email && !resultado.firestore) {
+    mostrarToast(motivosSkip[resultado.reason] || ('Prueba no enviada: ' + (resultado.reason || 'motivo desconocido')), 'error');
+    return;
+  }
+  if (resultado.ok) {
+    const detalles = [
+      resultado.email ? ('Correo: ' + (resultado.email.ok ? 'enviado ✓' : 'falló ✗')) : null,
+      resultado.firestore ? ('Firestore: ' + (resultado.firestore.ok ? 'guardado ✓' : 'falló ✗')) : null
+    ].filter(Boolean).join(' · ');
+    mostrarToast('Prueba enviada. ' + detalles, 'success');
+  } else {
+    const razones = [
+      resultado.email && !resultado.email.ok ? ('Correo: ' + (resultado.email.reason || 'error desconocido')) : null,
+      resultado.firestore && !resultado.firestore.ok ? ('Firestore: ' + (resultado.firestore.reason || 'error desconocido')) : null
+    ].filter(Boolean).join(' · ');
+    mostrarToast('La prueba falló. ' + razones, 'error');
+  }
 }
 
 function _syncPreferencias() {
