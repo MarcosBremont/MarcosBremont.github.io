@@ -12,7 +12,8 @@
     sendEmail: true,
     saveFirestore: true,
     includeUserAgent: true,
-    includeUrl: true
+    includeUrl: true,
+    templateId: ''
   };
 
   const _lastByFingerprint = new Map();
@@ -257,9 +258,9 @@
     if (!hasEmailJs || !hasConfig) return { ok: false, reason: 'emailjs-not-available' };
 
     const serviceId = EMAILJS_SERVICE_ID;
-    const templateId = (typeof EMAILJS_ERROR_TEMPLATE_ID !== 'undefined' && EMAILJS_ERROR_TEMPLATE_ID)
-      ? EMAILJS_ERROR_TEMPLATE_ID
-      : null;
+    const cfgTemplateId = String(_getCfg().templateId || '').trim();
+    const templateId = cfgTemplateId
+      || ((typeof EMAILJS_ERROR_TEMPLATE_ID !== 'undefined' && EMAILJS_ERROR_TEMPLATE_ID) ? EMAILJS_ERROR_TEMPLATE_ID : null);
     const target = (typeof ADMIN_EMAIL !== 'undefined' && ADMIN_EMAIL) ? ADMIN_EMAIL : null;
 
     if (!templateId || !target) return { ok: false, reason: 'email-config-missing' };

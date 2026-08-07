@@ -26127,6 +26127,7 @@ async function _refrescarPanelAlertasErrorConfig() {
   const chkEnabled = document.getElementById('cfg-error-alerts-enabled');
   const chkEmail = document.getElementById('cfg-error-alerts-email');
   const chkFs = document.getElementById('cfg-error-alerts-firestore');
+  const inpTemplateId = document.getElementById('cfg-error-alerts-template-id');
 
   if (!hasReporter) {
     if (statusEl) statusEl.textContent = 'Reporter no disponible. Recarga la aplicación para activarlo.';
@@ -26140,6 +26141,7 @@ async function _refrescarPanelAlertasErrorConfig() {
   if (chkEnabled) chkEnabled.checked = cfg.enabled !== false;
   if (chkEmail) chkEmail.checked = cfg.sendEmail !== false;
   if (chkFs) chkFs.checked = cfg.saveFirestore !== false;
+  if (inpTemplateId && document.activeElement !== inpTemplateId) inpTemplateId.value = cfg.templateId || '';
   if (statusEl) {
     statusEl.textContent = 'Activo: ' + (cfg.enabled ? 'Sí' : 'No')
       + ' | Correo: ' + (cfg.sendEmail ? 'Sí' : 'No')
@@ -26176,6 +26178,18 @@ function _cfgToggleErrorAlertsFirestore(on) {
   window.tinclassErrorAlertsConfig.set({ saveFirestore: !!on });
   _refrescarPanelAlertasErrorConfig();
   mostrarToast(on ? 'Respaldo en Firestore activado' : 'Respaldo en Firestore desactivado', 'success');
+}
+
+function _cfgGuardarErrorAlertsTemplateId() {
+  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
+    mostrarToast('Reporter de errores no disponible', 'error');
+    return;
+  }
+  const input = document.getElementById('cfg-error-alerts-template-id');
+  const val = (input?.value || '').trim();
+  window.tinclassErrorAlertsConfig.set({ templateId: val });
+  _syncPreferencias();
+  mostrarToast(val ? 'Template ID guardado' : 'Template ID restablecido al valor por defecto del código', 'success');
 }
 
 async function probarAlertaErrorCorreo() {
@@ -26235,7 +26249,7 @@ function _syncPreferencias() {
   if (!window._syncFirebase) return;
   const keys = ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana',
                  'cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral',
-                 'planificadorRA_touchMode_v1'];
+                 'planificadorRA_touchMode_v1','tinclass_error_alerts_cfg_v1'];
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
   _syncFirebase('preferencias', data);
