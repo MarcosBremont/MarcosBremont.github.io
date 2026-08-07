@@ -26749,13 +26749,20 @@ function _dashObtenerDatosCalendario() {
 }
 
 function _dashAsegurarCalendarioAdminBanner() {
-  if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') return;
+  console.log('[CalBanner] ensure() llamado. fetchInFlight=', _dashCalBannerFetchInFlight, 'adminDatos=', _calEsc.adminDatos, 'db?', typeof db !== 'undefined');
+  if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') {
+    console.log('[CalBanner] ensure() abortado por guard (ya hay adminDatos, fetch en curso, o sin db).');
+    return;
+  }
   _dashCalBannerFetchInFlight = true;
   (async () => {
+    console.log('[CalBanner] currentUser al iniciar fetch:', window.currentUser?.uid, window.currentUser?.email);
     if (!_calEsc.centroId) {
       _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
+      console.log('[CalBanner] centroId resuelto:', _calEsc.centroId);
     }
     await _calEscCargarAdmin();
+    console.log('[CalBanner] adminDatos cargado:', JSON.stringify(_calEsc.adminDatos)?.slice(0, 300));
     _renderizarBannerCalendarioDashboard();
   })().finally(() => { _dashCalBannerFetchInFlight = false; });
 }
@@ -26843,6 +26850,7 @@ function _renderizarBannerCalendarioDashboard() {
 
   const datos = _dashObtenerDatosCalendario();
   const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 6);
+  console.log('[CalBanner] render: festivos=', datos.festivos?.length || 0, 'meses con datos=', Object.keys(datos.meses || {}).length, 'avisos totales=', avisos.length, avisos.map(a => a.tipo + ':' + a.titulo));
 
   if (!avisos.length) {
     el.style.display = 'none';
@@ -29891,28 +29899,38 @@ function _calEscEsAdmin() {
 // Resuelve el centroId del usuario logueado (docente/admin_centro/director/coordinadora),
 // leyendo su perfil y, si no tiene centroId propio, buscandolo en centros.admins.
 async function _obtenerCentroIdDeUsuarioActual() {
-  if (!window.currentUser || typeof db === 'undefined') return null;
+  if (!window.currentUser || typeof db === 'undefined') {
+    console.log('[CalBanner] _obtenerCentroIdDeUsuarioActual: sin currentUser o sin db, devuelvo null.');
+    return null;
+  }
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    console.log('[CalBanner] usuarios/' + window.currentUser.uid + ' existe?', doc.exists, 'centroId=', doc.data()?.centroId, 'rol=', doc.data()?.rol);
     if (doc.exists && doc.data().centroId) return doc.data().centroId;
-  } catch {}
+  } catch (e) { console.warn('[CalBanner] error leyendo usuarios/uid:', e.code || e.message); }
   try {
     const email = window.currentUser.email?.toLowerCase();
     if (email) {
       const snap = await db.collection('centros').get();
+      console.log('[CalBanner] total centros en la coleccion:', snap.size);
       const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      console.log('[CalBanner] centro donde soy admin (por email):', centro?.id || 'ninguno');
       if (centro) return centro.id;
     }
-  } catch {}
+  } catch (e) { console.warn('[CalBanner] error buscando en centros.admins:', e.code || e.message); }
   // Superadmin sin centro propio: usar el primer centro registrado como referencia por
   // defecto (mismo criterio que el selector del editor de calendario), para que su propio
   // dashboard muestre avisos en vez de quedar vacío.
   try {
-    if (await _esSuperadminPorPerfil()) {
+    const esSA = await _esSuperadminPorPerfil();
+    console.log('[CalBanner] es superadmin?', esSA);
+    if (esSA) {
       const snap = await db.collection('centros').orderBy('nombre').limit(1).get();
+      console.log('[CalBanner] fallback superadmin, primer centro encontrado:', snap.empty ? 'NINGUNO (coleccion centros vacia)' : snap.docs[0].id);
       if (!snap.empty) return snap.docs[0].id;
     }
-  } catch {}
+  } catch (e) { console.warn('[CalBanner] error en fallback superadmin:', e.code || e.message); }
+  console.log('[CalBanner] _obtenerCentroIdDeUsuarioActual: no se pudo resolver ningun centroId, devuelvo null.');
   return null;
 }
 
@@ -29954,11 +29972,18 @@ function _calEscDatosVacios() {
 async function _calEscCargarAdmin(centroId) {
   if (typeof db === 'undefined') return;
   const cid = centroId || _calEsc.centroId;
-  if (!cid) { _calEsc.adminDatos = _calEscDatosVacios(); return; }
+  console.log('[CalBanner] _calEscCargarAdmin con cid=', cid, '(param=', centroId, ', _calEsc.centroId=', _calEsc.centroId, ')');
+  if (!cid) {
+    console.log('[CalBanner] sin cid, adminDatos queda vacio.');
+    _calEsc.adminDatos = _calEscDatosVacios();
+    return;
+  }
   try {
     const doc = await db.collection('centros').doc(cid).collection('calendario').doc('main').get();
+    console.log('[CalBanner] centros/' + cid + '/calendario/main existe?', doc.exists, 'tiene meses?', !!doc.data()?.meses, 'festivos=', doc.data()?.festivos?.length || 0);
     _calEsc.adminDatos = (doc.exists && doc.data()?.meses) ? doc.data() : _calEscDatosVacios();
   } catch (e) {
+    console.warn('[CalBanner] error leyendo centros/' + cid + '/calendario/main:', e.code || e.message);
     _calEsc.adminDatos = _calEscDatosVacios();
   }
 }
