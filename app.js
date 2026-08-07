@@ -5806,6 +5806,33 @@ function _getNextSchoolYearKey(now = new Date()) {
   return (startYear + 1) + '-' + (endYear + 1);
 }
 
+// Inverso de _getSchoolYearKey: ¿esta fecha cae dentro del ciclo "2025-2026" (agosto→julio)?
+function _fechaPerteneceACiclo(fechaLike, yearId) {
+  if (!fechaLike || !yearId) return false;
+  const m = String(yearId).match(/^(\d{4})-(\d{4})$/);
+  if (!m) return false;
+  const inicio = new Date(Number(m[1]), 7, 1); // 1 de agosto
+  const fin = new Date(Number(m[2]), 6, 31, 23, 59, 59); // 31 de julio
+  const f = fechaLike instanceof Date ? fechaLike : new Date(fechaLike);
+  if (Number.isNaN(f.getTime())) return false;
+  return f >= inicio && f <= fin;
+}
+
+// Busca el nombre de un estudiante por id, primero en el ciclo archivado indicado,
+// luego en el ciclo activo. Si no aparece en ningún lado, devuelve el id crudo.
+function _resolverNombreEstudiante(estId, yearId) {
+  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
+  for (const c of cursosDelCiclo) {
+    const est = (c.estudiantes || []).find(e => e.id === estId);
+    if (est) return est.nombre;
+  }
+  for (const c of Object.values(calState.cursos || {})) {
+    const est = (c.estudiantes || []).find(e => e.id === estId);
+    if (est) return est.nombre;
+  }
+  return estId;
+}
+
 function _loadArchivedYears() {
   try {
     const raw = localStorage.getItem(ARCHIVES_KEY);
@@ -6097,6 +6124,164 @@ function _archiveValueCount(value) {
   return 1;
 }
 
+// ── Visores de solo lectura filtrados por ciclo escolar (leen el store en vivo,
+// nunca lo modifican) para el modal de "Ver este ciclo" en Mis Datos. ──────────
+function _cicloScroll(html) {
+  return '<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;">' + html + '</div>';
+}
+
+function _renderAsistenciaCicloHTML(yearId) {
+  const data = cargarAsistencia();
+  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
+  const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
+  const filas = [];
+  Object.entries(data || {}).forEach(([cursoId, porFecha]) => {
+    Object.entries(porFecha || {}).forEach(([fecha, porEst]) => {
+      if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(fecha, yearId)) return;
+      const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
+      const estados = Object.values(porEst || {});
+      const presentes = estados.filter(v => v === 'P').length;
+      filas.push({ cursoNombre, fecha, presentes, total: estados.length });
+    });
+  });
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin registros de asistencia en este ciclo.</div>';
+  filas.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return _cicloScroll(filas.map(f =>
+    '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.cursoNombre) + '</span>'
+    + '<span style="color:#7E57C2;">' + escapeHTML(f.fecha) + '</span>'
+    + '<span style="color:#2E7D32;font-weight:700;">' + f.presentes + '/' + f.total + ' presentes</span>'
+    + '</div>'
+  ).join(''));
+}
+
+function _renderComentariosCicloHTML(yearId) {
+  const data = cargarComentarios();
+  const filas = [];
+  Object.entries(data || {}).forEach(([estId, lista]) => {
+    (lista || []).forEach(c => {
+      if (!c.ts || !_fechaPerteneceACiclo(new Date(c.ts), yearId)) return;
+      filas.push({
+        sortKey: c.ts,
+        nombre: _resolverNombreEstudiante(estId, yearId),
+        fecha: new Date(c.ts).toLocaleDateString('es-DO'),
+        categoria: c.categoria, texto: c.texto
+      });
+    });
+  });
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin comentarios en este ciclo.</div>';
+  filas.sort((a, b) => b.sortKey - a.sortKey);
+  return _cicloScroll(filas.map(f =>
+    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(f.fecha) + (f.categoria ? ' · ' + escapeHTML(f.categoria) : '') + '</span></div>'
+    + (f.texto ? '<div style="color:#5E35B1;margin-top:2px;">' + escapeHTML(f.texto) + '</div>' : '')
+    + '</div>'
+  ).join(''));
+}
+
+function _renderIncidenciasCicloHTML(yearId) {
+  const data = cargarIncidencias();
+  const filas = [];
+  Object.entries(data || {}).forEach(([estId, lista]) => {
+    (lista || []).forEach(inc => {
+      const fechaRef = inc.fechaEvento || (inc.ts ? new Date(inc.ts) : null);
+      if (!fechaRef || !_fechaPerteneceACiclo(fechaRef, yearId)) return;
+      filas.push({
+        sortKey: inc.fechaEvento || new Date(inc.ts).toISOString().split('T')[0],
+        nombre: _resolverNombreEstudiante(estId, yearId),
+        fechaLabel: inc.fechaEvento || new Date(inc.ts).toLocaleDateString('es-DO'),
+        tipo: inc.tipo, descripcion: inc.descripcion
+      });
+    });
+  });
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin incidencias en este ciclo.</div>';
+  filas.sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)));
+  return _cicloScroll(filas.map(f =>
+    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(f.fechaLabel) + (f.tipo ? ' · ' + escapeHTML(f.tipo) : '') + '</span></div>'
+    + (f.descripcion ? '<div style="color:#5E35B1;margin-top:2px;">' + escapeHTML(f.descripcion) + '</div>' : '')
+    + '</div>'
+  ).join(''));
+}
+
+function _renderRecuperacionesCicloHTML(yearId) {
+  const data = cargarRecuperaciones();
+  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
+  const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
+  const filas = [];
+  Object.entries(data || {}).forEach(([cursoId, porEst]) => {
+    Object.entries(porEst || {}).forEach(([estId, porRec]) => {
+      Object.entries(porRec || {}).forEach(([recKey, r]) => {
+        if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(r.fechaLimite, yearId)) return;
+        const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
+        filas.push({
+          nombre: _resolverNombreEstudiante(estId, yearId), cursoNombre,
+          fechaLimite: r.fechaLimite || '', estado: r.estado, nota: r.notaRecuperacion
+        });
+      });
+    });
+  });
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin recuperaciones en este ciclo.</div>';
+  filas.sort((a, b) => String(b.fechaLimite).localeCompare(String(a.fechaLimite)));
+  return _cicloScroll(filas.map(f =>
+    '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + '<span style="font-weight:400;color:#9E9E9E;"> · ' + escapeHTML(f.cursoNombre) + '</span></span>'
+    + '<span style="color:' + (f.estado === 'completada' ? '#2E7D32' : '#E65100') + ';font-weight:700;">' + (f.nota != null ? f.nota : (f.estado || '—')) + '</span>'
+    + '</div>'
+  ).join(''));
+}
+
+function _renderTareasCicloHTML(yearId) {
+  const data = cargarTareas();
+  const filas = (data || []).filter(t => (t.fechaLimite || t.creadaEn) && _fechaPerteneceACiclo(t.fechaLimite || t.creadaEn, yearId));
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin tareas en este ciclo.</div>';
+  filas.sort((a, b) => String(b.fechaLimite || b.creadaEn).localeCompare(String(a.fechaLimite || a.creadaEn)));
+  return _cicloScroll(filas.map(t =>
+    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(t.descripcion || 'Tarea') + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(t.fechaLimite || '') + '</span></div>'
+    + '<div style="color:#7E57C2;margin-top:2px;">' + escapeHTML(t.seccion || '') + (t.estado ? ' · ' + escapeHTML(t.estado) : '') + '</div>'
+    + '</div>'
+  ).join(''));
+}
+
+function _renderLibretaCicloHTML(yearId) {
+  const data = cargarLibreta();
+  const filas = (data?.entries || []).filter(e => e.fecha && _fechaPerteneceACiclo(e.fecha, yearId));
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin entradas de libreta en este ciclo.</div>';
+  filas.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  return _cicloScroll(filas.map(e =>
+    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(e.titulo || 'Entrada') + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(e.fecha) + '</span></div>'
+    + (e.texto ? '<div style="color:#5E35B1;margin-top:2px;">' + escapeHTML(e.texto) + '</div>' : '')
+    + '</div>'
+  ).join(''));
+}
+
+function _renderParticipacionCicloHTML(yearId) {
+  const data = cargarParticipacion();
+  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
+  const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
+  const filas = [];
+  Object.entries(data || {}).forEach(([cursoId, porFecha]) => {
+    Object.entries(porFecha || {}).forEach(([fecha, porEst]) => {
+      if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(fecha, yearId)) return;
+      const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
+      const estados = Object.values(porEst || {});
+      const destacados = estados.filter(v => v === 'D').length;
+      filas.push({ cursoNombre, fecha, destacados, total: estados.length });
+    });
+  });
+  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin registros de participación en este ciclo.</div>';
+  filas.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return _cicloScroll(filas.map(f =>
+    '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
+    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.cursoNombre) + '</span>'
+    + '<span style="color:#7E57C2;">' + escapeHTML(f.fecha) + '</span>'
+    + '<span style="color:#2E7D32;font-weight:700;">' + f.destacados + '/' + f.total + ' destacados</span>'
+    + '</div>'
+  ).join(''));
+}
+
 function _archiveShortText(value) {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'string') return value.length > 72 ? value.slice(0, 72) + '…' : value;
@@ -6122,7 +6307,7 @@ function _renderArchiveFriendlySection(title, icon, subtitle, badges, bodyHtml) 
     + '</details>';
 }
 
-function _renderArchiveSections(snapshot) {
+function _renderArchiveSections(snapshot, yearId) {
   const meta = snapshot._meta || {};
   const sections = [];
   const cal = _parseArchiveValue(snapshot.calificaciones) || {};
@@ -6247,16 +6432,23 @@ function _renderArchiveSections(snapshot) {
 
   sections.push(_renderArchiveFriendlySection('Horario', 'schedule', 'Horario activo del ciclo', badge((Array.isArray(horario) ? horario.length : 0) + ' clases'), lista(horarioRows)));
   sections.push(_renderArchiveFriendlySection('Sesiones diarias', 'today', 'Sesiones registradas por fecha', badge(Object.keys(sesionesDiarias).length + ' fechas'), lista(genericRows(sesionesDiarias))));
-  sections.push(_renderArchiveFriendlySection('Tareas', 'task', 'Tareas del ciclo', badge((Array.isArray(tareas) ? tareas.length : 0) + ' tareas'), lista(genericRows(tareas))));
-  sections.push(_renderArchiveFriendlySection('Asistencia', 'how_to_reg', 'Registros de asistencia', badge(Object.keys(asistencia || {}).length + ' registros'), lista(genericRows(asistencia))));
-  sections.push(_renderArchiveFriendlySection('Comentarios', 'comment', 'Comentarios por estudiante', badge(_archiveValueCount(snapshot.comentarios) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.comentarios) || {}))));
+  sections.push(_renderArchiveFriendlySection('Tareas', 'task', 'Tareas del ciclo', badge((Array.isArray(tareas) ? tareas.length : 0) + ' tareas'),
+    yearId ? _renderTareasCicloHTML(yearId) : lista(genericRows(tareas))));
+  sections.push(_renderArchiveFriendlySection('Asistencia', 'how_to_reg', 'Registros de asistencia', badge(Object.keys(asistencia || {}).length + ' registros'),
+    yearId ? _renderAsistenciaCicloHTML(yearId) : lista(genericRows(asistencia))));
+  sections.push(_renderArchiveFriendlySection('Comentarios', 'comment', 'Comentarios por estudiante', badge(_archiveValueCount(snapshot.comentarios) + ' elementos'),
+    yearId ? _renderComentariosCicloHTML(yearId) : lista(genericRows(_parseArchiveValue(snapshot.comentarios) || {}))));
   sections.push(_renderArchiveFriendlySection('Notas de clase', 'sticky_note_2', 'Claves notaclase_*', badge(_archiveValueCount(snapshot.notasClase) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.notasClase) || {}))));
   sections.push(_renderArchiveFriendlySection('Observaciones de estudiantes', 'groups', 'Claves obs_est_*', badge(_archiveValueCount(snapshot.obsEstudiantes) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.obsEstudiantes) || {}))));
   sections.push(_renderArchiveFriendlySection('Escalas de evaluación', 'assessment', 'Claves eval_*', badge(_archiveValueCount(snapshot.evalFormas) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.evalFormas) || {}))));
-  sections.push(_renderArchiveFriendlySection('Incidencias', 'report', 'Incidencias guardadas', badge(_archiveValueCount(incidencias) + ' elementos'), lista(genericRows(incidencias))));
-  sections.push(_renderArchiveFriendlySection('Recuperaciones', 'auto_awesome', 'Recuperaciones generadas', badge(_archiveValueCount(recuperaciones) + ' elementos'), lista(genericRows(recuperaciones))));
-  sections.push(_renderArchiveFriendlySection('Libreta', 'menu_book', 'Entradas de libreta', badge(_archiveValueCount(libreta) + ' elementos'), lista(genericRows(libreta))));
-  sections.push(_renderArchiveFriendlySection('Participación', 'groups_2', 'Participación por curso o estudiante', badge(_archiveValueCount(participacion) + ' elementos'), lista(genericRows(participacion))));
+  sections.push(_renderArchiveFriendlySection('Incidencias', 'report', 'Incidencias guardadas', badge(_archiveValueCount(incidencias) + ' elementos'),
+    yearId ? _renderIncidenciasCicloHTML(yearId) : lista(genericRows(incidencias))));
+  sections.push(_renderArchiveFriendlySection('Recuperaciones', 'auto_awesome', 'Recuperaciones generadas', badge(_archiveValueCount(recuperaciones) + ' elementos'),
+    yearId ? _renderRecuperacionesCicloHTML(yearId) : lista(genericRows(recuperaciones))));
+  sections.push(_renderArchiveFriendlySection('Libreta', 'menu_book', 'Entradas de libreta', badge(_archiveValueCount(libreta) + ' elementos'),
+    yearId ? _renderLibretaCicloHTML(yearId) : lista(genericRows(libreta))));
+  sections.push(_renderArchiveFriendlySection('Participación', 'groups_2', 'Participación por curso o estudiante', badge(_archiveValueCount(participacion) + ' elementos'),
+    yearId ? _renderParticipacionCicloHTML(yearId) : lista(genericRows(participacion))));
   sections.push(_renderArchiveFriendlySection('Reportes', 'description', 'Reportes del ciclo', badge((Array.isArray(reportes) ? reportes.length : 0) + ' reportes'), lista(genericRows(reportes))));
   sections.push(_renderArchiveFriendlySection('Calendario escolar', 'event', 'Calendario y eventos', badge(_archiveValueCount(snapshot.calendarioEscolar) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calendarioEscolar) || {}))));
   sections.push(_renderArchiveFriendlySection('Cumpleaños', 'cake', 'Fechas de nacimiento por estudiante', badge(_archiveValueCount(snapshot.cumpleanos) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.cumpleanos) || {}))));
@@ -11182,15 +11374,103 @@ function renderizarPanelCursosArchivados() {
         + '<div style="font-size:0.72rem;color:#7E57C2;margin-top:6px;">Archivado: ' + escapeHTML(fecha) + '</div>'
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
         + (cursos.length
-          ? cursos.map(c => '<span style="background:#EDE7F6;color:#5E35B1;border-radius:999px;padding:4px 10px;font-size:0.73rem;font-weight:700;">'
+          ? cursos.map(c => '<button onclick="abrirCursoArchivado(\'' + escapeHTML(year) + '\',\'' + escapeHTML(c.id) + '\')" '
+            + 'style="background:#EDE7F6;color:#5E35B1;border:none;border-radius:999px;padding:4px 10px;font-size:0.73rem;font-weight:700;cursor:pointer;">'
             + escapeHTML(c.nombre || 'Curso sin nombre')
             + ' <span style="opacity:.75;font-weight:600;">(' + Number((c.estudiantes || []).length || 0) + ')</span>'
-            + '</span>').join('')
+            + '</button>').join('')
           : '<span style="font-size:0.74rem;color:#9E9E9E;">Sin cursos en este ciclo.</span>')
         + '</div>'
         + '</details>';
     }).join('')
     + '</div>';
+}
+
+// ── Visor de solo lectura para un curso archivado + traer al ciclo activo ──
+function _renderTablaCalificacionesSoloLectura(curso) {
+  const rasKeys = Object.keys(curso.ras || {});
+  if (!rasKeys.length) {
+    return '<div style="text-align:center;padding:24px;color:#9E9E9E;">Este curso no tiene calificaciones registradas.</div>';
+  }
+  const estudiantes = curso.estudiantes || [];
+  return rasKeys.map(raKey => {
+    const raInfo = curso.ras[raKey] || {};
+    const actividades = raInfo._actividadesSnapshot || [];
+    if (!actividades.length) {
+      return '<div style="margin-bottom:18px;"><div style="font-weight:700;color:#1565C0;margin-bottom:6px;">'
+        + escapeHTML(raInfo.label || raKey) + '</div><div style="color:#9E9E9E;font-size:0.85rem;">Sin actividades registradas.</div></div>';
+    }
+    let html = '<div style="margin-bottom:22px;overflow-x:auto;">'
+      + '<div style="font-weight:700;color:#1565C0;margin-bottom:8px;">' + escapeHTML(raInfo.label || raKey)
+      + ' <span style="font-weight:400;color:#78909C;font-size:0.8rem;">(' + (raInfo.valorTotal || 0) + ' pts)</span></div>'
+      + '<table style="border-collapse:collapse;width:100%;font-size:0.82rem;">'
+      + '<thead><tr style="background:#1565C0;color:#fff;">'
+      + '<th style="padding:6px 8px;text-align:left;">Estudiante</th>'
+      + actividades.map(a => '<th style="padding:6px 6px;text-align:center;min-width:60px;" title="' + escapeHTML(a.enunciado || '') + '">'
+        + escapeHTML((a.enunciado || '').substring(0, 14)) + ((a.enunciado || '').length > 14 ? '…' : '') + '</th>').join('')
+      + '<th style="padding:6px 8px;text-align:center;background:#0D47A1;">Total RA</th>'
+      + '</tr></thead><tbody>';
+    estudiantes.forEach((est, i) => {
+      const notaRA = _calcNotaRA(curso, est.id, raKey, actividades);
+      html += '<tr style="border-bottom:1px solid #E0E0E0;' + (i % 2 ? 'background:#FAFAFA;' : '') + '">'
+        + '<td style="padding:6px 8px;">' + escapeHTML(est.nombre) + '</td>'
+        + actividades.map(a => {
+          const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
+          return '<td style="padding:6px 6px;text-align:center;">' + (nota !== undefined && nota !== null ? nota : '—') + '</td>';
+        }).join('')
+        + '<td style="padding:6px 8px;text-align:center;font-weight:700;">' + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }).join('');
+}
+
+function abrirCursoArchivado(yearId, cursoId) {
+  const reg = calState.cursosArchivados?.[yearId];
+  const curso = reg?.cursos?.find(c => c.id === cursoId);
+  if (!curso) { mostrarToast('Curso archivado no encontrado', 'error'); return; }
+
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  if (!overlay || !body) return;
+
+  if (title) title.textContent = (curso.nombre || 'Curso archivado') + ' — ' + yearId;
+  body.innerHTML = '<div style="font-size:0.8rem;color:#78909C;margin-bottom:14px;">Ciclo ' + escapeHTML(yearId) + ' · '
+    + (curso.estudiantes || []).length + ' estudiante' + ((curso.estudiantes || []).length !== 1 ? 's' : '') + ' · Solo lectura</div>'
+    + _renderTablaCalificacionesSoloLectura(curso)
+    + '<div style="font-size:0.72rem;color:#9E9E9E;margin-top:10px;">"Traer a este año" crea un curso nuevo en el ciclo activo con la misma lista de estudiantes y estructura de RAs, con el boletín en blanco. El curso archivado no se modifica.</div>';
+
+  _usarFooterDinamico(
+    '<button class="btn-export btn-sm" style="background:#2E7D32;color:#fff;" onclick="traerCursoArchivadoAlAnioActual(\'' + escapeHTML(yearId) + '\',\'' + escapeHTML(cursoId) + '\')">'
+    + '<span class="material-icons">redo</span> Traer a este año</button>'
+    + '<button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>'
+  );
+
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function traerCursoArchivadoAlAnioActual(yearId, cursoId) {
+  const reg = calState.cursosArchivados?.[yearId];
+  const curso = reg?.cursos?.find(c => c.id === cursoId);
+  if (!curso) { mostrarToast('Curso archivado no encontrado', 'error'); return; }
+
+  if (!confirm('¿Traer "' + curso.nombre + '" al ciclo activo? Se creará un curso nuevo con la misma lista de estudiantes y estructura de RAs, con el boletín en blanco. El curso archivado seguirá disponible tal cual está.')) return;
+
+  const copia = JSON.parse(JSON.stringify(curso));
+  copia.id = uid();
+  copia.notas = {};
+  copia.ras = {};
+
+  calState.cursos[copia.id] = copia;
+  calState.cursoActivoId = copia.id;
+  guardarCalificaciones();
+
+  cerrarModalBtn();
+  renderizarCalificaciones();
+  mostrarToast('Curso "' + copia.nombre + '" traído al ciclo activo ✓', 'success');
 }
 
 // ── Pendientes por calificar ─────────────────────────────────────────────────
@@ -25865,7 +26145,7 @@ async function verCicloArchivado(yearId) {
                 + '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(fallbackInfo.closedAt ? new Date(fallbackInfo.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</div>'
               + '</div>'
             + '</div>'
-            + _renderArchiveSections(snapshot)
+            + _renderArchiveSections(snapshot, yearId)
           + '</div>';
           return;
         } catch (e) {
@@ -25895,7 +26175,7 @@ async function verCicloArchivado(yearId) {
           + '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(closedAt ? new Date(closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</div>'
         + '</div>'
       + '</div>'
-      + _renderArchiveSections(snapshot)
+      + _renderArchiveSections(snapshot, yearId)
     + '</div>';
     return;
   } catch (e) {
