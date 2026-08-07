@@ -124,7 +124,7 @@ const EMAILJS_PUBLIC_KEY  = 'lxnRazLrE3DNoOV99';   // Reemplaza con tu Public Ke
 // Variables recomendadas en la plantilla:
 // {{alert_subject}}, {{alert_title}}, {{error_message}}, {{error_where}}, {{error_when}},
 // {{route_url}}, {{severity}}, {{build_version}}, {{sw_version}}, {{user_uid}}, {{user_email_context}}, {{stack}}
-const EMAILJS_ERROR_TEMPLATE_ID = 'template_tinclass_error_alert';
+const EMAILJS_ERROR_TEMPLATE_ID = 'template_u3ql93h';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
