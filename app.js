@@ -29904,6 +29904,15 @@ async function _obtenerCentroIdDeUsuarioActual() {
       if (centro) return centro.id;
     }
   } catch {}
+  // Superadmin sin centro propio: usar el primer centro registrado como referencia por
+  // defecto (mismo criterio que el selector del editor de calendario), para que su propio
+  // dashboard muestre avisos en vez de quedar vacío.
+  try {
+    if (await _esSuperadminPorPerfil()) {
+      const snap = await db.collection('centros').orderBy('nombre').limit(1).get();
+      if (!snap.empty) return snap.docs[0].id;
+    }
+  } catch {}
   return null;
 }
 
