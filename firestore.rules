@@ -165,7 +165,9 @@ service cloud.firestore {
     }
 
     match /public_blogs/{userId}/datos_padre/{estId} {
-      allow read: if signedIn();
+      // Publico a proposito: los padres abren el reporte via un link con id corto
+      // (links_padre) sin haber iniciado sesion.
+      allow read: if true;
       allow write: if signedIn() && request.auth.uid == userId;
     }
 
@@ -201,7 +203,7 @@ service cloud.firestore {
     }
 
     match /{path=**}/datos_padre/{estId} {
-      allow read: if signedIn();
+      allow read: if true;
     }
   }
 }
