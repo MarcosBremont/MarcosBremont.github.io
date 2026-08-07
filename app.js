@@ -5833,6 +5833,18 @@ function _resolverNombreEstudiante(estId, yearId) {
   return estId;
 }
 
+// Una planificación (item de la biblioteca) "pertenece" al ciclo activo si algún curso
+// ACTIVO la referencia en planIds, o si no está vinculada a ningún curso todavía (recién
+// creada). Si solo la referencian cursos ya archivados, es del ciclo pasado.
+function _planPerteneceCicloActivo(planId) {
+  const enActivo = Object.values(calState.cursos || {}).some(c => (c.planIds || []).includes(planId));
+  if (enActivo) return true;
+  const enArchivado = Object.values(calState.cursosArchivados || {}).some(yearData =>
+    (yearData?.cursos || []).some(c => (c.planIds || []).includes(planId))
+  );
+  return !enArchivado;
+}
+
 function _loadArchivedYears() {
   try {
     const raw = localStorage.getItem(ARCHIVES_KEY);
@@ -26935,7 +26947,7 @@ function _renderizarSaludo() {
   const fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' · ' + ahora.getFullYear();
 
   const biblio = cargarBiblioteca();
-  const nPlans = (biblio.items || []).length;
+  const nPlans = (biblio.items || []).filter(i => _planPerteneceCicloActivo(i.id)).length;
   const nCursos = Object.keys(calState.cursos || {}).length;
   const tareas = cargarTareas();
   const nPend = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
