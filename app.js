@@ -30170,6 +30170,12 @@ async function abrirCompartidos() {
     return;
   }
   try {
+    const miUid = window.currentUser?.uid;
+    const miPerfil = miUid ? (await db.collection('usuarios').doc(miUid).get()).data() : null;
+    console.log('[Compartir] centroId resuelto por el cliente:', _compartirCentroId);
+    console.log('[Compartir] centroId guardado en usuarios/' + miUid + ':', miPerfil?.centroId);
+  } catch (e) { console.log('[Compartir] error leyendo perfil para debug:', e); }
+  try {
     _compartirDocentes = await _coordGetDocentes(_compartirCentroId);
   } catch { _compartirDocentes = []; }
 
