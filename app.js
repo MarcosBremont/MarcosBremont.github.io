@@ -34901,6 +34901,11 @@ const OPCIONES_DOCENTES = [
   { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios' },
   { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global de estudiantes' },
   { id: 'examenes', label: 'Exámenes y Pruebas', icono: 'quiz', desc: 'Crear exámenes en línea para estudiantes' },
+  { id: 'recuperaciones', label: 'RAs Adeudados', icono: 'assignment_return', desc: 'Recuperaciones pendientes por estudiante' },
+  { id: 'calc_asistencia', label: 'Calc. Asistencia', icono: 'calculate', desc: 'Calculadora de porcentaje de asistencia' },
+  { id: 'cumpleanos', label: 'Cumpleaños', icono: 'cake', desc: 'Registro de fechas de nacimiento de estudiantes' },
+  { id: 'compartir', label: 'Compartir', icono: 'folder_shared', desc: 'Compartir enlaces y documentos con otros docentes' },
+  { id: 'tutorial', label: 'Tutorial', icono: 'help_outline', desc: 'Guía de uso del sistema' },
 ];
 
 async function _cargarOpcionesDocentes() {
@@ -34994,6 +34999,11 @@ const OPCIONES_COORDINADORA = [
   { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios', defecto: true },
   { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global', defecto: true },
   { id: 'presentacion', label: 'Presentación', icono: 'slideshow', desc: 'Vista de presentación', defecto: false },
+  { id: 'recuperaciones', label: 'RAs Adeudados', icono: 'assignment_return', desc: 'Recuperaciones pendientes por estudiante', defecto: false },
+  { id: 'calc_asistencia', label: 'Calc. Asistencia', icono: 'calculate', desc: 'Calculadora de porcentaje de asistencia', defecto: false },
+  { id: 'cumpleanos', label: 'Cumpleaños', icono: 'cake', desc: 'Registro de fechas de nacimiento de estudiantes', defecto: true },
+  { id: 'compartir', label: 'Compartir', icono: 'folder_shared', desc: 'Compartir enlaces y documentos con otros docentes', defecto: true },
+  { id: 'tutorial', label: 'Tutorial', icono: 'help_outline', desc: 'Guía de uso del sistema', defecto: true },
 ];
 
 async function _cargarOpcionesCoordinadora() {
@@ -35102,6 +35112,11 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
     buscar: 'btn-buscar-est',
     presentacion: 'btn-dash-presentacion',
     examenes: 'btn-dash-examenes',
+    recuperaciones: 'btn-dash-recuperaciones',
+    calc_asistencia: 'btn-dash-calc-asistencia',
+    cumpleanos: 'btn-dash-cumpleanos',
+    compartir: 'btn-dash-compartir',
+    tutorial: 'btn-dash-tutorial',
   };
   Object.entries(mapDash).forEach(([key, btnId]) => {
     const def = defsArray ? defsArray.find(o => o.id === key) : null;
@@ -35177,6 +35192,11 @@ const OPCIONES_PSICOLOGIA = [
   { id: 'portafolio',      label: 'Portafolio Docente',     icono: 'workspace_premium',   desc: 'Organizar evidencias pedagógicas y documentos docentes', defecto: true },
   { id: 'rendimiento',     label: 'Rendimiento',            icono: 'bar_chart',           desc: 'Gráficas de rendimiento académico',     defecto: false },
   { id: 'auditoria',       label: 'Auditoría',              icono: 'history',             desc: 'Historial de cambios del sistema',      defecto: false },
+  { id: 'recuperaciones',  label: 'RAs Adeudados',          icono: 'assignment_return',   desc: 'Recuperaciones pendientes por estudiante', defecto: false },
+  { id: 'calc_asistencia', label: 'Calc. Asistencia',       icono: 'calculate',           desc: 'Calculadora de porcentaje de asistencia',  defecto: false },
+  { id: 'cumpleanos',      label: 'Cumpleaños',             icono: 'cake',                desc: 'Registro de fechas de nacimiento de estudiantes', defecto: true },
+  { id: 'compartir',       label: 'Compartir',              icono: 'folder_shared',       desc: 'Compartir enlaces y documentos con otros docentes', defecto: true },
+  { id: 'tutorial',        label: 'Tutorial',               icono: 'help_outline',        desc: 'Guía de uso del sistema',               defecto: true },
 ];
 
 async function _cargarOpcionesPsicologia() {
