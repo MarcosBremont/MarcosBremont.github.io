@@ -9736,7 +9736,7 @@ const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
 const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
 const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 700 * 1024;
 const PORTAFOLIO_FOTO_MAX_BYTES = 150 * 1024;
-const PORTAFOLIO_CV_MAX_BYTES = 700 * 1024;
+const PORTAFOLIO_CV_MAX_BYTES = 8 * 1024 * 1024; // 8 MB en crudo -- generoso para CVs tipicos de 3-5MB
 const PORTAFOLIO_CATEGORIAS = {
   formacion_academica: 'Título / grado académico',
   desarrollo_profesional: 'Desarrollo profesional / capacitación',
@@ -9783,11 +9783,10 @@ function _guardarPortafolioBase(data) {
   return payload;
 }
 
-// Foto de perfil y CV van en su propio documento (no dentro de portafolio_base, que ya
+// Foto de perfil va en su propio documento (no dentro de portafolio_base, que ya
 // tiene misión/visión/valores en texto) para no arriesgar el límite de 1 MiB por
-// documento de Firestore al sumarles el peso en base64.
+// documento de Firestore al sumarle el peso en base64.
 const PORTAFOLIO_FOTO_KEY = 'planificadorRA_portafolio_foto_v1';
-const PORTAFOLIO_CV_KEY = 'planificadorRA_portafolio_cv_v1';
 
 function cargarPortafolioFoto() {
   try {
@@ -9803,18 +9802,68 @@ function _guardarPortafolioFoto(data) {
   if (window._syncFirebase) _syncFirebase('portafolio_foto', data);
 }
 
-function cargarPortafolioCV() {
-  try {
-    const raw = localStorage.getItem(PORTAFOLIO_CV_KEY);
-    return raw ? JSON.parse(raw) : { cvBase64: '', cvNombre: '', cvMime: '' };
-  } catch {
-    return { cvBase64: '', cvNombre: '', cvMime: '' };
-  }
+// El CV (3-5 MB típico) no cabe en un solo documento de Firestore (límite 1 MiB), así
+// que se parte en varios documentos -- mismo patrón "chunks" que ya usa este proyecto
+// para la Biblioteca (ver _escribirChunksBiblioteca/_cargarBibliotecaChunks en auth.js).
+// No se cachea en localStorage (a diferencia de la foto): se lee/escribe directo de
+// Firestore, igual que las evidencias y la reflexión del portafolio.
+const PORTAFOLIO_CV_CHUNK_CHARS = 900000; // ~900 KB de base64 por documento, bajo el limite de 1 MiB
+
+function _portafolioDataBase() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('data');
 }
 
-function _guardarPortafolioCV(data) {
-  localStorage.setItem(PORTAFOLIO_CV_KEY, JSON.stringify(data));
-  if (window._syncFirebase) _syncFirebase('portafolio_cv', data);
+async function cargarPortafolioCV() {
+  const base = _portafolioDataBase();
+  if (!base) return { cvBase64: '', cvNombre: '', cvMime: '' };
+  try {
+    const metaDoc = await base.doc('portafolio_cv_meta').get();
+    if (metaDoc.exists && metaDoc.data().payload) {
+      const meta = JSON.parse(metaDoc.data().payload);
+      let base64 = '';
+      for (let i = 0; i < (meta.totalChunks || 0); i++) {
+        const chunkDoc = await base.doc('portafolio_cv_chunk_' + i).get();
+        base64 += (chunkDoc.exists && chunkDoc.data().payload) || '';
+      }
+      return { cvBase64: base64, cvNombre: meta.cvNombre || '', cvMime: meta.cvMime || '' };
+    }
+    // Migración desde el formato viejo (un solo documento, tope 700 KB de antes de hoy).
+    const legacyDoc = await base.doc('portafolio_cv').get();
+    if (legacyDoc.exists && legacyDoc.data().payload) {
+      try {
+        const legacy = JSON.parse(legacyDoc.data().payload);
+        if (legacy.cvBase64) return legacy;
+      } catch {}
+    }
+  } catch (e) {
+    console.warn('Error cargando CV del portafolio:', e);
+  }
+  return { cvBase64: '', cvNombre: '', cvMime: '' };
+}
+
+async function _guardarPortafolioCV(data) {
+  const base = _portafolioDataBase();
+  if (!base) return;
+  const base64 = data.cvBase64 || '';
+  const totalChunks = Math.max(1, Math.ceil(base64.length / PORTAFOLIO_CV_CHUNK_CHARS));
+
+  let prevChunks = 0;
+  try {
+    const metaOld = await base.doc('portafolio_cv_meta').get();
+    if (metaOld.exists) prevChunks = JSON.parse(metaOld.data().payload || '{}').totalChunks || 0;
+  } catch {}
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = base64.slice(i * PORTAFOLIO_CV_CHUNK_CHARS, (i + 1) * PORTAFOLIO_CV_CHUNK_CHARS);
+    await base.doc('portafolio_cv_chunk_' + i).set({ payload: chunk });
+  }
+  for (let i = totalChunks; i < prevChunks; i++) {
+    await base.doc('portafolio_cv_chunk_' + i).delete().catch(() => {});
+  }
+  await base.doc('portafolio_cv_meta').set({
+    payload: JSON.stringify({ cvNombre: data.cvNombre || '', cvMime: data.cvMime || '', totalChunks, actualizadoEn: new Date().toISOString() })
+  });
 }
 
 // Si la imagen pesa mas de lo permitido, la redibuja en un canvas bajando calidad
@@ -9895,7 +9944,7 @@ async function _portafolioSubirFoto(inputEl) {
 async function _portafolioSubirCV(inputEl) {
   const file = inputEl?.files?.[0];
   if (!file) return;
-  if (file.size > PORTAFOLIO_CV_MAX_BYTES) { mostrarToast('El CV no debe superar 700 KB.', 'error'); return; }
+  if (file.size > PORTAFOLIO_CV_MAX_BYTES) { mostrarToast('El CV no debe superar 8 MB.', 'error'); return; }
   try {
     const base64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -9903,16 +9952,17 @@ async function _portafolioSubirCV(inputEl) {
       reader.onerror = () => reject(new Error('Error leyendo archivo'));
       reader.readAsDataURL(file);
     });
-    _guardarPortafolioCV({ cvBase64: base64, cvNombre: file.name, cvMime: file.type || 'application/octet-stream' });
+    mostrarToast('Subiendo currículum...', 'info');
+    await _guardarPortafolioCV({ cvBase64: base64, cvNombre: file.name, cvMime: file.type || 'application/octet-stream' });
     renderizarPortafolio();
     mostrarToast('Currículum actualizado', 'success');
   } catch (e) {
-    mostrarToast('No se pudo leer el archivo', 'error');
+    mostrarToast('No se pudo subir el archivo: ' + (e.message || e), 'error');
   }
 }
 
-function _descargarCVPortafolio() {
-  const cv = cargarPortafolioCV();
+async function _descargarCVPortafolio() {
+  const cv = await cargarPortafolioCV();
   if (!cv.cvBase64) { mostrarToast('Aún no has subido un currículum', 'error'); return; }
   const bytes = Uint8Array.from(atob(cv.cvBase64), c => c.charCodeAt(0));
   const blob = new Blob([bytes], { type: cv.cvMime || 'application/octet-stream' });
@@ -10361,7 +10411,7 @@ async function renderizarPortafolio() {
   const docente = data.docente || {};
   const centro = data.centro || {};
   const foto = cargarPortafolioFoto();
-  const cv = cargarPortafolioCV();
+  const cv = await cargarPortafolioCV();
   const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
   const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:92px;';
 
@@ -10430,7 +10480,7 @@ async function renderizarPortafolio() {
         <div>
           <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">${cv.cvNombre ? 'Reemplazar archivo' : 'Subir archivo'}</label>
           <input id="pf-docente-cv" type="file" accept=".pdf,.doc,.docx" onchange="_portafolioSubirCV(this)">
-          <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 700 KB. PDF o Word.</div>
+          <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 8 MB. PDF o Word.</div>
         </div>
       </div>
 
