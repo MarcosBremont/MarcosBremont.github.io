@@ -33718,6 +33718,29 @@ function abrirSuperadmin() {
   if (!_esSuperadmin()) { mostrarToast('Acceso denegado', 'error'); return; }
   _mostrarPanel('panel-superadmin');
   switchTabSuperadmin('centros');
+  _actualizarBadgePendientesGlobalSuperadmin();
+}
+
+// Contador de docentes/cuentas pendientes de aprobar en TODOS los centros (a diferencia
+// de ac-badge-pendientes, que es por centro dentro de Admin Centro). Solo para que el
+// superadmin lo vea de un vistazo al entrar -- no es un listado, solo el numero.
+async function _actualizarBadgePendientesGlobalSuperadmin() {
+  const cont = document.getElementById('sa-badge-pendientes-global');
+  if (!cont) return;
+  cont.innerHTML = '';
+  try {
+    const snap = await db.collection('usuarios').where('estado', '==', 'pendiente').get();
+    const n = snap.size;
+    cont.innerHTML = n > 0
+      ? '<div style="display:inline-flex;align-items:center;gap:6px;background:#FFF3E0;color:#E65100;border-radius:20px;padding:6px 14px;font-size:0.85rem;font-weight:700;">'
+        + '<span class="material-icons" style="font-size:16px;">hourglass_empty</span>'
+        + n + ' solicitud' + (n === 1 ? '' : 'es') + ' pendiente' + (n === 1 ? '' : 's') + ' de aprobar (todos los centros)'
+        + '</div>'
+      : '<div style="display:inline-flex;align-items:center;gap:6px;background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:6px 14px;font-size:0.85rem;font-weight:700;">'
+        + '<span class="material-icons" style="font-size:16px;">check_circle</span> No hay solicitudes pendientes</div>';
+  } catch (e) {
+    console.warn('No se pudo cargar el conteo de pendientes:', e);
+  }
 }
 
 /** Tabs del superadmin */
