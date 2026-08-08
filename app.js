@@ -10404,14 +10404,30 @@ async function _eliminarPortafolioEvidencia(id) {
   }
 }
 
+// La identidad del centro (misión, visión, valores, etc.) ya no la escribe cada docente
+// por su cuenta: se administra una sola vez desde Superadmin > Centros Educativos y de
+// ahí se lee para todos. centros/{id} es de lectura pública, así que no hace falta
+// ningún permiso especial para que el docente la vea.
+async function _portafolioCargarIdentidadCentro() {
+  try {
+    const centroId = await _obtenerCentroIdDeUsuarioActual();
+    if (!centroId || typeof db === 'undefined') return null;
+    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    return doc.exists ? doc.data() : null;
+  } catch (e) {
+    console.warn('Error cargando identidad del centro:', e);
+    return null;
+  }
+}
+
 async function renderizarPortafolio() {
   const cont = document.getElementById('portafolio-contenido');
   if (!cont) return;
   const data = cargarPortafolioBase();
   const docente = data.docente || {};
-  const centro = data.centro || {};
   const foto = cargarPortafolioFoto();
   const cv = await cargarPortafolioCV();
+  const centroInfo = await _portafolioCargarIdentidadCentro();
   const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
   const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:92px;';
 
@@ -10488,14 +10504,17 @@ async function renderizarPortafolio() {
         <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
           <span class="material-icons" style="font-size:18px;color:#455A64;">domain</span> Identidad del centro
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Nombre del centro</label><input id="pf-centro-nombre" style="${inputStyle}" value="${escapeHTML(centro.nombre || '')}" placeholder="Centro educativo"></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Lema / filosofía</label><input id="pf-centro-lema" style="${inputStyle}" value="${escapeHTML(centro.lema || '')}" placeholder="Un lema breve del centro"></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Misión</label><textarea id="pf-centro-mision" style="${textareaStyle}" placeholder="Misión institucional">${escapeHTML(centro.mision || '')}</textarea></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Visión</label><textarea id="pf-centro-vision" style="${textareaStyle}" placeholder="Visión institucional">${escapeHTML(centro.vision || '')}</textarea></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Valores</label><textarea id="pf-centro-valores" style="${textareaStyle}" placeholder="Valores institucionales">${escapeHTML(centro.valores || '')}</textarea></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Propósito del año escolar</label><textarea id="pf-centro-proposito" style="${textareaStyle}" placeholder="Propósito del año escolar">${escapeHTML(centro.propositoAnual || '')}</textarea></div>
-        </div>
+        ${centroInfo ? `
+          <div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:12px;">La administra tu centro educativo desde el panel de Superadmin.</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Nombre del centro</div><div style="font-size:0.9rem;color:#37474F;">${escapeHTML(centroInfo.nombre || '—')}</div></div>
+            ${centroInfo.lema ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Lema / filosofía</div><div style="font-size:0.9rem;color:#37474F;">${escapeHTML(centroInfo.lema)}</div></div>` : ''}
+            ${centroInfo.mision ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Misión</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.mision)}</div></div>` : ''}
+            ${centroInfo.vision ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Visión</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.vision)}</div></div>` : ''}
+            ${centroInfo.valores ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Valores</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.valores)}</div></div>` : ''}
+            ${centroInfo.propositoAnual ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Propósito del año escolar</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.propositoAnual)}</div></div>` : ''}
+          </div>
+        ` : `<div style="font-size:0.82rem;color:#9E9E9E;">No se pudo determinar tu centro educativo, o el Superadmin todavía no ha completado esta información en el panel de Centros Educativos.</div>`}
       </div>
     </div>
 
@@ -10527,7 +10546,7 @@ async function renderizarPortafolio() {
 async function _portafolioImprimir() {
   const data = cargarPortafolioBase();
   const docente = data.docente || {};
-  const centro = data.centro || {};
+  const centroInfo = await _portafolioCargarIdentidadCentro() || {};
   const foto = cargarPortafolioFoto();
   const anioSel = _portafolioAnioEnUso();
   const reflexion = await _cargarReflexionPortafolio(anioSel);
@@ -10582,11 +10601,17 @@ async function _portafolioImprimir() {
       '<tr><td style="width:30%;"><b>Docente</b></td><td>' + esc(docente.nombre || '—') + '</td></tr>' +
       '<tr><td><b>Título / cédula</b></td><td>' + esc(docente.titulo || '—') + ' · ' + esc(docente.cedula || '—') + '</td></tr>' +
       '<tr><td><b>Cargo</b></td><td>' + esc(docente.cargo || '—') + '</td></tr>' +
-      '<tr><td><b>Centro educativo</b></td><td>' + esc(centro.nombre || docente.centro || '—') + '</td></tr>' +
-      '<tr><td><b>Propósito del año</b></td><td>' + esc(centro.propositoAnual || '—') + '</td></tr>' +
+      '<tr><td><b>Centro educativo</b></td><td>' + esc(centroInfo.nombre || docente.centro || '—') + '</td></tr>' +
+      '<tr><td><b>Propósito del año</b></td><td>' + esc(centroInfo.propositoAnual || '—') + '</td></tr>' +
     '</table>' +
     (docente.perfilProfesional ? '<h3>Perfil profesional</h3><p style="white-space:pre-wrap;">' + esc(docente.perfilProfesional) + '</p>' : '') +
     (docente.filosofiaEnsenanza ? '<h3>Filosofía de enseñanza</h3><p style="white-space:pre-wrap;">' + esc(docente.filosofiaEnsenanza) + '</p>' : '') +
+    ((centroInfo.mision || centroInfo.vision || centroInfo.valores)
+      ? '<h3>Identidad del centro</h3>' +
+        (centroInfo.mision ? '<p><b>Misión:</b> ' + esc(centroInfo.mision) + '</p>' : '') +
+        (centroInfo.vision ? '<p><b>Visión:</b> ' + esc(centroInfo.vision) + '</p>' : '') +
+        (centroInfo.valores ? '<p><b>Valores:</b> ' + esc(centroInfo.valores) + '</p>' : '')
+      : '') +
     '<div class="stats">' +
       '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + planes.length + '</div><div style="font-size:9pt;">Planificaciones</div></div>' +
       '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + totalActividades + '</div><div style="font-size:9pt;">Actividades</div></div>' +
@@ -10611,8 +10636,6 @@ function _cargarPortafolioDesdePlanificacionActiva() {
   data.docente.nombre = dg.nombreDocente || data.docente.nombre || '';
   data.docente.centro = dg.nombreCentro || data.docente.centro || '';
   data.docente.cargo = dg.moduloFormativo || data.docente.cargo || '';
-  data.centro.nombre = dg.nombreCentro || data.centro.nombre || '';
-  data.centro.propositoAnual = dg.propositoAnual || data.centro.propositoAnual || '';
   _guardarPortafolioBase(data);
   renderizarPortafolio();
   mostrarToast('Datos tomados de la planificación activa', 'success');
@@ -10640,12 +10663,8 @@ function guardarPortafolioBaseDesdeUI() {
   data.docente.telefono = document.getElementById('pf-docente-telefono')?.value.trim() || '';
   data.docente.perfilProfesional = document.getElementById('pf-docente-perfil')?.value.trim() || '';
   data.docente.filosofiaEnsenanza = document.getElementById('pf-docente-filosofia')?.value.trim() || '';
-  data.centro.nombre = document.getElementById('pf-centro-nombre')?.value.trim() || '';
-  data.centro.lema = document.getElementById('pf-centro-lema')?.value.trim() || '';
-  data.centro.mision = document.getElementById('pf-centro-mision')?.value.trim() || '';
-  data.centro.vision = document.getElementById('pf-centro-vision')?.value.trim() || '';
-  data.centro.valores = document.getElementById('pf-centro-valores')?.value.trim() || '';
-  data.centro.propositoAnual = document.getElementById('pf-centro-proposito')?.value.trim() || '';
+  // La identidad del centro (nombre/lema/misión/etc.) ya no se edita aquí -- la
+  // administra Superadmin en Centros Educativos y se lee en vivo de ahí.
 
   _guardarPortafolioBase(data);
   renderizarPortafolio();
@@ -34040,7 +34059,7 @@ async function _renderCentrosEducativos() {
 
 /** Muestra formulario para crear/editar centro */
 async function _mostrarFormCentro(centroId) {
-  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '' };
+  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
 
   if (centroId) {
     try {
@@ -34071,6 +34090,16 @@ async function _mostrarFormCentro(centroId) {
     + _inputCentro('sa-centro-emailjs-template', 'EmailJS Template ID (OTP)', centro.emailjsTemplateId, 'template_xxxxxxx')
     + _inputCentro('sa-centro-emailjs-public-key', 'EmailJS Public Key', centro.emailjsPublicKey, 'xxxxxxxxxxxxxxxxx')
     + '</div>'
+    + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #2E7D32;border-radius:10px;background:#E8F5E9;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#1B5E20;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">auto_stories</span> Identidad institucional</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Esta información aparece automáticamente en el Portafolio Docente de todos los profesores de este centro — no hace falta que cada uno la escriba por su cuenta.</p>'
+    + _inputCentro('sa-centro-lema', 'Lema / filosofía', centro.lema, 'Un lema breve del centro')
+    + _textareaCentro('sa-centro-mision', 'Misión', centro.mision, 'Misión institucional')
+    + _textareaCentro('sa-centro-vision', 'Visión', centro.vision, 'Visión institucional')
+    + _textareaCentro('sa-centro-valores', 'Valores', centro.valores, 'Valores institucionales')
+    + _textareaCentro('sa-centro-proposito', 'Propósito del año escolar', centro.propositoAnual, 'Propósito del año escolar en curso')
     + '</div>'
     + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #7C4DFF;border-radius:10px;background:#F3E5F5;">'
     + '<label style="font-size:0.82rem;font-weight:600;color:#4527A0;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
@@ -34130,6 +34159,12 @@ function _inputCentro(id, label, val, ph) {
     + 'style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>';
 }
 
+function _textareaCentro(id, label, val, ph) {
+  return '<div style="margin-top:10px;"><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">' + label + '</label>'
+    + '<textarea id="' + id + '" placeholder="' + ph + '" '
+    + 'style="width:100%;min-height:70px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;line-height:1.5;resize:vertical;">' + escapeHTML(val || '') + '</textarea></div>';
+}
+
 /** Guarda centro en Firestore (y sube plantilla si se seleccionó) */
 async function _guardarCentro(centroId) {
   const nombre = document.getElementById('sa-centro-nombre')?.value?.trim();
@@ -34147,6 +34182,11 @@ async function _guardarCentro(centroId) {
     emailjsServiceId: document.getElementById('sa-centro-emailjs-service')?.value?.trim() || '',
     emailjsTemplateId: document.getElementById('sa-centro-emailjs-template')?.value?.trim() || '',
     emailjsPublicKey: document.getElementById('sa-centro-emailjs-public-key')?.value?.trim() || '',
+    lema: document.getElementById('sa-centro-lema')?.value?.trim() || '',
+    mision: document.getElementById('sa-centro-mision')?.value?.trim() || '',
+    vision: document.getElementById('sa-centro-vision')?.value?.trim() || '',
+    valores: document.getElementById('sa-centro-valores')?.value?.trim() || '',
+    propositoAnual: document.getElementById('sa-centro-proposito')?.value?.trim() || '',
     updatedAt: new Date().toISOString()
   };
 
