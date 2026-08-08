@@ -9734,7 +9734,7 @@ function cerrarPortafolio() { abrirDashboard(); }
 
 const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
 const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
-const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 700 * 1024;
+const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 5 * 1024 * 1024; // 5 MB en crudo -- ver nota de chunking mas abajo
 const PORTAFOLIO_FOTO_MAX_BYTES = 150 * 1024;
 const PORTAFOLIO_CV_MAX_BYTES = 8 * 1024 * 1024; // 8 MB en crudo -- generoso para CVs tipicos de 3-5MB
 const PORTAFOLIO_CATEGORIAS = {
@@ -9802,12 +9802,12 @@ function _guardarPortafolioFoto(data) {
   if (window._syncFirebase) _syncFirebase('portafolio_foto', data);
 }
 
-// El CV (3-5 MB típico) no cabe en un solo documento de Firestore (límite 1 MiB), así
-// que se parte en varios documentos -- mismo patrón "chunks" que ya usa este proyecto
-// para la Biblioteca (ver _escribirChunksBiblioteca/_cargarBibliotecaChunks en auth.js).
-// No se cachea en localStorage (a diferencia de la foto): se lee/escribe directo de
-// Firestore, igual que las evidencias y la reflexión del portafolio.
-const PORTAFOLIO_CV_CHUNK_CHARS = 900000; // ~900 KB de base64 por documento, bajo el limite de 1 MiB
+// Un archivo grande (CV, o el adjunto de una evidencia) no cabe en un solo documento de
+// Firestore (límite 1 MiB), así que se parte en varios documentos -- mismo patrón
+// "chunks" que ya usa este proyecto para la Biblioteca (ver
+// _escribirChunksBiblioteca/_cargarBibliotecaChunks en auth.js). No se cachea en
+// localStorage (a diferencia de la foto): se lee/escribe directo de Firestore.
+const PORTAFOLIO_CHUNK_CHARS = 900000; // ~900 KB de base64 por documento, bajo el limite de 1 MiB
 
 function _portafolioDataBase() {
   if (!window.currentUser || typeof db === 'undefined') return null;
@@ -9846,7 +9846,7 @@ async function _guardarPortafolioCV(data) {
   const base = _portafolioDataBase();
   if (!base) return;
   const base64 = data.cvBase64 || '';
-  const totalChunks = Math.max(1, Math.ceil(base64.length / PORTAFOLIO_CV_CHUNK_CHARS));
+  const totalChunks = Math.max(1, Math.ceil(base64.length / PORTAFOLIO_CHUNK_CHARS));
 
   let prevChunks = 0;
   try {
@@ -9855,7 +9855,7 @@ async function _guardarPortafolioCV(data) {
   } catch {}
 
   for (let i = 0; i < totalChunks; i++) {
-    const chunk = base64.slice(i * PORTAFOLIO_CV_CHUNK_CHARS, (i + 1) * PORTAFOLIO_CV_CHUNK_CHARS);
+    const chunk = base64.slice(i * PORTAFOLIO_CHUNK_CHARS, (i + 1) * PORTAFOLIO_CHUNK_CHARS);
     await base.doc('portafolio_cv_chunk_' + i).set({ payload: chunk });
   }
   for (let i = totalChunks; i < prevChunks; i++) {
@@ -10021,6 +10021,38 @@ async function _cargarEvidenciasPortafolio() {
   }
 }
 
+// El adjunto de una evidencia (hasta 5 MB) tampoco cabe en el documento de la propia
+// evidencia (que además tiene título/descripción/etc.), así que va aparte, en una
+// subcolección "archivo" partida en chunks -- mismo criterio que el CV.
+async function _guardarArchivoEvidenciaChunks(docRef, base64) {
+  const archivoCol = docRef.collection('archivo');
+  const totalChunks = Math.max(1, Math.ceil(base64.length / PORTAFOLIO_CHUNK_CHARS));
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = base64.slice(i * PORTAFOLIO_CHUNK_CHARS, (i + 1) * PORTAFOLIO_CHUNK_CHARS);
+    await archivoCol.doc(String(i)).set({ payload: chunk });
+  }
+  await docRef.update({ archivoChunks: totalChunks });
+}
+
+// item.archivoBase64 es el formato viejo (adjuntos guardados directo en el campo, hasta
+// 700 KB, de antes de este cambio) -- se respeta para no romper evidencias ya subidas.
+async function _cargarArchivoEvidenciaBase64(itemDocRef, item) {
+  if (item.archivoBase64) return item.archivoBase64;
+  if (!item.archivoChunks) return '';
+  let base64 = '';
+  for (let i = 0; i < item.archivoChunks; i++) {
+    const chunkDoc = await itemDocRef.collection('archivo').doc(String(i)).get();
+    base64 += (chunkDoc.exists && chunkDoc.data().payload) || '';
+  }
+  return base64;
+}
+
+async function _eliminarArchivoEvidenciaChunks(itemDocRef, totalChunks) {
+  for (let i = 0; i < (totalChunks || 0); i++) {
+    await itemDocRef.collection('archivo').doc(String(i)).delete().catch(() => {});
+  }
+}
+
 // Migración única y no destructiva: si nunca se migró y la colección nueva está vacía,
 // copia el blob viejo (localStorage/Firebase) a documentos individuales. El blob viejo
 // se deja intacto como respaldo.
@@ -10172,11 +10204,11 @@ function renderizarPortafolioResumenPedagogico() {
 
 function _renderTarjetaEvidenciaPortafolio(item, soloLectura) {
   const fecha = item.fecha ? new Date(item.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const esImagen = (item.archivoMime || '').startsWith('image/');
+  // El adjunto ya no viaja en la consulta de la lista (vive aparte, en chunks) -- solo
+  // se lee al descargarlo, para no tener que traer 5 MB por cada evidencia solo para
+  // mostrar la lista.
   const archivoHtml = item.archivoNombre
-    ? (esImagen
-        ? `<div style="margin-top:8px;"><img src="data:${escapeHTML(item.archivoMime)};base64,${item.archivoBase64}" style="max-width:160px;max-height:120px;border-radius:8px;border:1px solid #E0E0E0;display:block;"></div>`
-        : `<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:15px;">attach_file</span>${escapeHTML(item.archivoNombre)}</div>`)
+    ? `<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:15px;">attach_file</span>${escapeHTML(item.archivoNombre)}</div>`
     : '';
   const descargarBtn = item.archivoNombre
     ? `<button class="btn-secundario" onclick="_descargarEvidenciaPortafolio('${item.id}')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>`
@@ -10203,11 +10235,13 @@ async function _descargarEvidenciaPortafolio(id) {
   const ref = _portafolioEvidenciasColeccion();
   if (!ref) return;
   try {
-    const doc = await ref.doc(id).get();
+    const docRef = ref.doc(id);
+    const doc = await docRef.get();
     if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
     const it = doc.data();
-    if (!it.archivoBase64) { mostrarToast('Esta evidencia no tiene archivo adjunto', 'error'); return; }
-    const bytes = Uint8Array.from(atob(it.archivoBase64), c => c.charCodeAt(0));
+    const base64 = await _cargarArchivoEvidenciaBase64(docRef, it);
+    if (!base64) { mostrarToast('Esta evidencia no tiene archivo adjunto', 'error'); return; }
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -10274,7 +10308,7 @@ async function renderizarPortafolioEvidencias() {
       <div style="margin-bottom:12px;">
         <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Archivo adjunto (opcional)</label>
         <input id="pf-evi-archivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-        <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 700 KB. PDF, Word, Excel o imagen.</div>
+        <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 5 MB. PDF, Word, Excel o imagen.</div>
       </div>
       <div id="pf-evi-error" style="color:#C62828;font-size:0.8rem;min-height:18px;"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
@@ -10326,12 +10360,12 @@ async function guardarPortafolioEvidenciaDesdeUI() {
       try {
         file = await _comprimirImagenParaLimite(file, PORTAFOLIO_EVIDENCIA_MAX_BYTES);
       } catch {
-        if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB.';
+        if (errEl) errEl.textContent = 'El archivo no debe superar 5 MB.';
         return;
       }
     }
     if (file.size > PORTAFOLIO_EVIDENCIA_MAX_BYTES) {
-      if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB (no se pudo reducir más).';
+      if (errEl) errEl.textContent = 'El archivo no debe superar 5 MB (no se pudo reducir más).';
       return;
     }
   }
@@ -10339,32 +10373,36 @@ async function guardarPortafolioEvidenciaDesdeUI() {
   const ref = _portafolioEvidenciasColeccion();
   if (!ref) { if (errEl) errEl.textContent = 'No se pudo guardar: inicia sesión de nuevo.'; return; }
 
-  const data = {
-    categoria, titulo, descripcion, fecha, origen,
-    cicloEscolar: _portafolioAnioActivo(),
-    archivoBase64: '', archivoNombre: '', archivoMime: '',
-    creadoEn: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
+  let archivoBase64 = '';
   if (file) {
     try {
-      const base64 = await new Promise((resolve, reject) => {
+      archivoBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result).split(',')[1]);
         reader.onerror = () => reject(new Error('Error leyendo archivo'));
         reader.readAsDataURL(file);
       });
-      data.archivoBase64 = base64;
-      data.archivoNombre = file.name;
-      data.archivoMime = file.type || 'application/octet-stream';
     } catch (e) {
       if (errEl) errEl.textContent = 'No se pudo leer el archivo.';
       return;
     }
   }
 
+  const data = {
+    categoria, titulo, descripcion, fecha, origen,
+    cicloEscolar: _portafolioAnioActivo(),
+    archivoNombre: file ? file.name : '',
+    archivoMime: file ? (file.type || 'application/octet-stream') : '',
+    archivoChunks: 0,
+    creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
   try {
-    await ref.add(data);
+    const docRef = await ref.add(data);
+    if (file) {
+      mostrarToast('Subiendo archivo...', 'info');
+      await _guardarArchivoEvidenciaChunks(docRef, archivoBase64);
+    }
     mostrarToast('Evidencia agregada al portafolio', 'success');
     renderizarPortafolioEvidencias();
   } catch (e) {
@@ -10396,7 +10434,12 @@ async function _eliminarPortafolioEvidencia(id) {
   const ref = _portafolioEvidenciasColeccion();
   if (!ref) return;
   try {
-    await ref.doc(id).delete();
+    const docRef = ref.doc(id);
+    const doc = await docRef.get();
+    if (doc.exists && doc.data().archivoChunks) {
+      await _eliminarArchivoEvidenciaChunks(docRef, doc.data().archivoChunks);
+    }
+    await docRef.delete();
     mostrarToast('Evidencia eliminada', 'success');
     renderizarPortafolioEvidencias();
   } catch (e) {
@@ -10556,6 +10599,16 @@ async function _portafolioImprimir() {
   const items = todas.filter(it => _portafolioEvidenciaPerteneceAnio(it, anioSel));
   const grupos = _agruparEvidenciasPorCategoria(items);
 
+  // Las imágenes ya no viajan con la lista (viven en chunks aparte) -- se traen aparte,
+  // solo las que son imagen, para poder incrustarlas en la vista de impresión.
+  const evidenciasRef = _portafolioEvidenciasColeccion();
+  const imagenesBase64 = {};
+  for (const it of items) {
+    if (it.archivoNombre && (it.archivoMime || '').startsWith('image/') && evidenciasRef) {
+      imagenesBase64[it.id] = await _cargarArchivoEvidenciaBase64(evidenciasRef.doc(it.id), it);
+    }
+  }
+
   const biblio = cargarBiblioteca();
   const planes = (Array.isArray(biblio?.items) ? biblio.items : []).filter(reg => _fechaPerteneceACiclo(reg.fechaGuardado, anioSel));
   const totalActividades = planes.reduce((acc, reg) => acc + ((reg.planificacion?.actividades || []).length), 0);
@@ -10567,8 +10620,8 @@ async function _portafolioImprimir() {
       const fecha = it.fecha ? new Date(it.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
       const esImagen = (it.archivoMime || '').startsWith('image/');
       const archivoNota = it.archivoNombre
-        ? (esImagen
-            ? '<img src="data:' + esc(it.archivoMime) + ';base64,' + it.archivoBase64 + '" style="max-width:220px;max-height:160px;margin-top:6px;border:1px solid #999;">'
+        ? (esImagen && imagenesBase64[it.id]
+            ? '<img src="data:' + esc(it.archivoMime) + ';base64,' + imagenesBase64[it.id] + '" style="max-width:220px;max-height:160px;margin-top:6px;border:1px solid #999;">'
             : '<div style="font-size:9.5pt;color:#555;margin-top:4px;">Adjunto: ' + esc(it.archivoNombre) + ' (disponible en el sistema)</div>')
         : '';
       return '<div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #ddd;">' +
