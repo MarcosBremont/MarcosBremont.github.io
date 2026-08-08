@@ -9736,7 +9736,6 @@ const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
 const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
 const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 700 * 1024;
 const PORTAFOLIO_CATEGORIAS = {
-  planificacion: 'Planificación / actividad de clase',
   evaluacion: 'Instrumento de evaluación',
   diario_reflexivo: 'Diario reflexivo',
   desarrollo_profesional: 'Desarrollo profesional / capacitación',
@@ -9785,7 +9784,7 @@ function _portafolioCategoriaLabel(categoria) {
 // Mapa de los "tipo" viejos (cuando el portafolio era un blob plano) a las categorías nuevas.
 function _portafolioMigrarTipoACategoria(tipoViejo) {
   const map = {
-    planificacion: 'planificacion', diaria: 'planificacion',
+    planificacion: 'otro', diaria: 'otro', // las planificaciones ya se muestran solas en el Resumen pedagógico
     instrumento: 'evaluacion',
     diario: 'diario_reflexivo',
     reunion: 'reunion_seguimiento', seguimiento: 'reunion_seguimiento',
@@ -9931,7 +9930,12 @@ function renderizarPortafolioResumenPedagogico() {
       const fecha = reg.fechaGuardadoLabel || (reg.fechaGuardado ? new Date(reg.fechaGuardado).toLocaleDateString('es-DO') : '—');
       const acts = (reg.planificacion?.actividades || []).length;
       return `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:10px 12px;">
-        <div style="font-size:0.8rem;color:#78909C;margin-bottom:4px;">${escapeHTML(fecha)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="font-size:0.8rem;color:#78909C;margin-bottom:4px;">${escapeHTML(fecha)}</div>
+          <button class="btn-secundario" onclick="cargarPlanificacionGuardada('${reg.id}')" style="padding:4px 10px;font-size:0.72rem;flex-shrink:0;">
+            <span class="material-icons" style="font-size:14px;">visibility</span> Ver
+          </button>
+        </div>
         <div style="font-weight:700;color:#37474F;font-size:0.88rem;margin-bottom:3px;">${escapeHTML(modulo)}</div>
         <div style="font-size:0.8rem;color:#546E7A;line-height:1.45;">${escapeHTML(raTxt)}</div>
         <div style="font-size:0.75rem;color:#90A4AE;margin-top:4px;">${acts} actividad(es)</div>
