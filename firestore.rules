@@ -169,6 +169,13 @@ service cloud.firestore {
                      (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
     }
 
+    // Autoevaluación / plan de mejora del Portafolio Docente, un documento por año escolar.
+    match /users/{userId}/portafolio_reflexion/{yearId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                     (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+    }
+
     match /error_logs/{logId} {
       allow create: if signedIn();
       allow read: if signedIn() && (

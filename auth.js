@@ -39,6 +39,8 @@ const FIREBASE_STORES = [
   { store: 'preferencias',         key: 'planificadorRA_preferencias_v1' },
   { store: 'portafolio_base',       key: 'planificadorRA_portafolio_base_v1' },
   { store: 'portafolio_evidencias', key: 'planificadorRA_portafolio_evidencias_v1' },
+  { store: 'portafolio_foto',       key: 'planificadorRA_portafolio_foto_v1' },
+  { store: 'portafolio_cv',         key: 'planificadorRA_portafolio_cv_v1' },
 ];
 
 const MIGRATION_FLAG = 'planificadorRA_migrated_v1';

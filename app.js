@@ -9735,33 +9735,40 @@ function cerrarPortafolio() { abrirDashboard(); }
 const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
 const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
 const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 700 * 1024;
+const PORTAFOLIO_FOTO_MAX_BYTES = 150 * 1024;
+const PORTAFOLIO_CV_MAX_BYTES = 700 * 1024;
 const PORTAFOLIO_CATEGORIAS = {
-  diario_reflexivo: 'Diario reflexivo',
+  formacion_academica: 'Título / grado académico',
   desarrollo_profesional: 'Desarrollo profesional / capacitación',
+  diario_reflexivo: 'Diario reflexivo',
   reunion_seguimiento: 'Reunión / seguimiento',
   acompanamiento: 'Acompañamiento / observación de clase',
+  logros_reconocimientos: 'Logros y reconocimientos',
   otro: 'Otro'
 };
 let _portafolioAnioSeleccionado = null; // null = año activo
+
+const PORTAFOLIO_DOCENTE_DEFAULT = { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '', perfilProfesional: '', filosofiaEnsenanza: '' };
+const PORTAFOLIO_CENTRO_DEFAULT = { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
 
 function cargarPortafolioBase() {
   try {
     const raw = localStorage.getItem(PORTAFOLIO_BASE_KEY);
     if (!raw) return {
-      docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
-      centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
+      docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT),
+      centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT),
       metadata: { actualizadoEn: null }
     };
     const parsed = JSON.parse(raw);
     return {
-      docente: Object.assign({ nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' }, parsed.docente || {}),
-      centro: Object.assign({ nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' }, parsed.centro || {}),
+      docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT, parsed.docente || {}),
+      centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT, parsed.centro || {}),
       metadata: Object.assign({ actualizadoEn: null }, parsed.metadata || {})
     };
   } catch {
     return {
-      docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
-      centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
+      docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT),
+      centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT),
       metadata: { actualizadoEn: null }
     };
   }
@@ -9774,6 +9781,93 @@ function _guardarPortafolioBase(data) {
   localStorage.setItem(PORTAFOLIO_BASE_KEY, JSON.stringify(payload));
   if (window._syncFirebase) _syncFirebase('portafolio_base', payload);
   return payload;
+}
+
+// Foto de perfil y CV van en su propio documento (no dentro de portafolio_base, que ya
+// tiene misión/visión/valores en texto) para no arriesgar el límite de 1 MiB por
+// documento de Firestore al sumarles el peso en base64.
+const PORTAFOLIO_FOTO_KEY = 'planificadorRA_portafolio_foto_v1';
+const PORTAFOLIO_CV_KEY = 'planificadorRA_portafolio_cv_v1';
+
+function cargarPortafolioFoto() {
+  try {
+    const raw = localStorage.getItem(PORTAFOLIO_FOTO_KEY);
+    return raw ? JSON.parse(raw) : { fotoBase64: '', fotoMime: '' };
+  } catch {
+    return { fotoBase64: '', fotoMime: '' };
+  }
+}
+
+function _guardarPortafolioFoto(data) {
+  localStorage.setItem(PORTAFOLIO_FOTO_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('portafolio_foto', data);
+}
+
+function cargarPortafolioCV() {
+  try {
+    const raw = localStorage.getItem(PORTAFOLIO_CV_KEY);
+    return raw ? JSON.parse(raw) : { cvBase64: '', cvNombre: '', cvMime: '' };
+  } catch {
+    return { cvBase64: '', cvNombre: '', cvMime: '' };
+  }
+}
+
+function _guardarPortafolioCV(data) {
+  localStorage.setItem(PORTAFOLIO_CV_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('portafolio_cv', data);
+}
+
+async function _portafolioSubirFoto(inputEl) {
+  const file = inputEl?.files?.[0];
+  if (!file) return;
+  if (file.size > PORTAFOLIO_FOTO_MAX_BYTES) { mostrarToast('La foto no debe superar 150 KB.', 'error'); return; }
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('Error leyendo archivo'));
+      reader.readAsDataURL(file);
+    });
+    _guardarPortafolioFoto({ fotoBase64: base64, fotoMime: file.type || 'image/jpeg' });
+    renderizarPortafolio();
+    mostrarToast('Foto actualizada', 'success');
+  } catch (e) {
+    mostrarToast('No se pudo leer la imagen', 'error');
+  }
+}
+
+async function _portafolioSubirCV(inputEl) {
+  const file = inputEl?.files?.[0];
+  if (!file) return;
+  if (file.size > PORTAFOLIO_CV_MAX_BYTES) { mostrarToast('El CV no debe superar 700 KB.', 'error'); return; }
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('Error leyendo archivo'));
+      reader.readAsDataURL(file);
+    });
+    _guardarPortafolioCV({ cvBase64: base64, cvNombre: file.name, cvMime: file.type || 'application/octet-stream' });
+    renderizarPortafolio();
+    mostrarToast('Currículum actualizado', 'success');
+  } catch (e) {
+    mostrarToast('No se pudo leer el archivo', 'error');
+  }
+}
+
+function _descargarCVPortafolio() {
+  const cv = cargarPortafolioCV();
+  if (!cv.cvBase64) { mostrarToast('Aún no has subido un currículum', 'error'); return; }
+  const bytes = Uint8Array.from(atob(cv.cvBase64), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: cv.cvMime || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = cv.cvNombre || 'curriculum';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function _portafolioCategoriaLabel(categoria) {
@@ -10200,6 +10294,8 @@ async function renderizarPortafolio() {
   const data = cargarPortafolioBase();
   const docente = data.docente || {};
   const centro = data.centro || {};
+  const foto = cargarPortafolioFoto();
+  const cv = cargarPortafolioCV();
   const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
   const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:92px;';
 
@@ -10233,6 +10329,15 @@ async function renderizarPortafolio() {
         <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
           <span class="material-icons" style="font-size:18px;color:#455A64;">badge</span> Datos del docente
         </div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#ECEFF1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            ${foto.fotoBase64 ? `<img src="data:${escapeHTML(foto.fotoMime)};base64,${foto.fotoBase64}" style="width:100%;height:100%;object-fit:cover;">` : '<span class="material-icons" style="font-size:32px;color:#B0BEC5;">person</span>'}
+          </div>
+          <div>
+            <input id="pf-docente-foto" type="file" accept="image/*" onchange="_portafolioSubirFoto(this)" style="font-size:0.78rem;max-width:200px;">
+            <div style="font-size:0.7rem;color:#9E9E9E;margin-top:2px;">Foto de perfil, máx. 150 KB</div>
+          </div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Nombre completo</label><input id="pf-docente-nombre" style="${inputStyle}" value="${escapeHTML(docente.nombre || '')}" placeholder="Nombre del docente"></div>
           <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título universitario</label><input id="pf-docente-titulo" style="${inputStyle}" value="${escapeHTML(docente.titulo || '')}" placeholder="Lic., Mag., Ing., etc."></div>
@@ -10243,6 +10348,23 @@ async function renderizarPortafolio() {
             <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Correo</label><input id="pf-docente-correo" style="${inputStyle}" value="${escapeHTML(docente.correo || '')}" placeholder="correo@ejemplo.com"></div>
             <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Teléfono</label><input id="pf-docente-telefono" style="${inputStyle}" value="${escapeHTML(docente.telefono || '')}" placeholder="809-000-0000"></div>
           </div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Perfil profesional</label><textarea id="pf-docente-perfil" style="${textareaStyle}" placeholder="Breve biografía o semblanza de tu trayectoria profesional">${escapeHTML(docente.perfilProfesional || '')}</textarea></div>
+          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Filosofía de enseñanza</label><textarea id="pf-docente-filosofia" style="${textareaStyle}" placeholder="Tu visión de la educación y tu rol como guía del aprendizaje">${escapeHTML(docente.filosofiaEnsenanza || '')}</textarea></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
+        <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <span class="material-icons" style="font-size:18px;color:#455A64;">description</span> Currículum
+        </div>
+        ${cv.cvNombre
+          ? `<div style="font-size:0.85rem;color:#455A64;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:16px;">attach_file</span>${escapeHTML(cv.cvNombre)}</div>
+             <button class="btn-secundario" onclick="_descargarCVPortafolio()" style="font-size:0.8rem;padding:7px 12px;margin-bottom:12px;"><span class="material-icons">download</span> Descargar</button>`
+          : `<div style="font-size:0.82rem;color:#9E9E9E;margin-bottom:12px;">Aún no has subido tu currículum.</div>`}
+        <div>
+          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">${cv.cvNombre ? 'Reemplazar archivo' : 'Subir archivo'}</label>
+          <input id="pf-docente-cv" type="file" accept=".pdf,.doc,.docx" onchange="_portafolioSubirCV(this)">
+          <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 700 KB. PDF o Word.</div>
         </div>
       </div>
 
@@ -10276,15 +10398,23 @@ async function renderizarPortafolio() {
   resumen.style.marginTop = '18px';
   cont.appendChild(resumen);
 
+  const reflexion = document.createElement('div');
+  reflexion.id = 'portafolio-reflexion';
+  reflexion.style.marginTop = '18px';
+  cont.appendChild(reflexion);
+
   await renderizarPortafolioEvidencias();
   renderizarPortafolioResumenPedagogico();
+  await renderizarPortafolioReflexion();
 }
 
 async function _portafolioImprimir() {
   const data = cargarPortafolioBase();
   const docente = data.docente || {};
   const centro = data.centro || {};
+  const foto = cargarPortafolioFoto();
   const anioSel = _portafolioAnioEnUso();
+  const reflexion = await _cargarReflexionPortafolio(anioSel);
   const esc = escapeHTML;
 
   const todas = await _cargarEvidenciasPortafolio();
@@ -10328,8 +10458,10 @@ async function _portafolioImprimir() {
     '<div class="no-print" style="text-align:center;margin-bottom:14px;">' +
       '<button onclick="window.print()" style="padding:9px 26px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Imprimir / Guardar PDF</button>' +
     '</div>' +
-    '<h1>Portafolio Docente</h1>' +
-    '<h2>Año escolar ' + esc(anioSel) + '</h2>' +
+    '<div style="display:flex;align-items:center;gap:16px;justify-content:center;">' +
+      (foto.fotoBase64 ? '<img src="data:' + esc(foto.fotoMime) + ';base64,' + foto.fotoBase64 + '" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:1px solid #999;">' : '') +
+      '<div><h1 style="margin-bottom:0;">Portafolio Docente</h1><h2>Año escolar ' + esc(anioSel) + '</h2></div>' +
+    '</div>' +
     '<table>' +
       '<tr><td style="width:30%;"><b>Docente</b></td><td>' + esc(docente.nombre || '—') + '</td></tr>' +
       '<tr><td><b>Título / cédula</b></td><td>' + esc(docente.titulo || '—') + ' · ' + esc(docente.cedula || '—') + '</td></tr>' +
@@ -10337,12 +10469,19 @@ async function _portafolioImprimir() {
       '<tr><td><b>Centro educativo</b></td><td>' + esc(centro.nombre || docente.centro || '—') + '</td></tr>' +
       '<tr><td><b>Propósito del año</b></td><td>' + esc(centro.propositoAnual || '—') + '</td></tr>' +
     '</table>' +
+    (docente.perfilProfesional ? '<h3>Perfil profesional</h3><p style="white-space:pre-wrap;">' + esc(docente.perfilProfesional) + '</p>' : '') +
+    (docente.filosofiaEnsenanza ? '<h3>Filosofía de enseñanza</h3><p style="white-space:pre-wrap;">' + esc(docente.filosofiaEnsenanza) + '</p>' : '') +
     '<div class="stats">' +
       '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + planes.length + '</div><div style="font-size:9pt;">Planificaciones</div></div>' +
       '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + totalActividades + '</div><div style="font-size:9pt;">Actividades</div></div>' +
       '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + items.length + '</div><div style="font-size:9pt;">Evidencias</div></div>' +
     '</div>' +
     (seccionesHtml || '<p style="margin-top:20px;color:#777;">Aún no hay evidencias registradas para este año escolar.</p>') +
+    ((reflexion.autoevaluacion || reflexion.planMejora)
+      ? '<h3>Reflexión y mejora continua</h3>' +
+        (reflexion.autoevaluacion ? '<p><b>Autoevaluación:</b><br><span style="white-space:pre-wrap;">' + esc(reflexion.autoevaluacion) + '</span></p>' : '') +
+        (reflexion.planMejora ? '<p><b>Plan de mejora:</b><br><span style="white-space:pre-wrap;">' + esc(reflexion.planMejora) + '</span></p>' : '')
+      : '') +
     '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>' +
     '</body></html>';
 
@@ -10365,8 +10504,8 @@ function _cargarPortafolioDesdePlanificacionActiva() {
 
 function _portafolioRestaurarDemo() {
   const demo = {
-    docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
-    centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
+    docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT),
+    centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT),
     metadata: cargarPortafolioBase().metadata
   };
   _guardarPortafolioBase(demo);
@@ -10383,6 +10522,8 @@ function guardarPortafolioBaseDesdeUI() {
   data.docente.centro = document.getElementById('pf-docente-centro')?.value.trim() || '';
   data.docente.correo = document.getElementById('pf-docente-correo')?.value.trim() || '';
   data.docente.telefono = document.getElementById('pf-docente-telefono')?.value.trim() || '';
+  data.docente.perfilProfesional = document.getElementById('pf-docente-perfil')?.value.trim() || '';
+  data.docente.filosofiaEnsenanza = document.getElementById('pf-docente-filosofia')?.value.trim() || '';
   data.centro.nombre = document.getElementById('pf-centro-nombre')?.value.trim() || '';
   data.centro.lema = document.getElementById('pf-centro-lema')?.value.trim() || '';
   data.centro.mision = document.getElementById('pf-centro-mision')?.value.trim() || '';
@@ -10393,6 +10534,66 @@ function guardarPortafolioBaseDesdeUI() {
   _guardarPortafolioBase(data);
   renderizarPortafolio();
   mostrarToast('Datos base del portafolio guardados', 'success');
+}
+
+// Autoevaluación / plan de mejora: cambia cada ciclo, así que es un documento por año
+// escolar (a diferencia de los datos base, que son fijos).
+function _portafolioReflexionRef(yearId) {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('portafolio_reflexion').doc(yearId);
+}
+
+async function _cargarReflexionPortafolio(yearId) {
+  const ref = _portafolioReflexionRef(yearId);
+  if (!ref) return { autoevaluacion: '', planMejora: '' };
+  try {
+    const doc = await ref.get();
+    return doc.exists ? doc.data() : { autoevaluacion: '', planMejora: '' };
+  } catch (e) {
+    console.warn('Error cargando reflexión del portafolio:', e);
+    return { autoevaluacion: '', planMejora: '' };
+  }
+}
+
+async function renderizarPortafolioReflexion() {
+  const cont = document.getElementById('portafolio-reflexion');
+  if (!cont) return;
+
+  const anioSel = _portafolioAnioEnUso();
+  const soloLectura = anioSel !== _portafolioAnioActivo();
+  const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:100px;';
+  const datos = await _cargarReflexionPortafolio(anioSel);
+
+  cont.innerHTML = `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
+    <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <span class="material-icons" style="font-size:18px;color:#455A64;">self_improvement</span> Reflexión y mejora continua — ${escapeHTML(anioSel)}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Autoevaluación</label>
+        <textarea id="pf-reflexion-autoeval" ${soloLectura ? 'disabled' : ''} style="${textareaStyle}" placeholder="Fortalezas, áreas de oportunidad y retos superados durante el ciclo lectivo">${escapeHTML(datos.autoevaluacion || '')}</textarea>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Plan de mejora</label>
+        <textarea id="pf-reflexion-plan" ${soloLectura ? 'disabled' : ''} style="${textareaStyle}" placeholder="Metas propuestas para optimizar tu práctica docente en el próximo periodo">${escapeHTML(datos.planMejora || '')}</textarea>
+      </div>
+      ${soloLectura ? '' : '<div style="display:flex;justify-content:flex-end;"><button class="btn-siguiente" onclick="guardarReflexionPortafolioDesdeUI()"><span class="material-icons">save</span> Guardar reflexión</button></div>'}
+    </div>
+  </div>`;
+}
+
+async function guardarReflexionPortafolioDesdeUI() {
+  const anioSel = _portafolioAnioEnUso();
+  const ref = _portafolioReflexionRef(anioSel);
+  if (!ref) { mostrarToast('No se pudo guardar: inicia sesión de nuevo.', 'error'); return; }
+  const autoevaluacion = (document.getElementById('pf-reflexion-autoeval')?.value || '').trim();
+  const planMejora = (document.getElementById('pf-reflexion-plan')?.value || '').trim();
+  try {
+    await ref.set({ autoevaluacion, planMejora, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() });
+    mostrarToast('Reflexión guardada', 'success');
+  } catch (e) {
+    mostrarToast('Error al guardar: ' + (e.message || e), 'error');
+  }
 }
 
 function renderizarLibreta() {
