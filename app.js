@@ -9736,7 +9736,6 @@ const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
 const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
 const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 700 * 1024;
 const PORTAFOLIO_CATEGORIAS = {
-  evaluacion: 'Instrumento de evaluación',
   diario_reflexivo: 'Diario reflexivo',
   desarrollo_profesional: 'Desarrollo profesional / capacitación',
   reunion_seguimiento: 'Reunión / seguimiento',
@@ -9785,7 +9784,7 @@ function _portafolioCategoriaLabel(categoria) {
 function _portafolioMigrarTipoACategoria(tipoViejo) {
   const map = {
     planificacion: 'otro', diaria: 'otro', // las planificaciones ya se muestran solas en el Resumen pedagógico
-    instrumento: 'evaluacion',
+    instrumento: 'otro',
     diario: 'diario_reflexivo',
     reunion: 'reunion_seguimiento', seguimiento: 'reunion_seguimiento',
     ficha: 'acompanamiento',
