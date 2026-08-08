@@ -30171,26 +30171,6 @@ async function abrirCompartidos() {
   }
 
   try {
-    const miUid = window.currentUser?.uid;
-    console.log('[Compartir DEBUG] email:', window.currentUser?.email, 'uid:', miUid);
-    console.log('[Compartir DEBUG] centroId resuelto por el cliente:', _compartirCentroId);
-    const perfilSnap = await db.collection('usuarios').doc(miUid).get();
-    console.log('[Compartir DEBUG] perfil crudo usuarios/' + miUid + ':', JSON.stringify(perfilSnap.data()));
-    const centroSnap = await db.collection('centros').doc(_compartirCentroId).get();
-    console.log('[Compartir DEBUG] centro ' + _compartirCentroId + ' existe:', centroSnap.exists, 'admins:', JSON.stringify(centroSnap.data()?.admins));
-    try {
-      const testRef = await db.collection('centros').doc(_compartirCentroId).collection('compartidos').add({ debug: true, autorUid: miUid, visibilidad: 'todos', destinatarios: [], ts: Date.now() });
-      console.log('[Compartir DEBUG] escritura de PRUEBA en compartidos: OK, id=' + testRef.id);
-      await testRef.delete();
-      console.log('[Compartir DEBUG] borrado de PRUEBA: OK');
-    } catch (eWrite) {
-      console.log('[Compartir DEBUG] escritura/borrado de PRUEBA en compartidos FALLO:', eWrite.code || eWrite.message);
-    }
-  } catch (eDebug) {
-    console.log('[Compartir DEBUG] error general de diagnostico:', eDebug);
-  }
-
-  try {
     _compartirDocentes = await _coordGetDocentes(_compartirCentroId);
   } catch { _compartirDocentes = []; }
 

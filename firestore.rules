@@ -108,10 +108,18 @@ service cloud.firestore {
       // Compartir entre docentes del mismo centro (links/documentos), con visibilidad
       // por destinatario. Aislado por centro (a diferencia de avisos, que no lo esta).
       match /compartidos/{itemId} {
-        allow read: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId) && (
-          resource.data.visibilidad == 'todos' ||
-          resource.data.autorUid == request.auth.uid ||
-          request.auth.uid in resource.data.get('destinatarios', [])
+        // OJO: en consultas "list", si UN SOLO documento candidato no cumple la
+        // condicion, Firestore rechaza la consulta ENTERA (no filtra en silencio).
+        // Por eso el bypass de superadmin debe saltarse tambien el chequeo de
+        // visibilidad, no solo el de "mismo centro" -- si no, un item privado de
+        // otro docente tumba la lista completa para el superadmin.
+        allow read: if signedIn() && (
+          isSuperadminByEmail() || currentRole() == 'superadmin' ||
+          (miCentroId() == centroId && (
+            resource.data.visibilidad == 'todos' ||
+            resource.data.autorUid == request.auth.uid ||
+            request.auth.uid in resource.data.get('destinatarios', [])
+          ))
         );
         allow create: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId)
                       && request.resource.data.autorUid == request.auth.uid;
