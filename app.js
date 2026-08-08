@@ -9721,15 +9721,30 @@ function abrirLibreta() {
 
 function cerrarLibreta() { abrirDashboard(); }
 
-function abrirPortafolio() {
+async function abrirPortafolio() {
   _mostrarPanel('panel-portafolio');
+  _portafolioAnioSeleccionado = null;
+  const cont = document.getElementById('portafolio-contenido');
+  if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando...</div>';
+  await _migrarEvidenciasPortafolioSiHaceFalta();
   renderizarPortafolio();
 }
 
 function cerrarPortafolio() { abrirDashboard(); }
 
 const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
-const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1';
+const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
+const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 700 * 1024;
+const PORTAFOLIO_CATEGORIAS = {
+  planificacion: 'Planificación / actividad de clase',
+  evaluacion: 'Instrumento de evaluación',
+  diario_reflexivo: 'Diario reflexivo',
+  desarrollo_profesional: 'Desarrollo profesional / capacitación',
+  reunion_seguimiento: 'Reunión / seguimiento',
+  acompanamiento: 'Acompañamiento / observación de clase',
+  otro: 'Otro'
+};
+let _portafolioAnioSeleccionado = null; // null = año activo
 
 function cargarPortafolioBase() {
   try {
@@ -9763,7 +9778,24 @@ function _guardarPortafolioBase(data) {
   return payload;
 }
 
-function cargarPortafolioEvidencias() {
+function _portafolioCategoriaLabel(categoria) {
+  return PORTAFOLIO_CATEGORIAS[categoria] || PORTAFOLIO_CATEGORIAS.otro;
+}
+
+// Mapa de los "tipo" viejos (cuando el portafolio era un blob plano) a las categorías nuevas.
+function _portafolioMigrarTipoACategoria(tipoViejo) {
+  const map = {
+    planificacion: 'planificacion', diaria: 'planificacion',
+    instrumento: 'evaluacion',
+    diario: 'diario_reflexivo',
+    reunion: 'reunion_seguimiento', seguimiento: 'reunion_seguimiento',
+    ficha: 'acompanamiento',
+    evidencia: 'otro', otro: 'otro'
+  };
+  return map[tipoViejo] || 'otro';
+}
+
+function _cargarPortafolioEvidenciasBlobLegacy() {
   try {
     const raw = localStorage.getItem(PORTAFOLIO_EVIDENCIAS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -9772,26 +9804,88 @@ function cargarPortafolioEvidencias() {
   }
 }
 
-function _guardarPortafolioEvidencias(items) {
-  const payload = Array.isArray(items) ? items : [];
-  localStorage.setItem(PORTAFOLIO_EVIDENCIAS_KEY, JSON.stringify(payload));
-  if (window._syncFirebase) _syncFirebase('portafolio_evidencias', payload);
-  return payload;
+// Cada evidencia es su propio documento (a diferencia del blob viejo) para poder
+// adjuntar archivos sin toparse con el límite de 1 MiB por documento de Firestore.
+function _portafolioEvidenciasColeccion() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('portafolio_evidencias');
 }
 
-function _portafolioTipoEvidenciaLabel(tipo) {
-  const labels = {
-    planificacion: 'Planificación',
-    diaria: 'Planificación diaria',
-    instrumento: 'Instrumento',
-    diario: 'Diario reflexivo',
-    reunion: 'Reunión',
-    seguimiento: 'Seguimiento',
-    ficha: 'Ficha de acompañamiento',
-    evidencia: 'Evidencia',
-    otro: 'Otro'
-  };
-  return labels[tipo] || 'Evidencia';
+async function _cargarEvidenciasPortafolio() {
+  const ref = _portafolioEvidenciasColeccion();
+  if (!ref) return [];
+  try {
+    const snap = await ref.orderBy('fecha', 'desc').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('Error cargando evidencias del portafolio:', e);
+    return [];
+  }
+}
+
+// Migración única y no destructiva: si nunca se migró y la colección nueva está vacía,
+// copia el blob viejo (localStorage/Firebase) a documentos individuales. El blob viejo
+// se deja intacto como respaldo.
+let _portafolioMigrando = false;
+async function _migrarEvidenciasPortafolioSiHaceFalta() {
+  if (_portafolioMigrando) return;
+  const base = cargarPortafolioBase();
+  if (base.metadata?.evidenciasMigradas) return;
+  const ref = _portafolioEvidenciasColeccion();
+  if (!ref) return;
+  _portafolioMigrando = true;
+  try {
+    const existentes = await ref.limit(1).get();
+    if (existentes.empty) {
+      const viejas = _cargarPortafolioEvidenciasBlobLegacy();
+      for (const item of viejas) {
+        await ref.add({
+          categoria: _portafolioMigrarTipoACategoria(item.tipo),
+          titulo: item.titulo || 'Sin título',
+          descripcion: item.descripcion || '',
+          fecha: item.fecha || new Date().toISOString().split('T')[0],
+          origen: item.origen || '',
+          cicloEscolar: '', // desconocido para datos viejos; se filtra por fecha
+          archivoBase64: '', archivoNombre: '', archivoMime: '',
+          creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+    base.metadata = Object.assign({}, base.metadata, { evidenciasMigradas: true });
+    _guardarPortafolioBase(base);
+  } catch (e) {
+    console.warn('Error migrando evidencias del portafolio:', e);
+  } finally {
+    _portafolioMigrando = false;
+  }
+}
+
+function _portafolioAnioActivo() {
+  return localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey();
+}
+
+function _portafolioAnioEnUso() {
+  return _portafolioAnioSeleccionado || _portafolioAnioActivo();
+}
+
+function _portafolioEvidenciaPerteneceAnio(item, yearId) {
+  if (item.cicloEscolar) return item.cicloEscolar === yearId;
+  return _fechaPerteneceACiclo(item.fecha, yearId);
+}
+
+function _portafolioCambiarAnio(anioId) {
+  _portafolioAnioSeleccionado = anioId;
+  renderizarPortafolio();
+}
+
+function _agruparEvidenciasPorCategoria(items) {
+  const grupos = {};
+  Object.keys(PORTAFOLIO_CATEGORIAS).forEach(cat => { grupos[cat] = []; });
+  items.forEach(item => {
+    const cat = PORTAFOLIO_CATEGORIAS[item.categoria] ? item.categoria : 'otro';
+    grupos[cat].push(item);
+  });
+  return grupos;
 }
 
 function _leerDiariasPortafolio() {
@@ -9808,8 +9902,9 @@ function renderizarPortafolioResumenPedagogico() {
   const cont = document.getElementById('portafolio-resumen-pedagogico');
   if (!cont) return;
 
+  const anioSel = _portafolioAnioEnUso();
   const biblio = cargarBiblioteca();
-  const items = Array.isArray(biblio?.items) ? biblio.items.slice() : [];
+  const items = (Array.isArray(biblio?.items) ? biblio.items : []).filter(reg => _fechaPerteneceACiclo(reg.fechaGuardado, anioSel));
   const totalPlanes = items.length;
   const totalActividades = items.reduce((acc, reg) => acc + ((reg.planificacion?.actividades || []).length), 0);
   const totalInstrumentos = items.reduce((acc, reg) => {
@@ -9817,10 +9912,15 @@ function renderizarPortafolioResumenPedagogico() {
     return acc + acts.filter(a => !!a?.instrumento).length;
   }, 0);
 
+  // "sesiones" del diario se indexan por actividadId, no por fecha, así que se cuentan
+  // solo las que pertenecen a una actividad de una planificación de este año escolar.
+  const actividadIdsDelAnio = new Set();
+  items.forEach(reg => (reg.planificacion?.actividades || []).forEach(a => { if (a?.id) actividadIdsDelAnio.add(a.id); }));
   const diarias = _leerDiariasPortafolio();
-  const sesionesDiarias = Object.keys(diarias.sesiones || {}).length;
+  const sesionesDiarias = Object.keys(diarias.sesiones || {}).filter(actId => actividadIdsDelAnio.has(actId)).length;
 
   const recientes = items
+    .slice()
     .sort((a, b) => String(b.fechaGuardado || '').localeCompare(String(a.fechaGuardado || '')))
     .slice(0, 5)
     .map(reg => {
@@ -9842,7 +9942,7 @@ function renderizarPortafolioResumenPedagogico() {
     <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
       <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
         <span class="material-icons" style="font-size:18px;color:#455A64;">analytics</span>
-        Resumen pedagógico del año
+        Resumen pedagógico — ${escapeHTML(anioSel)}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">
         <div style="background:#ECEFF1;border-radius:10px;padding:10px 12px;">
@@ -9863,58 +9963,92 @@ function renderizarPortafolioResumenPedagogico() {
         </div>
       </div>
       <div style="font-size:0.82rem;font-weight:700;color:#546E7A;margin-bottom:8px;">Planificaciones recientes</div>
-      ${recientes || '<div style="padding:10px 12px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:10px;color:#78909C;font-size:0.84rem;">Aún no hay planificaciones guardadas para mostrar.</div>'}
+      ${recientes || '<div style="padding:10px 12px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:10px;color:#78909C;font-size:0.84rem;">Aún no hay planificaciones guardadas para este año.</div>'}
     </div>`;
 }
 
-function renderizarPortafolioEvidencias() {
+function _renderTarjetaEvidenciaPortafolio(item, soloLectura) {
+  const fecha = item.fecha ? new Date(item.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const esImagen = (item.archivoMime || '').startsWith('image/');
+  const archivoHtml = item.archivoNombre
+    ? (esImagen
+        ? `<div style="margin-top:8px;"><img src="data:${escapeHTML(item.archivoMime)};base64,${item.archivoBase64}" style="max-width:160px;max-height:120px;border-radius:8px;border:1px solid #E0E0E0;display:block;"></div>`
+        : `<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:15px;">attach_file</span>${escapeHTML(item.archivoNombre)}</div>`)
+    : '';
+  const descargarBtn = item.archivoNombre
+    ? `<button class="btn-secundario" onclick="_descargarEvidenciaPortafolio('${item.id}')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>`
+    : '';
+  const eliminarBtn = soloLectura ? '' : `<button class="btn-secundario" onclick="_eliminarPortafolioEvidencia('${item.id}')" style="padding:6px 10px;font-size:0.75rem;color:#C62828;border-color:#FFCDD2;"><span class="material-icons" style="font-size:14px;">delete_outline</span> Quitar</button>`;
+
+  return `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          ${item.origen ? `<span style="font-size:0.7rem;color:#546E7A;background:#ECEFF1;border-radius:20px;padding:2px 8px;">${escapeHTML(item.origen)}</span>` : ''}
+          <div style="font-weight:700;color:#37474F;margin:5px 0;">${escapeHTML(item.titulo || 'Sin título')}</div>
+          <div style="font-size:0.85rem;color:#455A64;line-height:1.55;white-space:pre-wrap;">${escapeHTML(item.descripcion || '')}</div>
+          ${archivoHtml}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          <div style="font-size:0.72rem;color:#90A4AE;">${fecha}</div>
+          ${descargarBtn}${eliminarBtn}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function _descargarEvidenciaPortafolio(id) {
+  const ref = _portafolioEvidenciasColeccion();
+  if (!ref) return;
+  try {
+    const doc = await ref.doc(id).get();
+    if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
+    const it = doc.data();
+    if (!it.archivoBase64) { mostrarToast('Esta evidencia no tiene archivo adjunto', 'error'); return; }
+    const bytes = Uint8Array.from(atob(it.archivoBase64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = it.archivoNombre || 'archivo';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
+  }
+}
+
+async function renderizarPortafolioEvidencias() {
   const cont = document.getElementById('portafolio-evidencias');
   if (!cont) return;
-  const items = cargarPortafolioEvidencias().sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+  cont.innerHTML = '<div style="text-align:center;padding:20px;color:#9E9E9E;">Cargando evidencias...</div>';
+
+  const anioSel = _portafolioAnioEnUso();
+  const soloLectura = anioSel !== _portafolioAnioActivo();
+  const todas = await _cargarEvidenciasPortafolio();
+  const items = todas.filter(it => _portafolioEvidenciaPerteneceAnio(it, anioSel));
+
   const plan = planificacion?.datosGenerales || {};
   const planLabel = plan.moduloFormativo || plan.nombreCentro || '';
   const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
   const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:90px;';
 
-  const lista = items.length ? items.map(item => `
-    <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
-            <span style="font-size:0.7rem;font-weight:700;color:#1B5E20;background:#E8F5E9;border-radius:20px;padding:2px 8px;">${escapeHTML(_portafolioTipoEvidenciaLabel(item.tipo))}</span>
-            ${item.origen ? `<span style="font-size:0.7rem;color:#546E7A;background:#ECEFF1;border-radius:20px;padding:2px 8px;">${escapeHTML(item.origen)}</span>` : ''}
-          </div>
-          <div style="font-weight:700;color:#37474F;margin-bottom:5px;">${escapeHTML(item.titulo || 'Sin título')}</div>
-          <div style="font-size:0.85rem;color:#455A64;line-height:1.55;white-space:pre-wrap;">${escapeHTML(item.descripcion || '')}</div>
-          ${item.archivo ? `<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;">Archivo: ${escapeHTML(item.archivo)}</div>` : ''}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-          <div style="font-size:0.72rem;color:#90A4AE;">${item.fecha ? new Date(item.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
-          <button class="btn-secundario" onclick="_eliminarPortafolioEvidencia('${item.id}')" style="padding:6px 10px;font-size:0.75rem;color:#C62828;border-color:#FFCDD2;">
-            <span class="material-icons" style="font-size:14px;">delete_outline</span> Quitar
-          </button>
-        </div>
-      </div>
-    </div>`).join('') : '<div style="padding:14px 16px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:12px;color:#78909C;font-size:0.85rem;">Aún no hay evidencias registradas para este portafolio.</div>';
-
-  cont.innerHTML = `
+  const composer = soloLectura ? '' : `
     <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <div style="font-weight:800;color:#37474F;display:flex;align-items:center;gap:8px;">
-          <span class="material-icons" style="font-size:18px;color:#455A64;">collections_bookmark</span> Evidencias iniciales
+          <span class="material-icons" style="font-size:18px;color:#455A64;">collections_bookmark</span> Agregar evidencia
         </div>
         <button class="btn-secundario" onclick="_cargarEvidenciaDesdePlanificacionActiva()" style="font-size:0.8rem;padding:7px 12px;">
           <span class="material-icons">sync</span> Tomar de la planificación activa
         </button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px;">
         <div>
-          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Tipo</label>
-          <select id="pf-evi-tipo" style="${inputStyle}">
-            <option value="evidencia">Evidencia</option>
-            <option value="reunion">Reunión</option>
-            <option value="seguimiento">Seguimiento</option>
-            <option value="otro">Otro</option>
+          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Categoría</label>
+          <select id="pf-evi-categoria" style="${inputStyle}">
+            ${Object.entries(PORTAFOLIO_CATEGORIAS).map(([k, v]) => `<option value="${k}">${escapeHTML(v)}</option>`).join('')}
           </select>
         </div>
         <div>
@@ -9927,41 +10061,102 @@ function renderizarPortafolioEvidencias() {
         </div>
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título de la evidencia</label>
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título</label>
         <input id="pf-evi-titulo" type="text" placeholder="Ej: Planificación diaria del 12 de agosto" style="${inputStyle}">
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Descripción</label>
         <textarea id="pf-evi-descripcion" placeholder="Describe qué evidencia aporta y por qué es relevante..." style="${textareaStyle}"></textarea>
       </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Archivo adjunto (opcional)</label>
+        <input id="pf-evi-archivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+        <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 700 KB. PDF, Word, Excel o imagen.</div>
+      </div>
+      <div id="pf-evi-error" style="color:#C62828;font-size:0.8rem;min-height:18px;"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
         <button class="btn-siguiente" onclick="guardarPortafolioEvidenciaDesdeUI()"><span class="material-icons">add_circle</span> Agregar evidencia</button>
       </div>
-    </div>
+    </div>`;
+
+  const grupos = _agruparEvidenciasPorCategoria(items);
+  const listaHtml = Object.entries(PORTAFOLIO_CATEGORIAS).map(([cat, label]) => {
+    const itemsCat = grupos[cat];
+    return `<div style="margin-bottom:16px;">
+      <div style="font-weight:800;color:#37474F;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <span class="material-icons" style="font-size:18px;color:#455A64;">folder</span> ${escapeHTML(label)}
+        <span style="font-size:0.75rem;color:#90A4AE;font-weight:400;">(${itemsCat.length})</span>
+      </div>
+      ${itemsCat.length
+        ? itemsCat.map(it => _renderTarjetaEvidenciaPortafolio(it, soloLectura)).join('')
+        : '<div style="padding:12px 14px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:12px;color:#78909C;font-size:0.82rem;">Aún no hay evidencias en esta categoría.</div>'}
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = composer + `
     <div>
       <div style="font-weight:800;color:#37474F;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-        <span class="material-icons" style="font-size:18px;color:#455A64;">list_alt</span> Registro de evidencias
+        <span class="material-icons" style="font-size:18px;color:#455A64;">list_alt</span> Evidencias por categoría
       </div>
-      ${lista}
+      ${listaHtml}
     </div>`;
 }
 
-function guardarPortafolioEvidenciaDesdeUI() {
+async function guardarPortafolioEvidenciaDesdeUI() {
+  const errEl = document.getElementById('pf-evi-error');
+  if (errEl) errEl.textContent = '';
+
   const titulo = (document.getElementById('pf-evi-titulo')?.value || '').trim();
   const descripcion = (document.getElementById('pf-evi-descripcion')?.value || '').trim();
-  const tipo = document.getElementById('pf-evi-tipo')?.value || 'evidencia';
+  const categoria = document.getElementById('pf-evi-categoria')?.value || 'otro';
   const fecha = document.getElementById('pf-evi-fecha')?.value || new Date().toISOString().split('T')[0];
   const origen = (document.getElementById('pf-evi-origen')?.value || '').trim();
+  const fileInput = document.getElementById('pf-evi-archivo');
+  const file = fileInput?.files?.[0];
+
   if (!titulo || !descripcion) {
-    mostrarToast('Escribe un título y una descripción para la evidencia', 'error');
+    if (errEl) errEl.textContent = 'Escribe un título y una descripción para la evidencia.';
+    return;
+  }
+  if (file && file.size > PORTAFOLIO_EVIDENCIA_MAX_BYTES) {
+    if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB.';
     return;
   }
 
-  const items = cargarPortafolioEvidencias();
-  items.unshift({ id: uid(), tipo, titulo, descripcion, fecha, origen, archivo: '' });
-  _guardarPortafolioEvidencias(items);
-  renderizarPortafolioEvidencias();
-  mostrarToast('Evidencia agregada al portafolio', 'success');
+  const ref = _portafolioEvidenciasColeccion();
+  if (!ref) { if (errEl) errEl.textContent = 'No se pudo guardar: inicia sesión de nuevo.'; return; }
+
+  const data = {
+    categoria, titulo, descripcion, fecha, origen,
+    cicloEscolar: _portafolioAnioActivo(),
+    archivoBase64: '', archivoNombre: '', archivoMime: '',
+    creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (file) {
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
+      data.archivoBase64 = base64;
+      data.archivoNombre = file.name;
+      data.archivoMime = file.type || 'application/octet-stream';
+    } catch (e) {
+      if (errEl) errEl.textContent = 'No se pudo leer el archivo.';
+      return;
+    }
+  }
+
+  try {
+    await ref.add(data);
+    mostrarToast('Evidencia agregada al portafolio', 'success');
+    renderizarPortafolioEvidencias();
+  } catch (e) {
+    if (errEl) errEl.textContent = 'Error al guardar: ' + (e.message || e);
+  }
 }
 
 function _cargarEvidenciaDesdePlanificacionActiva() {
@@ -9983,15 +10178,20 @@ function _cargarEvidenciaDesdePlanificacionActiva() {
   mostrarToast('Datos de evidencia cargados desde la planificación activa', 'success');
 }
 
-function _eliminarPortafolioEvidencia(id) {
+async function _eliminarPortafolioEvidencia(id) {
   if (!confirm('¿Eliminar esta evidencia del portafolio?')) return;
-  const items = cargarPortafolioEvidencias().filter(e => e.id !== id);
-  _guardarPortafolioEvidencias(items);
-  renderizarPortafolioEvidencias();
-  mostrarToast('Evidencia eliminada', 'success');
+  const ref = _portafolioEvidenciasColeccion();
+  if (!ref) return;
+  try {
+    await ref.doc(id).delete();
+    mostrarToast('Evidencia eliminada', 'success');
+    renderizarPortafolioEvidencias();
+  } catch (e) {
+    mostrarToast('Error al eliminar: ' + (e.message || e), 'error');
+  }
 }
 
-function renderizarPortafolio() {
+async function renderizarPortafolio() {
   const cont = document.getElementById('portafolio-contenido');
   if (!cont) return;
   const data = cargarPortafolioBase();
@@ -10000,7 +10200,24 @@ function renderizarPortafolio() {
   const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
   const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:92px;';
 
-  cont.innerHTML = `
+  const anioActivo = _portafolioAnioActivo();
+  const aniosArchivados = _loadArchivedYears();
+  const anioSel = _portafolioAnioEnUso();
+  const opcionesAnio = [{ id: anioActivo, label: anioActivo + ' (activo)' }]
+    .concat(aniosArchivados.filter(a => a.id !== anioActivo).map(a => ({ id: a.id, label: a.yearLabel || a.id })));
+
+  const selectorAnioHtml = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+    <label style="font-size:0.8rem;font-weight:700;color:#546E7A;">Año escolar</label>
+    <select id="pf-selector-anio" onchange="_portafolioCambiarAnio(this.value)" style="padding:7px 10px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.85rem;">
+      ${opcionesAnio.map(o => `<option value="${escapeHTML(o.id)}"${o.id === anioSel ? ' selected' : ''}>${escapeHTML(o.label)}</option>`).join('')}
+    </select>
+    ${anioSel !== anioActivo ? '<span style="font-size:0.72rem;background:#FFF3E0;color:#E65100;border-radius:20px;padding:3px 10px;font-weight:700;">Solo lectura</span>' : ''}
+    <button class="btn-secundario" onclick="_portafolioImprimir()" style="margin-left:auto;font-size:0.8rem;padding:7px 12px;">
+      <span class="material-icons">print</span> Imprimir / Generar PDF
+    </button>
+  </div>`;
+
+  cont.innerHTML = selectorAnioHtml + `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
       <div style="font-size:0.85rem;color:#607D8B;">Actualizado: ${data.metadata?.actualizadoEn ? new Date(data.metadata.actualizadoEn).toLocaleString('es-DO') : 'Sin guardar aún'}</div>
       <button class="btn-secundario" onclick="_cargarPortafolioDesdePlanificacionActiva()" style="font-size:0.8rem;padding:7px 12px;">
@@ -10042,7 +10259,7 @@ function renderizarPortafolio() {
     </div>
 
     <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
-      <button class="btn-secundario" onclick="_portafolioRestaurarDemo()"><span class="material-icons">auto_fix_high</span> Plantilla base</button>
+      <button class="btn-secundario" onclick="_portafolioRestaurarDemo()"><span class="material-icons">auto_fix_high</span> Limpiar datos base</button>
       <button class="btn-siguiente" onclick="guardarPortafolioBaseDesdeUI()"><span class="material-icons">save</span> Guardar datos base</button>
     </div>`;
 
@@ -10056,8 +10273,78 @@ function renderizarPortafolio() {
   resumen.style.marginTop = '18px';
   cont.appendChild(resumen);
 
-  renderizarPortafolioEvidencias();
+  await renderizarPortafolioEvidencias();
   renderizarPortafolioResumenPedagogico();
+}
+
+async function _portafolioImprimir() {
+  const data = cargarPortafolioBase();
+  const docente = data.docente || {};
+  const centro = data.centro || {};
+  const anioSel = _portafolioAnioEnUso();
+  const esc = escapeHTML;
+
+  const todas = await _cargarEvidenciasPortafolio();
+  const items = todas.filter(it => _portafolioEvidenciaPerteneceAnio(it, anioSel));
+  const grupos = _agruparEvidenciasPorCategoria(items);
+
+  const biblio = cargarBiblioteca();
+  const planes = (Array.isArray(biblio?.items) ? biblio.items : []).filter(reg => _fechaPerteneceACiclo(reg.fechaGuardado, anioSel));
+  const totalActividades = planes.reduce((acc, reg) => acc + ((reg.planificacion?.actividades || []).length), 0);
+
+  const seccionesHtml = Object.entries(PORTAFOLIO_CATEGORIAS).map(([cat, label]) => {
+    const itemsCat = grupos[cat] || [];
+    if (!itemsCat.length) return '';
+    return '<h3>' + esc(label) + '</h3>' + itemsCat.map(it => {
+      const fecha = it.fecha ? new Date(it.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      const esImagen = (it.archivoMime || '').startsWith('image/');
+      const archivoNota = it.archivoNombre
+        ? (esImagen
+            ? '<img src="data:' + esc(it.archivoMime) + ';base64,' + it.archivoBase64 + '" style="max-width:220px;max-height:160px;margin-top:6px;border:1px solid #999;">'
+            : '<div style="font-size:9.5pt;color:#555;margin-top:4px;">Adjunto: ' + esc(it.archivoNombre) + ' (disponible en el sistema)</div>')
+        : '';
+      return '<div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #ddd;">' +
+        '<div style="font-weight:bold;">' + esc(it.titulo || 'Sin título') + ' <span style="font-weight:normal;color:#666;">— ' + fecha + '</span></div>' +
+        '<div style="white-space:pre-wrap;">' + esc(it.descripcion || '') + '</div>' +
+        archivoNota +
+        '</div>';
+    }).join('');
+  }).join('');
+
+  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+    '<title>Portafolio Docente — ' + esc(docente.nombre || '') + '</title>' +
+    '<style>body{font-family:Arial,sans-serif;margin:16mm 16mm 12mm;font-size:11pt;color:#222;}' +
+    'h1{font-size:16pt;text-align:center;margin-bottom:4px;}' +
+    'h2{font-size:12pt;color:#444;text-align:center;margin-top:0;font-weight:normal;}' +
+    'h3{font-size:12pt;border-bottom:2px solid #333;padding-bottom:3px;margin-top:22px;}' +
+    'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
+    'td{padding:4px 6px;font-size:10.5pt;vertical-align:top;}' +
+    '.stats{display:flex;gap:14px;margin-top:14px;}' +
+    '.stat{border:1px solid #999;border-radius:6px;padding:8px 12px;text-align:center;}' +
+    '@media print{.no-print{display:none!important;}}</style></head><body>' +
+    '<div class="no-print" style="text-align:center;margin-bottom:14px;">' +
+      '<button onclick="window.print()" style="padding:9px 26px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Imprimir / Guardar PDF</button>' +
+    '</div>' +
+    '<h1>Portafolio Docente</h1>' +
+    '<h2>Año escolar ' + esc(anioSel) + '</h2>' +
+    '<table>' +
+      '<tr><td style="width:30%;"><b>Docente</b></td><td>' + esc(docente.nombre || '—') + '</td></tr>' +
+      '<tr><td><b>Título / cédula</b></td><td>' + esc(docente.titulo || '—') + ' · ' + esc(docente.cedula || '—') + '</td></tr>' +
+      '<tr><td><b>Cargo</b></td><td>' + esc(docente.cargo || '—') + '</td></tr>' +
+      '<tr><td><b>Centro educativo</b></td><td>' + esc(centro.nombre || docente.centro || '—') + '</td></tr>' +
+      '<tr><td><b>Propósito del año</b></td><td>' + esc(centro.propositoAnual || '—') + '</td></tr>' +
+    '</table>' +
+    '<div class="stats">' +
+      '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + planes.length + '</div><div style="font-size:9pt;">Planificaciones</div></div>' +
+      '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + totalActividades + '</div><div style="font-size:9pt;">Actividades</div></div>' +
+      '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + items.length + '</div><div style="font-size:9pt;">Evidencias</div></div>' +
+    '</div>' +
+    (seccionesHtml || '<p style="margin-top:20px;color:#777;">Aún no hay evidencias registradas para este año escolar.</p>') +
+    '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>' +
+    '</body></html>';
+
+  const win = window.open('', '_blank', 'width=820,height=950');
+  if (win) { win.document.write(html); win.document.close(); }
 }
 
 function _cargarPortafolioDesdePlanificacionActiva() {
@@ -10070,8 +10357,6 @@ function _cargarPortafolioDesdePlanificacionActiva() {
   data.centro.propositoAnual = dg.propositoAnual || data.centro.propositoAnual || '';
   _guardarPortafolioBase(data);
   renderizarPortafolio();
-  renderizarPortafolioEvidencias();
-  renderizarPortafolioResumenPedagogico();
   mostrarToast('Datos tomados de la planificación activa', 'success');
 }
 
@@ -10079,13 +10364,11 @@ function _portafolioRestaurarDemo() {
   const demo = {
     docente: { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '' },
     centro: { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' },
-    metadata: { actualizadoEn: null }
+    metadata: cargarPortafolioBase().metadata
   };
   _guardarPortafolioBase(demo);
   renderizarPortafolio();
-  renderizarPortafolioEvidencias();
-  renderizarPortafolioResumenPedagogico();
-  mostrarToast('Plantilla base cargada', 'success');
+  mostrarToast('Datos base limpiados', 'success');
 }
 
 function guardarPortafolioBaseDesdeUI() {
@@ -10106,8 +10389,6 @@ function guardarPortafolioBaseDesdeUI() {
 
   _guardarPortafolioBase(data);
   renderizarPortafolio();
-  renderizarPortafolioEvidencias();
-  renderizarPortafolioResumenPedagogico();
   mostrarToast('Datos base del portafolio guardados', 'success');
 }
 
