@@ -30170,12 +30170,6 @@ async function abrirCompartidos() {
     return;
   }
   try {
-    const miUid = window.currentUser?.uid;
-    const miPerfil = miUid ? (await db.collection('usuarios').doc(miUid).get()).data() : null;
-    console.log('[Compartir] centroId resuelto por el cliente:', _compartirCentroId);
-    console.log('[Compartir] centroId guardado en usuarios/' + miUid + ':', miPerfil?.centroId);
-  } catch (e) { console.log('[Compartir] error leyendo perfil para debug:', e); }
-  try {
     _compartirDocentes = await _coordGetDocentes(_compartirCentroId);
   } catch { _compartirDocentes = []; }
 
@@ -30420,7 +30414,13 @@ async function _obtenerCentroIdDeUsuarioActual() {
     if (email) {
       const snap = await db.collection('centros').get();
       const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
-      if (centro) return centro.id;
+      if (centro) {
+        // Se resolvio por coincidencia en centros.admins[], no por el campo propio.
+        // Lo respaldamos en el perfil porque varias reglas de Firestore (miCentroId())
+        // leen usuarios/{uid}.centroId directamente y no replican este fallback.
+        try { await db.collection('usuarios').doc(window.currentUser.uid).set({ centroId: centro.id }, { merge: true }); } catch {}
+        return centro.id;
+      }
     }
   } catch {}
   // Superadmin sin centro propio: usar el primer centro registrado como referencia por
