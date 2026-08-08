@@ -112,6 +112,24 @@ async function _crearPerfilUsuario(uid, data) {
   }
 }
 
+// Contador público de usuarios registrados (stats/publico), para poder mostrar
+// "N personas registradas en TinClass" fuera de la app (p.ej. en un portafolio) sin
+// exponer la colección usuarios/ completa. La regla de Firestore solo permite crear el
+// doc en 1 y despues incrementarlo de a 1, nunca saltar ni bajar el numero.
+async function _incrementarContadorUsuariosPublico() {
+  try {
+    const ref = db.collection('stats').doc('publico');
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({ usuariosRegistrados: 1 });
+    } else {
+      await ref.update({ usuariosRegistrados: firebase.firestore.FieldValue.increment(1) });
+    }
+  } catch (e) {
+    console.warn('No se pudo actualizar el contador público de usuarios:', e);
+  }
+}
+
 /** Carga la lista de centros educativos en los selectores de registro */
 async function _cargarCentrosParaRegistro() {
   try {
@@ -247,6 +265,7 @@ async function _onLogin(user) {
         estado: 'aprobado',
         createdAt: new Date().toISOString()
       });
+      _incrementarContadorUsuariosPublico();
     }
     // Si no es ni superadmin ni admin, es docente sin perfil — crear como pendiente
     else {
@@ -260,6 +279,7 @@ async function _onLogin(user) {
         estado: 'pendiente',
         createdAt: new Date().toISOString()
       });
+      _incrementarContadorUsuariosPublico();
       _mostrarPantallaPendiente({ estado: 'pendiente', centroNombre: '' });
       return;
     }
@@ -970,6 +990,7 @@ async function authVerificarOTPRegistro() {
       createdAt: new Date().toISOString()
     };
     await _crearPerfilUsuario(cred.user.uid, perfilData);
+    _incrementarContadorUsuariosPublico();
     _registrando = false;
     // Mostrar pantalla de espera directamente
     window.currentUser = cred.user;
@@ -1076,6 +1097,7 @@ async function _confirmarCodigoGoogle() {
         createdAt: new Date().toISOString()
       };
       await _crearPerfilUsuario(result.user.uid, perfilData);
+      _incrementarContadorUsuariosPublico();
       window._pendingGoogleCentro = null;
       _registrando = false;
       window.currentUser = result.user;
