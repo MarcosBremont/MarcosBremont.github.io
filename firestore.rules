@@ -38,14 +38,17 @@ service cloud.firestore {
       return isOwnerSuperadminEmail() || isConfiguredSuperadminEmail();
     }
 
+    // .get('centroId', null) en vez de acceso directo: leer un campo ausente con
+    // notacion de punto lanza un error de evaluacion (no null) y tumba el permiso
+    // completo -- el mismo problema que ya se resolvio en mismoCentroOSinCentro().
     function miCentroId() {
-      return signedIn() ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.centroId : null;
+      return signedIn() ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('centroId', null) : null;
     }
 
     // Compara mi centro contra el centro del dueño de un doc ubicado en users/{otroUid}/... o usuarios/{otroUid}
     function mismoCentro(otroUid) {
       return otroUid != null && miCentroId() != null &&
-             miCentroId() == get(/databases/$(database)/documents/usuarios/$(otroUid)).data.centroId;
+             miCentroId() == get(/databases/$(database)/documents/usuarios/$(otroUid)).data.get('centroId', null);
     }
 
     // Compara mi centro contra un campo centroId estampado en el propio documento leido.
