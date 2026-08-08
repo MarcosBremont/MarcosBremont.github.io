@@ -290,10 +290,14 @@
         </div>
         <div class="auth-field">
           <label for="auth-centro-reg">Centro Educativo *</label>
-          <select id="auth-centro-reg"
+          <select id="auth-centro-reg" onchange="_authToggleCentroOtro('auth-centro-reg')"
             style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;background:#fff;color:#212121;">
             <option value="">Cargando centros...</option>
           </select>
+        </div>
+        <div class="auth-field" id="auth-centro-reg-otro-wrap" style="display:none;">
+          <label for="auth-centro-reg-otro">Nombre de tu centro *</label>
+          <input type="text" id="auth-centro-reg-otro" placeholder="Nombre del centro educativo" />
         </div>
         <div class="auth-field">
           <label for="auth-pass-reg">Contraseña *</label>
@@ -359,6 +363,21 @@
           <span class="material-icons" style="font-size:16px;">login</span> Iniciar sesión
         </button>
       </div>
+
+      <!-- Créditos y contacto -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid #ECEFF1;text-align:center;">
+        <div style="font-size:0.75rem;color:#90A4AE;margin-bottom:8px;">Desarrollado por Marcos Bremont</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <a href="mailto:soymarcosbremont@gmail.com"
+            style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #E0E0E0;border-radius:20px;color:#616161;font-size:0.76rem;font-weight:600;text-decoration:none;">
+            <span class="material-icons" style="font-size:14px;">mail</span> Correo
+          </a>
+          <a href="https://wa.me/18298668113" target="_blank" rel="noopener"
+            style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #E0E0E0;border-radius:20px;color:#616161;font-size:0.76rem;font-weight:600;text-decoration:none;">
+            <span class="material-icons" style="font-size:14px;">chat</span> WhatsApp
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -376,10 +395,15 @@
       <div style="margin-bottom:10px;">
         <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo
           *</label>
-        <select id="auth-centro-google"
+        <select id="auth-centro-google" onchange="_authToggleCentroOtro('auth-centro-google')"
           style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
           <option value="">Cargando centros...</option>
         </select>
+      </div>
+      <div style="margin-bottom:10px;display:none;" id="auth-centro-google-otro-wrap">
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Nombre de tu centro *</label>
+        <input type="text" id="auth-centro-google-otro" placeholder="Nombre del centro educativo"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
       </div>
       <div class="auth-error" id="auth-codigo-google-error" style="margin-top:6px;min-height:18px;"></div>
       <div style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:10px 12px;margin-bottom:14px;">
@@ -4728,7 +4752,7 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.01"></script>
+  <script src="app.js?v=16.02"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 

@@ -1,6 +1,6 @@
 {
-  "version": "16.01",
-  "sw": "137",
-  "updatedAt": "2026-08-08T02:00:00Z",
+  "version": "16.02",
+  "sw": "138",
+  "updatedAt": "2026-08-08T02:15:00Z",
   "_instrucciones_ia": "Este archivo es la UNICA fuente de verdad del numero de version de TinClass. index.html hace fetch de este archivo en tiempo de ejecucion (no hardcodea el numero) para fijar window.TINCLASS_BUILD_VERSION y window.TINCLASS_SW_VERSION, que alimentan el badge de version, el popup de estado, y el registro del Service Worker. REGLA PARA CUALQUIER IA (Claude u otra) QUE HAGA UN COMMIT DE CODIGO EN ESTE REPO: antes de comitear, sube 'version' en +0.01 (ej. 15.83 -> 15.84). Si el cambio toca el Service Worker (sw.js) o requiere forzar que los usuarios descarguen la version nueva (cache-bust), sube tambien 'sw' en +1 (ej. 136 -> 137) y actualiza a mano CACHE_NAME en sw.js para que coincida exactamente (ej. 'tinclass-v137'). Tambien actualiza a mano el query string de cache-busting en index.html: <script src=\"app.js?v=X.XX\"></script>, para que coincida con 'version' -- ese script se carga de forma sincrona por orden de documento y no puede depender de este fetch sin arriesgar el orden de carga. Si agregas una entrada nueva al Historial de versiones (en el modal 'Acerca de' de index.html), el numero debe coincidir con 'version'. No dejes este archivo desincronizado del resto del sistema."
 }

@@ -146,6 +146,10 @@ async function _cargarCentrosParaRegistro() {
         opt.textContent = c.nombre + (c.distrito ? ' (' + c.distrito + ')' : '');
         sel.appendChild(opt);
       });
+      const optOtro = document.createElement('option');
+      optOtro.value = '__otro__';
+      optOtro.textContent = 'Otro (mi centro no está en la lista)';
+      sel.appendChild(optOtro);
     });
   } catch (e) {
     console.warn('Error cargando centros para registro:', e.code, e.message);
@@ -156,6 +160,14 @@ async function _cargarCentrosParaRegistro() {
       sel.innerHTML = '<option value="">— Error al cargar centros —</option>';
     });
   }
+}
+
+/** Muestra/oculta el campo de texto libre cuando se elige "Otro" en el selector de centro */
+function _authToggleCentroOtro(baseId) {
+  const sel = document.getElementById(baseId);
+  const wrap = document.getElementById(baseId + '-otro-wrap');
+  if (!sel || !wrap) return;
+  wrap.style.display = sel.value === '__otro__' ? '' : 'none';
 }
 
 /** Muestra la pantalla de espera para docentes pendientes */
@@ -753,12 +765,18 @@ async function authRegistrarse() {
   const pass   = document.getElementById('auth-pass-reg').value;
   const pass2  = document.getElementById('auth-pass-reg2').value;
   const nombre = document.getElementById('auth-nombre-reg').value.trim();
-  const centroId = document.getElementById('auth-centro-reg')?.value;
-  const centroNombre = document.getElementById('auth-centro-reg')?.selectedOptions[0]?.textContent || '';
+  let centroId = document.getElementById('auth-centro-reg')?.value;
+  let centroNombre = document.getElementById('auth-centro-reg')?.selectedOptions[0]?.textContent || '';
 
   if (!nombre) return _authError('Ingresa tu nombre completo.', 'reg');
   if (!email || !pass || !pass2) return _authError('Completa todos los campos.', 'reg');
   if (!centroId) return _authError('Selecciona tu centro educativo.', 'reg');
+  if (centroId === '__otro__') {
+    const otro = document.getElementById('auth-centro-reg-otro')?.value.trim();
+    if (!otro) return _authError('Escribe el nombre de tu centro educativo.', 'reg');
+    centroId = '';
+    centroNombre = otro;
+  }
   if (pass !== pass2) return _authError('Las contraseñas no coinciden.', 'reg');
   if (pass.length < 6) return _authError('La contraseña debe tener al menos 6 caracteres.', 'reg');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return _authError('El formato del correo no es válido.', 'reg');
@@ -1067,12 +1085,21 @@ function authMostrarCodigoGoogle() {
 
 async function _confirmarCodigoGoogle() {
   const errEl = document.getElementById('auth-codigo-google-error');
-  const centroId = document.getElementById('auth-centro-google')?.value;
-  const centroNombre = document.getElementById('auth-centro-google')?.selectedOptions[0]?.textContent || '';
+  let centroId = document.getElementById('auth-centro-google')?.value;
+  let centroNombre = document.getElementById('auth-centro-google')?.selectedOptions[0]?.textContent || '';
 
   if (!centroId) {
     if (errEl) { errEl.textContent = 'Selecciona tu centro educativo.'; errEl.classList.add('visible'); }
     return;
+  }
+  if (centroId === '__otro__') {
+    const otro = document.getElementById('auth-centro-google-otro')?.value.trim();
+    if (!otro) {
+      if (errEl) { errEl.textContent = 'Escribe el nombre de tu centro educativo.'; errEl.classList.add('visible'); }
+      return;
+    }
+    centroId = '';
+    centroNombre = otro;
   }
 
   // Guardar centro seleccionado para usarlo después del login
