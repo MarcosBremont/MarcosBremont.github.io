@@ -9817,11 +9817,67 @@ function _guardarPortafolioCV(data) {
   if (window._syncFirebase) _syncFirebase('portafolio_cv', data);
 }
 
+// Si la imagen pesa mas de lo permitido, la redibuja en un canvas bajando calidad
+// (y si hace falta, tambien dimensiones) hasta que quepa -- para no obligar al
+// docente a andar probando fotos a ver cual "pasa" de tamaño.
+function _comprimirImagenParaLimite(file, maxBytes) {
+  return new Promise((resolve, reject) => {
+    if (!file.type || !file.type.startsWith('image/')) { resolve(file); return; }
+    if (file.size <= maxBytes) { resolve(file); return; }
+
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      URL.revokeObjectURL(url);
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const dibujar = (w, h, calidad) => new Promise(res => {
+          canvas.width = w;
+          canvas.height = h;
+          ctx.clearRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(res, 'image/jpeg', calidad);
+        });
+
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        let calidad = 0.85;
+        let blob = await dibujar(w, h, calidad);
+
+        while (blob && blob.size > maxBytes && calidad > 0.35) {
+          calidad -= 0.15;
+          blob = await dibujar(w, h, calidad);
+        }
+        while (blob && blob.size > maxBytes && (w > 300 || h > 300)) {
+          w = Math.round(w * 0.8);
+          h = Math.round(h * 0.8);
+          blob = await dibujar(w, h, Math.max(calidad, 0.6));
+        }
+
+        if (!blob) { reject(new Error('No se pudo comprimir la imagen')); return; }
+        const nombre = (file.name || 'imagen').replace(/\.\w+$/, '') + '.jpg';
+        resolve(new File([blob], nombre, { type: 'image/jpeg' }));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+
 async function _portafolioSubirFoto(inputEl) {
-  const file = inputEl?.files?.[0];
+  let file = inputEl?.files?.[0];
   if (!file) return;
-  if (file.size > PORTAFOLIO_FOTO_MAX_BYTES) { mostrarToast('La foto no debe superar 150 KB.', 'error'); return; }
   try {
+    if (file.size > PORTAFOLIO_FOTO_MAX_BYTES) {
+      file = await _comprimirImagenParaLimite(file, PORTAFOLIO_FOTO_MAX_BYTES);
+    }
+    if (file.size > PORTAFOLIO_FOTO_MAX_BYTES) {
+      mostrarToast('No se pudo reducir la foto lo suficiente (máx. 150 KB). Prueba con otra imagen.', 'error');
+      return;
+    }
     const base64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result).split(',')[1]);
@@ -9832,7 +9888,7 @@ async function _portafolioSubirFoto(inputEl) {
     renderizarPortafolio();
     mostrarToast('Foto actualizada', 'success');
   } catch (e) {
-    mostrarToast('No se pudo leer la imagen', 'error');
+    mostrarToast('No se pudo procesar la imagen: ' + (e.message || e), 'error');
   }
 }
 
@@ -10209,15 +10265,25 @@ async function guardarPortafolioEvidenciaDesdeUI() {
   const fecha = document.getElementById('pf-evi-fecha')?.value || new Date().toISOString().split('T')[0];
   const origen = (document.getElementById('pf-evi-origen')?.value || '').trim();
   const fileInput = document.getElementById('pf-evi-archivo');
-  const file = fileInput?.files?.[0];
+  let file = fileInput?.files?.[0];
 
   if (!titulo || !descripcion) {
     if (errEl) errEl.textContent = 'Escribe un título y una descripción para la evidencia.';
     return;
   }
   if (file && file.size > PORTAFOLIO_EVIDENCIA_MAX_BYTES) {
-    if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB.';
-    return;
+    if (file.type && file.type.startsWith('image/')) {
+      try {
+        file = await _comprimirImagenParaLimite(file, PORTAFOLIO_EVIDENCIA_MAX_BYTES);
+      } catch {
+        if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB.';
+        return;
+      }
+    }
+    if (file.size > PORTAFOLIO_EVIDENCIA_MAX_BYTES) {
+      if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB (no se pudo reducir más).';
+      return;
+    }
   }
 
   const ref = _portafolioEvidenciasColeccion();
