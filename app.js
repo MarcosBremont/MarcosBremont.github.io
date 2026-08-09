@@ -34133,88 +34133,20 @@ async function _cargarCentros() {
 }
 
 /** Renderiza lista de centros */
-// Cuentas que se registraron eligiendo "Otro" y escribieron el nombre de su centro a
-// mano (centroId vacío) -- invisibles en Admin Centro porque ese panel filtra por
-// centroId exacto. Se listan aparte para que el superadmin les asigne un centro real
-// (o cree uno primero) antes de aprobarlas.
-async function _renderPendientesSinCentro(centros) {
-  try {
-    const snap = await db.collection('usuarios').where('estado', '==', 'pendiente').get();
-    const sinCentro = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => !d.centroId);
-    if (!sinCentro.length) return '';
-
-    const opcionesCentros = centros.map(c => '<option value="' + c.id + '">' + escapeHTML(c.nombre) + '</option>').join('');
-
-    let html = '<div style="background:#FFF3E0;border:1.5px solid #FFB74D;border-radius:12px;padding:16px;margin-bottom:18px;">'
-      + '<div style="font-weight:800;color:#E65100;margin-bottom:4px;display:flex;align-items:center;gap:8px;">'
-      + '<span class="material-icons">report_problem</span> Cuentas sin centro asignado (' + sinCentro.length + ')</div>'
-      + '<p style="font-size:0.8rem;color:#8D6E63;margin:0 0 12px;">Se registraron eligiendo "Otro" y escribiendo el nombre de su centro a mano. Asígnales un centro educativo real (créalo abajo primero si hace falta) para poder aprobarlas.</p>'
-      + '<div style="display:flex;flex-direction:column;gap:10px;">';
-
-    sinCentro.forEach(d => {
-      const fecha = d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-      html += '<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">'
-        + '<div style="flex:1;min-width:180px;">'
-        + '<div style="font-weight:700;color:#37474F;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + '</div>'
-        + '<div style="font-size:0.78rem;color:#78909C;">' + escapeHTML(d.email || '') + (fecha ? ' · ' + fecha : '') + '</div>'
-        + '<div style="font-size:0.8rem;color:#E65100;margin-top:2px;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">edit_note</span> Escribió: "' + escapeHTML(d.centroNombre || '') + '"</div>'
-        + '</div>'
-        + '<select id="sa-centro-asignar-' + d.uid + '" style="padding:7px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.82rem;">'
-        + '<option value="">— Elegir centro —</option>' + opcionesCentros + '</select>'
-        + '<button onclick="_asignarCentroYAprobar(\'' + d.uid + '\')" style="padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">check</span> Asignar y aprobar</button>'
-        + '<button onclick="_rechazarPendienteSinCentro(\'' + d.uid + '\')" style="padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">close</span> Rechazar</button>'
-        + '</div>';
-    });
-
-    html += '</div></div>';
-    return html;
-  } catch (e) {
-    console.warn('Error cargando pendientes sin centro:', e);
-    return '';
-  }
-}
-
-async function _rechazarPendienteSinCentro(uid) {
-  if (!confirm('¿Rechazar esta cuenta? No podrá acceder al sistema.')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ estado: 'rechazado', rejectedAt: new Date().toISOString(), rejectedBy: window.currentUser?.email || '' });
-    mostrarToast('Cuenta rechazada', 'success');
-    _renderCentrosEducativos();
-    _actualizarBadgePendientesGlobalSuperadmin();
-  } catch (e) {
-    mostrarToast('Error: ' + e.message, 'error');
-  }
-}
-
-async function _asignarCentroYAprobar(uid) {
-  const sel = document.getElementById('sa-centro-asignar-' + uid);
-  const centroId = sel?.value;
-  if (!centroId) { mostrarToast('Elige un centro primero', 'error'); return; }
-  const centroNombre = sel.selectedOptions[0]?.textContent || '';
-  try {
-    await db.collection('usuarios').doc(uid).update({
-      centroId, centroNombre,
-      estado: 'aprobado',
-      approvedAt: new Date().toISOString(),
-      approvedBy: window.currentUser?.email || ''
-    });
-    mostrarToast('Cuenta asignada y aprobada', 'success');
-    _renderCentrosEducativos();
-    _actualizarBadgePendientesGlobalSuperadmin();
-  } catch (e) {
-    mostrarToast('Error: ' + e.message, 'error');
-  }
-}
-
+// Nota: la gestión de cuentas sin centro asignado ("eligieron Otro al
+// registrarse") vive en la pestaña "Solicitudes Pendientes"
+// (_renderSolicitudesPendientes) -- antes había una sección duplicada aquí
+// mismo con la misma función, restaurada por accidente junto con el resto
+// de funcionalidad recuperada; se quitó para no tener dos lugares distintos
+// haciendo lo mismo.
 async function _renderCentrosEducativos() {
   const cont = document.getElementById('sa-contenido');
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando centros...</div>';
 
   const centros = await _cargarCentros();
-  const pendientesSinCentroHtml = await _renderPendientesSinCentro(centros);
 
-  let html = pendientesSinCentroHtml + '<div style="margin-bottom:16px;">'
+  let html = '<div style="margin-bottom:16px;">'
     + '<button onclick="_mostrarFormCentro()" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">add</span> Crear Centro Educativo</button></div>';
 
