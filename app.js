@@ -29531,9 +29531,24 @@ async function _esAdminDeCentro() {
   if (!email) return [];
   try {
     const snap = await db.collection('centros').get();
-    return snap.docs
+    const centros = snap.docs
       .filter(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email))
       .map(d => ({ id: d.id, ...d.data() }));
+
+    // Director y Coordinadora también aprueban/rechazan docentes de su propio
+    // centro, aunque su email no esté en centros.admins[] (ese arreglo es solo
+    // para administradores designados explícitamente).
+    try {
+      const perfil = await db.collection('usuarios').doc(window.currentUser.uid).get();
+      const rol = perfil.exists ? perfil.data().rol : null;
+      const centroId = perfil.exists ? perfil.data().centroId : null;
+      if (centroId && ['director', 'coordinadora'].includes(rol) && !centros.some(c => c.id === centroId)) {
+        const centroDoc = snap.docs.find(d => d.id === centroId);
+        if (centroDoc) centros.push({ id: centroDoc.id, ...centroDoc.data() });
+      }
+    } catch {}
+
+    return centros;
   } catch { return []; }
 }
 
@@ -29686,22 +29701,23 @@ async function _renderDocentesCentro() {
   }
 }
 
-/** Aprobar docente */
-async function _aprobarDocente(uid) {
+/** Aprobar docente. origen='global' cuando se llama desde la vista de
+ *  Solicitudes Pendientes de Superadmin (no filtrada por centro). */
+async function _aprobarDocente(uid, origen) {
   try {
     await db.collection('usuarios').doc(uid).update({ estado: 'aprobado', approvedAt: new Date().toISOString(), approvedBy: window.currentUser?.email || '' });
     mostrarToast('Docente aprobado correctamente', 'success');
-    _renderDocentesCentro();
+    if (origen === 'global') _renderSolicitudesPendientes(); else _renderDocentesCentro();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
-/** Rechazar docente */
-async function _rechazarDocente(uid) {
+/** Rechazar docente. origen='global' -- ver _aprobarDocente. */
+async function _rechazarDocente(uid, origen) {
   if (!confirm('¿Rechazar este docente? No podrá acceder al sistema.')) return;
   try {
     await db.collection('usuarios').doc(uid).update({ estado: 'rechazado', rejectedAt: new Date().toISOString(), rejectedBy: window.currentUser?.email || '' });
     mostrarToast('Docente rechazado', 'success');
-    _renderDocentesCentro();
+    if (origen === 'global') _renderSolicitudesPendientes(); else _renderDocentesCentro();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
@@ -29945,30 +29961,133 @@ async function _guardarEmailsSuperadmin(emails) {
 function _verificarAccesoSuperadmin() {
   const btn = document.getElementById('btn-dash-superadmin');
   if (btn) btn.style.display = _esSuperadmin() ? '' : 'none';
+  if (_esSuperadmin()) _actualizarBadgeSuperadmin();
+}
+
+/** Badge con el conteo global de docentes pendientes de aprobación (todos los centros) */
+async function _actualizarBadgeSuperadmin() {
+  const badge = document.getElementById('dash-superadmin-badge');
+  if (!badge) return;
+  try {
+    const snap = await db.collection('usuarios').where('estado', '==', 'pendiente').get();
+    // Solo las que no tienen centro real asignado (eligieron "Otro" al
+    // registrarse) -- las que sí eligieron un centro existente las aprueba
+    // ese centro (admin_centro/director/coordinadora), no el superadmin.
+    const sinCentro = snap.docs.filter(d => !d.data().centroId).length;
+    if (sinCentro > 0) { badge.style.display = 'flex'; badge.textContent = sinCentro > 9 ? '9+' : String(sinCentro); }
+    else { badge.style.display = 'none'; }
+  } catch { badge.style.display = 'none'; }
 }
 
 /** Abre el panel de superadmin */
 function abrirSuperadmin() {
   if (!_esSuperadmin()) { mostrarToast('Acceso denegado', 'error'); return; }
   _mostrarPanel('panel-superadmin');
-  switchTabSuperadmin('centros');
+  switchTabSuperadmin('solicitudes');
 }
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts' };
+  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
     if (key === tab) { el.classList.add('activo'); el.style.background = '#B71C1C'; el.style.color = '#fff'; }
     else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
   });
-  if (tab === 'centros') _renderCentrosEducativos();
+  if (tab === 'solicitudes') _renderSolicitudesPendientes();
+  else if (tab === 'centros') _renderCentrosEducativos();
   else if (tab === 'admins') _renderEmailsSuperadmin();
   else if (tab === 'opciones') _renderOpcionesDocentes();
   else if (tab === 'opciones_coord') _renderOpcionesCoordinadora();
   else if (tab === 'opciones_psico') _renderOpcionesPsicologia();
   else if (tab === 'prompts') _renderPromptsIA();
+}
+
+/**
+ * Vista global de docentes con estado 'pendiente', SIN filtrar por centro.
+ * El panel de Admin Centro (_renderDocentesCentro) solo lista pendientes de
+ * UN centro a la vez -- un docente que se registró eligiendo "Otro" (o cuyo
+ * perfil se creó sin selección de centro) queda con centroId:'' y nunca
+ * calza con ningún centro real, así que no aparecía en ningún lado.
+ */
+async function _renderSolicitudesPendientes() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando solicitudes...</div>';
+
+  try {
+    const [snap, centros] = await Promise.all([
+      db.collection('usuarios').where('estado', '==', 'pendiente').get(),
+      _cargarCentros()
+    ]);
+    // Solo docentes que eligieron "Otro" al registrarse (sin centro real
+    // asignado). Los que sí eligieron un centro existente los debe aprobar
+    // ese centro (admin_centro/director/coordinadora), no el superadmin --
+    // así el control de acceso se queda en manos de cada centro.
+    const solicitudes = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
+      .filter(d => !d.centroId)
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+    const badge = document.getElementById('sa-badge-solicitudes');
+    if (badge) { badge.style.display = solicitudes.length > 0 ? '' : 'none'; badge.textContent = solicitudes.length > 9 ? '9+' : solicitudes.length; }
+
+    window._saCentrosCache = centros;
+
+    let html = '<div style="font-size:0.78rem;color:#78909C;margin-bottom:14px;">Solo docentes que se registraron sin elegir un centro existente (opción "Otro"). Las solicitudes de docentes que sí eligieron un centro las aprueba directamente ese centro.</div>';
+
+    if (solicitudes.length === 0) {
+      html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">check_circle_outline</span>No hay solicitudes sin centro asignado</div>';
+      cont.innerHTML = html;
+      return;
+    }
+
+    const opcionesCentros = '<option value="">— Sin asignar —</option>'
+      + centros.map(c => '<option value="' + c.id + '">' + escapeHTML(c.nombre || c.id) + '</option>').join('');
+
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    solicitudes.forEach(d => {
+      const fecha = d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
+
+      html += '<div style="background:#fff;border:1.5px solid #FFB74D;border-radius:12px;padding:14px;">'
+        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+        + '<div style="width:44px;height:44px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.1rem;">' + escapeHTML(inicial) + '</div>'
+        + '<div style="flex:1;min-width:150px;">'
+        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || 'Sin nombre') + '</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + escapeHTML(d.email || '') + '</div>'
+        + '<div style="font-size:0.75rem;color:#B0BEC5;margin-top:2px;">Registro: ' + fecha + (d.centroNombre ? ' · Escribió: "' + escapeHTML(d.centroNombre) + '"' : '') + '</div>'
+        + '</div>'
+        + '<span style="background:#FFF3E0;color:#E65100;padding:3px 10px;border-radius:10px;font-size:0.72rem;font-weight:700;white-space:nowrap;">Sin centro asignado</span>'
+        + '</div>';
+
+      html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #F0F0F0;">'
+        + '<select id="sa-sol-centro-' + d.uid + '" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;">' + opcionesCentros + '</select>'
+        + '<button onclick="_saAsignarCentro(\'' + d.uid + '\')" style="padding:7px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Asignar centro</button>'
+        + '<button onclick="_aprobarDocente(\'' + d.uid + '\',\'global\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>'
+        + '<button onclick="_rechazarDocente(\'' + d.uid + '\',\'global\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">close</span> Rechazar</button>'
+        + '</div></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  } catch (e) {
+    console.error('Error cargando solicitudes:', e);
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+/** Asigna (o cambia) el centro educativo de un docente desde la vista global de solicitudes */
+async function _saAsignarCentro(uid) {
+  const sel = document.getElementById('sa-sol-centro-' + uid);
+  if (!sel) return;
+  const centroId = sel.value;
+  if (!centroId) { mostrarToast('Selecciona un centro', 'error'); return; }
+  const centro = (window._saCentrosCache || []).find(c => c.id === centroId);
+  try {
+    await db.collection('usuarios').doc(uid).update({ centroId, centroNombre: centro?.nombre || '' });
+    mostrarToast('Centro asignado correctamente', 'success');
+    _renderSolicitudesPendientes();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
 // ── EDITOR DE PROMPTS IA ─────────────────────────────────────────
