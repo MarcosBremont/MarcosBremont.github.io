@@ -11184,6 +11184,10 @@ function abrirCalificaciones(cursoId) {
   renderizarCalificaciones();
 }
 
+function cerrarCalificaciones() {
+  abrirDashboard();
+}
+
 function _irACalificacionesPlan(cursoId, planId) {
   calState.cursoActivoId = cursoId;
   const curso = calState.cursos[cursoId];
