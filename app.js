@@ -29770,9 +29770,15 @@ async function _verificarAccesoDirector() {
 /** Abre panel de director */
 async function abrirDirector() {
   _mostrarPanel('panel-director');
-  // 'docentes' (Monitoreo Docentes) es la única pestaña que se queda dentro de
-  // Panel Director -- las otras 5 redirigen a Panel Coordinadora (ver
-  // switchTabDirector), así que no tiene sentido abrir el panel ya redirigiendo.
+  window._coordCentroSeleccionado = null; // reset al (re)entrar al panel
+  // Limpiar contenido que Panel Coordinadora pudo haber dejado renderizado en
+  // su propio contenedor en esta misma sesión -- evita ids duplicados (ej.
+  // dos elementos "coord-rend-buscar" vivos a la vez).
+  const coordCont = document.getElementById('coord-contenido');
+  if (coordCont) coordCont.innerHTML = '';
+  // 'docentes' (Monitoreo Docentes) es la única pestaña con contenido propio de
+  // Director -- las otras 5 muestran el mismo contenido de Panel Coordinadora,
+  // pero renderizado aquí mismo (ver switchTabDirector), no navegando a otro panel.
   switchTabDirector('docentes');
 }
 
@@ -29791,22 +29797,17 @@ function switchTabDirector(tab) {
   window._dirTabActual = tab;
 
   // Calificaciones, Rendimiento, Planificaciones, Resumen Docentes y Avisos
-  // reutilizan directamente las pestañas ya construidas en Panel Coordinadora
-  // (mismos datos, misma lógica) en vez de duplicar su implementación aquí --
-  // Director ya tiene acceso a ese panel, así que solo lo mostramos.
-  if (['calificaciones', 'rendimiento', 'planificaciones', 'resumen', 'avisos'].includes(tab)) {
-    _dirAbrirEnCoordinadora(tab);
-    return;
-  }
-  _renderMonitoreoDocentes();
-}
+  // reutilizan directamente las funciones ya construidas para Panel
+  // Coordinadora (mismos datos, misma lógica), pero renderizando dentro del
+  // contenedor propio de Panel Director ('dir-contenido') en vez de duplicar
+  // su implementación o navegar a otro panel con otro encabezado.
+  const dispatch = {
+    calificaciones: _coordMonitorCalificaciones, rendimiento: _coordMonitorRendimiento,
+    planificaciones: _coordMonitorPlanificaciones, resumen: _coordResumenDocentes, avisos: _coordAvisos
+  };
+  if (dispatch[tab]) { dispatch[tab]('dir-contenido'); return; }
 
-/** Muestra el Panel Coordinadora directamente en la pestaña indicada (sin pasar
- *  primero por su pestaña por defecto, para no disparar dos fetch en paralelo). */
-function _dirAbrirEnCoordinadora(tab) {
-  window._coordCentroSeleccionado = null;
-  _mostrarPanel('panel-coordinadora');
-  switchTabCoordinadora(tab);
+  _renderMonitoreoDocentes();
 }
 
 // ── AVISOS ──────────────────────────────────────────────────────
@@ -31233,6 +31234,12 @@ async function _verificarAccesoCoordinadora() {
 
 function abrirCoordinadora() {
   window._coordCentroSeleccionado = null; // Reset para permitir cambiar centro
+  // Limpiar el contenido que Panel Director pudo haber dejado renderizado en su
+  // propio contenedor -- evita que queden dos elementos con el mismo id (ej.
+  // "coord-rend-buscar") vivos a la vez si el usuario ya había abierto estas
+  // pestañas desde Panel Director en esta misma sesión.
+  const dirCont = document.getElementById('dir-contenido');
+  if (dirCont) dirCont.innerHTML = '';
   _mostrarPanel('panel-coordinadora');
   switchTabCoordinadora('calificaciones');
 }
@@ -31269,23 +31276,28 @@ async function _coordGetCentroId() {
       const snap = await db.collection('centros').get();
       const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
       if (centro) return centro.id;
+      // Superadmin sin centroId asignado: si solo hay un centro en todo el
+      // sistema, usarlo directamente en vez de forzar a elegir entre 1 opción.
+      const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+      if (esSA && snap.size === 1) return snap.docs[0].id;
     }
   } catch {}
-  // Superadmin/Director sin centro: mostrar selector
+  // Superadmin con varios centros / Director sin centro: mostrar selector
   return null;
 }
 
-async function _coordMostrarSelectorCentro(cont, callback) {
+async function _coordMostrarSelectorCentro(cont, callback, contId) {
   try {
     const snap = await db.collection('centros').get();
     const centros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (!centros.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centros registrados.</div>'; return; }
+    const args = contId ? '\'' + contId + '\'' : '';
     let html = '<div style="text-align:center;padding:30px;">'
       + '<span class="material-icons" style="font-size:48px;color:#00695C;display:block;margin-bottom:12px;">business</span>'
       + '<p style="color:#546E7A;margin-bottom:16px;">Selecciona un centro educativo para ver sus datos:</p>'
       + '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">';
     centros.forEach(c => {
-      html += '<button onclick="window._coordCentroSeleccionado=\'' + c.id + '\';' + callback + '()" style="padding:12px 20px;background:#fff;border:2px solid #00695C;border-radius:12px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#00695C;transition:all 0.2s;"'
+      html += '<button onclick="window._coordCentroSeleccionado=\'' + c.id + '\';' + callback + '(' + args + ')" style="padding:12px 20px;background:#fff;border:2px solid #00695C;border-radius:12px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#00695C;transition:all 0.2s;"'
         + ' onmouseover="this.style.background=\'#00695C\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#00695C\'">'
         + '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;">school</span>'
         + escapeHTML(c.nombre || c.id) + '</button>';
@@ -31363,13 +31375,15 @@ async function _coordGetDocentes(centroId) {
 
 // ── 1. MONITOR DE CALIFICACIONES ────────────────────────────────
 
-async function _coordMonitorCalificaciones() {
-  const cont = document.getElementById('coord-contenido');
+async function _coordMonitorCalificaciones(contId) {
+  contId = contId || 'coord-contenido';
+  window._coordActiveContId = contId;
+  const cont = document.getElementById(contId);
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando calificaciones...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorCalificaciones'); return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorCalificaciones', contId); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
@@ -31588,13 +31602,15 @@ function _coordCicloDePlan(item) {
   return _getSchoolYearKey(fechaRef);
 }
 
-async function _coordMonitorPlanificaciones() {
-  const cont = document.getElementById('coord-contenido');
+async function _coordMonitorPlanificaciones(contId) {
+  contId = contId || 'coord-contenido';
+  window._coordActiveContId = contId;
+  const cont = document.getElementById(contId);
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando planificaciones...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorPlanificaciones'); return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorPlanificaciones', contId); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
@@ -31765,13 +31781,15 @@ function _coordPlanItemHTML(item) {
 
 // ── 3. RESUMEN POR DOCENTE ──────────────────────────────────────
 
-async function _coordResumenDocentes() {
-  const cont = document.getElementById('coord-contenido');
+async function _coordResumenDocentes(contId) {
+  contId = contId || 'coord-contenido';
+  window._coordActiveContId = contId;
+  const cont = document.getElementById(contId);
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando resumen...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordResumenDocentes'); return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordResumenDocentes', contId); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
@@ -31891,13 +31909,15 @@ async function _coordResumenDocentes() {
 
 // ── 4. AVISOS COORDINADORA ──────────────────────────────────────
 
-async function _coordAvisos() {
-  const cont = document.getElementById('coord-contenido');
+async function _coordAvisos(contId) {
+  contId = contId || 'coord-contenido';
+  window._coordActiveContId = contId;
+  const cont = document.getElementById(contId);
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando avisos...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordAvisos'); return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordAvisos', contId); return; }
 
   let avisos = [];
   try {
@@ -31979,7 +31999,7 @@ async function _coordEnviarAviso(centroId) {
       fecha: firebase.firestore.FieldValue.serverTimestamp()
     });
     mostrarToast('Aviso enviado correctamente', 'success');
-    _coordAvisos();
+    _coordAvisos(window._coordActiveContId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
@@ -31988,7 +32008,7 @@ async function _coordEliminarAviso(centroId, avisoId) {
   try {
     await db.collection('centros').doc(centroId).collection('avisos').doc(avisoId).delete();
     mostrarToast('Aviso eliminado', 'success');
-    _coordAvisos();
+    _coordAvisos(window._coordActiveContId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
@@ -31999,13 +32019,15 @@ async function _coordEliminarAviso(centroId, avisoId) {
 // aplicadas sobre los datos de calificaciones que Coordinadora ya descarga
 // por docente. No requiere lecturas adicionales a Firestore.
 
-async function _coordMonitorRendimiento() {
-  const cont = document.getElementById('coord-contenido');
+async function _coordMonitorRendimiento(contId) {
+  contId = contId || 'coord-contenido';
+  window._coordActiveContId = contId;
+  const cont = document.getElementById(contId);
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando rendimiento...</div>';
 
   const centroId = await _coordGetCentroId();
-  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorRendimiento'); return; }
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorRendimiento', contId); return; }
 
   try {
     const docentes = await _coordGetDocentes(centroId);
