@@ -115,6 +115,34 @@
     </div>
     <span id="splash-texto">Cargando...</span>
   </div>
+  <script>
+    window.__TINCLASS_APP_READY__ = false;
+    window.__TINCLASS_BOOT_FAILED__ = false;
+
+    function _tinclassBootFail(msg) {
+      if (window.__TINCLASS_APP_READY__) return;
+      window.__TINCLASS_BOOT_FAILED__ = true;
+      const txt = document.getElementById('splash-texto');
+      if (txt) {
+        txt.textContent = msg || 'Error al iniciar. Recarga la página.';
+        txt.style.color = '#C62828';
+        txt.style.fontWeight = '700';
+      }
+    }
+
+    window.addEventListener('error', function (ev) {
+      const src = String(ev && ev.filename || '');
+      if (src.includes('/app.js')) {
+        _tinclassBootFail('Error de versión en caché. Presiona Ctrl+F5.');
+      }
+    });
+
+    setTimeout(function () {
+      if (!window.__TINCLASS_APP_READY__) {
+        _tinclassBootFail('Inicio tardando demasiado. Presiona Ctrl+F5.');
+      }
+    }, 12000);
+  </script>
 
   <!-- ===== HEADER ===== -->
   <header class="app-header">
@@ -262,10 +290,14 @@
         </div>
         <div class="auth-field">
           <label for="auth-centro-reg">Centro Educativo *</label>
-          <select id="auth-centro-reg"
+          <select id="auth-centro-reg" onchange="_authToggleCentroOtro('auth-centro-reg')"
             style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.92rem;background:#fff;color:#212121;">
             <option value="">Cargando centros...</option>
           </select>
+        </div>
+        <div class="auth-field" id="auth-centro-reg-otro-wrap" style="display:none;">
+          <label for="auth-centro-reg-otro">Nombre de tu centro *</label>
+          <input type="text" id="auth-centro-reg-otro" placeholder="Nombre del centro educativo" />
         </div>
         <div class="auth-field">
           <label for="auth-pass-reg">Contraseña *</label>
@@ -326,6 +358,25 @@
           style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
           <span class="material-icons" style="font-size:16px;">logout</span> Cerrar sesión
         </button>
+        <button onclick="authIniciarSesionPendiente()"
+          style="width:100%;margin-top:10px;background:#1565C0;border:1.5px solid #1565C0;color:#fff;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">login</span> Iniciar sesión
+        </button>
+      </div>
+
+      <!-- Créditos y contacto -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid #ECEFF1;text-align:center;">
+        <div style="font-size:0.75rem;color:#90A4AE;margin-bottom:8px;">Desarrollado por Marcos Bremont</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <a href="mailto:soymarcosbremont@gmail.com"
+            style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #E0E0E0;border-radius:20px;color:#616161;font-size:0.76rem;font-weight:600;text-decoration:none;">
+            <span class="material-icons" style="font-size:14px;">mail</span> Correo
+          </a>
+          <a href="https://wa.me/18298668113" target="_blank" rel="noopener"
+            style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #E0E0E0;border-radius:20px;color:#616161;font-size:0.76rem;font-weight:600;text-decoration:none;">
+            <span class="material-icons" style="font-size:14px;">chat</span> WhatsApp
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -344,10 +395,15 @@
       <div style="margin-bottom:10px;">
         <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Centro Educativo
           *</label>
-        <select id="auth-centro-google"
+        <select id="auth-centro-google" onchange="_authToggleCentroOtro('auth-centro-google')"
           style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;box-sizing:border-box;">
           <option value="">Cargando centros...</option>
         </select>
+      </div>
+      <div style="margin-bottom:10px;display:none;" id="auth-centro-google-otro-wrap">
+        <label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Nombre de tu centro *</label>
+        <input type="text" id="auth-centro-google-otro" placeholder="Nombre del centro educativo"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
       </div>
       <div class="auth-error" id="auth-codigo-google-error" style="margin-top:6px;min-height:18px;"></div>
       <div style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:10px 12px;margin-bottom:14px;">
@@ -376,6 +432,9 @@
 
       <!-- ── Saludo + stats ── -->
       <div class="dash-greeting" id="dash-greeting"></div>
+
+      <!-- ── Avisos de calendario escolar ── -->
+      <div id="dash-calendario-banner" style="display:none;margin-top:8px;"></div>
 
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
@@ -416,6 +475,10 @@
           <span class="material-icons">menu_book</span>
           <span>Mi Libreta</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-portafolio" onclick="abrirPortafolio()" style="--accent:#37474F;">
+          <span class="material-icons">workspace_premium</span>
+          <span>Portafolio Docente</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-rendimiento" onclick="abrirRendimiento()" style="--accent:#6A1B9A;">
           <span class="material-icons">insights</span>
           <span>Rendimiento</span>
@@ -445,6 +508,16 @@
           style="--accent:#1565C0;">
           <span class="material-icons">event_note</span>
           <span>Calendario Escolar</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-cumpleanos" onclick="abrirCumpleanos()"
+          style="--accent:#AD1457;">
+          <span class="material-icons">cake</span>
+          <span>Cumpleaños</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-compartir" onclick="abrirCompartidos()"
+          style="--accent:#00838F;">
+          <span class="material-icons">folder_shared</span>
+          <span>Compartir</span>
         </button>
         <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()"
           style="--accent:#C62828;">
@@ -1421,6 +1494,23 @@
     </div>
   </div>
 
+  <!-- ===== PANEL PORTAFOLIO DOCENTE ===== -->
+  <div id="panel-portafolio" class="cal-panel hidden">
+    <div class="section-card" style="padding:0;overflow:hidden;">
+      <div class="section-header" style="padding:20px 24px;">
+        <span class="material-icons section-icon" style="background:#ECEFF1;color:#37474F;">workspace_premium</span>
+        <div>
+          <h2 style="margin:0;">Portafolio Docente</h2>
+          <div style="font-size:0.82rem;color:#607D8B;margin-top:4px;">Organiza evidencias pedagógicas, currículo, documentos y seguimiento profesional</div>
+        </div>
+      </div>
+      <div id="portafolio-contenido" style="padding:20px 24px 20px;"></div>
+      <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+        <button class="btn-secundario" onclick="abrirDashboard()"><span class="material-icons">arrow_back</span> Volver</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- ===== PANEL RENDIMIENTO ===== -->
   <div id="panel-rendimiento" class="cal-panel hidden">
@@ -1786,6 +1876,52 @@
     </div>
   </div>
 
+  <!-- ===== PANEL: CUMPLEAÑOS ===== -->
+  <div id="panel-cumpleanos" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#FCE4EC;color:#AD1457;">cake</span>
+        <h2>Cumpleaños</h2>
+        <div style="margin-left:auto;">
+          <select id="cumple-filtro-curso" onchange="renderizarCumpleanos()"
+            style="padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:20px;font-size:0.8rem;background:#fff;color:#424242;cursor:pointer;">
+            <option value="">Todos los cursos</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:#78909C;margin:0 0 16px;">
+        Registra la fecha de nacimiento de cada estudiante para anticipar sus cumpleaños en los avisos del calendario escolar.
+      </p>
+
+      <div id="cumpleanos-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarCumpleanos()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: COMPARTIR ENTRE DOCENTES ===== -->
+  <div id="panel-compartidos" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#E0F7FA;color:#00838F;">folder_shared</span>
+        <h2>Compartir</h2>
+      </div>
+      <p style="font-size:0.8rem;color:#78909C;margin:0 0 16px;">
+        Comparte enlaces o documentos con los demás docentes de tu centro — a todos, o solo a quien elijas.
+      </p>
+
+      <div id="compartir-container"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarCompartidos()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
   <!-- ===== PANEL: REPORTES DE COMPORTAMIENTO (ESTUDIANTES) ===== -->
   <div id="panel-denuncias" class="cal-panel hidden">
     <div class="section-card">
@@ -1919,10 +2055,6 @@
         <button class="ra-tab activo" id="tab-coord-calificaciones" onclick="switchTabCoordinadora('calificaciones')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#00695C;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">grade</span> Calificaciones
-        </button>
-        <button class="ra-tab" id="tab-coord-rendimiento" onclick="switchTabCoordinadora('rendimiento')"
-          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
-          <span class="material-icons" style="font-size:14px;vertical-align:middle;">insights</span> Rendimiento
         </button>
         <button class="ra-tab" id="tab-coord-planificaciones" onclick="switchTabCoordinadora('planificaciones')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -2463,6 +2595,63 @@
           </div>
         </div>
 
+        <!-- Alertas de errores (solo superadmin) -->
+        <div class="config-section" id="cfg-error-alerts-section" style="display:none;">
+          <div class="config-section-title"><span class="material-icons">bug_report</span>Alertas de errores</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Reporte de errores activo
+              <small>Captura errores críticos y los procesa para notificación.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-error-alerts-enabled" onchange="_cfgToggleErrorAlertsEnabled(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Enviar correo al administrador
+              <small>Usa EmailJS para enviarte el aviso a tu correo personal.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-error-alerts-email" onchange="_cfgToggleErrorAlertsEmail(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Guardar respaldo en Firestore
+              <small>Guarda cada evento en <em>error_logs</em> para auditoría técnica.</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-error-alerts-firestore" onchange="_cfgToggleErrorAlertsFirestore(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+            <div class="toggle-label">
+              Template ID de EmailJS (alertas)
+              <small>ID de la plantilla en EmailJS usada para enviar las alertas de error. Déjalo vacío para usar el valor por defecto del código.</small>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="cfg-error-alerts-template-id" placeholder="template_xxxxxxx"
+                style="flex:1;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.82rem;font-family:inherit;">
+              <button onclick="_cfgGuardarErrorAlertsTemplateId()"
+                style="background:#1565C0;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                Guardar
+              </button>
+            </div>
+          </div>
+          <div style="margin-top:8px;background:#E3F2FD;border:1px solid #90CAF9;border-radius:10px;padding:10px 12px;">
+            <div id="cfg-error-alerts-status" style="font-size:0.8rem;color:#1565C0;line-height:1.5;">Estado del reporter: cargando...</div>
+          </div>
+          <button onclick="probarAlertaErrorCorreo()"
+            style="margin-top:10px;width:100%;background:#B71C1C;border:1.5px solid #EF9A9A;color:#fff;border-radius:8px;padding:10px;font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">mark_email_read</span>
+            Probar alerta de error ahora
+          </button>
+        </div>
+
         <!-- Seguridad -->
         <div class="config-section">
           <div class="config-section-title"><span class="material-icons">lock</span>Seguridad</div>
@@ -2534,6 +2723,569 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.95<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente: perfil completo, títulos, CV y reflexión</div>
+              <ul class="about-ver-items">
+                <li>Foto de perfil, perfil profesional y filosofía de enseñanza en "Datos del docente".</li>
+                <li>Subir currículum (CV) y descargarlo desde el portafolio.</li>
+                <li>Nuevas categorías de evidencia: "Título / grado académico" y "Logros y reconocimientos".</li>
+                <li>Nueva sección "Reflexión y mejora continua" (autoevaluación + plan de mejora) por año escolar.</li>
+                <li>Todo lo nuevo se incluye en la versión imprimible / PDF del portafolio.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.92<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente rehecho por completo</div>
+              <ul class="about-ver-items">
+                <li><strong>Por año escolar:</strong> cada evidencia se guarda con su año escolar; puedes consultar (de solo lectura) los años anteriores desde un selector.</li>
+                <li><strong>Archivos reales:</strong> ahora sí se puede adjuntar un documento o foto (hasta 700 KB) a cada evidencia.</li>
+                <li><strong>Categorías:</strong> las evidencias se organizan por categoría (planificación, evaluación, diario reflexivo, desarrollo profesional, acompañamiento, etc.), como un índice real de portafolio.</li>
+                <li><strong>Imprimir / PDF:</strong> nuevo botón para generar una versión imprimible del portafolio del año seleccionado.</li>
+                <li>Se corrigió que los datos del portafolio no se restauraban al iniciar sesión en otro dispositivo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v15.86<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Compartir entre docentes y doble rol</div>
+              <ul class="about-ver-items">
+                <li><strong>Compartir:</strong> nuevo apartado para compartir enlaces y documentos con los demás docentes de tu centro — a todos, o solo a quien elijas.</li>
+                <li><strong>Doble rol:</strong> en Admin Centro se puede dar acceso de Docente a alguien con otro rol (ej. Psicología), sin que pierda ninguno de los dos.</li>
+                <li><strong>Cuentas de estudiantes:</strong> si no tienes cursos creados, el curso ya no es obligatorio para crear una cuenta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.83<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ciclos archivados navegables y versión centralizada</div>
+              <ul class="about-ver-items">
+                <li><strong>Ciclos archivados:</strong> ahora se pueden ver las calificaciones reales de un curso de un año anterior y traerlo al ciclo activo (con el mismo grupo de estudiantes, boletín en blanco). Asistencia, comentarios, incidencias, recuperaciones, tareas y libreta también se pueden consultar filtradas por ciclo.</li>
+                <li><strong>Dashboard:</strong> el contador de planificaciones ya solo cuenta las del ciclo activo, no las de años archivados.</li>
+                <li><strong>Versión del sistema:</strong> ahora se controla desde un único archivo (<code>version.json</code>), evitando desincronizaciones entre el badge de versión y el Service Worker.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.82<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cumpleaños de estudiantes y plataforma multi-centro</div>
+              <ul class="about-ver-items">
+                <li><strong>Cumpleaños:</strong> nuevo apartado para registrar la fecha de nacimiento de cada estudiante, con aviso anticipado en el dashboard.</li>
+                <li><strong>Calendario y correo por centro:</strong> cada centro educativo puede tener su propio calendario escolar y su propia cuenta de correo para el código de verificación al registrarse.</li>
+                <li><strong>Seguridad:</strong> se reforzó el aislamiento de datos entre centros educativos distintos.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.81<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Notas de clase compartidas entre períodos</div>
+              <ul class="about-ver-items">
+                <li><strong>Historial unificado:</strong> las notas de clase ahora se guardan por sección y módulo, no por período, así que P1 y P2 de la misma materia comparten la misma nota e historial.</li>
+                <li><strong>Migración automática:</strong> las notas guardadas con el esquema anterior se recuperan y aparecen en el historial compartido.</li>
+                <li><strong>Sincronización:</strong> corregido el respaldo y la sincronización con Firebase para incluir las notas guardadas con el nuevo esquema.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.80<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente con resumen pedagógico automático</div>
+              <ul class="about-ver-items">
+                <li><strong>Resumen del año:</strong> se muestran automáticamente planificaciones, actividades, instrumentos y sesiones diarias.</li>
+                <li><strong>Vista rápida:</strong> se añadieron tarjetas de métricas para lectura inmediata del avance pedagógico.</li>
+                <li><strong>Planificaciones recientes:</strong> el portafolio lista las últimas planificaciones guardadas como evidencia activa.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.79<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente con evidencias iniciales</div>
+              <ul class="about-ver-items">
+                <li><strong>Evidencias registrables:</strong> ya se pueden agregar, listar y eliminar evidencias del portafolio.</li>
+                <li><strong>Vínculo con planificación:</strong> el formulario puede tomar datos de la planificación activa para acelerar el llenado.</li>
+                <li><strong>Continuidad:</strong> la base del portafolio sigue lista para ampliar a planificaciones, instrumentos y diarios.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#546E7A;">v15.78<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente publicado con captura base</div>
+              <ul class="about-ver-items">
+                <li><strong>Panel nuevo:</strong> el módulo ya abre desde el dashboard principal.</li>
+                <li><strong>Datos base:</strong> ahora guarda datos del docente y del centro en un bloque funcional.</li>
+                <li><strong>Base preparada:</strong> la estructura queda lista para evidencias, planificaciones y seguimiento.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#37474F;">v15.77<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente con datos base del docente y del centro</div>
+              <ul class="about-ver-items">
+                <li><strong>Formulario inicial:</strong> el módulo ya permite guardar nombre, título, cédula, cargo, correo y teléfono del docente.</li>
+                <li><strong>Identidad institucional:</strong> se agregó la captura de misión, visión, valores y propósito anual del centro.</li>
+                <li><strong>Base lista:</strong> el módulo queda preparado para la siguiente fase de evidencias, planificaciones e instrumentos.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#455A64;">v15.76<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Portafolio Docente integrado en el dashboard</div>
+              <ul class="about-ver-items">
+                <li><strong>Acceso nuevo:</strong> se añadió el módulo Portafolio Docente como botón en el tablero principal.</li>
+                <li><strong>Base navegable:</strong> el panel inicial organiza las áreas clave del portafolio para desarrollarlo por partes.</li>
+                <li><strong>Visibilidad integrada:</strong> el módulo ya forma parte de la lógica de paneles y de opciones docentes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.75<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mi Libreta exporta Word solo del dia seleccionado</div>
+              <ul class="about-ver-items">
+                <li><strong>Descarga directa:</strong> el boton de Libreta ahora genera un documento Word (.doc) sin abrir impresion.</li>
+                <li><strong>Solo el dia activo:</strong> el archivo incluye unicamente los registros del dia seleccionado en la columna izquierda.</li>
+                <li><strong>Formato limpio:</strong> cada registro sale con hora, tipo, curso, titulo y anotacion para compartir o archivar.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#004D40;">v15.74<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Monitoreo de errores reforzado + productividad en libreta y horario</div>
+              <ul class="about-ver-items">
+                <li><strong>Alertas de error ampliadas:</strong> ahora se reportan tambien fallos de recursos, errores HTTP/fetch y errores relevantes de consola para aviso temprano por correo.</li>
+                <li><strong>Mi Horario mas rapido:</strong> se agrego duplicacion de clases desde el modal para copiar materia, seccion, aula y notas a otro dia/periodo.</li>
+                <li><strong>Mi Libreta imprimible:</strong> nuevo boton para imprimir registros en formato limpio o guardar PDF.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0D47A1;">v15.73<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix de descarga/exportación en panel de Psicología</div>
+              <ul class="about-ver-items">
+                <li><strong>Reporte encontrado:</strong> los botones ahora leen el reporte desde la vista de Psicología cargada desde Firestore.</li>
+                <li><strong>Descarga robusta:</strong> si no hay Word guardado, se genera en el momento y se descarga igual.</li>
+                <li><strong>Flujo estable:</strong> se evita el error “No se encontró el reporte” al operar con usuarios de Psicología.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v15.72<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Reporte de Psicología autogenerado al guardar</div>
+              <ul class="about-ver-items">
+                <li><strong>Word automático:</strong> al guardar un reporte desde Calificaciones, se genera y almacena el .docx con la plantilla del centro.</li>
+                <li><strong>Descarga inmediata:</strong> Psicología puede descargar el Word guardado desde cada tarjeta del panel.</li>
+                <li><strong>Datos unificados:</strong> el mismo contenido se usa para guardar, exportar y mantener el archivo adjunto.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v15.71<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Reportes de Psicología exportables en Word</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo upload:</strong> Superadmin puede cargar una plantilla .docx específica para reportes psicológicos.</li>
+                <li><strong>Placeholders propios:</strong> el modal de ayuda muestra los campos del reporte formal de estudiantes.</li>
+                <li><strong>Exportación directa:</strong> cada reporte ahora puede descargarse en Word desde el panel de Psicología.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.70<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Acerca de ordenado + cierre inferior removido</div>
+              <ul class="about-ver-items">
+                <li><strong>Botón oculto:</strong> se removió el botón inferior “Cerrar” para evitar superposición visual en móviles.</li>
+                <li><strong>Historial reparado:</strong> se reconstruyeron filas rotas de versiones que destruían el layout del modal.</li>
+                <li><strong>Lectura limpia:</strong> las tarjetas vuelven a mostrarse en orden vertical y sin columnas partidas.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.67<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Header con diagnóstico visible y reporte de estado por botón</div>
+              <ul class="about-ver-items">
+                <li><strong>Logs más claros:</strong> se registra el click y el estado de cada botón del encabezado al iniciar.</li>
+                <li><strong>Detección de ocultos:</strong> la consola avisa si algún botón queda oculto, deshabilitado o sin interacción.</li>
+                <li><strong>Soporte directo:</strong> ayuda a ubicar si el fallo está en visibilidad, acceso o apertura del modal.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.66<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Diagnóstico de modales: logs de apertura y estado de overlays</div>
+              <ul class="about-ver-items">
+                <li><strong>Registro fino:</strong> cada botón del encabezado deja trazas en consola para confirmar si el click llega al handler.</li>
+                <li><strong>Estado visible:</strong> se imprime el estado de Avisos, Buscar, Mis datos, Config. IA, Configuración y Acerca de antes y después de abrir.</li>
+                <li><strong>Depuración rápida:</strong> facilita localizar si el bloqueo ocurre en el click, en la función de apertura o en una capa superpuesta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.64<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Diagnóstico de modales: logs de apertura y estado de overlays</div>
+              <ul class="about-ver-items">
+                <li><strong>Registro fino:</strong> cada botón del encabezado deja trazas en consola para confirmar si el click llega al handler.</li>
+                <li><strong>Estado visible:</strong> se imprime el estado de Avisos, Buscar, Mis datos, Config. IA, Configuración y Acerca de antes y después de abrir.</li>
+                <li><strong>Depuración rápida:</strong> facilita localizar si el bloqueo ocurre en el click, en la función de apertura o en una capa superpuesta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.63<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Botones del encabezado: modales independientes y sin apilado</div>
+              <ul class="about-ver-items">
+                <li><strong>Cierre preventivo:</strong> Avisos, Buscar, Config. IA, Mis datos y Acerca de cierran cualquier ventana previa antes de abrir la suya.</li>
+                <li><strong>Sin ventanas apiladas:</strong> se evita que varios overlays queden abiertos al mismo tiempo y bloqueen la interacción.</li>
+                <li><strong>Comportamiento consistente:</strong> cada acceso del encabezado ahora abre una sola ventana visible y limpia.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.62<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Botón flotante izquierdo: versión + estado de IA</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo panel flotante:</strong> se muestra la versión activa del sistema en el lateral izquierdo sin interferir con los botones del encabezado.</li>
+                <li><strong>Diagnóstico IA en vivo:</strong> indica estado de Groq, Google Gemini y OpenRouter (En línea / Sin conexión / Sin clave).</li>
+                <li><strong>Acceso rápido:</strong> al tocar el panel se abre Configuración de IA para revisar o actualizar las claves.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.61<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Dashboard: avisos anticipados del calendario escolar</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo banner:</strong> se agregó un aviso encima de Accesos rápidos con próximos eventos del calendario escolar.</li>
+                <li><strong>Anticipación inteligente:</strong> muestra festivos desde 4 días antes y actividades/efemérides desde 2 días antes.</li>
+                <li><strong>Lectura rápida:</strong> cada alerta indica tipo, fecha y tiempo restante (hoy, mañana o en X días), con acceso directo al calendario.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.60<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Festivos superpuestos: prioridad al motivo más específico</div>
+              <ul class="about-ver-items">
+                <li><strong>Corrección de solapados:</strong> cuando pegas un rango y luego un día puntual dentro del rango, la fecha puntual ya no queda con motivo genérico.</li>
+                <li><strong>Regla aplicada:</strong> en fechas repetidas, ahora se conserva la última descripción pegada (por ejemplo, “Viernes Santo” sobre “Semana Santa”).</li>
+                <li><strong>Carga masiva más confiable:</strong> se mantienen los rangos largos, pero con motivos precisos en cada día especial.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.59<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: guardado de festivos por pegado en lote</div>
+              <ul class="about-ver-items">
+                <li><strong>Problema resuelto:</strong> al pegar líneas con formato <em>DD/MM/AAAA DD/MM/AAAA Descripción</em>, el botón Guardar ahora sí registra los días correctamente.</li>
+                <li><strong>Compatibilidad ampliada:</strong> el cálculo interno de rangos acepta fechas tanto en formato local <em>DD/MM/AAAA</em> como en formato ISO.</li>
+                <li><strong>Rangos largos funcionales:</strong> periodos como vacaciones o Semana Santa se expanden y agregan día por día sin bloquear el guardado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.58<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Calendario escolar: importación automática de festivos desde descripción</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo formato rápido:</strong> en “Días festivos / No lectivos” ya puedes pegar texto con formato <em>DD/MM/AAAA`DD/MM/AAAA`Descripción</em> y se registran las fechas automáticamente.</li>
+                <li><strong>Carga por lotes:</strong> acepta múltiples entradas pegadas seguidas o por líneas, ideal para cargar varios festivos de una vez sin usar los datepickers.</li>
+                <li><strong>Compatibilidad total:</strong> si no se detectan fechas en el texto, el flujo tradicional con “Desde/Hasta” sigue funcionando igual.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.57<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Date Pickers visuales en el Calendario</div>
+              <ul class="about-ver-items">
+                <li><strong>Calendarios interactivos:</strong> Se reemplazaron los campos de texto plano de las fechas por controles visuales tipo calendario nativo de fecha (`input-date`), mejorando significativamente la velocidad de llenado y evitando errores de escritura.</li>
+                <li><strong>Conversión transparente:</strong> Las fechas seleccionadas visualmente se parsean automáticamente al formato estándar local de la República Dominicana (`DD/MM/AAAA`) al guardar y se cargan correctamente al editar una actividad.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#546E7A;">v15.56<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Calendario escolar: Rangos de fecha y pegado en lote</div>
+              <ul class="about-ver-items">
+                <li><strong>Agregar en lote:</strong> el modal de actividades ahora permite pegar un bloque de texto con múltiples actividades (una por línea) para guardarlas todas en la misma fecha simultáneamente.</li>
+                <li><strong>Asistente de fecha:</strong> campos de rango opcional ("Fecha de inicio" y "Fecha de fin") que formatean el enunciado de forma inteligente como "Del DD/MM/AAAA al DD/MM/AAAA: ...".</li>
+                <li><strong>Smart parser:</strong> al editar, detecta y desglosa automáticamente la fecha de inicio, fin y descripción previos si coinciden con el formato.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.55<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Correcciones clave del calendario escolar y pegado en lote</div>
+              <ul class="about-ver-items">
+                <li><strong>Flujo más estable:</strong> se corrigieron bloqueos al guardar varias actividades desde texto pegado.</li>
+                <li><strong>Mejor lectura:</strong> el contenido ingresado en lote ahora conserva mejor el formato esperado por actividad.</li>
+                <li><strong>Validación reforzada:</strong> se reducen errores por líneas vacías o texto mal estructurado durante el guardado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.54<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Refuerzo de usabilidad en calendario y edición de actividades</div>
+              <ul class="about-ver-items">
+                <li><strong>Edición más clara:</strong> se mejoró la carga de datos al reabrir actividades del calendario escolar.</li>
+                <li><strong>Consistencia visual:</strong> ajustes de presentación para evitar desorden en listados extensos.</li>
+                <li><strong>Menos fricción:</strong> se optimizó el flujo para docentes al registrar y actualizar actividades.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.53<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Alertas automáticas de errores por correo para respuesta rápida</div>
+              <ul class="about-ver-items">
+                <li><strong>Monitoreo global:</strong> ahora se capturan errores de ejecución y promesas rechazadas no controladas.</li>
+                <li><strong>Notificación inmediata:</strong> los errores críticos se envían al correo del administrador para atención rápida.</li>
+                <li><strong>Trazabilidad:</strong> cada incidencia se guarda también en Firestore para auditoría técnica y diagnóstico.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.52<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Dashboard coherente con módulos desactivados y fallback de permisos</div>
+              <ul class="about-ver-items">
+                <li><strong>Tarjetas superiores:</strong> si desactivas planificaciones, cursos, horario o tareas, también se ocultan sus tarjetas rápidas del encabezado.</li>
+                <li><strong>Panel consistente:</strong> se mantiene alineado lo que se puede abrir con lo que está habilitado en opciones.</li>
+                <li><strong>Reportes/denuncias:</strong> se agregó fallback automático cuando Firestore no permite vista global, evitando el error en pantalla.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.51<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Opciones Psicología ampliadas en Superadmin</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevos toggles:</strong> ahora puedes activar o desactivar <em>Importar Planificación</em> desde Opciones Psicología.</li>
+                <li><strong>Dashboard configurable:</strong> se agregó control para el bloque <em>Estado de cursos</em>.</li>
+                <li><strong>Más control visual:</strong> también puedes ocultar o mostrar <em>Estadísticas de rendimiento</em> del dashboard.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.50<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Gestión de Psicología desde Docentes y vista global de convivencia</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo rol:</strong> en Gestión de Docentes ahora puedes asignar y quitar el rol <em>Psicología</em> igual que Director o Coordinadora.</li>
+                <li><strong>Vista global:</strong> usuarios con rol Psicología ven todos los reportes de comportamiento y denuncias del centro, no solo los suyos.</li>
+                <li><strong>Mejor contexto:</strong> en la vista global se muestra el nombre del docente para cada reporte y denuncia.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1B5E20;">v15.49<span class="about-ver-fecha">Jul
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Pantalla de cuenta pendiente: botón Iniciar sesión</div>
+              <ul class="about-ver-items">
+                <li><strong>Nuevo acceso:</strong> se agregó botón <em>Iniciar sesión</em> debajo de <em>Cerrar sesión</em> en la vista de cuenta pendiente.</li>
+                <li><strong>Flujo más simple:</strong> al pulsarlo, vuelve directo al formulario de login con el correo prellenado.</li>
+                <li><strong>Mejor experiencia:</strong> cuando el administrador aprueba, el docente puede entrar rápido sin pasos extra.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -3613,9 +4365,7 @@
 
         </div>
       </div>
-      <div class="modal-footer" style="position:sticky;bottom:0;">
-        <button class="btn-siguiente" onclick="cerrarAcercaDe()">Cerrar</button>
-      </div>
+
     </div>
   </div>
 
@@ -4011,9 +4761,23 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
   <script src="firebase-config.js"></script>
+  <script>
+    // La version real vive en version.json (fuente unica de verdad) -- ver
+    // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
+    window.TINCLASS_BUILD_VERSION = 'vdev';
+    window.TINCLASS_SW_VERSION = 'vsw';
+    fetch('/version.json?_=' + Date.now())
+      .then(r => r.json())
+      .then(v => {
+        if (v && v.version) window.TINCLASS_BUILD_VERSION = 'v' + v.version;
+        if (v && v.sw) window.TINCLASS_SW_VERSION = 'v' + v.sw;
+      })
+      .catch(() => {});
+  </script>
+  <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=16.05"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 
@@ -4315,6 +5079,8 @@
       <span class="material-icons" id="timer-fab-icon">timer</span>
       <span id="timer-fab-time" class="hidden"></span>
     </button>
+
+    <div id="version-detector" class="version-detector hidden" aria-live="polite"></div>
   </div>
 
   <!-- ===== TOUR DE BIENVENIDA ===== -->
@@ -4342,9 +5108,10 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=91', { scope: '/' })
+        navigator.serviceWorker.register('/sw.js?v=' + (window.TINCLASS_SW_VERSION || 'vsw').replace(/^v/i, ''), { scope: '/' })
           .then(reg => {
             console.log('[SW] Registrado:', reg.scope);
+            reg.update();
             if (reg.waiting) {
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
