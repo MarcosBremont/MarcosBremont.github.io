@@ -14774,19 +14774,66 @@ const NOVEDADES_SISTEMA = [
 let _avisosDocenteCache = [];
 let _avisosDocenteCargados = false;
 
-/** Carga los avisos del centro del docente y actualiza el badge */
+/**
+ * Carga los avisos del centro del docente: puebla la caché que usa la campanita
+ * de notificaciones (badge + contador de no leídos) y renderiza el widget de
+ * avisos recientes bajo el saludo del dashboard.
+ *
+ * Antes existían dos declaraciones separadas de esta misma función -- una hacía
+ * lo primero, la otra lo segundo. Como JavaScript se queda con la última
+ * declaración de una función, solo corría la del widget; la que poblaba
+ * _avisosDocenteCache nunca se ejecutaba y el contador de avisos de la
+ * campanita quedó muerto permanentemente. Se fusionaron en una sola.
+ */
 async function _cargarAvisosDocente() {
   if (!window.currentUser) return;
   try {
-    const perfilDoc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    const centroId = perfilDoc.exists ? perfilDoc.data().centroId : null;
+    const perfil = await _obtenerPerfilUsuario(window.currentUser.uid);
+    const centroId = perfil?.centroId;
     if (!centroId) return;
+
     const snap = await db.collection('centros').doc(centroId).collection('avisos')
       .orderBy('fecha', 'desc').limit(30).get();
-    _avisosDocenteCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const avisos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    _avisosDocenteCache = avisos;
     _avisosDocenteCargados = true;
     actualizarBadgeNotificaciones();
-  } catch(e) { console.warn('Error cargando avisos docente:', e); }
+
+    if (avisos.length) _renderizarWidgetAvisosDashboard(avisos.slice(0, 5));
+  } catch (e) { console.warn('Error cargando avisos docente:', e); }
+}
+
+/** Widget de avisos recientes que se muestra bajo el saludo del dashboard */
+function _renderizarWidgetAvisosDashboard(avisos) {
+  let container = document.getElementById('dash-avisos-centro');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'dash-avisos-centro';
+    const greeting = document.getElementById('dash-greeting');
+    if (greeting) greeting.after(container);
+    else return;
+  }
+
+  let html = '<div style="margin-bottom:16px;">';
+  avisos.forEach(a => {
+    const prioColors = { urgente: '#C62828', importante: '#E65100', normal: '#4A148C' };
+    const color = prioColors[a.prioridad] || prioColors.normal;
+    const bgColors = { urgente: '#FFEBEE', importante: '#FFF3E0', normal: '#F3E5F5' };
+    const bg = bgColors[a.prioridad] || bgColors.normal;
+    const fechaDate = _avisoFechaToDate(a.fecha);
+    const fecha = fechaDate ? fechaDate.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    html += '<div style="background:' + bg + ';border-left:4px solid ' + color + ';border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+      + '<span class="material-icons" style="font-size:18px;color:' + color + ';">campaign</span>'
+      + '<strong style="font-size:0.9rem;color:' + color + ';">' + escapeHTML(a.titulo || 'Aviso') + '</strong>'
+      + '<span style="font-size:0.72rem;color:#90A4AE;margin-left:auto;">' + fecha + '</span>'
+      + '</div>'
+      + '<div style="font-size:0.85rem;color:#37474F;white-space:pre-wrap;">' + escapeHTML(a.mensaje || '') + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // IDs de notificaciones app ya vistas (se puebla al abrir el modal)
@@ -29723,12 +29770,18 @@ async function _verificarAccesoDirector() {
 /** Abre panel de director */
 async function abrirDirector() {
   _mostrarPanel('panel-director');
-  switchTabDirector('avisos');
+  // 'docentes' (Monitoreo Docentes) es la única pestaña que se queda dentro de
+  // Panel Director -- las otras 5 redirigen a Panel Coordinadora (ver
+  // switchTabDirector), así que no tiene sentido abrir el panel ya redirigiendo.
+  switchTabDirector('docentes');
 }
 
 /** Tabs del director */
 function switchTabDirector(tab) {
-  const tabs = { avisos: 'tab-dir-avisos', docentes: 'tab-dir-docentes' };
+  const tabs = {
+    avisos: 'tab-dir-avisos', calificaciones: 'tab-dir-calificaciones', rendimiento: 'tab-dir-rendimiento',
+    planificaciones: 'tab-dir-planificaciones', resumen: 'tab-dir-resumen', docentes: 'tab-dir-docentes'
+  };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -29736,8 +29789,24 @@ function switchTabDirector(tab) {
     else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
   });
   window._dirTabActual = tab;
-  if (tab === 'avisos') _renderAvisosDirector();
-  else _renderMonitoreoDocentes();
+
+  // Calificaciones, Rendimiento, Planificaciones, Resumen Docentes y Avisos
+  // reutilizan directamente las pestañas ya construidas en Panel Coordinadora
+  // (mismos datos, misma lógica) en vez de duplicar su implementación aquí --
+  // Director ya tiene acceso a ese panel, así que solo lo mostramos.
+  if (['calificaciones', 'rendimiento', 'planificaciones', 'resumen', 'avisos'].includes(tab)) {
+    _dirAbrirEnCoordinadora(tab);
+    return;
+  }
+  _renderMonitoreoDocentes();
+}
+
+/** Muestra el Panel Coordinadora directamente en la pestaña indicada (sin pasar
+ *  primero por su pestaña por defecto, para no disparar dos fetch en paralelo). */
+function _dirAbrirEnCoordinadora(tab) {
+  window._coordCentroSeleccionado = null;
+  _mostrarPanel('panel-coordinadora');
+  switchTabCoordinadora(tab);
 }
 
 // ── AVISOS ──────────────────────────────────────────────────────
@@ -29752,111 +29821,11 @@ async function _getCentroDirector() {
   return null;
 }
 
-/** Renderiza la sección de avisos */
-async function _renderAvisosDirector() {
-  const cont = document.getElementById('dir-contenido');
-  if (!cont) return;
-  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
-
-  const centroId = await _getCentroDirector();
-  // Superadmin sin centro: mostrar selector
-  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-  let centroFinal = centroId;
-
-  if (!centroFinal && esSA) {
-    // Usar primer centro disponible
-    try {
-      const snap = await db.collection('centros').limit(1).get();
-      if (!snap.empty) centroFinal = snap.docs[0].id;
-    } catch {}
-  }
-
-  if (!centroFinal) {
-    cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No estás asignado a ningún centro.</div>';
-    return;
-  }
-
-  // Cargar avisos existentes
-  let avisos = [];
-  try {
-    const snap = await db.collection('centros').doc(centroFinal).collection('avisos').orderBy('fecha', 'desc').get();
-    avisos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (e) { console.warn('Error cargando avisos:', e); }
-
-  let html = '';
-
-  // Formulario nuevo aviso
-  html += '<div style="background:#F3E5F5;border:1.5px solid #CE93D8;border-radius:12px;padding:16px;margin-bottom:20px;">'
-    + '<h4 style="margin:0 0 10px;color:#4A148C;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">campaign</span> Enviar nuevo aviso</h4>'
-    + '<input type="text" id="dir-aviso-titulo" placeholder="Título del aviso" style="width:100%;padding:10px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;margin-bottom:8px;box-sizing:border-box;">'
-    + '<textarea id="dir-aviso-mensaje" placeholder="Escribe el mensaje para todos los docentes y administradores del centro..." rows="3" style="width:100%;padding:10px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>'
-    + '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">'
-    + '<select id="dir-aviso-prioridad" style="padding:8px 12px;border:1.5px solid #CE93D8;border-radius:8px;font-size:0.85rem;background:#fff;">'
-    + '<option value="normal">Normal</option><option value="importante">Importante</option><option value="urgente">Urgente</option>'
-    + '</select>'
-    + '<button onclick="_enviarAvisoDirector(\'' + centroFinal + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#4A148C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-left:auto;">'
-    + '<span class="material-icons" style="font-size:18px;">send</span> Enviar aviso</button>'
-    + '</div></div>';
-
-  // Lista de avisos
-  if (avisos.length === 0) {
-    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">notifications_none</span>No hay avisos enviados</div>';
-  } else {
-    html += '<h4 style="color:#4A148C;margin:0 0 12px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">history</span> Avisos enviados</h4>';
-    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-    avisos.forEach(a => {
-      const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-      const prioColors = { urgente: '#C62828', importante: '#E65100', normal: '#4A148C' };
-      const prioLabels = { urgente: 'URGENTE', importante: 'IMPORTANTE', normal: 'Normal' };
-      const color = prioColors[a.prioridad] || prioColors.normal;
-      html += '<div style="background:#fff;border-left:4px solid ' + color + ';border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-        + '<span style="background:' + color + ';color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:700;">' + (prioLabels[a.prioridad] || 'Normal') + '</span>'
-        + '<span style="font-size:0.78rem;color:#90A4AE;">' + fecha + '</span>'
-        + '<button onclick="_eliminarAviso(\'' + centroFinal + '\',\'' + a.id + '\')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#C62828;"><span class="material-icons" style="font-size:18px;">delete</span></button>'
-        + '</div>'
-        + '<div style="font-weight:700;font-size:0.95rem;color:#212121;margin-bottom:4px;">' + (a.titulo || 'Sin título') + '</div>'
-        + '<div style="font-size:0.88rem;color:#546E7A;white-space:pre-wrap;">' + (a.mensaje || '') + '</div>'
-        + '<div style="font-size:0.72rem;color:#B0BEC5;margin-top:6px;">Enviado por: ' + (a.enviadoPor || '') + '</div>'
-        + '</div>';
-    });
-    html += '</div>';
-  }
-
-  cont.innerHTML = html;
-}
-
-/** Enviar aviso */
-async function _enviarAvisoDirector(centroId) {
-  const titulo = document.getElementById('dir-aviso-titulo')?.value?.trim();
-  const mensaje = document.getElementById('dir-aviso-mensaje')?.value?.trim();
-  const prioridad = document.getElementById('dir-aviso-prioridad')?.value || 'normal';
-
-  if (!titulo && !mensaje) { mostrarToast('Escribe un título o mensaje', 'error'); return; }
-
-  try {
-    await db.collection('centros').doc(centroId).collection('avisos').add({
-      titulo: titulo || '',
-      mensaje: mensaje || '',
-      prioridad,
-      fecha: new Date().toISOString(),
-      enviadoPor: window.currentUser?.displayName || window.currentUser?.email || '',
-      enviadoPorUid: window.currentUser?.uid || ''
-    });
-    mostrarToast('Aviso enviado correctamente', 'success');
-    _renderAvisosDirector();
-  } catch (e) { mostrarToast('Error enviando aviso: ' + e.message, 'error'); }
-}
-
-/** Eliminar aviso */
-async function _eliminarAviso(centroId, avisoId) {
-  if (!confirm('¿Eliminar este aviso?')) return;
-  try {
-    await db.collection('centros').doc(centroId).collection('avisos').doc(avisoId).delete();
-    mostrarToast('Aviso eliminado', 'success');
-    _renderAvisosDirector();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
-}
+// Nota: la pestaña "Avisos" de Director reutiliza directamente _coordAvisos()/
+// _coordEnviarAviso()/_coordEliminarAviso() (ver switchTabDirector) — antes había
+// una implementación aparte aquí que escribía con un esquema de campos distinto
+// al de Coordinadora en la misma colección de Firestore, causando que cada UI
+// mostrara en blanco la fecha o el remitente de los avisos del otro rol.
 
 // ── MONITOREO DE DOCENTES ──────────────────────────────────────
 
@@ -31219,48 +31188,10 @@ renderizarDashboard = function() {
   _aplicarOpcionesPsicologia(); // ocultar opciones desactivadas para psicología
 };
 
-// ── AVISOS PARA DOCENTES EN DASHBOARD ─────────────────────────────
-async function _cargarAvisosDocente() {
-  if (!window.currentUser) return;
-  try {
-    const perfil = await _obtenerPerfilUsuario(window.currentUser.uid);
-    const centroId = perfil?.centroId;
-    if (!centroId) return;
-
-    const snap = await db.collection('centros').doc(centroId).collection('avisos').orderBy('fecha', 'desc').limit(5).get();
-    if (snap.empty) return;
-
-    const avisos = snap.docs.map(d => d.data());
-    let container = document.getElementById('dash-avisos-centro');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'dash-avisos-centro';
-      // Insertar después del saludo
-      const greeting = document.getElementById('dash-greeting');
-      if (greeting) greeting.after(container);
-      else return;
-    }
-
-    let html = '<div style="margin-bottom:16px;">';
-    avisos.forEach(a => {
-      const prioColors = { urgente: '#C62828', importante: '#E65100', normal: '#4A148C' };
-      const color = prioColors[a.prioridad] || prioColors.normal;
-      const bgColors = { urgente: '#FFEBEE', importante: '#FFF3E0', normal: '#F3E5F5' };
-      const bg = bgColors[a.prioridad] || bgColors.normal;
-      const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-      html += '<div style="background:' + bg + ';border-left:4px solid ' + color + ';border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
-        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
-        + '<span class="material-icons" style="font-size:18px;color:' + color + ';">campaign</span>'
-        + '<strong style="font-size:0.9rem;color:' + color + ';">' + (a.titulo || 'Aviso') + '</strong>'
-        + '<span style="font-size:0.72rem;color:#90A4AE;margin-left:auto;">' + fecha + '</span>'
-        + '</div>'
-        + '<div style="font-size:0.85rem;color:#37474F;white-space:pre-wrap;">' + (a.mensaje || '') + '</div>'
-        + '</div>';
-    });
-    html += '</div>';
-    container.innerHTML = html;
-  } catch (e) { console.warn('Error cargando avisos docente:', e); }
-}
+// Nota: _cargarAvisosDocente() (caché de la campanita + widget del dashboard)
+// vive junto a _avisosDocenteCache, más arriba en este archivo. Antes había una
+// segunda declaración aquí que dejaba muerta la caché de la campanita -- ver el
+// comentario en la declaración original.
 
 // ══════════════════════════════════════════════════════════════════
 // ── MÓDULO COORDINADORA ─────────────────────────────────────────
@@ -31996,7 +31927,10 @@ async function _coordAvisos() {
     avisos.forEach(a => {
       const prioMap = { urgente: { color: '#C62828', bg: '#FFEBEE', icon: 'priority_high' }, importante: { color: '#E65100', bg: '#FFF3E0', icon: 'warning' }, normal: { color: '#00695C', bg: '#E0F2F1', icon: 'info' } };
       const prio = prioMap[a.prioridad] || prioMap.normal;
-      const fecha = a.fecha?.toDate ? a.fecha.toDate().toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const fechaDate = _avisoFechaToDate(a.fecha);
+      const fecha = fechaDate ? fechaDate.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const nombreAutor = a.autorNombre || a.enviadoPor || a.autor || '';
+      const rolLabel = _avisoRolLabel(a.rolAutor);
       html += '<div style="background:' + prio.bg + ';border:1.5px solid ' + prio.color + '33;border-radius:12px;padding:14px;">'
         + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
         + '<span class="material-icons" style="color:' + prio.color + ';font-size:18px;">' + prio.icon + '</span>'
@@ -32005,12 +31939,25 @@ async function _coordAvisos() {
         + '<button onclick="_coordEliminarAviso(\'' + centroId + '\',\'' + a.id + '\')" style="background:none;border:none;cursor:pointer;color:#C62828;padding:2px;"><span class="material-icons" style="font-size:16px;">delete</span></button>'
         + '</div>'
         + '<div style="font-size:0.88rem;color:#333;line-height:1.5;">' + escapeHTML(a.mensaje || '').replace(/\n/g, '<br>') + '</div>'
-        + '<div style="font-size:0.72rem;color:#999;margin-top:6px;">Enviado por: ' + escapeHTML(a.autor || '') + '</div>'
+        + '<div style="font-size:0.72rem;color:#999;margin-top:6px;">Enviado por: ' + escapeHTML(nombreAutor) + (rolLabel ? ' <span style="color:' + prio.color + ';font-weight:600;">· ' + rolLabel + '</span>' : '') + '</div>'
         + '</div>';
     });
     html += '</div>';
   }
   cont.innerHTML = html;
+}
+
+/** Convierte el campo 'fecha' de un aviso a Date, sea Firestore Timestamp (avisos nuevos)
+ *  o string ISO (avisos viejos de Director, antes de unificar el esquema). */
+function _avisoFechaToDate(fecha) {
+  if (!fecha) return null;
+  if (fecha.toDate) return fecha.toDate();
+  if (typeof fecha === 'string') { const d = new Date(fecha); return isNaN(d.getTime()) ? null : d; }
+  return null;
+}
+
+function _avisoRolLabel(rol) {
+  return { director: 'Director', coordinadora: 'Coordinadora', admin_centro: 'Administración' }[rol] || '';
 }
 
 async function _coordEnviarAviso(centroId) {
@@ -32019,10 +31966,15 @@ async function _coordEnviarAviso(centroId) {
   const prioridad = document.getElementById('coord-aviso-prioridad')?.value || 'normal';
   if (!titulo) { mostrarToast('Escribe un título', 'error'); return; }
   if (!mensaje) { mostrarToast('Escribe el mensaje', 'error'); return; }
+  let rolAutor = 'coordinadora';
+  try {
+    const perfilDoc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (perfilDoc.exists && perfilDoc.data().rol) rolAutor = perfilDoc.data().rol;
+  } catch {}
   try {
     await db.collection('centros').doc(centroId).collection('avisos').add({
-      titulo, mensaje, prioridad,
-      autor: window.currentUser?.email || 'Coordinadora',
+      titulo, mensaje, prioridad, rolAutor,
+      autor: window.currentUser?.email || '',
       autorNombre: window.currentUser?.displayName || '',
       fecha: firebase.firestore.FieldValue.serverTimestamp()
     });
