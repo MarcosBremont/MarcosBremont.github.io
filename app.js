@@ -10014,12 +10014,24 @@ function _portafolioEvidenciasColeccion() {
   return db.collection('users').doc(window.currentUser.uid).collection('portafolio_evidencias');
 }
 
+/** Evidencias del propio docente (dueño de la sesión): junta las públicas
+ *  (visibles a Coordinadora/Director/admin_centro) con las privadas (Mi Libreta,
+ *  invisibles a esos roles). Se etiqueta cada item con _privada para saber, más
+ *  adelante, de cuál de las dos colecciones borrarlo. Esta función SOLO se usa
+ *  para la vista propia -- la vista de Coordinadora usa _coordLeerEvidenciasPortafolio,
+ *  que nunca toca la colección privada. */
 async function _cargarEvidenciasPortafolio() {
   const ref = _portafolioEvidenciasColeccion();
+  const refPrivadas = _portafolioEvidenciasPrivadasColeccion();
   if (!ref) return [];
   try {
-    const snap = await ref.orderBy('fecha', 'desc').get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const [snap, snapPriv] = await Promise.all([
+      ref.orderBy('fecha', 'desc').get(),
+      refPrivadas ? refPrivadas.orderBy('fecha', 'desc').get().catch(() => ({ docs: [] })) : Promise.resolve({ docs: [] })
+    ]);
+    const publicas = snap.docs.map(d => ({ id: d.id, ...d.data(), _privada: false }));
+    const privadas = snapPriv.docs.map(d => ({ id: d.id, ...d.data(), _privada: true }));
+    return publicas.concat(privadas).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
   } catch (e) {
     console.warn('Error cargando evidencias del portafolio:', e);
     return [];
@@ -10218,7 +10230,7 @@ function _renderTarjetaEvidenciaPortafolio(item, soloLectura) {
   const descargarBtn = item.archivoNombre
     ? `<button class="btn-secundario" onclick="_descargarEvidenciaPortafolio('${item.id}')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>`
     : '';
-  const eliminarBtn = soloLectura ? '' : `<button class="btn-secundario" onclick="_eliminarPortafolioEvidencia('${item.id}')" style="padding:6px 10px;font-size:0.75rem;color:#C62828;border-color:#FFCDD2;"><span class="material-icons" style="font-size:14px;">delete_outline</span> Quitar</button>`;
+  const eliminarBtn = soloLectura ? '' : `<button class="btn-secundario" onclick="_eliminarPortafolioEvidencia('${item.id}', ${item._privada ? 'true' : 'false'})" style="padding:6px 10px;font-size:0.75rem;color:#C62828;border-color:#FFCDD2;"><span class="material-icons" style="font-size:14px;">delete_outline</span> Quitar</button>`;
 
   return `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
@@ -10445,6 +10457,33 @@ async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, f
   } catch (e) { console.warn('No se pudo agregar evidencia automática al portafolio:', e); }
 }
 
+/** Colección de evidencias PRIVADAS del docente actual -- users/{uid}/portafolio_evidencias_privadas.
+ *  A diferencia de _portafolioEvidenciasColeccion(), firestore.rules NO le da lectura a
+ *  Coordinadora/Director/admin_centro sobre esta, ni siquiera del mismo centro: es lo único
+ *  del Portafolio que solo puede ver el propio docente. Usada para enlazar Mi Libreta. */
+function _portafolioEvidenciasPrivadasColeccion() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('portafolio_evidencias_privadas');
+}
+
+/** Igual que _crearEvidenciaPortafolioAuto, pero guarda en la colección privada -- para
+ *  fuentes que NO deben ser visibles a Coordinadora/Director/admin_centro (hoy: Mi Libreta). */
+async function _crearEvidenciaPortafolioPrivada({ categoria, titulo, descripcion, fecha, origen }) {
+  try {
+    const ref = _portafolioEvidenciasPrivadasColeccion();
+    if (!ref) return;
+    await ref.add({
+      categoria: categoria || 'otro',
+      titulo, descripcion,
+      fecha: fecha || new Date().toISOString().split('T')[0],
+      origen: origen || '',
+      cicloEscolar: _portafolioAnioActivo(),
+      archivoNombre: '', archivoMime: '', archivoChunks: 0,
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) { console.warn('No se pudo agregar evidencia privada al portafolio:', e); }
+}
+
 function _cargarEvidenciaDesdePlanificacionActiva() {
   const dg = planificacion?.datosGenerales || {};
   const ra = planificacion?.ra || {};
@@ -10464,14 +10503,14 @@ function _cargarEvidenciaDesdePlanificacionActiva() {
   mostrarToast('Datos de evidencia cargados desde la planificación activa', 'success');
 }
 
-async function _eliminarPortafolioEvidencia(id) {
+async function _eliminarPortafolioEvidencia(id, privada) {
   if (!confirm('¿Eliminar esta evidencia del portafolio?')) return;
-  const ref = _portafolioEvidenciasColeccion();
+  const ref = privada ? _portafolioEvidenciasPrivadasColeccion() : _portafolioEvidenciasColeccion();
   if (!ref) return;
   try {
     const docRef = ref.doc(id);
     const doc = await docRef.get();
-    if (doc.exists && doc.data().archivoChunks) {
+    if (!privada && doc.exists && doc.data().archivoChunks) {
       await _eliminarArchivoEvidenciaChunks(docRef, doc.data().archivoChunks);
     }
     await docRef.delete();
@@ -11003,6 +11042,19 @@ function _guardarEntradaLibreta(entryId) {
     if (idx >= 0) data.entries[idx] = { ...data.entries[idx], titulo, texto, fecha, tipo, cursoId, cursoNombre };
   } else {
     data.entries.push({ id: uid(), fecha, titulo, texto, hora, tipo, cursoId, cursoNombre });
+
+    // Enlazar con el Portafolio Docente como evidencia PRIVADA (nunca visible a
+    // Coordinadora/Director/admin_centro -- ver _crearEvidenciaPortafolioPrivada).
+    // Solo al crear una anotación nueva, no al editar una existente (mismo criterio
+    // que Eventos/Reportes/Comentarios).
+    const tipoInfoLib = _LIBRETA_TIPOS.find(t => t.value === tipo) || _LIBRETA_TIPOS[0];
+    _crearEvidenciaPortafolioPrivada({
+      categoria: 'diario_reflexivo',
+      titulo: titulo || (tipoInfoLib.label + ' — ' + fecha),
+      descripcion: texto,
+      fecha,
+      origen: 'Mi Libreta'
+    });
   }
 
   _guardarLibreta(data);
@@ -35802,6 +35854,111 @@ async function _coordLeerBibliotecaDocente(uid) {
   }
 }
 
+// ── LECTURA DEL PORTAFOLIO DE OTRO DOCENTE (Coordinadora) ────────
+// Mismo patrón que _coordLeerBibliotecaDocente: leen directo de Firestore con
+// el uid del docente en vez de window.currentUser.uid. NUNCA tocan
+// portafolio_evidencias_privadas -- esa colección está fuera del alcance de
+// Coordinadora tanto por regla de Firestore como porque estas funciones
+// simplemente no la consultan.
+
+async function _coordLeerPortafolioBase(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).collection('data').doc('portafolio_base').get();
+    if (!doc.exists || !doc.data().payload) return { docente: {}, metadata: {} };
+    const parsed = JSON.parse(doc.data().payload);
+    return { docente: parsed.docente || {}, metadata: parsed.metadata || {} };
+  } catch (e) {
+    console.warn('Error leyendo portafolio_base de ' + uid + ':', e);
+    return { docente: {}, metadata: {} };
+  }
+}
+
+async function _coordLeerPortafolioFoto(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).collection('data').doc('portafolio_foto').get();
+    if (!doc.exists || !doc.data().payload) return { fotoBase64: '', fotoMime: '' };
+    return JSON.parse(doc.data().payload);
+  } catch (e) {
+    console.warn('Error leyendo portafolio_foto de ' + uid + ':', e);
+    return { fotoBase64: '', fotoMime: '' };
+  }
+}
+
+async function _coordLeerPortafolioCV(uid) {
+  const base = db.collection('users').doc(uid).collection('data');
+  try {
+    const metaDoc = await base.doc('portafolio_cv_meta').get();
+    if (metaDoc.exists && metaDoc.data().payload) {
+      const meta = JSON.parse(metaDoc.data().payload);
+      let base64 = '';
+      for (let i = 0; i < (meta.totalChunks || 0); i++) {
+        const chunkDoc = await base.doc('portafolio_cv_chunk_' + i).get();
+        base64 += (chunkDoc.exists && chunkDoc.data().payload) || '';
+      }
+      return { cvBase64: base64, cvNombre: meta.cvNombre || '', cvMime: meta.cvMime || '' };
+    }
+    // Migración desde el formato viejo (un solo documento) -- mismo fallback que cargarPortafolioCV.
+    const legacyDoc = await base.doc('portafolio_cv').get();
+    if (legacyDoc.exists && legacyDoc.data().payload) {
+      try {
+        const legacy = JSON.parse(legacyDoc.data().payload);
+        if (legacy.cvBase64) return legacy;
+      } catch {}
+    }
+  } catch (e) {
+    console.warn('Error leyendo CV de ' + uid + ':', e);
+  }
+  return { cvBase64: '', cvNombre: '', cvMime: '' };
+}
+
+async function _coordLeerEvidenciasPortafolio(uid) {
+  try {
+    const snap = await db.collection('users').doc(uid).collection('portafolio_evidencias').orderBy('fecha', 'desc').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('Error leyendo evidencias de ' + uid + ':', e);
+    return [];
+  }
+}
+
+async function _coordDescargarCVDocente(uid) {
+  const cv = await _coordLeerPortafolioCV(uid);
+  if (!cv.cvBase64) { mostrarToast('Este docente no ha subido un currículum', 'error'); return; }
+  const bytes = Uint8Array.from(atob(cv.cvBase64), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: cv.cvMime || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = cv.cvNombre || 'curriculum';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function _coordDescargarEvidenciaDocente(uid, id) {
+  try {
+    const docRef = db.collection('users').doc(uid).collection('portafolio_evidencias').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
+    const it = doc.data();
+    const base64 = await _cargarArchivoEvidenciaBase64(docRef, it);
+    if (!base64) { mostrarToast('Esta evidencia no tiene archivo adjunto', 'error'); return; }
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = it.archivoNombre || 'archivo';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
+  }
+}
+
 /**
  * Ciclo escolar ("2026-2027") al que pertenece una planificación guardada,
  * usando la misma convención que _getSchoolYearKey (año escolar inicia en
@@ -36054,10 +36211,12 @@ async function _coordResumenDocentes(contId) {
       } catch { return { ...d, totalEst: 0, totalActs: 0, actsSinNota: 0, cursosArr: [], nPlan: 0, nPlanTotal: 0, ultimaSesion: null }; }
     }));
 
+    window._coordResumenDocentesData = docentesData;
+
     let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">person</span> Ficha de cada Docente</h4>';
     html += '<div style="display:flex;flex-direction:column;gap:14px;">';
 
-    docentesData.forEach(d => {
+    docentesData.forEach((d, idxDoc) => {
       const pct = d.totalActs > 0 ? Math.round(((d.totalActs - d.actsSinNota) / d.totalActs) * 100) : 0;
       const barColor = pct >= 70 ? '#2E7D32' : pct >= 50 ? '#FF9800' : '#C62828';
 
@@ -36112,6 +36271,11 @@ async function _coordResumenDocentes(contId) {
         html += '</div>';
       }
 
+      html += '<div style="margin-top:10px;">'
+        + '<button class="btn-secundario" onclick="_coordVerPortafolioDocente(' + idxDoc + ')" style="font-size:0.78rem;padding:6px 12px;">'
+        + '<span class="material-icons" style="font-size:15px;">badge</span> Ver Portafolio</button>'
+        + '</div>';
+
       html += '</div>';
     });
     html += '</div>';
@@ -36119,6 +36283,98 @@ async function _coordResumenDocentes(contId) {
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
   }
+}
+
+/** Abre la vista de solo lectura del Portafolio de un docente desde su índice
+ *  en window._coordResumenDocentesData (evita meter nombres con comillas en el onclick). */
+async function _coordVerPortafolioDocente(idx) {
+  const d = window._coordResumenDocentesData?.[idx];
+  if (!d) return;
+  await _coordRenderPortafolioDocente(d.uid, d.nombre || d.email || 'Docente');
+}
+
+/** Vista de solo lectura del Portafolio de OTRO docente, para Coordinadora/Director/
+ *  admin_centro. Nunca lee portafolio_evidencias_privadas (esa colección ni siquiera
+ *  la permiten las reglas de Firestore para otro rol que no sea el propio dueño). */
+async function _coordRenderPortafolioDocente(uid, nombre) {
+  const contId = window._coordActiveContId || 'coord-contenido';
+  const cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando portafolio...</div>';
+
+  try {
+    const [base, foto, cv, evidencias] = await Promise.all([
+      _coordLeerPortafolioBase(uid),
+      _coordLeerPortafolioFoto(uid),
+      _coordLeerPortafolioCV(uid),
+      _coordLeerEvidenciasPortafolio(uid)
+    ]);
+    const docente = base.docente || {};
+    const grupos = _agruparEvidenciasPorCategoria(evidencias);
+
+    let html = '<button class="btn-secundario" onclick="_coordResumenDocentes(\'' + contId + '\')" style="margin-bottom:14px;">'
+      + '<span class="material-icons">arrow_back</span> Volver a Resumen Docentes</button>';
+    html += '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">badge</span> Portafolio — ' + escapeHTML(nombre) + '</h4>';
+
+    html += '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;margin-bottom:14px;">'
+      + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">'
+      + '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#ECEFF1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+      + (foto.fotoBase64 ? '<img src="data:' + escapeHTML(foto.fotoMime) + ';base64,' + foto.fotoBase64 + '" style="width:100%;height:100%;object-fit:cover;">' : '<span class="material-icons" style="font-size:32px;color:#B0BEC5;">person</span>')
+      + '</div>'
+      + '<div>'
+      + '<div style="font-weight:800;font-size:1rem;color:#212121;">' + escapeHTML(docente.nombre || nombre) + '</div>'
+      + (docente.titulo ? '<div style="font-size:0.85rem;color:#546E7A;">' + escapeHTML(docente.titulo) + '</div>' : '')
+      + (docente.cargo ? '<div style="font-size:0.82rem;color:#78909C;">' + escapeHTML(docente.cargo) + '</div>' : '')
+      + '</div></div>'
+      + (docente.perfilProfesional ? '<div style="margin-bottom:10px;"><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Perfil profesional</div><div style="font-size:0.85rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">' + escapeHTML(docente.perfilProfesional) + '</div></div>' : '')
+      + (docente.filosofiaEnsenanza ? '<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Filosofía de enseñanza</div><div style="font-size:0.85rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">' + escapeHTML(docente.filosofiaEnsenanza) + '</div></div>' : '')
+      + '</div>';
+
+    html += '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;margin-bottom:14px;">'
+      + '<div style="font-weight:800;color:#37474F;margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span class="material-icons" style="font-size:18px;color:#455A64;">description</span> Currículum</div>'
+      + (cv.cvNombre
+          ? '<div style="font-size:0.85rem;color:#455A64;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:16px;">attach_file</span>' + escapeHTML(cv.cvNombre) + '</div>'
+            + '<button class="btn-secundario" onclick="_coordDescargarCVDocente(\'' + uid + '\')" style="font-size:0.8rem;padding:7px 12px;"><span class="material-icons">download</span> Descargar</button>'
+          : '<div style="font-size:0.82rem;color:#9E9E9E;">Este docente no ha subido su currículum.</div>')
+      + '</div>';
+
+    html += '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">'
+      + '<div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;"><span class="material-icons" style="font-size:18px;color:#455A64;">folder_special</span> Evidencias del portafolio</div>';
+    Object.entries(PORTAFOLIO_CATEGORIAS).forEach(([cat, label]) => {
+      const itemsCat = grupos[cat] || [];
+      html += '<div style="font-size:0.8rem;font-weight:700;color:#546E7A;margin:12px 0 6px;">' + escapeHTML(label) + ' (' + itemsCat.length + ')</div>';
+      html += itemsCat.length
+        ? itemsCat.map(it => _coordTarjetaEvidenciaDocente(it, uid)).join('')
+        : '<div style="font-size:0.78rem;color:#B0BEC5;padding:6px 0;">Sin evidencias en esta categoría.</div>';
+    });
+    html += '</div>';
+
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+function _coordTarjetaEvidenciaDocente(item, uid) {
+  const fecha = item.fecha ? new Date(item.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const archivoHtml = item.archivoNombre
+    ? '<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:15px;">attach_file</span>' + escapeHTML(item.archivoNombre) + '</div>'
+    : '';
+  const descargarBtn = item.archivoNombre
+    ? '<button class="btn-secundario" onclick="_coordDescargarEvidenciaDocente(\'' + uid + '\',\'' + item.id + '\')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>'
+    : '';
+  return '<div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:0;">'
+    + (item.origen ? '<span style="font-size:0.7rem;color:#546E7A;background:#ECEFF1;border-radius:20px;padding:2px 8px;">' + escapeHTML(item.origen) + '</span>' : '')
+    + '<div style="font-weight:700;color:#37474F;margin:5px 0;">' + escapeHTML(item.titulo || 'Sin título') + '</div>'
+    + '<div style="font-size:0.85rem;color:#455A64;line-height:1.55;white-space:pre-wrap;">' + escapeHTML(item.descripcion || '') + '</div>'
+    + archivoHtml
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'
+    + '<div style="font-size:0.72rem;color:#90A4AE;">' + fecha + '</div>'
+    + descargarBtn
+    + '</div></div></div>';
 }
 
 // ── 4. AVISOS COORDINADORA ──────────────────────────────────────

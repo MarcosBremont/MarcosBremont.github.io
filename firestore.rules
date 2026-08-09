@@ -202,6 +202,17 @@ service cloud.firestore {
                      (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
     }
 
+    // Evidencias PRIVADAS del Portafolio (ej. lo que se enlaza desde Mi Libreta):
+    // a diferencia de portafolio_evidencias de arriba, aquí NO hay rama de lectura
+    // para coordinadora/director/admin_centro/superadmin -- deliberadamente. Es el
+    // único dato del portafolio que ni siquiera un supervisor del mismo centro puede
+    // leer. Mismo patrón que users/{userId}/sessions (ver arriba): regla plana sin
+    // depender de resource.data, para no reintroducir el gotcha de "list" que ya
+    // documentamos en compartidos/mismoCentroOSinCentro.
+    match /users/{userId}/portafolio_evidencias_privadas/{itemId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
     match /error_logs/{logId} {
       allow create: if signedIn();
       allow read: if signedIn() && (
