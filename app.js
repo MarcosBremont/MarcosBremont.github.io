@@ -5332,10 +5332,13 @@ async function _blobToBase64(blob) {
   return btoa(binary);
 }
 
+/** Devuelve { blob, nombre } si se generó y guardó el docx, o null si no hay plantilla
+ *  configurada en el centro (para que quien llama pueda reusar el mismo blob, ej. para
+ *  adjuntarlo también a una evidencia de Portafolio, sin regenerarlo dos veces). */
 async function _generarYGuardarDocxReportePsicologia(estId, rep) {
   try {
     const generado = await _generarBlobReportePsicologiaDocx(rep);
-    if (!generado) return;
+    if (!generado) return null;
     const base64 = await _blobToBase64(generado.blob);
     const data = cargarReportes();
     const lista = data[estId] || [];
@@ -5347,8 +5350,10 @@ async function _generarYGuardarDocxReportePsicologia(estId, rep) {
       guardarReportes(data);
       renderizarReportes(estId);
     }
+    return generado;
   } catch (e) {
     console.warn('[PlantillaPsicologia] No se pudo generar/guardar el docx:', e);
+    return null;
   }
 }
 
@@ -10417,19 +10422,26 @@ async function guardarPortafolioEvidenciaDesdeUI() {
  * interrumpir el guardado del evento/reporte/comentario que la originó, solo
  * se registra en consola.
  */
-async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, fecha, origen }) {
+async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, fecha, origen, archivoBlob, archivoNombre, archivoMime }) {
   try {
     const ref = _portafolioEvidenciasColeccion();
     if (!ref) return;
-    await ref.add({
+    const data = {
       categoria: categoria || 'otro',
       titulo, descripcion,
       fecha: fecha || new Date().toISOString().split('T')[0],
       origen: origen || '',
       cicloEscolar: _portafolioAnioActivo(),
-      archivoNombre: '', archivoMime: '', archivoChunks: 0,
+      archivoNombre: archivoBlob ? (archivoNombre || 'documento') : '',
+      archivoMime: archivoBlob ? (archivoMime || 'application/octet-stream') : '',
+      archivoChunks: 0,
       creadoEn: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+    const docRef = await ref.add(data);
+    if (archivoBlob) {
+      const base64 = await _blobToBase64(archivoBlob);
+      await _guardarArchivoEvidenciaChunks(docRef, base64);
+    }
   } catch (e) { console.warn('No se pudo agregar evidencia automática al portafolio:', e); }
 }
 
@@ -30152,6 +30164,9 @@ function renderizarReportes(estId) {
             '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto,#212121);">' + escapeHTML(fecha) + '</div>' +
             '<div style="font-size:0.78rem;color:#757575;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(resumen) + '</div>' +
           '</div>' +
+          '<button class="btn-icon-sm" title="Descargar Word (plantilla del centro)" onclick="descargarReporteDocx(\'' + estId + '\',\'' + r.id + '\')" style="color:#6A1B9A;">' +
+            '<span class="material-icons" style="font-size:16px;">description</span>' +
+          '</button>' +
           '<button class="btn-icon-sm" title="Imprimir reporte" onclick="imprimirReporte(\'' + r.id + '\',\'' + estId + '\')" style="color:#1565C0;">' +
             '<span class="material-icons" style="font-size:16px;">print</span>' +
           '</button>' +
@@ -30265,17 +30280,24 @@ function guardarReporteNuevo(estId) {
   registrarCambio('Reporte académico guardado — ' + nuevo.estudianteNombre);
   mostrarToast('Reporte guardado', 'success');
   renderizarReportes(estId);
-  _generarYGuardarDocxReportePsicologia(estId, nuevo);
 
-  // Enlazar con el Portafolio Docente como evidencia (automático, best-effort)
+  // Enlazar con el Portafolio Docente como evidencia (automático, best-effort). Se genera
+  // el Word con la plantilla del centro una sola vez y se reutiliza para: (a) guardarlo en
+  // el propio reporte -- alimenta "Descargar Word" en esta lista y en Psicología -- y
+  // (b) adjuntarlo como archivo a la evidencia del Portafolio.
   let descEvidenciaRep = nuevo.detallesEvento;
   if (nuevo.medidasDocente) descEvidenciaRep += '\n\nMedidas del docente: ' + nuevo.medidasDocente;
-  _crearEvidenciaPortafolioAuto({
-    categoria: 'acompanamiento',
-    titulo: 'Reporte' + (nuevo.estudianteNombre ? ' — ' + nuevo.estudianteNombre : ''),
-    descripcion: descEvidenciaRep,
-    fecha: nuevo.fechaReporte,
-    origen: 'Calificaciones — Reportes'
+  _generarYGuardarDocxReportePsicologia(estId, nuevo).then(generado => {
+    _crearEvidenciaPortafolioAuto({
+      categoria: 'acompanamiento',
+      titulo: 'Reporte' + (nuevo.estudianteNombre ? ' — ' + nuevo.estudianteNombre : ''),
+      descripcion: descEvidenciaRep,
+      fecha: nuevo.fechaReporte,
+      origen: 'Calificaciones — Reportes',
+      archivoBlob: generado ? generado.blob : undefined,
+      archivoNombre: generado ? generado.nombre : undefined,
+      archivoMime: generado ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : undefined
+    });
   });
 }
 
@@ -30286,6 +30308,42 @@ function eliminarReporte(id, estId) {
   guardarReportes(data);
   registrarCambio('Reporte académico eliminado');
   renderizarReportes(estId);
+}
+
+/** Descarga el Word (plantilla del centro) de un reporte guardado en Calificaciones.
+ *  Usa el docx ya generado si existe (reporteDocxBase64); si no, lo genera al vuelo --
+ *  misma lógica que descargarReportePsicologiaGuardado, pero leyendo de cargarReportes()
+ *  en vez de _psicoDatos, para no depender de que el Panel Psicología ya se haya abierto. */
+function descargarReporteDocx(estId, id) {
+  const data = cargarReportes();
+  const rep = (data[estId] || []).find(r => r.id === id);
+  if (!rep) { mostrarToast('No se encontró el reporte.', 'error'); return; }
+
+  if (rep.reporteDocxBase64) {
+    const link = document.createElement('a');
+    const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    link.href = URL.createObjectURL(blob);
+    link.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    return;
+  }
+
+  mostrarToast('Generando Word...', 'info');
+  _generarBlobReportePsicologiaDocx(rep).then(generado => {
+    if (!generado) {
+      mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(generado.blob);
+    link.download = generado.nombre;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    mostrarToast('Reporte exportado en Word', 'success');
+  });
 }
 
 function descargarReportePsicologiaGuardado(estId, id) {
