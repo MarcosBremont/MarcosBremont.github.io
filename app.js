@@ -9332,6 +9332,49 @@ function _eliminarEntradaLibreta(entryId) {
   mostrarToast('Anotación eliminada', 'success');
 }
 
+/** Exporta las anotaciones del día seleccionado como documento Word (.doc),
+ *  una por página si hay varias, en Arial 12 con el encabezado en negrita. */
+function _imprimirLibretaDia() {
+  if (!_libretaDiaSeleccionado) { mostrarToast('Selecciona un día primero', 'error'); return; }
+  const data = cargarLibreta();
+  const entries = data.entries.filter(e => e.fecha === _libretaDiaSeleccionado).sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+  if (!entries.length) { mostrarToast('No hay anotaciones en este día', 'error'); return; }
+
+  const fechaLabel = new Date(_libretaDiaSeleccionado + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const bodyHtml = entries.map((e, idx) => {
+    const tipoInfo = _LIBRETA_TIPOS.find(t => t.value === (e.tipo || 'general')) || _LIBRETA_TIPOS[0];
+    const encabezado = tipoInfo.label + (e.cursoNombre ? ' – ' + e.cursoNombre : '');
+    const textoHtml = escapeHTML(e.texto || '').replace(/\n/g, '<br>');
+    const saltoPagina = idx > 0 ? "<br clear='all' style='page-break-before:always'>" : '';
+    return saltoPagina
+      + '<p><b>' + escapeHTML(encabezado) + '</b></p>'
+      + '<p>' + fechaLabel + ' ' + escapeHTML(e.hora || '') + '</p>'
+      + '<p>' + textoHtml + '</p>';
+  }).join('');
+
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"/>
+  <style>
+    body{font-family:Arial;font-size:12pt;}
+    p{margin:0 0 12pt;}
+  </style></head>
+  <body>${bodyHtml}</body></html>`;
+
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Libreta_' + _libretaDiaSeleccionado + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Documento descargado', 'success');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // RENDIMIENTO — Gráficas por curso
 // ═══════════════════════════════════════════════════════════════════
