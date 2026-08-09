@@ -31294,7 +31294,10 @@ async function _verificarAccesoCoordinadora() {
   const esDir = await _esDirector();
   const esAdmin = (await _esAdminDeCentro()).length > 0;
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-  btn.style.display = (esCoord || esDir || esAdmin || esSA) ? '' : 'none';
+  const visible = esCoord || esDir || esAdmin || esSA;
+  btn.style.display = visible ? '' : 'none';
+  if (visible) { _coordActualizarBadgeAlertas(); }
+  else { const badge = document.getElementById('coord-alertas-badge'); if (badge) badge.style.display = 'none'; }
 }
 
 function abrirCoordinadora() {
@@ -31979,14 +31982,18 @@ async function _coordMonitorRendimiento() {
         const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
         const cursos = calData.cursos || {};
         const filas = [];
-        Object.values(cursos).forEach(curso => {
+        Object.entries(cursos).forEach(([cId, curso]) => {
           const ests = curso.estudiantes || [];
           if (!ests.length) return;
           const maxTotal = _rendMaxTotal(curso);
           ests.forEach(est => {
             const nota = maxTotal > 0 ? _calcNotaFinal(curso, est.id) : null;
             const pct = (maxTotal > 0 && nota !== null) ? nota / maxTotal : null;
-            filas.push({ estNombre: est.nombre || 'Sin nombre', cursoNombre: curso.nombre || '', docente: d.nombre || d.email || 'Sin nombre', nota, maxTotal, pct });
+            filas.push({
+              estNombre: est.nombre || 'Sin nombre', cursoNombre: curso.nombre || '',
+              docente: d.nombre || d.email || 'Sin nombre', nota, maxTotal, pct,
+              docenteUid: d.uid, cursoId: cId, estId: est.id
+            });
           });
         });
         return filas;
@@ -31994,6 +32001,19 @@ async function _coordMonitorRendimiento() {
     }));
 
     window._coordRendData = listas.flat();
+    window._coordRendData.forEach((f, i) => { f._idx = i; });
+    window._coordRendCentroId = centroId;
+
+    // Cargar casos de seguimiento ya abiertos para este centro
+    window._coordAlertasMap = {};
+    try {
+      const alertasSnap = await db.collection('centros').doc(centroId).collection('alertas_rendimiento').get();
+      alertasSnap.docs.forEach(docSnap => {
+        const a = docSnap.data();
+        const key = a.docenteUid + '|' + a.cursoId + '|' + a.estId;
+        window._coordAlertasMap[key] = { id: docSnap.id, ...a };
+      });
+    } catch (e) { console.warn('Error cargando alertas de seguimiento:', e); }
 
     const evaluadas  = window._coordRendData.filter(f => f.pct !== null);
     const sinEvaluar = window._coordRendData.filter(f => f.pct === null);
@@ -32084,19 +32104,24 @@ function _coordFiltrarRendimiento() {
   }
 
   let html = '<div style="font-size:0.75rem;color:#78909C;margin-bottom:6px;">Mostrando ' + filtradas.length + ' de ' + todas.length + ' registros (estudiante × curso)</div>';
-  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;min-width:520px;">'
+  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;min-width:660px;">'
     + '<thead><tr style="background:#F5F5F5;">'
     + '<th style="text-align:left;padding:6px 10px;border:1px solid #E0E0E0;">Estudiante</th>'
     + '<th style="text-align:left;padding:6px 10px;border:1px solid #E0E0E0;">Curso</th>'
     + '<th style="text-align:left;padding:6px 10px;border:1px solid #E0E0E0;">Docente</th>'
     + '<th style="padding:6px 10px;border:1px solid #E0E0E0;width:90px;">Nota</th>'
     + '<th style="padding:6px 10px;border:1px solid #E0E0E0;width:120px;">Estado</th>'
+    + '<th style="padding:6px 10px;border:1px solid #E0E0E0;width:150px;">Seguimiento</th>'
     + '</tr></thead><tbody>';
 
   filtradas.forEach(f => {
     const col = _coordEstadoRend(f.pct);
     const notaTxt = f.pct === null ? '—' : f.nota.toFixed(1) + '/' + f.maxTotal;
     const estadoTxt = f.pct === null ? col.label : (f.pct * 100).toFixed(0) + '% · ' + col.label;
+    const key = f.docenteUid + '|' + f.cursoId + '|' + f.estId;
+    const alerta = window._coordAlertasMap?.[key];
+    const segCol = alerta ? _coordEstadoSeguimiento(alerta.estado) : null;
+
     html += '<tr>'
       + '<td style="padding:6px 10px;border:1px solid #E0E0E0;font-weight:600;">' + escapeHTML(f.estNombre) + '</td>'
       + '<td style="padding:6px 10px;border:1px solid #E0E0E0;">' + escapeHTML(f.cursoNombre) + '</td>'
@@ -32104,10 +32129,128 @@ function _coordFiltrarRendimiento() {
       + '<td style="padding:6px 10px;border:1px solid #E0E0E0;text-align:center;color:' + col.fg + ';font-weight:700;">' + notaTxt + '</td>'
       + '<td style="padding:6px 10px;border:1px solid #E0E0E0;text-align:center;">'
       + '<span style="background:' + col.fg + '22;color:' + col.fg + ';padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.75rem;">' + estadoTxt + '</span>'
+      + '</td>'
+      + '<td style="padding:6px 10px;border:1px solid #E0E0E0;text-align:center;">'
+      + (alerta
+          ? '<span onclick="_coordToggleSeguimientoDetalle(' + f._idx + ')" style="cursor:pointer;background:' + segCol.fg + '22;color:' + segCol.fg + ';padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.72rem;">' + segCol.label + (alerta.derivadoAPsicologia ? ' · Derivado' : '') + '</span>'
+          : '<button onclick="_coordAbrirSeguimiento(' + f._idx + ')" style="background:#00695C;color:#fff;border:none;border-radius:14px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;">+ Abrir caso</button>')
       + '</td></tr>';
+
+    html += '<tr id="coord-rend-seg-' + f._idx + '" style="display:none;background:#FAFAFA;">'
+      + '<td colspan="6" style="padding:10px 14px;border:1px solid #E0E0E0;">' + _coordSeguimientoForm(f._idx) + '</td></tr>';
   });
   html += '</tbody></table></div>';
   tabla.innerHTML = html;
+}
+
+function _coordEstadoSeguimiento(estado) {
+  if (estado === 'atendida') return { fg: '#2E7D32', label: 'Atendida' };
+  if (estado === 'en_seguimiento') return { fg: '#1565C0', label: 'En seguimiento' };
+  return { fg: '#E65100', label: 'Nueva' };
+}
+
+/** Genera el formulario inline de gestión de un caso de seguimiento ya abierto */
+function _coordSeguimientoForm(idx) {
+  const f = window._coordRendData?.[idx];
+  if (!f) return '';
+  const key = f.docenteUid + '|' + f.cursoId + '|' + f.estId;
+  const alerta = window._coordAlertasMap?.[key];
+  if (!alerta) return '';
+  const opciones = ['nueva', 'en_seguimiento', 'atendida'].map(v =>
+    '<option value="' + v + '"' + (alerta.estado === v ? ' selected' : '') + '>' + _coordEstadoSeguimiento(v).label + '</option>'
+  ).join('');
+  return '<div style="display:flex;flex-direction:column;gap:8px;">'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    + '<label style="font-size:0.78rem;font-weight:600;color:#546E7A;">Estado:</label>'
+    + '<select id="coord-rend-seg-estado-' + idx + '" style="padding:5px 8px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.78rem;">' + opciones + '</select>'
+    + '</div>'
+    + '<textarea id="coord-rend-seg-nota-' + idx + '" placeholder="Nota de seguimiento (acción tomada, próximos pasos...)" '
+    + 'style="width:100%;min-height:60px;padding:8px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.8rem;font-family:inherit;resize:vertical;">' + escapeHTML(alerta.nota || '') + '</textarea>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button onclick="_coordGuardarSeguimiento(' + idx + ')" style="background:#00695C;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:0.78rem;font-weight:600;cursor:pointer;">Guardar</button>'
+    + (alerta.derivadoAPsicologia
+        ? '<span style="color:#6A1B9A;font-size:0.78rem;font-weight:600;align-self:center;">✓ Derivado a Orientación</span>'
+        : '<button onclick="_coordDerivarPsicologia(' + idx + ')" style="background:#6A1B9A;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:0.78rem;font-weight:600;cursor:pointer;">Derivar a Orientación</button>')
+    + '<span style="font-size:0.72rem;color:#9E9E9E;align-self:center;">Abierto por ' + escapeHTML(alerta.creadoPor || '') + '</span>'
+    + '</div></div>';
+}
+
+async function _coordAbrirSeguimiento(idx) {
+  const f = window._coordRendData?.[idx];
+  const centroId = window._coordRendCentroId;
+  if (!f || !centroId) return;
+  try {
+    const nuevo = {
+      docenteUid: f.docenteUid, cursoId: f.cursoId, estId: f.estId,
+      estudianteNombre: f.estNombre, cursoNombre: f.cursoNombre, docenteNombre: f.docente,
+      notaPct: f.pct, estado: 'nueva', nota: '', derivadoAPsicologia: false,
+      creadoPor: window.currentUser?.email || '',
+      fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+      fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const ref = await db.collection('centros').doc(centroId).collection('alertas_rendimiento').add(nuevo);
+    const key = f.docenteUid + '|' + f.cursoId + '|' + f.estId;
+    window._coordAlertasMap[key] = { id: ref.id, ...nuevo };
+    mostrarToast('Caso de seguimiento abierto', 'success');
+    _coordFiltrarRendimiento();
+    _coordActualizarBadgeAlertas();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+function _coordToggleSeguimientoDetalle(idx) {
+  const el = document.getElementById('coord-rend-seg-' + idx);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+
+async function _coordGuardarSeguimiento(idx) {
+  const f = window._coordRendData?.[idx];
+  const centroId = window._coordRendCentroId;
+  if (!f || !centroId) return;
+  const key = f.docenteUid + '|' + f.cursoId + '|' + f.estId;
+  const alerta = window._coordAlertasMap?.[key];
+  if (!alerta) return;
+  const estado = document.getElementById('coord-rend-seg-estado-' + idx)?.value || alerta.estado;
+  const nota = document.getElementById('coord-rend-seg-nota-' + idx)?.value || '';
+  try {
+    await db.collection('centros').doc(centroId).collection('alertas_rendimiento').doc(alerta.id).update({
+      estado, nota, fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alerta.estado = estado; alerta.nota = nota;
+    mostrarToast('Seguimiento actualizado', 'success');
+    _coordFiltrarRendimiento();
+    _coordActualizarBadgeAlertas();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _coordDerivarPsicologia(idx) {
+  const f = window._coordRendData?.[idx];
+  const centroId = window._coordRendCentroId;
+  if (!f || !centroId) return;
+  const key = f.docenteUid + '|' + f.cursoId + '|' + f.estId;
+  const alerta = window._coordAlertasMap?.[key];
+  if (!alerta) return;
+  try {
+    await db.collection('centros').doc(centroId).collection('alertas_rendimiento').doc(alerta.id).update({
+      derivadoAPsicologia: true, fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alerta.derivadoAPsicologia = true;
+    mostrarToast('Caso marcado como derivado a Orientación', 'success');
+    _coordFiltrarRendimiento();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+/** Actualiza el badge de alertas nuevas sobre el botón "Panel Coordinadora" del dashboard */
+async function _coordActualizarBadgeAlertas() {
+  const badge = document.getElementById('coord-alertas-badge');
+  if (!badge) return;
+  try {
+    const centroId = await _coordGetCentroId();
+    if (!centroId) { badge.style.display = 'none'; return; }
+    const snap = await db.collection('centros').doc(centroId).collection('alertas_rendimiento').where('estado', '==', 'nueva').get();
+    if (snap.size > 0) { badge.style.display = 'flex'; badge.textContent = snap.size > 9 ? '9+' : String(snap.size); }
+    else { badge.style.display = 'none'; }
+  } catch { badge.style.display = 'none'; }
 }
 
 // ════════════════════════════════════════════════════════════════════

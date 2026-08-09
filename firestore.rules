@@ -107,6 +107,13 @@ service cloud.firestore {
         allow read, write: if signedIn();
       }
 
+      // Casos de seguimiento de rendimiento académico abiertos por Coordinadora
+      // (pestaña Rendimiento del Panel Coordinadora). Mismo patrón que avisos:
+      // el gating de quién puede escribir vive en la UI, no en la regla.
+      match /alertas_rendimiento/{alertaId} {
+        allow read, write: if signedIn();
+      }
+
       match /pagos_config/{doc} {
         allow read, write: if signedIn();
       }
