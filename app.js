@@ -10410,6 +10410,29 @@ async function guardarPortafolioEvidenciaDesdeUI() {
   }
 }
 
+/**
+ * Crea una evidencia de Portafolio sin pasar por el formulario -- usada para
+ * enlazar automáticamente Eventos/Reportes/Comentarios de Calificaciones con
+ * el Portafolio Docente. "Best-effort": si falla (ej. sin conexión), no debe
+ * interrumpir el guardado del evento/reporte/comentario que la originó, solo
+ * se registra en consola.
+ */
+async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, fecha, origen }) {
+  try {
+    const ref = _portafolioEvidenciasColeccion();
+    if (!ref) return;
+    await ref.add({
+      categoria: categoria || 'otro',
+      titulo, descripcion,
+      fecha: fecha || new Date().toISOString().split('T')[0],
+      origen: origen || '',
+      cicloEscolar: _portafolioAnioActivo(),
+      archivoNombre: '', archivoMime: '', archivoChunks: 0,
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) { console.warn('No se pudo agregar evidencia automática al portafolio:', e); }
+}
+
 function _cargarEvidenciaDesdePlanificacionActiva() {
   const dg = planificacion?.datosGenerales || {};
   const ra = planificacion?.ra || {};
@@ -13922,6 +13945,21 @@ function guardarIncidenciaNueva(estId) {
   renderizarIncidencias(estId);
   renderizarTablaCalificaciones();
   mostrarToast('Evento registrado', 'success');
+
+  // Enlazar con el Portafolio Docente como evidencia (automático, best-effort)
+  const cursoInc = calState.cursos[calState.cursoActivoId];
+  const estInc = cursoInc?.estudiantes?.find(e => e.id === estId);
+  const tipoInfo = INCID_TIPOS.find(t => t.id === tipo) || INCID_TIPOS[INCID_TIPOS.length - 1];
+  let descEvidenciaInc = descripcion;
+  if (participantes) descEvidenciaInc += '\n\nParticipantes: ' + participantes;
+  if (acuerdos) descEvidenciaInc += '\n\nAcuerdos: ' + acuerdos;
+  _crearEvidenciaPortafolioAuto({
+    categoria: 'reunion_seguimiento',
+    titulo: tipoInfo.label + (estInc ? ' — ' + estInc.nombre : ''),
+    descripcion: descEvidenciaInc,
+    fecha: fechaEvento,
+    origen: 'Calificaciones — Eventos'
+  });
 }
 function eliminarIncidencia(incId, estId) {
   if (!confirm('¿Eliminar este evento?')) return;
@@ -16452,6 +16490,18 @@ function guardarComentarioNuevo(estId) {
   // También actualizar badge en la lista de resultados
   _actualizarBadgeComentarios(estId);
   mostrarToast('Comentario guardado', 'success');
+
+  // Enlazar con el Portafolio Docente como evidencia (automático, best-effort)
+  const cursoCom = calState.cursos[calState.cursoActivoId];
+  const estCom = cursoCom?.estudiantes?.find(e => e.id === estId);
+  const catInfo = COMENT_CATEGORIAS.find(c => c.id === cat) || COMENT_CATEGORIAS[COMENT_CATEGORIAS.length - 1];
+  _crearEvidenciaPortafolioAuto({
+    categoria: 'otro',
+    titulo: 'Comentario (' + catInfo.label + ')' + (estCom ? ' — ' + estCom.nombre : ''),
+    descripcion: texto,
+    fecha: new Date().toISOString().split('T')[0],
+    origen: 'Calificaciones — Comentarios'
+  });
 }
 
 function editarComentario(comentId, estId) {
@@ -30216,6 +30266,17 @@ function guardarReporteNuevo(estId) {
   mostrarToast('Reporte guardado', 'success');
   renderizarReportes(estId);
   _generarYGuardarDocxReportePsicologia(estId, nuevo);
+
+  // Enlazar con el Portafolio Docente como evidencia (automático, best-effort)
+  let descEvidenciaRep = nuevo.detallesEvento;
+  if (nuevo.medidasDocente) descEvidenciaRep += '\n\nMedidas del docente: ' + nuevo.medidasDocente;
+  _crearEvidenciaPortafolioAuto({
+    categoria: 'acompanamiento',
+    titulo: 'Reporte' + (nuevo.estudianteNombre ? ' — ' + nuevo.estudianteNombre : ''),
+    descripcion: descEvidenciaRep,
+    fecha: nuevo.fechaReporte,
+    origen: 'Calificaciones — Reportes'
+  });
 }
 
 function eliminarReporte(id, estId) {
