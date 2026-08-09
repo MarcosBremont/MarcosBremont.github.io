@@ -31643,6 +31643,20 @@ async function _coordLeerBibliotecaDocente(uid) {
   }
 }
 
+/**
+ * Ciclo escolar ("2026-2027") al que pertenece una planificación guardada,
+ * usando la misma convención que _getSchoolYearKey (año escolar inicia en
+ * agosto). Prioriza la fecha de inicio del módulo sobre la fecha en que se
+ * guardó/duplicó el registro, porque un docente puede duplicar en cualquier
+ * momento un plan que en realidad es para otro ciclo.
+ */
+function _coordCicloDePlan(item) {
+  const fechaInicio = item?.planificacion?.datosGenerales?.fechaInicio;
+  const fechaRef = fechaInicio ? new Date(fechaInicio) : (item?.fechaGuardado ? new Date(item.fechaGuardado) : null);
+  if (!fechaRef || isNaN(fechaRef.getTime())) return 'Sin fecha';
+  return _getSchoolYearKey(fechaRef);
+}
+
 async function _coordMonitorPlanificaciones() {
   const cont = document.getElementById('coord-contenido');
   if (!cont) return;
@@ -31655,10 +31669,13 @@ async function _coordMonitorPlanificaciones() {
     const docentes = await _coordGetDocentes(centroId);
     if (!docentes.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay docentes en este centro.</div>'; return; }
 
+    const cicloActual = _getSchoolYearKey(new Date());
+
     const docentesData = await Promise.all(docentes.map(async d => {
       try {
         const biblio = await _coordLeerBibliotecaDocente(d.uid);
         const items = biblio.items || [];
+        const itemsCicloActual = items.filter(it => _coordCicloDePlan(it) === cicloActual);
         const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
         const calRaw2 = calDoc.exists ? calDoc.data() : {};
         const calData = calRaw2.payload ? JSON.parse(calRaw2.payload) : calRaw2;
@@ -31672,25 +31689,32 @@ async function _coordMonitorPlanificaciones() {
         });
         const sortedItems = [...items].sort((a, b) => (b.fechaGuardado || b.modificado || b.creado || '').localeCompare(a.fechaGuardado || a.modificado || a.creado || ''));
         const ultimaFecha = sortedItems[0]?.fechaGuardado || sortedItems[0]?.modificado || sortedItems[0]?.creado || null;
-        return { ...d, totalPlanificaciones: items.length, asignadas, ultimaModificacion: ultimaFecha, planItems: items, cursosConPlan };
-      } catch { return { ...d, totalPlanificaciones: 0, asignadas: 0, ultimaModificacion: null, planItems: [], cursosConPlan: [] }; }
+        return {
+          ...d,
+          totalPlanificaciones: itemsCicloActual.length, // activas en el ciclo actual (impulsa el estado/color de la tarjeta)
+          totalBiblioteca: items.length,                 // histórico completo, incluye ciclos anteriores
+          asignadas, ultimaModificacion: ultimaFecha, planItems: items, cursosConPlan
+        };
+      } catch { return { ...d, totalPlanificaciones: 0, totalBiblioteca: 0, asignadas: 0, ultimaModificacion: null, planItems: [], cursosConPlan: [] }; }
     }));
 
     docentesData.sort((a, b) => a.totalPlanificaciones - b.totalPlanificaciones);
 
     // Guardar para drill-down
     window._coordPlanData = docentesData;
+    window._coordCicloActual = cicloActual;
 
-    let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">description</span> Estado de Planificaciones por Docente</h4>';
+    let html = '<h4 style="color:#00695C;margin:0 0 4px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">description</span> Estado de Planificaciones por Docente</h4>'
+      + '<div style="font-size:0.78rem;color:#78909C;margin-bottom:14px;">Ciclo escolar actual: <strong>' + cicloActual + '</strong> — los conteos principales solo cuentan planificaciones de este ciclo; el historial completo (incluye ciclos anteriores) está disponible al expandir cada docente.</div>';
 
     const conPlan = docentesData.filter(d => d.totalPlanificaciones > 0).length;
     const sinPlan = docentesData.filter(d => d.totalPlanificaciones === 0).length;
     const sinAsignar = docentesData.filter(d => d.totalPlanificaciones > 0 && d.asignadas === 0).length;
     html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'
       + '<div style="flex:1;min-width:120px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:10px;padding:12px;text-align:center;">'
-      + '<div style="font-size:1.4rem;font-weight:700;color:#2E7D32;">' + conPlan + '</div><div style="font-size:0.78rem;color:#388E3C;">Con planificaciones</div></div>'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#2E7D32;">' + conPlan + '</div><div style="font-size:0.78rem;color:#388E3C;">Con planificaciones (ciclo actual)</div></div>'
       + '<div style="flex:1;min-width:120px;background:#FFEBEE;border:1.5px solid #EF9A9A;border-radius:10px;padding:12px;text-align:center;">'
-      + '<div style="font-size:1.4rem;font-weight:700;color:#C62828;">' + sinPlan + '</div><div style="font-size:0.78rem;color:#C62828;">Sin planificaciones</div></div>'
+      + '<div style="font-size:1.4rem;font-weight:700;color:#C62828;">' + sinPlan + '</div><div style="font-size:0.78rem;color:#C62828;">Sin planificaciones (ciclo actual)</div></div>'
       + '<div style="flex:1;min-width:120px;background:#FFF3E0;border:1.5px solid #FFB74D;border-radius:10px;padding:12px;text-align:center;">'
       + '<div style="font-size:1.4rem;font-weight:700;color:#E65100;">' + sinAsignar + '</div><div style="font-size:0.78rem;color:#E65100;">Sin asignar a cursos</div></div>'
       + '</div>';
@@ -31703,6 +31727,7 @@ async function _coordMonitorPlanificaciones() {
       else { statusColor = '#2E7D32'; statusIcon = 'check_circle'; }
 
       const ultimaMod = d.ultimaModificacion ? new Date(d.ultimaModificacion).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Nunca';
+      const otrasEnBiblio = d.totalBiblioteca - d.totalPlanificaciones;
 
       html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;transition:box-shadow 0.2s;">'
         + '<div onclick="_coordToggleDetallePlan(' + idx + ')" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;" onmouseover="this.parentElement.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.parentElement.style.boxShadow=\'none\'">'
@@ -31710,7 +31735,8 @@ async function _coordMonitorPlanificaciones() {
         + '<span class="material-icons" style="color:' + statusColor + ';font-size:22px;">' + statusIcon + '</span></div>'
         + '<div style="flex:1;min-width:150px;">'
         + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + ' <span class="material-icons" style="font-size:16px;vertical-align:middle;color:#90A4AE;">expand_more</span></div>'
-        + '<div style="font-size:0.82rem;color:#78909C;">' + d.totalPlanificaciones + ' planificaciones · ' + d.asignadas + ' asignadas a cursos</div>'
+        + '<div style="font-size:0.82rem;color:#78909C;">' + d.totalPlanificaciones + ' planificaciones (ciclo ' + cicloActual + ') · ' + d.asignadas + ' asignadas a cursos</div>'
+        + (otrasEnBiblio > 0 ? '<div style="font-size:0.72rem;color:#B0BEC5;">+ ' + otrasEnBiblio + ' más en su biblioteca de ciclos anteriores</div>' : '')
         + '<div style="font-size:0.72rem;color:#B0BEC5;">Última modificación: ' + ultimaMod + '</div>'
         + '</div></div>'
         + '<div id="coord-plan-detalle-' + idx + '" style="display:none;margin-top:12px;border-top:1px solid #E0E0E0;padding-top:12px;"></div>'
@@ -31742,44 +31768,68 @@ function _coordToggleDetallePlan(idx) {
     h += '<div style="margin-bottom:10px;"></div>';
   }
 
-  // Lista de planificaciones
-  h += '<div style="font-size:0.82rem;font-weight:600;color:#00695C;margin-bottom:8px;">Planificaciones guardadas (' + d.planItems.length + '):</div>';
-  h += '<div style="display:flex;flex-direction:column;gap:6px;">';
+  // Planificaciones agrupadas por ciclo escolar (ciclo actual expandido, los demás colapsados)
+  const cicloActual = window._coordCicloActual || _getSchoolYearKey(new Date());
+  const grupos = {};
   d.planItems.forEach(item => {
-    const plan = item.planificacion || {};
-    const raDesc = plan.ra?.descripcion || '';
-    const raCorto = raDesc.substring(0, 60) + (raDesc.length > 60 ? '...' : '');
-    const modulo = plan.datosGenerales?.moduloFormativo || '';
-    const nActs = (plan.actividades || []).length;
-    const fecha = item.fechaGuardadoLabel || (item.fechaGuardado ? new Date(item.fechaGuardado).toLocaleDateString('es-DO') : '');
-
-    h += '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:10px;">'
-      + '<div style="font-weight:600;font-size:0.85rem;color:#212121;">' + escapeHTML(item.nombre || 'Sin nombre') + '</div>';
-    if (modulo) h += '<div style="font-size:0.78rem;color:#1565C0;">' + escapeHTML(modulo) + '</div>';
-    if (raCorto) h += '<div style="font-size:0.75rem;color:#00695C;">' + escapeHTML(raCorto) + '</div>';
-    h += '<div style="font-size:0.72rem;color:#78909C;margin-top:2px;">' + nActs + ' actividades · Guardada: ' + fecha + '</div>';
-
-    // Detalle de actividades
-    if (nActs > 0) {
-      h += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:0.75rem;color:#5C6BC0;">Ver actividades</summary>';
-      h += '<div style="margin-top:4px;">';
-      (plan.actividades || []).forEach((act, i) => {
-        h += '<div style="font-size:0.75rem;padding:3px 0;border-bottom:1px solid #EEE;display:flex;gap:6px;align-items:flex-start;">'
-          + '<span style="color:#78909C;min-width:20px;">' + (i + 1) + '.</span>'
-          + '<div><span style="color:#212121;">' + escapeHTML(act.enunciado || 'Sin descripción') + '</span>';
-        if (act.ecCodigo) h += ' <span style="color:#5C6BC0;font-size:0.7rem;">(' + act.ecCodigo + ')</span>';
-        if (act.instrumento?.tipoLabel) h += ' <span style="color:#78909C;font-size:0.7rem;">— ' + act.instrumento.tipoLabel + '</span>';
-        if (act.valor) h += ' <span style="color:#E65100;font-size:0.7rem;font-weight:600;">' + act.valor + ' pts</span>';
-        h += '</div></div>';
-      });
-      h += '</div></details>';
-    }
-    h += '</div>';
+    const ciclo = _coordCicloDePlan(item);
+    (grupos[ciclo] = grupos[ciclo] || []).push(item);
   });
-  h += '</div>';
+  const ciclosOrdenados = Object.keys(grupos).sort((a, b) => {
+    if (a === 'Sin fecha') return 1;
+    if (b === 'Sin fecha') return -1;
+    return b.localeCompare(a); // más reciente primero
+  });
+
+  h += '<div style="font-size:0.82rem;font-weight:600;color:#00695C;margin-bottom:8px;">Planificaciones guardadas (' + d.planItems.length + '):</div>';
+
+  ciclosOrdenados.forEach(ciclo => {
+    const itemsCiclo = grupos[ciclo];
+    const esActual = ciclo === cicloActual;
+    h += '<details' + (esActual ? ' open' : '') + ' style="margin-bottom:8px;">'
+      + '<summary style="cursor:pointer;font-size:0.8rem;font-weight:700;color:' + (esActual ? '#2E7D32' : '#546E7A') + ';padding:4px 0;">'
+      + (ciclo === 'Sin fecha' ? 'Sin fecha identificada' : 'Ciclo ' + ciclo + (esActual ? ' (actual)' : '')) + ' — ' + itemsCiclo.length + ' plan' + (itemsCiclo.length > 1 ? 'es' : '')
+      + '</summary>'
+      + '<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">'
+      + itemsCiclo.map(_coordPlanItemHTML).join('')
+      + '</div></details>';
+  });
 
   el.innerHTML = h;
   el.style.display = 'block';
+}
+
+/** Tarjeta de detalle de una planificación individual (usada en el drill-down de Coordinadora) */
+function _coordPlanItemHTML(item) {
+  const plan = item.planificacion || {};
+  const raDesc = plan.ra?.descripcion || '';
+  const raCorto = raDesc.substring(0, 60) + (raDesc.length > 60 ? '...' : '');
+  const modulo = plan.datosGenerales?.moduloFormativo || '';
+  const nActs = (plan.actividades || []).length;
+  const fecha = item.fechaGuardadoLabel || (item.fechaGuardado ? new Date(item.fechaGuardado).toLocaleDateString('es-DO') : '');
+
+  let h = '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:10px;">'
+    + '<div style="font-weight:600;font-size:0.85rem;color:#212121;">' + escapeHTML(item.nombre || 'Sin nombre') + '</div>';
+  if (modulo) h += '<div style="font-size:0.78rem;color:#1565C0;">' + escapeHTML(modulo) + '</div>';
+  if (raCorto) h += '<div style="font-size:0.75rem;color:#00695C;">' + escapeHTML(raCorto) + '</div>';
+  h += '<div style="font-size:0.72rem;color:#78909C;margin-top:2px;">' + nActs + ' actividades · Guardada: ' + fecha + '</div>';
+
+  if (nActs > 0) {
+    h += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:0.75rem;color:#5C6BC0;">Ver actividades</summary>';
+    h += '<div style="margin-top:4px;">';
+    (plan.actividades || []).forEach((act, i) => {
+      h += '<div style="font-size:0.75rem;padding:3px 0;border-bottom:1px solid #EEE;display:flex;gap:6px;align-items:flex-start;">'
+        + '<span style="color:#78909C;min-width:20px;">' + (i + 1) + '.</span>'
+        + '<div><span style="color:#212121;">' + escapeHTML(act.enunciado || 'Sin descripción') + '</span>';
+      if (act.ecCodigo) h += ' <span style="color:#5C6BC0;font-size:0.7rem;">(' + act.ecCodigo + ')</span>';
+      if (act.instrumento?.tipoLabel) h += ' <span style="color:#78909C;font-size:0.7rem;">— ' + act.instrumento.tipoLabel + '</span>';
+      if (act.valor) h += ' <span style="color:#E65100;font-size:0.7rem;font-weight:600;">' + act.valor + ' pts</span>';
+      h += '</div></div>';
+    });
+    h += '</div></details>';
+  }
+  h += '</div>';
+  return h;
 }
 
 // ── 3. RESUMEN POR DOCENTE ──────────────────────────────────────
@@ -31823,9 +31873,12 @@ async function _coordResumenDocentes() {
           cursosArr.push({ nombre: curso.nombre || cId, estudiantes: ests.length, actividades: cursoActs, sinNota: cursoSinNota });
         });
 
-        // Planificaciones
+        // Planificaciones (activas del ciclo actual vs. total histórico en biblioteca)
         const biblio3 = await _coordLeerBibliotecaDocente(d.uid);
-        const nPlan = (biblio3.items || []).length;
+        const itemsBiblio3 = biblio3.items || [];
+        const cicloActual3 = _getSchoolYearKey(new Date());
+        const nPlan = itemsBiblio3.filter(it => _coordCicloDePlan(it) === cicloActual3).length;
+        const nPlanTotal = itemsBiblio3.length;
 
         // Última sesión
         let ultimaSesion = null;
@@ -31834,8 +31887,8 @@ async function _coordResumenDocentes() {
           if (!sesSnap.empty) ultimaSesion = sesSnap.docs[0].data();
         } catch {}
 
-        return { ...d, totalEst, totalActs, actsSinNota, cursosArr, nPlan, ultimaSesion };
-      } catch { return { ...d, totalEst: 0, totalActs: 0, actsSinNota: 0, cursosArr: [], nPlan: 0, ultimaSesion: null }; }
+        return { ...d, totalEst, totalActs, actsSinNota, cursosArr, nPlan, nPlanTotal, ultimaSesion };
+      } catch { return { ...d, totalEst: 0, totalActs: 0, actsSinNota: 0, cursosArr: [], nPlan: 0, nPlanTotal: 0, ultimaSesion: null }; }
     }));
 
     let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">person</span> Ficha de cada Docente</h4>';
@@ -31871,8 +31924,10 @@ async function _coordResumenDocentes() {
         + '<div style="font-weight:700;color:#1565C0;">' + d.cursosArr.length + '</div><div style="font-size:0.7rem;color:#78909C;">Cursos</div></div>'
         + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
         + '<div style="font-weight:700;color:#1565C0;">' + d.totalEst + '</div><div style="font-size:0.7rem;color:#78909C;">Estudiantes</div></div>'
-        + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
-        + '<div style="font-weight:700;color:#1565C0;">' + d.nPlan + '</div><div style="font-size:0.7rem;color:#78909C;">Planificaciones</div></div>'
+        + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;" title="Planificaciones del ciclo escolar actual · ' + d.nPlanTotal + ' en total en su biblioteca (incluye ciclos anteriores)">'
+        + '<div style="font-weight:700;color:#1565C0;">' + d.nPlan + '</div><div style="font-size:0.7rem;color:#78909C;">Planificaciones (ciclo actual)</div>'
+        + (d.nPlanTotal > d.nPlan ? '<div style="font-size:0.62rem;color:#B0BEC5;">' + d.nPlanTotal + ' en biblioteca total</div>' : '')
+        + '</div>'
         + '<div style="flex:1;min-width:80px;background:#F5F5F5;border-radius:8px;padding:8px;text-align:center;">'
         + '<div style="font-weight:700;color:' + barColor + ';">' + pct + '%</div><div style="font-size:0.7rem;color:#78909C;">Calificado</div></div>'
         + '</div>';
