@@ -10434,7 +10434,7 @@ async function guardarPortafolioEvidenciaDesdeUI() {
  * interrumpir el guardado del evento/reporte/comentario que la originó, solo
  * se registra en consola.
  */
-async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, fecha, origen, archivoBlob, archivoNombre, archivoMime }) {
+async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, fecha, origen, archivoBlob, archivoNombre, archivoMime, refEstId, refId }) {
   try {
     const ref = _portafolioEvidenciasColeccion();
     if (!ref) return;
@@ -10447,6 +10447,11 @@ async function _crearEvidenciaPortafolioAuto({ categoria, titulo, descripcion, f
       archivoNombre: archivoBlob ? (archivoNombre || 'documento') : '',
       archivoMime: archivoBlob ? (archivoMime || 'application/octet-stream') : '',
       archivoChunks: 0,
+      // Referencia de vuelta al registro original (hoy solo la usan los Reportes, para
+      // poder regenerar el Word con la plantilla del centro desde el Portafolio sin
+      // tener que duplicar los campos estructurados del reporte en la propia evidencia).
+      ...(refEstId ? { refEstId } : {}),
+      ...(refId ? { refId } : {}),
       creadoEn: firebase.firestore.FieldValue.serverTimestamp()
     };
     const docRef = await ref.add(data);
@@ -30348,7 +30353,11 @@ function guardarReporteNuevo(estId) {
       origen: 'Calificaciones — Reportes',
       archivoBlob: generado ? generado.blob : undefined,
       archivoNombre: generado ? generado.nombre : undefined,
-      archivoMime: generado ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : undefined
+      archivoMime: generado ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : undefined,
+      // Aunque ya se haya adjuntado el archivo arriba, se guarda también la referencia al
+      // reporte original -- así Coordinadora puede regenerar el Word más adelante (ej. si
+      // el centro configuró la plantilla después de este reporte, o el adjunto se perdió).
+      refEstId: estId, refId: nuevo.id
     });
   });
 }
@@ -35959,6 +35968,95 @@ async function _coordDescargarEvidenciaDocente(uid, id) {
   }
 }
 
+/** Lee el reporte original (con todos sus campos estructurados) desde
+ *  users/{uid}/data/reportes -- necesario para regenerar el Word con la
+ *  plantilla del centro, ya que la evidencia del Portafolio solo guarda un
+ *  resumen en texto plano, no los campos individuales (firmas, seguimiento, etc). */
+async function _coordLeerReporteOriginal(uid, estId, repId) {
+  try {
+    const doc = await db.collection('users').doc(uid).collection('data').doc('reportes').get();
+    if (!doc.exists || !doc.data().payload) return null;
+    const data = JSON.parse(doc.data().payload);
+    const lista = data[estId] || [];
+    return lista.find(r => r.id === repId) || null;
+  } catch (e) {
+    console.warn('Error leyendo reporte original de ' + uid + ':', e);
+    return null;
+  }
+}
+
+/** Descarga el Word (plantilla del centro) de un Reporte visto desde el Portafolio de
+ *  Coordinadora. Usa el docx ya guardado en el reporte si existe; si no, lo genera al
+ *  vuelo -- misma lógica que descargarReporteDocx, pero cruzando al uid del docente. */
+async function _coordDescargarReporteDocente(uid, estId, repId) {
+  const rep = await _coordLeerReporteOriginal(uid, estId, repId);
+  if (!rep) { mostrarToast('No se encontró el reporte original.', 'error'); return; }
+
+  if (rep.reporteDocxBase64) {
+    const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  mostrarToast('Generando Word...', 'info');
+  const generado = await _generarBlobReportePsicologiaDocx(rep);
+  if (!generado) { mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error'); return; }
+  const url = URL.createObjectURL(generado.blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = generado.nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Descarga cualquier evidencia de solo texto (ej. un Comentario) como documento Word
+ *  simple -- Arial 12, sin plantilla -- reusando el mismo truco HTML+Blob que ya usa
+ *  Imprimir en Mi Libreta. No necesita el uid del docente: usa solo lo que ya trae la
+ *  propia evidencia (título/descripción/fecha). */
+function _coordDescargarEvidenciaComoWord(titulo, descripcion, fecha) {
+  const fechaLabel = fecha ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+  const textoHtml = escapeHTML(descripcion || '').replace(/\n/g, '<br>');
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"/>
+  <style>
+    body{font-family:Arial;font-size:12pt;}
+    p{margin:0 0 12pt;}
+  </style></head>
+  <body><p><b>${escapeHTML(titulo || 'Sin título')}</b></p><p>${fechaLabel}</p><p>${textoHtml}</p></body></html>`;
+
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (titulo || 'Documento').replace(/[\\/:*?"<>|]+/g, '').trim() + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Wrapper para las tarjetas de evidencia del Portafolio de Coordinadora: busca la
+ *  evidencia por su índice en window._coordPortafolioEvidenciasActuales (evita meter
+ *  título/descripción de texto libre dentro del onclick) y la descarga como Word simple. */
+function _coordDescargarComentarioPorIndice(idx) {
+  const item = window._coordPortafolioEvidenciasActuales?.[idx];
+  if (!item) return;
+  _coordDescargarEvidenciaComoWord(item.titulo, item.descripcion, item.fecha);
+}
+
 /**
  * Ciclo escolar ("2026-2027") al que pertenece una planificación guardada,
  * usando la misma convención que _getSchoolYearKey (año escolar inicia en
@@ -36310,6 +36408,10 @@ async function _coordRenderPortafolioDocente(uid, nombre) {
       _coordLeerEvidenciasPortafolio(uid)
     ]);
     const docente = base.docente || {};
+    // Índice global para poder descargar un Comentario como Word simple desde su tarjeta
+    // sin tener que meter título/descripción (texto libre) dentro del onclick.
+    evidencias.forEach((it, i) => { it._idx = i; });
+    window._coordPortafolioEvidenciasActuales = evidencias;
     const grupos = _agruparEvidenciasPorCategoria(evidencias);
 
     let html = '<button class="btn-secundario" onclick="_coordResumenDocentes(\'' + contId + '\')" style="margin-bottom:14px;">'
@@ -36360,9 +36462,23 @@ function _coordTarjetaEvidenciaDocente(item, uid) {
   const archivoHtml = item.archivoNombre
     ? '<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:15px;">attach_file</span>' + escapeHTML(item.archivoNombre) + '</div>'
     : '';
-  const descargarBtn = item.archivoNombre
-    ? '<button class="btn-secundario" onclick="_coordDescargarEvidenciaDocente(\'' + uid + '\',\'' + item.id + '\')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>'
-    : '';
+
+  // Orden de prioridad para el botón de descarga:
+  // 1) La evidencia ya trae un archivo adjunto (ej. un Reporte cuya plantilla sí generó Word al crearla).
+  // 2) Viene de un Reporte de Calificaciones y tenemos con qué regenerar el Word con la plantilla del centro.
+  // 3) Viene de un Reporte sin esa referencia (evidencia vieja, de antes de este ajuste) o de un
+  //    Comentario: Word simple en Arial 12, sin plantilla, armado con lo que ya trae la evidencia.
+  const esReporte = item.origen === 'Calificaciones — Reportes';
+  const esComentario = item.origen === 'Calificaciones — Comentarios';
+  let descargarBtn = '';
+  if (item.archivoNombre) {
+    descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarEvidenciaDocente(\'' + uid + '\',\'' + item.id + '\')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>';
+  } else if (esReporte && item.refEstId && item.refId) {
+    descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarReporteDocente(\'' + uid + '\',\'' + item.refEstId + '\',\'' + item.refId + '\')" style="padding:6px 10px;font-size:0.75rem;color:#6A1B9A;"><span class="material-icons" style="font-size:14px;">description</span> Descargar Word</button>';
+  } else if ((esReporte || esComentario) && typeof item._idx === 'number') {
+    descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarComentarioPorIndice(' + item._idx + ')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">description</span> Descargar Word</button>';
+  }
+
   return '<div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
     + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">'
     + '<div style="flex:1;min-width:0;">'
