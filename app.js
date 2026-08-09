@@ -31610,6 +31610,39 @@ function _coordToggleDetalleCal(idx) {
 
 // ── 2. MONITOR DE PLANIFICACIONES ───────────────────────────────
 
+/**
+ * Lee la biblioteca de planificaciones de un docente. El docente NUNCA guarda
+ * un doc único 'biblioteca_planificaciones' -- auth.js la parte en chunks
+ * ('biblioteca_meta' + 'biblioteca_chunk_N', ver _guardarBibliotecaChunks en
+ * auth.js) para no toparse con el límite de 1 MiB por documento. Leer el doc
+ * único siempre daba biblioteca vacía, aunque el docente sí tuviera planes.
+ */
+async function _coordLeerBibliotecaDocente(uid) {
+  try {
+    const base = db.collection('users').doc(uid).collection('data');
+    const metaDoc = await base.doc('biblioteca_meta').get();
+    if (!metaDoc.exists) return { items: [] };
+    const meta = JSON.parse(metaDoc.data().payload || '{}');
+    const totalChunks = meta.totalChunks || 0;
+    if (!totalChunks) return { items: [] };
+    const chunkDocs = await Promise.all(
+      Array.from({ length: totalChunks }, (_, i) => base.doc('biblioteca_chunk_' + i).get())
+    );
+    const items = [];
+    chunkDocs.forEach(docSnap => {
+      if (!docSnap.exists) return;
+      try {
+        const data = JSON.parse(docSnap.data().payload || '{"items":[]}');
+        items.push(...(data.items || []));
+      } catch {}
+    });
+    return { items };
+  } catch (e) {
+    console.warn('Error leyendo biblioteca de ' + uid + ':', e);
+    return { items: [] };
+  }
+}
+
 async function _coordMonitorPlanificaciones() {
   const cont = document.getElementById('coord-contenido');
   if (!cont) return;
@@ -31624,9 +31657,7 @@ async function _coordMonitorPlanificaciones() {
 
     const docentesData = await Promise.all(docentes.map(async d => {
       try {
-        const biblioDoc = await db.collection('users').doc(d.uid).collection('data').doc('biblioteca_planificaciones').get();
-        const biblioRaw = biblioDoc.exists ? biblioDoc.data() : {};
-        const biblio = biblioRaw.payload ? JSON.parse(biblioRaw.payload) : biblioRaw;
+        const biblio = await _coordLeerBibliotecaDocente(d.uid);
         const items = biblio.items || [];
         const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
         const calRaw2 = calDoc.exists ? calDoc.data() : {};
@@ -31793,9 +31824,7 @@ async function _coordResumenDocentes() {
         });
 
         // Planificaciones
-        const biblioDoc = await db.collection('users').doc(d.uid).collection('data').doc('biblioteca_planificaciones').get();
-        const biblioRaw3 = biblioDoc.exists ? biblioDoc.data() : {};
-        const biblio3 = biblioRaw3.payload ? JSON.parse(biblioRaw3.payload) : biblioRaw3;
+        const biblio3 = await _coordLeerBibliotecaDocente(d.uid);
         const nPlan = (biblio3.items || []).length;
 
         // Última sesión
