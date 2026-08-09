@@ -1,5 +1,4 @@
 function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
-window.__TINCLASS_APP_READY__ = true;
 
 // ─── Funciones de gestión de cursos ───────────────────────────────
 function eliminarCurso(id) {
@@ -3594,115 +3593,6 @@ function cerrarModalBtn() {
   if (footer) footer.style.display = 'none';
 }
 
-function _cerrarTodosLosModales() {
-  document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.classList.add('hidden'));
-  document.body.style.overflow = '';
-  const footer = document.getElementById('modal-footer');
-  if (footer) footer.style.display = 'none';
-}
-
-function _estadoOverlay(id) {
-  const overlay = document.getElementById(id);
-  if (!overlay) return 'missing';
-  return overlay.classList.contains('hidden') ? 'hidden' : 'visible';
-}
-
-function _resolverOverlay(id) {
-  const overlay = document.getElementById(id);
-  if (!overlay) return null;
-  if (overlay.parentElement !== document.body) {
-    document.body.appendChild(overlay);
-    console.warn('[TinClass modals] overlay reubicado en body:', id);
-  }
-  return overlay;
-}
-
-function _logEstadoModales(origen, extra = {}) {
-  console.log('[TinClass modals]', origen, {
-    bodyOverflow: document.body.style.overflow || '(empty)',
-    modal: _estadoOverlay('modal-overlay'),
-    notif: _estadoOverlay('notif-overlay'),
-    buscar: _estadoOverlay('buscar-overlay'),
-    backup: _estadoOverlay('backup-overlay'),
-    config: _estadoOverlay('config-overlay'),
-    acercade: _estadoOverlay('acercade-overlay'),
-    ...extra,
-  });
-}
-
-function _logElementosRequeridos(origen, ids) {
-  const estado = {};
-  ids.forEach(id => { estado[id] = !!document.getElementById(id); });
-  console.log('[TinClass modals]', origen, { elementos: estado });
-  return estado;
-}
-
-function _logHeaderBotonesVisibles(origen) {
-  const ids = [
-    'btn-notificaciones',
-    'btn-buscar-est',
-    'btn-config-ia',
-    'btn-backup',
-    'btn-configuracion',
-    'btn-acercade',
-  ];
-  const estado = {};
-  const ocultos = [];
-  ids.forEach(id => {
-    const btn = document.getElementById(id);
-    if (!btn) {
-      estado[id] = 'missing';
-      ocultos.push(id + ':missing');
-      return;
-    }
-    const style = window.getComputedStyle(btn);
-    estado[id] = {
-      display: style.display,
-      visibility: style.visibility,
-      pointerEvents: style.pointerEvents,
-      disabled: !!btn.disabled,
-    };
-    if (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none' || btn.disabled) {
-      ocultos.push(id + ':' + [style.display, style.visibility, style.pointerEvents, btn.disabled ? 'disabled' : 'enabled'].join('/'));
-    }
-  });
-  console.log('[TinClass modals]', origen, { header: estado });
-  if (ocultos.length) {
-    console.warn('[TinClass modals]', origen + ':ocultos', ocultos.join(', '));
-  }
-}
-
-function _instalarLogsHeaderModales() {
-  const botones = [
-    'btn-notificaciones',
-    'btn-buscar-est',
-    'btn-config-ia',
-    'btn-backup',
-    'btn-configuracion',
-    'btn-acercade',
-  ];
-
-  botones.forEach(id => {
-    const btn = document.getElementById(id);
-    if (!btn || btn.dataset.tinclassDebugLog === '1') return;
-    btn.dataset.tinclassDebugLog = '1';
-    btn.addEventListener('click', () => {
-      _logEstadoModales('click:' + id, {
-        display: btn.style.display || '(auto)',
-        disabled: !!btn.disabled,
-      });
-    }, true);
-  });
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _instalarLogsHeaderModales, { once: true });
-} else {
-  _instalarLogsHeaderModales();
-}
-
-setTimeout(() => _logHeaderBotonesVisibles('header:init'), 0);
-
 
 
 
@@ -4867,86 +4757,6 @@ function _nombreArchivoRA(ext) {
   return `Planificacion ${codigoRA} ${modulo}.${ext}`;
 }
 
-function _toSnakeCasePlaceholderKey(key) {
-  return String(key || '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/[\s\-./]+/g, '_')
-    .replace(/[^a-zA-Z0-9_]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toLowerCase();
-}
-
-function _placeholderValueToString(value) {
-  if (value == null) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) {
-    const simple = value
-      .map(v => (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') ? String(v) : '')
-      .filter(Boolean);
-    return simple.join(', ');
-  }
-  return '';
-}
-
-function _isPlainObject(value) {
-  return Object.prototype.toString.call(value) === '[object Object]';
-}
-
-function _setPlaceholderIfEmpty(target, key, value) {
-  if (!key) return;
-  if (target[key] === undefined || target[key] === '') target[key] = value;
-}
-
-function _agregarPlaceholdersDinamicos(target, source, opts) {
-  if (!_isPlainObject(source)) return;
-
-  const prefix = _toSnakeCasePlaceholderKey((opts && opts.prefix) || '');
-
-  const walk = (node, pathSnake, pathRaw) => {
-    if (node == null) return;
-
-    if (Array.isArray(node)) {
-      const simpleJoined = _placeholderValueToString(node);
-      if (simpleJoined) {
-        const snakePath = pathSnake.join('_');
-        const rawPath = pathRaw.join('_');
-        _setPlaceholderIfEmpty(target, snakePath, simpleJoined);
-        _setPlaceholderIfEmpty(target, rawPath, simpleJoined);
-        if (prefix) {
-          _setPlaceholderIfEmpty(target, prefix + '_' + snakePath, simpleJoined);
-          _setPlaceholderIfEmpty(target, prefix + '_' + rawPath, simpleJoined);
-        }
-      }
-      return;
-    }
-
-    if (_isPlainObject(node)) {
-      Object.keys(node).forEach((rawKey) => {
-        const snakeKey = _toSnakeCasePlaceholderKey(rawKey);
-        if (!snakeKey) return;
-        walk(node[rawKey], pathSnake.concat(snakeKey), pathRaw.concat(String(rawKey)));
-      });
-      return;
-    }
-
-    const textValue = _placeholderValueToString(node);
-    if (textValue === '') return;
-
-    const snakePath = pathSnake.join('_');
-    const rawPath = pathRaw.join('_');
-    _setPlaceholderIfEmpty(target, snakePath, textValue);
-    _setPlaceholderIfEmpty(target, rawPath, textValue);
-    if (prefix) {
-      _setPlaceholderIfEmpty(target, prefix + '_' + snakePath, textValue);
-      _setPlaceholderIfEmpty(target, prefix + '_' + rawPath, textValue);
-    }
-  };
-
-  walk(source, [], []);
-}
-
 /** Exporta usando la plantilla .docx del centro con docxtemplater */
 async function _exportarConPlantillaCentro() {
   const DocxModule = window.docxtemplater || window.Docxtemplater;
@@ -4971,7 +4781,6 @@ async function _exportarConPlantillaCentro() {
   const ra = planificacion.ra || {};
   const acts = planificacion.actividades || [];
   const ecs = planificacion.elementosCapacidad || [];
-  const ahora = new Date();
 
   // Construir tabla de EC + Actividades
   // Construir filas para loop de docxtemplater (tabla en Word)
@@ -5021,11 +4830,6 @@ async function _exportarConPlantillaCentro() {
     criterios_evaluacion: ra.criterios || '',
     recursos_didacticos: ra.recursos || ra.recursosDid || '',
     centro_educativo: info.centroNombre || '',
-    codigo_ra: ((ra.descripcion || '').match(/^([A-Za-z]{1,4}[\w.]+)/) || [])[1] || '',
-    cantidad_actividades: String(acts.length || 0),
-    cantidad_ec: String(ecs.length || 0),
-    fecha_exportacion: ahora.toLocaleDateString('es-DO'),
-    hora_exportacion: ahora.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }),
     // Array para loop en tabla: {#actividades}...{/actividades}
     actividades: actividades
   };
@@ -5046,12 +4850,6 @@ async function _exportarConPlantillaCentro() {
   });
   data.prio_total_valor = totalValPrio ? String(totalValPrio) : '';
   data.prio_total_tiempo = allNum && totalTiempoPrio ? String(totalTiempoPrio) : '';
-
-  // Placeholders dinámicos: acepta nuevos campos del sistema sin tocar código.
-  // Ejemplos: {dg_nombreDirector}, {ra_criterios}, {dg_campo_nuevo}, etc.
-  _agregarPlaceholdersDinamicos(data, dg, { prefix: 'dg' });
-  _agregarPlaceholdersDinamicos(data, ra, { prefix: 'ra' });
-  _agregarPlaceholdersDinamicos(data, planificacion, { prefix: 'plan' });
 
   // Procesar con docxtemplater
   const zip = new PizZip(arrayBuffer);
@@ -5155,203 +4953,6 @@ async function _getPlantillaDiariaCentro() {
   }
 }
 
-/** Obtiene la plantilla de reportes de psicología del centro del usuario actual */
-async function _getPlantillaReportePsicologiaCentro() {
-  if (!window.currentUser) return null;
-  try {
-    let centroId = null;
-    const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
-    if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
-    if (!centroId) {
-      const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
-      if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
-    }
-    if (centroId) {
-      const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-      if (centroDoc.exists && centroDoc.data().plantillaReportePsicologiaBase64) {
-        const centro = centroDoc.data();
-        return { base64: centro.plantillaReportePsicologiaBase64, centroId, centroNombre: centro.nombre || '' };
-      }
-    }
-    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaReportePsicologiaBase64', '!=', '').limit(1).get();
-    if (!snap.empty) {
-      const centro = snap.docs[0].data();
-      return { base64: centro.plantillaReportePsicologiaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
-    }
-    return null;
-  } catch (e) {
-    console.warn('[PlantillaPsicologia] Error obteniendo centro:', e);
-    return null;
-  }
-}
-
-/** Exporta un reporte individual de Psicología a Word usando la plantilla del centro */
-async function exportarReportePsicologiaDocx(id, estId) {
-  const DocxModule = window.docxtemplater || window.Docxtemplater;
-  const Docxtemplater = DocxModule?.default || DocxModule;
-  if (typeof PizZip === 'undefined' || !Docxtemplater) {
-    mostrarToast('No se puede generar Word: faltan librerías de plantilla.', 'error');
-    return false;
-  }
-
-  const rep = _obtenerReporteVistaPsicologia(estId, id);
-  if (!rep) {
-    mostrarToast('No se encontró el reporte.', 'error');
-    return false;
-  }
-
-  const info = await _getPlantillaReportePsicologiaCentro();
-  if (!info) {
-    mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error');
-    return false;
-  }
-
-  mostrarToast('Exportando reporte de Psicología...', 'info');
-
-  const binaryStr = atob(info.base64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-  const zip = new PizZip(bytes.buffer);
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-    delimiters: { start: '{', end: '}' },
-    nullGetter: () => ''
-  });
-
-  const fecha = rep.fechaReporte || '';
-  const fechaBonita = fecha
-    ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })
-    : '';
-
-  doc.render({
-    estudiante_nombre: rep.estudianteNombre || '',
-    grado_cursa: rep.gradoCursa || rep.cursoNombre || '',
-    fecha_reporte: fechaBonita || fecha,
-    detalles_evento: rep.detallesEvento || '',
-    medidas_docente: rep.medidasDocente || '',
-    seguimiento_repetitiva: rep.seguimientoRepetitiva || '',
-    firma_estudiante: rep.firmaEstudiante || '',
-    celular_estudiante: rep.celularEstudiante || '',
-    firma_docente: rep.firmaDocente || '',
-    firma_coordinacion: rep.firmaCoordenacion || '',
-    firma_psicologia: rep.firmaPsicologia || '',
-    firma_tutor: rep.firmaTutor || '',
-    telefono_tutor: rep.telefonoTutor || '',
-    nombre_centro: info.centroNombre || '',
-    nombre_docente: rep.nombreDocente || '',
-    curso_nombre: rep.cursoNombre || rep.gradoCursa || ''
-  });
-
-  const out = doc.getZip().generate({
-    type: 'blob',
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  });
-
-  const link = document.createElement('a');
-  const safeName = (rep.estudianteNombre || 'reporte').replace(/\s+/g, '_').replace(/[^\w\-]+/g, '_');
-  link.href = URL.createObjectURL(out);
-  link.download = 'Reporte_Psicologia_' + safeName + '.docx';
-  link.click();
-  URL.revokeObjectURL(link.href);
-  mostrarToast('Reporte exportado en Word', 'success');
-  return true;
-}
-
-function _obtenerReporteVistaPsicologia(estId, id) {
-  for (const estudiante of (_psicoDatos || [])) {
-    if (estId && estudiante.estId !== estId) continue;
-    const rep = (estudiante.reportes || []).find(r => r.id === id);
-    if (rep) return rep;
-  }
-  return null;
-}
-
-function _datosReportePsicologiaDocx(rep, info) {
-  const fecha = rep.fechaReporte || '';
-  const fechaBonita = fecha
-    ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })
-    : '';
-
-  return {
-    estudiante_nombre: rep.estudianteNombre || '',
-    grado_cursa: rep.gradoCursa || rep.cursoNombre || '',
-    fecha_reporte: fechaBonita || fecha,
-    detalles_evento: rep.detallesEvento || '',
-    medidas_docente: rep.medidasDocente || '',
-    seguimiento_repetitiva: rep.seguimientoRepetitiva || '',
-    firma_estudiante: rep.firmaEstudiante || '',
-    celular_estudiante: rep.celularEstudiante || '',
-    firma_docente: rep.firmaDocente || '',
-    firma_coordinacion: rep.firmaCoordenacion || '',
-    firma_psicologia: rep.firmaPsicologia || '',
-    firma_tutor: rep.firmaTutor || '',
-    telefono_tutor: rep.telefonoTutor || '',
-    nombre_centro: info?.centroNombre || '',
-    nombre_docente: rep.nombreDocente || '',
-    curso_nombre: rep.cursoNombre || rep.gradoCursa || ''
-  };
-}
-
-async function _generarBlobReportePsicologiaDocx(rep) {
-  const DocxModule = window.docxtemplater || window.Docxtemplater;
-  const Docxtemplater = DocxModule?.default || DocxModule;
-  if (typeof PizZip === 'undefined' || !Docxtemplater) return null;
-
-  const info = await _getPlantillaReportePsicologiaCentro();
-  if (!info) return null;
-
-  const binaryStr = atob(info.base64);
-  const bytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-  const zip = new PizZip(bytes.buffer);
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-    delimiters: { start: '{', end: '}' },
-    nullGetter: () => ''
-  });
-
-  doc.render(_datosReportePsicologiaDocx(rep, info));
-  const out = doc.getZip().generate({
-    type: 'blob',
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  });
-  const nombre = 'Reporte_Psicologia_' + (rep.estudianteNombre || 'reporte').replace(/\s+/g, '_').replace(/[^\w\-]+/g, '_') + '.docx';
-  return { blob: out, nombre };
-}
-
-async function _blobToBase64(blob) {
-  const buffer = await blob.arrayBuffer();
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
-}
-
-async function _generarYGuardarDocxReportePsicologia(estId, rep) {
-  try {
-    const generado = await _generarBlobReportePsicologiaDocx(rep);
-    if (!generado) return;
-    const base64 = await _blobToBase64(generado.blob);
-    const data = cargarReportes();
-    const lista = data[estId] || [];
-    const idx = lista.findIndex(r => r.id === rep.id);
-    if (idx !== -1) {
-      lista[idx].reporteDocxBase64 = base64;
-      lista[idx].reporteDocxNombre = generado.nombre;
-      data[estId] = lista;
-      guardarReportes(data);
-      renderizarReportes(estId);
-    }
-  } catch (e) {
-    console.warn('[PlantillaPsicologia] No se pudo generar/guardar el docx:', e);
-  }
-}
-
 /** Genera XML de tabla Word para un instrumento de evaluación */
 function _generarInstTablaXml(inst) {
   if (!inst || !inst.criterios || !inst.criterios.length) return '<w:p><w:r><w:t>\u2014</w:t></w:r></w:p>';
@@ -5383,6 +4984,20 @@ function _generarInstTablaXml(inst) {
   } else if (inst.tipo === 'rubrica') {
     const niveles = inst.niveles || [{ nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }];
     xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + niveles.map(n => mkCell(n.nombre, 1400, true, true)).join(''));
+    (inst.criterios || []).forEach((c, i) => {
+      const descs = c.descriptores || [];
+      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + niveles.map((_, ni) => mkCell(descs[ni] || '', 1400)).join(''));
+    });
+  } else if (inst.niveles && inst.niveles.length) {
+    xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + inst.niveles.map(n => mkCell(n.nombre, 1200, true, true)).join(''));
+    (inst.criterios || []).forEach((c, i) => {
+      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + inst.niveles.map(() => mkCell('', 1200, false, true)).join(''));
+    });
+  } else {
+    // Fallback: solo lista
+    (inst.criterios || []).forEach((c, i) => {
+      xml += mkRow(mkCell(String(i + 1), 500, false, true) + mkCell(c.criterio || c.indicador || c.texto || c));
+    });
   }
 
   xml += '</w:tbl>';
@@ -5806,45 +5421,6 @@ function _getNextSchoolYearKey(now = new Date()) {
   return (startYear + 1) + '-' + (endYear + 1);
 }
 
-// Inverso de _getSchoolYearKey: ¿esta fecha cae dentro del ciclo "2025-2026" (agosto→julio)?
-function _fechaPerteneceACiclo(fechaLike, yearId) {
-  if (!fechaLike || !yearId) return false;
-  const m = String(yearId).match(/^(\d{4})-(\d{4})$/);
-  if (!m) return false;
-  const inicio = new Date(Number(m[1]), 7, 1); // 1 de agosto
-  const fin = new Date(Number(m[2]), 6, 31, 23, 59, 59); // 31 de julio
-  const f = fechaLike instanceof Date ? fechaLike : new Date(fechaLike);
-  if (Number.isNaN(f.getTime())) return false;
-  return f >= inicio && f <= fin;
-}
-
-// Busca el nombre de un estudiante por id, primero en el ciclo archivado indicado,
-// luego en el ciclo activo. Si no aparece en ningún lado, devuelve el id crudo.
-function _resolverNombreEstudiante(estId, yearId) {
-  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
-  for (const c of cursosDelCiclo) {
-    const est = (c.estudiantes || []).find(e => e.id === estId);
-    if (est) return est.nombre;
-  }
-  for (const c of Object.values(calState.cursos || {})) {
-    const est = (c.estudiantes || []).find(e => e.id === estId);
-    if (est) return est.nombre;
-  }
-  return estId;
-}
-
-// Una planificación (item de la biblioteca) "pertenece" al ciclo activo si algún curso
-// ACTIVO la referencia en planIds, o si no está vinculada a ningún curso todavía (recién
-// creada). Si solo la referencian cursos ya archivados, es del ciclo pasado.
-function _planPerteneceCicloActivo(planId) {
-  const enActivo = Object.values(calState.cursos || {}).some(c => (c.planIds || []).includes(planId));
-  if (enActivo) return true;
-  const enArchivado = Object.values(calState.cursosArchivados || {}).some(yearData =>
-    (yearData?.cursos || []).some(c => (c.planIds || []).includes(planId))
-  );
-  return !enArchivado;
-}
-
 function _loadArchivedYears() {
   try {
     const raw = localStorage.getItem(ARCHIVES_KEY);
@@ -5907,7 +5483,7 @@ function _buildExportSnapshot() {
   return {
     _meta: {
       app: 'El Gran Planificador',
-      version: window.TINCLASS_BUILD_VERSION || '15.40',
+      version: '15.40',
       exportado: now.toISOString(),
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
@@ -5918,7 +5494,7 @@ function _buildExportSnapshot() {
     tareas: localStorage.getItem(TAREAS_KEY) || '[]',
     asistencia: localStorage.getItem(ASIST_KEY) || '{}',
     comentarios: localStorage.getItem(COMENT_KEY) || '{}',
-    notasClase: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')))),
+    notasClase: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('notaclase_')))),
     obsEstudiantes: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('obs_est_')))),
     evalFormas: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([k]) => k.startsWith('eval_')))),
     diarias: localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}',
@@ -5935,7 +5511,6 @@ function _buildExportSnapshot() {
     blog: localStorage.getItem(BLOG_KEY) || '[]',
     reportes: localStorage.getItem(REPORTES_KEY) || '[]',
     calendarioEscolar: localStorage.getItem(CAL_ESC_KEY) || '{}',
-    cumpleanos: localStorage.getItem(CUMPLE_KEY) || '{}',
     stickies: localStorage.getItem(STICKIES_KEY) || '[]',
     calBackups: localStorage.getItem(CAL_BACKUP_KEY) || '[]',
     geminiKey: localStorage.getItem(GEMINI_KEY_STORAGE) || '',
@@ -6136,164 +5711,6 @@ function _archiveValueCount(value) {
   return 1;
 }
 
-// ── Visores de solo lectura filtrados por ciclo escolar (leen el store en vivo,
-// nunca lo modifican) para el modal de "Ver este ciclo" en Mis Datos. ──────────
-function _cicloScroll(html) {
-  return '<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;">' + html + '</div>';
-}
-
-function _renderAsistenciaCicloHTML(yearId) {
-  const data = cargarAsistencia();
-  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
-  const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
-  const filas = [];
-  Object.entries(data || {}).forEach(([cursoId, porFecha]) => {
-    Object.entries(porFecha || {}).forEach(([fecha, porEst]) => {
-      if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(fecha, yearId)) return;
-      const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
-      const estados = Object.values(porEst || {});
-      const presentes = estados.filter(v => v === 'P').length;
-      filas.push({ cursoNombre, fecha, presentes, total: estados.length });
-    });
-  });
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin registros de asistencia en este ciclo.</div>';
-  filas.sort((a, b) => b.fecha.localeCompare(a.fecha));
-  return _cicloScroll(filas.map(f =>
-    '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.cursoNombre) + '</span>'
-    + '<span style="color:#7E57C2;">' + escapeHTML(f.fecha) + '</span>'
-    + '<span style="color:#2E7D32;font-weight:700;">' + f.presentes + '/' + f.total + ' presentes</span>'
-    + '</div>'
-  ).join(''));
-}
-
-function _renderComentariosCicloHTML(yearId) {
-  const data = cargarComentarios();
-  const filas = [];
-  Object.entries(data || {}).forEach(([estId, lista]) => {
-    (lista || []).forEach(c => {
-      if (!c.ts || !_fechaPerteneceACiclo(new Date(c.ts), yearId)) return;
-      filas.push({
-        sortKey: c.ts,
-        nombre: _resolverNombreEstudiante(estId, yearId),
-        fecha: new Date(c.ts).toLocaleDateString('es-DO'),
-        categoria: c.categoria, texto: c.texto
-      });
-    });
-  });
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin comentarios en este ciclo.</div>';
-  filas.sort((a, b) => b.sortKey - a.sortKey);
-  return _cicloScroll(filas.map(f =>
-    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(f.fecha) + (f.categoria ? ' · ' + escapeHTML(f.categoria) : '') + '</span></div>'
-    + (f.texto ? '<div style="color:#5E35B1;margin-top:2px;">' + escapeHTML(f.texto) + '</div>' : '')
-    + '</div>'
-  ).join(''));
-}
-
-function _renderIncidenciasCicloHTML(yearId) {
-  const data = cargarIncidencias();
-  const filas = [];
-  Object.entries(data || {}).forEach(([estId, lista]) => {
-    (lista || []).forEach(inc => {
-      const fechaRef = inc.fechaEvento || (inc.ts ? new Date(inc.ts) : null);
-      if (!fechaRef || !_fechaPerteneceACiclo(fechaRef, yearId)) return;
-      filas.push({
-        sortKey: inc.fechaEvento || new Date(inc.ts).toISOString().split('T')[0],
-        nombre: _resolverNombreEstudiante(estId, yearId),
-        fechaLabel: inc.fechaEvento || new Date(inc.ts).toLocaleDateString('es-DO'),
-        tipo: inc.tipo, descripcion: inc.descripcion
-      });
-    });
-  });
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin incidencias en este ciclo.</div>';
-  filas.sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)));
-  return _cicloScroll(filas.map(f =>
-    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(f.fechaLabel) + (f.tipo ? ' · ' + escapeHTML(f.tipo) : '') + '</span></div>'
-    + (f.descripcion ? '<div style="color:#5E35B1;margin-top:2px;">' + escapeHTML(f.descripcion) + '</div>' : '')
-    + '</div>'
-  ).join(''));
-}
-
-function _renderRecuperacionesCicloHTML(yearId) {
-  const data = cargarRecuperaciones();
-  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
-  const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
-  const filas = [];
-  Object.entries(data || {}).forEach(([cursoId, porEst]) => {
-    Object.entries(porEst || {}).forEach(([estId, porRec]) => {
-      Object.entries(porRec || {}).forEach(([recKey, r]) => {
-        if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(r.fechaLimite, yearId)) return;
-        const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
-        filas.push({
-          nombre: _resolverNombreEstudiante(estId, yearId), cursoNombre,
-          fechaLimite: r.fechaLimite || '', estado: r.estado, nota: r.notaRecuperacion
-        });
-      });
-    });
-  });
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin recuperaciones en este ciclo.</div>';
-  filas.sort((a, b) => String(b.fechaLimite).localeCompare(String(a.fechaLimite)));
-  return _cicloScroll(filas.map(f =>
-    '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + '<span style="font-weight:400;color:#9E9E9E;"> · ' + escapeHTML(f.cursoNombre) + '</span></span>'
-    + '<span style="color:' + (f.estado === 'completada' ? '#2E7D32' : '#E65100') + ';font-weight:700;">' + (f.nota != null ? f.nota : (f.estado || '—')) + '</span>'
-    + '</div>'
-  ).join(''));
-}
-
-function _renderTareasCicloHTML(yearId) {
-  const data = cargarTareas();
-  const filas = (data || []).filter(t => (t.fechaLimite || t.creadaEn) && _fechaPerteneceACiclo(t.fechaLimite || t.creadaEn, yearId));
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin tareas en este ciclo.</div>';
-  filas.sort((a, b) => String(b.fechaLimite || b.creadaEn).localeCompare(String(a.fechaLimite || a.creadaEn)));
-  return _cicloScroll(filas.map(t =>
-    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(t.descripcion || 'Tarea') + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(t.fechaLimite || '') + '</span></div>'
-    + '<div style="color:#7E57C2;margin-top:2px;">' + escapeHTML(t.seccion || '') + (t.estado ? ' · ' + escapeHTML(t.estado) : '') + '</div>'
-    + '</div>'
-  ).join(''));
-}
-
-function _renderLibretaCicloHTML(yearId) {
-  const data = cargarLibreta();
-  const filas = (data?.entries || []).filter(e => e.fecha && _fechaPerteneceACiclo(e.fecha, yearId));
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin entradas de libreta en este ciclo.</div>';
-  filas.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
-  return _cicloScroll(filas.map(e =>
-    '<div style="padding:7px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<div style="color:#4527A0;font-weight:700;">' + escapeHTML(e.titulo || 'Entrada') + ' <span style="font-weight:400;color:#9E9E9E;">· ' + escapeHTML(e.fecha) + '</span></div>'
-    + (e.texto ? '<div style="color:#5E35B1;margin-top:2px;">' + escapeHTML(e.texto) + '</div>' : '')
-    + '</div>'
-  ).join(''));
-}
-
-function _renderParticipacionCicloHTML(yearId) {
-  const data = cargarParticipacion();
-  const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
-  const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
-  const filas = [];
-  Object.entries(data || {}).forEach(([cursoId, porFecha]) => {
-    Object.entries(porFecha || {}).forEach(([fecha, porEst]) => {
-      if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(fecha, yearId)) return;
-      const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
-      const estados = Object.values(porEst || {});
-      const destacados = estados.filter(v => v === 'D').length;
-      filas.push({ cursoNombre, fecha, destacados, total: estados.length });
-    });
-  });
-  if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin registros de participación en este ciclo.</div>';
-  filas.sort((a, b) => b.fecha.localeCompare(a.fecha));
-  return _cicloScroll(filas.map(f =>
-    '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.cursoNombre) + '</span>'
-    + '<span style="color:#7E57C2;">' + escapeHTML(f.fecha) + '</span>'
-    + '<span style="color:#2E7D32;font-weight:700;">' + f.destacados + '/' + f.total + ' destacados</span>'
-    + '</div>'
-  ).join(''));
-}
-
 function _archiveShortText(value) {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'string') return value.length > 72 ? value.slice(0, 72) + '…' : value;
@@ -6319,7 +5736,7 @@ function _renderArchiveFriendlySection(title, icon, subtitle, badges, bodyHtml) 
     + '</details>';
 }
 
-function _renderArchiveSections(snapshot, yearId) {
+function _renderArchiveSections(snapshot) {
   const meta = snapshot._meta || {};
   const sections = [];
   const cal = _parseArchiveValue(snapshot.calificaciones) || {};
@@ -6444,26 +5861,18 @@ function _renderArchiveSections(snapshot, yearId) {
 
   sections.push(_renderArchiveFriendlySection('Horario', 'schedule', 'Horario activo del ciclo', badge((Array.isArray(horario) ? horario.length : 0) + ' clases'), lista(horarioRows)));
   sections.push(_renderArchiveFriendlySection('Sesiones diarias', 'today', 'Sesiones registradas por fecha', badge(Object.keys(sesionesDiarias).length + ' fechas'), lista(genericRows(sesionesDiarias))));
-  sections.push(_renderArchiveFriendlySection('Tareas', 'task', 'Tareas del ciclo', badge((Array.isArray(tareas) ? tareas.length : 0) + ' tareas'),
-    yearId ? _renderTareasCicloHTML(yearId) : lista(genericRows(tareas))));
-  sections.push(_renderArchiveFriendlySection('Asistencia', 'how_to_reg', 'Registros de asistencia', badge(Object.keys(asistencia || {}).length + ' registros'),
-    yearId ? _renderAsistenciaCicloHTML(yearId) : lista(genericRows(asistencia))));
-  sections.push(_renderArchiveFriendlySection('Comentarios', 'comment', 'Comentarios por estudiante', badge(_archiveValueCount(snapshot.comentarios) + ' elementos'),
-    yearId ? _renderComentariosCicloHTML(yearId) : lista(genericRows(_parseArchiveValue(snapshot.comentarios) || {}))));
+  sections.push(_renderArchiveFriendlySection('Tareas', 'task', 'Tareas del ciclo', badge((Array.isArray(tareas) ? tareas.length : 0) + ' tareas'), lista(genericRows(tareas))));
+  sections.push(_renderArchiveFriendlySection('Asistencia', 'how_to_reg', 'Registros de asistencia', badge(Object.keys(asistencia || {}).length + ' registros'), lista(genericRows(asistencia))));
+  sections.push(_renderArchiveFriendlySection('Comentarios', 'comment', 'Comentarios por estudiante', badge(_archiveValueCount(snapshot.comentarios) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.comentarios) || {}))));
   sections.push(_renderArchiveFriendlySection('Notas de clase', 'sticky_note_2', 'Claves notaclase_*', badge(_archiveValueCount(snapshot.notasClase) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.notasClase) || {}))));
   sections.push(_renderArchiveFriendlySection('Observaciones de estudiantes', 'groups', 'Claves obs_est_*', badge(_archiveValueCount(snapshot.obsEstudiantes) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.obsEstudiantes) || {}))));
   sections.push(_renderArchiveFriendlySection('Escalas de evaluación', 'assessment', 'Claves eval_*', badge(_archiveValueCount(snapshot.evalFormas) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.evalFormas) || {}))));
-  sections.push(_renderArchiveFriendlySection('Incidencias', 'report', 'Incidencias guardadas', badge(_archiveValueCount(incidencias) + ' elementos'),
-    yearId ? _renderIncidenciasCicloHTML(yearId) : lista(genericRows(incidencias))));
-  sections.push(_renderArchiveFriendlySection('Recuperaciones', 'auto_awesome', 'Recuperaciones generadas', badge(_archiveValueCount(recuperaciones) + ' elementos'),
-    yearId ? _renderRecuperacionesCicloHTML(yearId) : lista(genericRows(recuperaciones))));
-  sections.push(_renderArchiveFriendlySection('Libreta', 'menu_book', 'Entradas de libreta', badge(_archiveValueCount(libreta) + ' elementos'),
-    yearId ? _renderLibretaCicloHTML(yearId) : lista(genericRows(libreta))));
-  sections.push(_renderArchiveFriendlySection('Participación', 'groups_2', 'Participación por curso o estudiante', badge(_archiveValueCount(participacion) + ' elementos'),
-    yearId ? _renderParticipacionCicloHTML(yearId) : lista(genericRows(participacion))));
+  sections.push(_renderArchiveFriendlySection('Incidencias', 'report', 'Incidencias guardadas', badge(_archiveValueCount(incidencias) + ' elementos'), lista(genericRows(incidencias))));
+  sections.push(_renderArchiveFriendlySection('Recuperaciones', 'auto_awesome', 'Recuperaciones generadas', badge(_archiveValueCount(recuperaciones) + ' elementos'), lista(genericRows(recuperaciones))));
+  sections.push(_renderArchiveFriendlySection('Libreta', 'menu_book', 'Entradas de libreta', badge(_archiveValueCount(libreta) + ' elementos'), lista(genericRows(libreta))));
+  sections.push(_renderArchiveFriendlySection('Participación', 'groups_2', 'Participación por curso o estudiante', badge(_archiveValueCount(participacion) + ' elementos'), lista(genericRows(participacion))));
   sections.push(_renderArchiveFriendlySection('Reportes', 'description', 'Reportes del ciclo', badge((Array.isArray(reportes) ? reportes.length : 0) + ' reportes'), lista(genericRows(reportes))));
   sections.push(_renderArchiveFriendlySection('Calendario escolar', 'event', 'Calendario y eventos', badge(_archiveValueCount(snapshot.calendarioEscolar) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calendarioEscolar) || {}))));
-  sections.push(_renderArchiveFriendlySection('Cumpleaños', 'cake', 'Fechas de nacimiento por estudiante', badge(_archiveValueCount(snapshot.cumpleanos) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.cumpleanos) || {}))));
   sections.push(_renderArchiveFriendlySection('Notas del docente', 'edit_note', 'Bitácora personal del docente', badge((snapshot.notasDocente || '').trim() ? 'con contenido' : 'vacío'), lista(genericRows(snapshot.notasDocente || ''))));
   sections.push(_renderArchiveFriendlySection('Stickies', 'sticky_note_2', 'Notas rápidas del dashboard', badge((Array.isArray(stickies) ? stickies.length : 0) + ' notas'), lista(genericRows(stickies))));
   sections.push(_renderArchiveFriendlySection('Copias automáticas de calificaciones', 'history', 'Backups automáticos del módulo', badge(_archiveValueCount(snapshot.calBackups) + ' elementos'), lista(genericRows(_parseArchiveValue(snapshot.calBackups) || []))));
@@ -9524,7 +8933,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -9540,7 +8949,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -9720,1069 +9129,6 @@ function abrirLibreta() {
 }
 
 function cerrarLibreta() { abrirDashboard(); }
-
-async function abrirPortafolio() {
-  _mostrarPanel('panel-portafolio');
-  _portafolioAnioSeleccionado = null;
-  const cont = document.getElementById('portafolio-contenido');
-  if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando...</div>';
-  await _migrarEvidenciasPortafolioSiHaceFalta();
-  renderizarPortafolio();
-}
-
-function cerrarPortafolio() { abrirDashboard(); }
-
-const PORTAFOLIO_BASE_KEY = 'planificadorRA_portafolio_base_v1';
-const PORTAFOLIO_EVIDENCIAS_KEY = 'planificadorRA_portafolio_evidencias_v1'; // legado, solo para migrar
-const PORTAFOLIO_EVIDENCIA_MAX_BYTES = 5 * 1024 * 1024; // 5 MB en crudo -- ver nota de chunking mas abajo
-const PORTAFOLIO_FOTO_MAX_BYTES = 150 * 1024;
-const PORTAFOLIO_CV_MAX_BYTES = 8 * 1024 * 1024; // 8 MB en crudo -- generoso para CVs tipicos de 3-5MB
-const PORTAFOLIO_CATEGORIAS = {
-  formacion_academica: 'Título / grado académico',
-  desarrollo_profesional: 'Desarrollo profesional / capacitación',
-  diario_reflexivo: 'Diario reflexivo',
-  reunion_seguimiento: 'Reunión / seguimiento',
-  acompanamiento: 'Acompañamiento / observación de clase',
-  logros_reconocimientos: 'Logros y reconocimientos',
-  otro: 'Otro'
-};
-let _portafolioAnioSeleccionado = null; // null = año activo
-
-const PORTAFOLIO_DOCENTE_DEFAULT = { nombre: '', titulo: '', cedula: '', cargo: '', centro: '', correo: '', telefono: '', perfilProfesional: '', filosofiaEnsenanza: '' };
-const PORTAFOLIO_CENTRO_DEFAULT = { nombre: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
-
-function cargarPortafolioBase() {
-  try {
-    const raw = localStorage.getItem(PORTAFOLIO_BASE_KEY);
-    if (!raw) return {
-      docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT),
-      centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT),
-      metadata: { actualizadoEn: null }
-    };
-    const parsed = JSON.parse(raw);
-    return {
-      docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT, parsed.docente || {}),
-      centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT, parsed.centro || {}),
-      metadata: Object.assign({ actualizadoEn: null }, parsed.metadata || {})
-    };
-  } catch {
-    return {
-      docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT),
-      centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT),
-      metadata: { actualizadoEn: null }
-    };
-  }
-}
-
-function _guardarPortafolioBase(data) {
-  const payload = Object.assign({}, data, {
-    metadata: Object.assign({}, data.metadata || {}, { actualizadoEn: new Date().toISOString() })
-  });
-  localStorage.setItem(PORTAFOLIO_BASE_KEY, JSON.stringify(payload));
-  if (window._syncFirebase) _syncFirebase('portafolio_base', payload);
-  return payload;
-}
-
-// Foto de perfil va en su propio documento (no dentro de portafolio_base, que ya
-// tiene misión/visión/valores en texto) para no arriesgar el límite de 1 MiB por
-// documento de Firestore al sumarle el peso en base64.
-const PORTAFOLIO_FOTO_KEY = 'planificadorRA_portafolio_foto_v1';
-
-function cargarPortafolioFoto() {
-  try {
-    const raw = localStorage.getItem(PORTAFOLIO_FOTO_KEY);
-    return raw ? JSON.parse(raw) : { fotoBase64: '', fotoMime: '' };
-  } catch {
-    return { fotoBase64: '', fotoMime: '' };
-  }
-}
-
-function _guardarPortafolioFoto(data) {
-  localStorage.setItem(PORTAFOLIO_FOTO_KEY, JSON.stringify(data));
-  if (window._syncFirebase) _syncFirebase('portafolio_foto', data);
-}
-
-// Un archivo grande (CV, o el adjunto de una evidencia) no cabe en un solo documento de
-// Firestore (límite 1 MiB), así que se parte en varios documentos -- mismo patrón
-// "chunks" que ya usa este proyecto para la Biblioteca (ver
-// _escribirChunksBiblioteca/_cargarBibliotecaChunks en auth.js). No se cachea en
-// localStorage (a diferencia de la foto): se lee/escribe directo de Firestore.
-const PORTAFOLIO_CHUNK_CHARS = 900000; // ~900 KB de base64 por documento, bajo el limite de 1 MiB
-
-function _portafolioDataBase() {
-  if (!window.currentUser || typeof db === 'undefined') return null;
-  return db.collection('users').doc(window.currentUser.uid).collection('data');
-}
-
-async function cargarPortafolioCV() {
-  const base = _portafolioDataBase();
-  if (!base) return { cvBase64: '', cvNombre: '', cvMime: '' };
-  try {
-    const metaDoc = await base.doc('portafolio_cv_meta').get();
-    if (metaDoc.exists && metaDoc.data().payload) {
-      const meta = JSON.parse(metaDoc.data().payload);
-      let base64 = '';
-      for (let i = 0; i < (meta.totalChunks || 0); i++) {
-        const chunkDoc = await base.doc('portafolio_cv_chunk_' + i).get();
-        base64 += (chunkDoc.exists && chunkDoc.data().payload) || '';
-      }
-      return { cvBase64: base64, cvNombre: meta.cvNombre || '', cvMime: meta.cvMime || '' };
-    }
-    // Migración desde el formato viejo (un solo documento, tope 700 KB de antes de hoy).
-    const legacyDoc = await base.doc('portafolio_cv').get();
-    if (legacyDoc.exists && legacyDoc.data().payload) {
-      try {
-        const legacy = JSON.parse(legacyDoc.data().payload);
-        if (legacy.cvBase64) return legacy;
-      } catch {}
-    }
-  } catch (e) {
-    console.warn('Error cargando CV del portafolio:', e);
-  }
-  return { cvBase64: '', cvNombre: '', cvMime: '' };
-}
-
-async function _guardarPortafolioCV(data) {
-  const base = _portafolioDataBase();
-  if (!base) return;
-  const base64 = data.cvBase64 || '';
-  const totalChunks = Math.max(1, Math.ceil(base64.length / PORTAFOLIO_CHUNK_CHARS));
-
-  let prevChunks = 0;
-  try {
-    const metaOld = await base.doc('portafolio_cv_meta').get();
-    if (metaOld.exists) prevChunks = JSON.parse(metaOld.data().payload || '{}').totalChunks || 0;
-  } catch {}
-
-  for (let i = 0; i < totalChunks; i++) {
-    const chunk = base64.slice(i * PORTAFOLIO_CHUNK_CHARS, (i + 1) * PORTAFOLIO_CHUNK_CHARS);
-    await base.doc('portafolio_cv_chunk_' + i).set({ payload: chunk });
-  }
-  for (let i = totalChunks; i < prevChunks; i++) {
-    await base.doc('portafolio_cv_chunk_' + i).delete().catch(() => {});
-  }
-  await base.doc('portafolio_cv_meta').set({
-    payload: JSON.stringify({ cvNombre: data.cvNombre || '', cvMime: data.cvMime || '', totalChunks, actualizadoEn: new Date().toISOString() })
-  });
-}
-
-// Si la imagen pesa mas de lo permitido, la redibuja en un canvas bajando calidad
-// (y si hace falta, tambien dimensiones) hasta que quepa -- para no obligar al
-// docente a andar probando fotos a ver cual "pasa" de tamaño.
-function _comprimirImagenParaLimite(file, maxBytes) {
-  return new Promise((resolve, reject) => {
-    if (!file.type || !file.type.startsWith('image/')) { resolve(file); return; }
-    if (file.size <= maxBytes) { resolve(file); return; }
-
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = async () => {
-      URL.revokeObjectURL(url);
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const dibujar = (w, h, calidad) => new Promise(res => {
-          canvas.width = w;
-          canvas.height = h;
-          ctx.clearRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob(res, 'image/jpeg', calidad);
-        });
-
-        let w = img.naturalWidth || img.width;
-        let h = img.naturalHeight || img.height;
-        let calidad = 0.85;
-        let blob = await dibujar(w, h, calidad);
-
-        while (blob && blob.size > maxBytes && calidad > 0.35) {
-          calidad -= 0.15;
-          blob = await dibujar(w, h, calidad);
-        }
-        while (blob && blob.size > maxBytes && (w > 300 || h > 300)) {
-          w = Math.round(w * 0.8);
-          h = Math.round(h * 0.8);
-          blob = await dibujar(w, h, Math.max(calidad, 0.6));
-        }
-
-        if (!blob) { reject(new Error('No se pudo comprimir la imagen')); return; }
-        const nombre = (file.name || 'imagen').replace(/\.\w+$/, '') + '.jpg';
-        resolve(new File([blob], nombre, { type: 'image/jpeg' }));
-      } catch (e) {
-        reject(e);
-      }
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
-    img.src = url;
-  });
-}
-
-async function _portafolioSubirFoto(inputEl) {
-  let file = inputEl?.files?.[0];
-  if (!file) return;
-  try {
-    if (file.size > PORTAFOLIO_FOTO_MAX_BYTES) {
-      file = await _comprimirImagenParaLimite(file, PORTAFOLIO_FOTO_MAX_BYTES);
-    }
-    if (file.size > PORTAFOLIO_FOTO_MAX_BYTES) {
-      mostrarToast('No se pudo reducir la foto lo suficiente (máx. 150 KB). Prueba con otra imagen.', 'error');
-      return;
-    }
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(',')[1]);
-      reader.onerror = () => reject(new Error('Error leyendo archivo'));
-      reader.readAsDataURL(file);
-    });
-    _guardarPortafolioFoto({ fotoBase64: base64, fotoMime: file.type || 'image/jpeg' });
-    renderizarPortafolio();
-    mostrarToast('Foto actualizada', 'success');
-  } catch (e) {
-    mostrarToast('No se pudo procesar la imagen: ' + (e.message || e), 'error');
-  }
-}
-
-async function _portafolioSubirCV(inputEl) {
-  const file = inputEl?.files?.[0];
-  if (!file) return;
-  if (file.size > PORTAFOLIO_CV_MAX_BYTES) { mostrarToast('El CV no debe superar 8 MB.', 'error'); return; }
-  try {
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(',')[1]);
-      reader.onerror = () => reject(new Error('Error leyendo archivo'));
-      reader.readAsDataURL(file);
-    });
-    mostrarToast('Subiendo currículum...', 'info');
-    await _guardarPortafolioCV({ cvBase64: base64, cvNombre: file.name, cvMime: file.type || 'application/octet-stream' });
-    renderizarPortafolio();
-    mostrarToast('Currículum actualizado', 'success');
-  } catch (e) {
-    mostrarToast('No se pudo subir el archivo: ' + (e.message || e), 'error');
-  }
-}
-
-async function _descargarCVPortafolio() {
-  const cv = await cargarPortafolioCV();
-  if (!cv.cvBase64) { mostrarToast('Aún no has subido un currículum', 'error'); return; }
-  const bytes = Uint8Array.from(atob(cv.cvBase64), c => c.charCodeAt(0));
-  const blob = new Blob([bytes], { type: cv.cvMime || 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = cv.cvNombre || 'curriculum';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function _portafolioCategoriaLabel(categoria) {
-  return PORTAFOLIO_CATEGORIAS[categoria] || PORTAFOLIO_CATEGORIAS.otro;
-}
-
-// Mapa de los "tipo" viejos (cuando el portafolio era un blob plano) a las categorías nuevas.
-function _portafolioMigrarTipoACategoria(tipoViejo) {
-  const map = {
-    planificacion: 'otro', diaria: 'otro', // las planificaciones ya se muestran solas en el Resumen pedagógico
-    instrumento: 'otro',
-    diario: 'diario_reflexivo',
-    reunion: 'reunion_seguimiento', seguimiento: 'reunion_seguimiento',
-    ficha: 'acompanamiento',
-    evidencia: 'otro', otro: 'otro'
-  };
-  return map[tipoViejo] || 'otro';
-}
-
-function _cargarPortafolioEvidenciasBlobLegacy() {
-  try {
-    const raw = localStorage.getItem(PORTAFOLIO_EVIDENCIAS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Cada evidencia es su propio documento (a diferencia del blob viejo) para poder
-// adjuntar archivos sin toparse con el límite de 1 MiB por documento de Firestore.
-function _portafolioEvidenciasColeccion() {
-  if (!window.currentUser || typeof db === 'undefined') return null;
-  return db.collection('users').doc(window.currentUser.uid).collection('portafolio_evidencias');
-}
-
-async function _cargarEvidenciasPortafolio() {
-  const ref = _portafolioEvidenciasColeccion();
-  if (!ref) return [];
-  try {
-    const snap = await ref.orderBy('fecha', 'desc').get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (e) {
-    console.warn('Error cargando evidencias del portafolio:', e);
-    return [];
-  }
-}
-
-// El adjunto de una evidencia (hasta 5 MB) tampoco cabe en el documento de la propia
-// evidencia (que además tiene título/descripción/etc.), así que va aparte, en una
-// subcolección "archivo" partida en chunks -- mismo criterio que el CV.
-async function _guardarArchivoEvidenciaChunks(docRef, base64) {
-  const archivoCol = docRef.collection('archivo');
-  const totalChunks = Math.max(1, Math.ceil(base64.length / PORTAFOLIO_CHUNK_CHARS));
-  for (let i = 0; i < totalChunks; i++) {
-    const chunk = base64.slice(i * PORTAFOLIO_CHUNK_CHARS, (i + 1) * PORTAFOLIO_CHUNK_CHARS);
-    await archivoCol.doc(String(i)).set({ payload: chunk });
-  }
-  await docRef.update({ archivoChunks: totalChunks });
-}
-
-// item.archivoBase64 es el formato viejo (adjuntos guardados directo en el campo, hasta
-// 700 KB, de antes de este cambio) -- se respeta para no romper evidencias ya subidas.
-async function _cargarArchivoEvidenciaBase64(itemDocRef, item) {
-  if (item.archivoBase64) return item.archivoBase64;
-  if (!item.archivoChunks) return '';
-  let base64 = '';
-  for (let i = 0; i < item.archivoChunks; i++) {
-    const chunkDoc = await itemDocRef.collection('archivo').doc(String(i)).get();
-    base64 += (chunkDoc.exists && chunkDoc.data().payload) || '';
-  }
-  return base64;
-}
-
-async function _eliminarArchivoEvidenciaChunks(itemDocRef, totalChunks) {
-  for (let i = 0; i < (totalChunks || 0); i++) {
-    await itemDocRef.collection('archivo').doc(String(i)).delete().catch(() => {});
-  }
-}
-
-// Migración única y no destructiva: si nunca se migró y la colección nueva está vacía,
-// copia el blob viejo (localStorage/Firebase) a documentos individuales. El blob viejo
-// se deja intacto como respaldo.
-let _portafolioMigrando = false;
-async function _migrarEvidenciasPortafolioSiHaceFalta() {
-  if (_portafolioMigrando) return;
-  const base = cargarPortafolioBase();
-  if (base.metadata?.evidenciasMigradas) return;
-  const ref = _portafolioEvidenciasColeccion();
-  if (!ref) return;
-  _portafolioMigrando = true;
-  try {
-    const existentes = await ref.limit(1).get();
-    if (existentes.empty) {
-      const viejas = _cargarPortafolioEvidenciasBlobLegacy();
-      for (const item of viejas) {
-        await ref.add({
-          categoria: _portafolioMigrarTipoACategoria(item.tipo),
-          titulo: item.titulo || 'Sin título',
-          descripcion: item.descripcion || '',
-          fecha: item.fecha || new Date().toISOString().split('T')[0],
-          origen: item.origen || '',
-          cicloEscolar: '', // desconocido para datos viejos; se filtra por fecha
-          archivoBase64: '', archivoNombre: '', archivoMime: '',
-          creadoEn: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
-    }
-    base.metadata = Object.assign({}, base.metadata, { evidenciasMigradas: true });
-    _guardarPortafolioBase(base);
-  } catch (e) {
-    console.warn('Error migrando evidencias del portafolio:', e);
-  } finally {
-    _portafolioMigrando = false;
-  }
-}
-
-function _portafolioAnioActivo() {
-  return localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey();
-}
-
-function _portafolioAnioEnUso() {
-  return _portafolioAnioSeleccionado || _portafolioAnioActivo();
-}
-
-function _portafolioEvidenciaPerteneceAnio(item, yearId) {
-  if (item.cicloEscolar) return item.cicloEscolar === yearId;
-  return _fechaPerteneceACiclo(item.fecha, yearId);
-}
-
-function _portafolioCambiarAnio(anioId) {
-  _portafolioAnioSeleccionado = anioId;
-  renderizarPortafolio();
-}
-
-function _agruparEvidenciasPorCategoria(items) {
-  const grupos = {};
-  Object.keys(PORTAFOLIO_CATEGORIAS).forEach(cat => { grupos[cat] = []; });
-  items.forEach(item => {
-    const cat = PORTAFOLIO_CATEGORIAS[item.categoria] ? item.categoria : 'otro';
-    grupos[cat].push(item);
-  });
-  return grupos;
-}
-
-function _leerDiariasPortafolio() {
-  try {
-    const raw = localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}';
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : { sesiones: {} };
-  } catch {
-    return { sesiones: {} };
-  }
-}
-
-function renderizarPortafolioResumenPedagogico() {
-  const cont = document.getElementById('portafolio-resumen-pedagogico');
-  if (!cont) return;
-
-  const anioSel = _portafolioAnioEnUso();
-  const biblio = cargarBiblioteca();
-  const items = (Array.isArray(biblio?.items) ? biblio.items : []).filter(reg => _fechaPerteneceACiclo(reg.fechaGuardado, anioSel));
-  const totalPlanes = items.length;
-  const totalActividades = items.reduce((acc, reg) => acc + ((reg.planificacion?.actividades || []).length), 0);
-  const totalInstrumentos = items.reduce((acc, reg) => {
-    const acts = reg.planificacion?.actividades || [];
-    return acc + acts.filter(a => !!a?.instrumento).length;
-  }, 0);
-
-  // "sesiones" del diario se indexan por actividadId, no por fecha, así que se cuentan
-  // solo las que pertenecen a una actividad de una planificación de este año escolar.
-  const actividadIdsDelAnio = new Set();
-  items.forEach(reg => (reg.planificacion?.actividades || []).forEach(a => { if (a?.id) actividadIdsDelAnio.add(a.id); }));
-  const diarias = _leerDiariasPortafolio();
-  const sesionesDiarias = Object.keys(diarias.sesiones || {}).filter(actId => actividadIdsDelAnio.has(actId)).length;
-
-  const recientes = items
-    .slice()
-    .sort((a, b) => String(b.fechaGuardado || '').localeCompare(String(a.fechaGuardado || '')))
-    .slice(0, 5)
-    .map(reg => {
-      const dg = reg.planificacion?.datosGenerales || {};
-      const ra = reg.planificacion?.ra || {};
-      const modulo = dg.moduloFormativo || 'Sin módulo';
-      const raTxt = ra.resultado || ra.descripcion || 'Sin RA';
-      const fecha = reg.fechaGuardadoLabel || (reg.fechaGuardado ? new Date(reg.fechaGuardado).toLocaleDateString('es-DO') : '—');
-      const acts = (reg.planificacion?.actividades || []).length;
-      return `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:10px 12px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <div style="font-size:0.8rem;color:#78909C;margin-bottom:4px;">${escapeHTML(fecha)}</div>
-          <button class="btn-secundario" onclick="cargarPlanificacionGuardada('${reg.id}')" style="padding:4px 10px;font-size:0.72rem;flex-shrink:0;">
-            <span class="material-icons" style="font-size:14px;">visibility</span> Ver
-          </button>
-        </div>
-        <div style="font-weight:700;color:#37474F;font-size:0.88rem;margin-bottom:3px;">${escapeHTML(modulo)}</div>
-        <div style="font-size:0.8rem;color:#546E7A;line-height:1.45;">${escapeHTML(raTxt)}</div>
-        <div style="font-size:0.75rem;color:#90A4AE;margin-top:4px;">${acts} actividad(es)</div>
-      </div>`;
-    }).join('');
-
-  cont.innerHTML = `
-    <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
-      <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-        <span class="material-icons" style="font-size:18px;color:#455A64;">analytics</span>
-        Resumen pedagógico — ${escapeHTML(anioSel)}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">
-        <div style="background:#ECEFF1;border-radius:10px;padding:10px 12px;">
-          <div style="font-size:0.72rem;color:#607D8B;">Planificaciones</div>
-          <div style="font-size:1.15rem;font-weight:800;color:#37474F;">${totalPlanes}</div>
-        </div>
-        <div style="background:#E8F5E9;border-radius:10px;padding:10px 12px;">
-          <div style="font-size:0.72rem;color:#2E7D32;">Actividades</div>
-          <div style="font-size:1.15rem;font-weight:800;color:#1B5E20;">${totalActividades}</div>
-        </div>
-        <div style="background:#E3F2FD;border-radius:10px;padding:10px 12px;">
-          <div style="font-size:0.72rem;color:#1565C0;">Instrumentos</div>
-          <div style="font-size:1.15rem;font-weight:800;color:#0D47A1;">${totalInstrumentos}</div>
-        </div>
-        <div style="background:#F3E5F5;border-radius:10px;padding:10px 12px;">
-          <div style="font-size:0.72rem;color:#6A1B9A;">Sesiones diarias</div>
-          <div style="font-size:1.15rem;font-weight:800;color:#4A148C;">${sesionesDiarias}</div>
-        </div>
-      </div>
-      <div style="font-size:0.82rem;font-weight:700;color:#546E7A;margin-bottom:8px;">Planificaciones recientes</div>
-      ${recientes || '<div style="padding:10px 12px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:10px;color:#78909C;font-size:0.84rem;">Aún no hay planificaciones guardadas para este año.</div>'}
-    </div>`;
-}
-
-function _renderTarjetaEvidenciaPortafolio(item, soloLectura) {
-  const fecha = item.fecha ? new Date(item.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  // El adjunto ya no viaja en la consulta de la lista (vive aparte, en chunks) -- solo
-  // se lee al descargarlo, para no tener que traer 5 MB por cada evidencia solo para
-  // mostrar la lista.
-  const archivoHtml = item.archivoNombre
-    ? `<div style="font-size:0.78rem;color:#607D8B;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:15px;">attach_file</span>${escapeHTML(item.archivoNombre)}</div>`
-    : '';
-  const descargarBtn = item.archivoNombre
-    ? `<button class="btn-secundario" onclick="_descargarEvidenciaPortafolio('${item.id}')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>`
-    : '';
-  const eliminarBtn = soloLectura ? '' : `<button class="btn-secundario" onclick="_eliminarPortafolioEvidencia('${item.id}')" style="padding:6px 10px;font-size:0.75rem;color:#C62828;border-color:#FFCDD2;"><span class="material-icons" style="font-size:14px;">delete_outline</span> Quitar</button>`;
-
-  return `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">
-        <div style="flex:1;min-width:0;">
-          ${item.origen ? `<span style="font-size:0.7rem;color:#546E7A;background:#ECEFF1;border-radius:20px;padding:2px 8px;">${escapeHTML(item.origen)}</span>` : ''}
-          <div style="font-weight:700;color:#37474F;margin:5px 0;">${escapeHTML(item.titulo || 'Sin título')}</div>
-          <div style="font-size:0.85rem;color:#455A64;line-height:1.55;white-space:pre-wrap;">${escapeHTML(item.descripcion || '')}</div>
-          ${archivoHtml}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-          <div style="font-size:0.72rem;color:#90A4AE;">${fecha}</div>
-          ${descargarBtn}${eliminarBtn}
-        </div>
-      </div>
-    </div>`;
-}
-
-async function _descargarEvidenciaPortafolio(id) {
-  const ref = _portafolioEvidenciasColeccion();
-  if (!ref) return;
-  try {
-    const docRef = ref.doc(id);
-    const doc = await docRef.get();
-    if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
-    const it = doc.data();
-    const base64 = await _cargarArchivoEvidenciaBase64(docRef, it);
-    if (!base64) { mostrarToast('Esta evidencia no tiene archivo adjunto', 'error'); return; }
-    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = it.archivoNombre || 'archivo';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
-  }
-}
-
-async function renderizarPortafolioEvidencias() {
-  const cont = document.getElementById('portafolio-evidencias');
-  if (!cont) return;
-  cont.innerHTML = '<div style="text-align:center;padding:20px;color:#9E9E9E;">Cargando evidencias...</div>';
-
-  const anioSel = _portafolioAnioEnUso();
-  const soloLectura = anioSel !== _portafolioAnioActivo();
-  const todas = await _cargarEvidenciasPortafolio();
-  const items = todas.filter(it => _portafolioEvidenciaPerteneceAnio(it, anioSel));
-
-  const plan = planificacion?.datosGenerales || {};
-  const planLabel = plan.moduloFormativo || plan.nombreCentro || '';
-  const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
-  const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:90px;';
-
-  const composer = soloLectura ? '' : `
-    <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-        <div style="font-weight:800;color:#37474F;display:flex;align-items:center;gap:8px;">
-          <span class="material-icons" style="font-size:18px;color:#455A64;">collections_bookmark</span> Agregar evidencia
-        </div>
-        <button class="btn-secundario" onclick="_cargarEvidenciaDesdePlanificacionActiva()" style="font-size:0.8rem;padding:7px 12px;">
-          <span class="material-icons">sync</span> Tomar de la planificación activa
-        </button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Categoría</label>
-          <select id="pf-evi-categoria" style="${inputStyle}">
-            ${Object.entries(PORTAFOLIO_CATEGORIAS).map(([k, v]) => `<option value="${k}">${escapeHTML(v)}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Fecha</label>
-          <input id="pf-evi-fecha" type="date" value="${new Date().toISOString().split('T')[0]}" style="${inputStyle}">
-        </div>
-        <div>
-          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Origen / vínculo</label>
-          <input id="pf-evi-origen" type="text" value="${escapeHTML(planLabel || '')}" placeholder="Planificación, diario, reunión, etc." style="${inputStyle}">
-        </div>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título</label>
-        <input id="pf-evi-titulo" type="text" placeholder="Ej: Planificación diaria del 12 de agosto" style="${inputStyle}">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Descripción</label>
-        <textarea id="pf-evi-descripcion" placeholder="Describe qué evidencia aporta y por qué es relevante..." style="${textareaStyle}"></textarea>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Archivo adjunto (opcional)</label>
-        <input id="pf-evi-archivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-        <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 5 MB. PDF, Word, Excel o imagen.</div>
-      </div>
-      <div id="pf-evi-error" style="color:#C62828;font-size:0.8rem;min-height:18px;"></div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
-        <button class="btn-siguiente" onclick="guardarPortafolioEvidenciaDesdeUI()"><span class="material-icons">add_circle</span> Agregar evidencia</button>
-      </div>
-    </div>`;
-
-  const grupos = _agruparEvidenciasPorCategoria(items);
-  const listaHtml = Object.entries(PORTAFOLIO_CATEGORIAS).map(([cat, label]) => {
-    const itemsCat = grupos[cat];
-    return `<div style="margin-bottom:16px;">
-      <div style="font-weight:800;color:#37474F;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
-        <span class="material-icons" style="font-size:18px;color:#455A64;">folder</span> ${escapeHTML(label)}
-        <span style="font-size:0.75rem;color:#90A4AE;font-weight:400;">(${itemsCat.length})</span>
-      </div>
-      ${itemsCat.length
-        ? itemsCat.map(it => _renderTarjetaEvidenciaPortafolio(it, soloLectura)).join('')
-        : '<div style="padding:12px 14px;background:#FAFAFA;border:1px dashed #CFD8DC;border-radius:12px;color:#78909C;font-size:0.82rem;">Aún no hay evidencias en esta categoría.</div>'}
-    </div>`;
-  }).join('');
-
-  cont.innerHTML = composer + `
-    <div>
-      <div style="font-weight:800;color:#37474F;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-        <span class="material-icons" style="font-size:18px;color:#455A64;">list_alt</span> Evidencias por categoría
-      </div>
-      ${listaHtml}
-    </div>`;
-}
-
-async function guardarPortafolioEvidenciaDesdeUI() {
-  const errEl = document.getElementById('pf-evi-error');
-  if (errEl) errEl.textContent = '';
-
-  const titulo = (document.getElementById('pf-evi-titulo')?.value || '').trim();
-  const descripcion = (document.getElementById('pf-evi-descripcion')?.value || '').trim();
-  const categoria = document.getElementById('pf-evi-categoria')?.value || 'otro';
-  const fecha = document.getElementById('pf-evi-fecha')?.value || new Date().toISOString().split('T')[0];
-  const origen = (document.getElementById('pf-evi-origen')?.value || '').trim();
-  const fileInput = document.getElementById('pf-evi-archivo');
-  let file = fileInput?.files?.[0];
-
-  if (!titulo || !descripcion) {
-    if (errEl) errEl.textContent = 'Escribe un título y una descripción para la evidencia.';
-    return;
-  }
-  if (file && file.size > PORTAFOLIO_EVIDENCIA_MAX_BYTES) {
-    if (file.type && file.type.startsWith('image/')) {
-      try {
-        file = await _comprimirImagenParaLimite(file, PORTAFOLIO_EVIDENCIA_MAX_BYTES);
-      } catch {
-        if (errEl) errEl.textContent = 'El archivo no debe superar 5 MB.';
-        return;
-      }
-    }
-    if (file.size > PORTAFOLIO_EVIDENCIA_MAX_BYTES) {
-      if (errEl) errEl.textContent = 'El archivo no debe superar 5 MB (no se pudo reducir más).';
-      return;
-    }
-  }
-
-  const ref = _portafolioEvidenciasColeccion();
-  if (!ref) { if (errEl) errEl.textContent = 'No se pudo guardar: inicia sesión de nuevo.'; return; }
-
-  let archivoBase64 = '';
-  if (file) {
-    try {
-      archivoBase64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result).split(',')[1]);
-        reader.onerror = () => reject(new Error('Error leyendo archivo'));
-        reader.readAsDataURL(file);
-      });
-    } catch (e) {
-      if (errEl) errEl.textContent = 'No se pudo leer el archivo.';
-      return;
-    }
-  }
-
-  const data = {
-    categoria, titulo, descripcion, fecha, origen,
-    cicloEscolar: _portafolioAnioActivo(),
-    archivoNombre: file ? file.name : '',
-    archivoMime: file ? (file.type || 'application/octet-stream') : '',
-    archivoChunks: 0,
-    creadoEn: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  try {
-    const docRef = await ref.add(data);
-    if (file) {
-      mostrarToast('Subiendo archivo...', 'info');
-      await _guardarArchivoEvidenciaChunks(docRef, archivoBase64);
-    }
-    mostrarToast('Evidencia agregada al portafolio', 'success');
-    renderizarPortafolioEvidencias();
-  } catch (e) {
-    if (errEl) errEl.textContent = 'Error al guardar: ' + (e.message || e);
-  }
-}
-
-function _cargarEvidenciaDesdePlanificacionActiva() {
-  const dg = planificacion?.datosGenerales || {};
-  const ra = planificacion?.ra || {};
-  const titulo = [dg.moduloFormativo, ra.resultado].filter(Boolean).join(' · ') || 'Planificación activa';
-  const descripcion = [
-    dg.unidadCompetencia ? 'UC: ' + dg.unidadCompetencia : '',
-    ra.descripcion ? 'RA: ' + ra.descripcion : '',
-    dg.propositoAnual ? 'Propósito: ' + dg.propositoAnual : ''
-  ].filter(Boolean).join('\n');
-
-  const tituloEl = document.getElementById('pf-evi-titulo');
-  const descEl = document.getElementById('pf-evi-descripcion');
-  const origenEl = document.getElementById('pf-evi-origen');
-  if (tituloEl) tituloEl.value = titulo;
-  if (descEl) descEl.value = descripcion || 'Evidencia tomada de la planificación activa.';
-  if (origenEl) origenEl.value = dg.moduloFormativo || 'Planificación activa';
-  mostrarToast('Datos de evidencia cargados desde la planificación activa', 'success');
-}
-
-async function _eliminarPortafolioEvidencia(id) {
-  if (!confirm('¿Eliminar esta evidencia del portafolio?')) return;
-  const ref = _portafolioEvidenciasColeccion();
-  if (!ref) return;
-  try {
-    const docRef = ref.doc(id);
-    const doc = await docRef.get();
-    if (doc.exists && doc.data().archivoChunks) {
-      await _eliminarArchivoEvidenciaChunks(docRef, doc.data().archivoChunks);
-    }
-    await docRef.delete();
-    mostrarToast('Evidencia eliminada', 'success');
-    renderizarPortafolioEvidencias();
-  } catch (e) {
-    mostrarToast('Error al eliminar: ' + (e.message || e), 'error');
-  }
-}
-
-// La identidad del centro (misión, visión, valores, etc.) ya no la escribe cada docente
-// por su cuenta: se administra una sola vez desde Superadmin > Centros Educativos y de
-// ahí se lee para todos. centros/{id} es de lectura pública, así que no hace falta
-// ningún permiso especial para que el docente la vea.
-async function _portafolioCargarIdentidadCentro() {
-  try {
-    const centroId = await _obtenerCentroIdDeUsuarioActual();
-    if (!centroId || typeof db === 'undefined') return null;
-    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-    return doc.exists ? doc.data() : null;
-  } catch (e) {
-    console.warn('Error cargando identidad del centro:', e);
-    return null;
-  }
-}
-
-async function renderizarPortafolio() {
-  const cont = document.getElementById('portafolio-contenido');
-  if (!cont) return;
-  const data = cargarPortafolioBase();
-  const docente = data.docente || {};
-  const foto = cargarPortafolioFoto();
-  const cv = await cargarPortafolioCV();
-  const centroInfo = await _portafolioCargarIdentidadCentro();
-  const inputStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;background:#fff;';
-  const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:92px;';
-
-  const anioActivo = _portafolioAnioActivo();
-  const aniosArchivados = _loadArchivedYears();
-  const anioSel = _portafolioAnioEnUso();
-  const opcionesAnio = [{ id: anioActivo, label: anioActivo + ' (activo)' }]
-    .concat(aniosArchivados.filter(a => a.id !== anioActivo).map(a => ({ id: a.id, label: a.yearLabel || a.id })));
-
-  const selectorAnioHtml = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-    <label style="font-size:0.8rem;font-weight:700;color:#546E7A;">Año escolar</label>
-    <select id="pf-selector-anio" onchange="_portafolioCambiarAnio(this.value)" style="padding:7px 10px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.85rem;">
-      ${opcionesAnio.map(o => `<option value="${escapeHTML(o.id)}"${o.id === anioSel ? ' selected' : ''}>${escapeHTML(o.label)}</option>`).join('')}
-    </select>
-    ${anioSel !== anioActivo ? '<span style="font-size:0.72rem;background:#FFF3E0;color:#E65100;border-radius:20px;padding:3px 10px;font-weight:700;">Solo lectura</span>' : ''}
-    <button class="btn-secundario" onclick="_portafolioImprimir()" style="margin-left:auto;font-size:0.8rem;padding:7px 12px;">
-      <span class="material-icons">print</span> Imprimir / Generar PDF
-    </button>
-  </div>`;
-
-  cont.innerHTML = selectorAnioHtml + `
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-      <div style="font-size:0.85rem;color:#607D8B;">Actualizado: ${data.metadata?.actualizadoEn ? new Date(data.metadata.actualizadoEn).toLocaleString('es-DO') : 'Sin guardar aún'}</div>
-      <button class="btn-secundario" onclick="_cargarPortafolioDesdePlanificacionActiva()" style="font-size:0.8rem;padding:7px 12px;">
-        <span class="material-icons">sync</span> Tomar datos de la planificación activa
-      </button>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
-      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
-        <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-          <span class="material-icons" style="font-size:18px;color:#455A64;">badge</span> Datos del docente
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-          <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#ECEFF1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            ${foto.fotoBase64 ? `<img src="data:${escapeHTML(foto.fotoMime)};base64,${foto.fotoBase64}" style="width:100%;height:100%;object-fit:cover;">` : '<span class="material-icons" style="font-size:32px;color:#B0BEC5;">person</span>'}
-          </div>
-          <div>
-            <input id="pf-docente-foto" type="file" accept="image/*" onchange="_portafolioSubirFoto(this)" style="font-size:0.78rem;max-width:200px;">
-            <div style="font-size:0.7rem;color:#9E9E9E;margin-top:2px;">Foto de perfil, máx. 150 KB</div>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Nombre completo</label><input id="pf-docente-nombre" style="${inputStyle}" value="${escapeHTML(docente.nombre || '')}" placeholder="Nombre del docente"></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título universitario</label><input id="pf-docente-titulo" style="${inputStyle}" value="${escapeHTML(docente.titulo || '')}" placeholder="Lic., Mag., Ing., etc."></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Cédula</label><input id="pf-docente-cedula" style="${inputStyle}" value="${escapeHTML(docente.cedula || '')}" placeholder="000-0000000-0"></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Cargo / Área</label><input id="pf-docente-cargo" style="${inputStyle}" value="${escapeHTML(docente.cargo || '')}" placeholder="Docente de..."></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Centro educativo</label><input id="pf-docente-centro" style="${inputStyle}" value="${escapeHTML(docente.centro || '')}" placeholder="Nombre del centro"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Correo</label><input id="pf-docente-correo" style="${inputStyle}" value="${escapeHTML(docente.correo || '')}" placeholder="correo@ejemplo.com"></div>
-            <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Teléfono</label><input id="pf-docente-telefono" style="${inputStyle}" value="${escapeHTML(docente.telefono || '')}" placeholder="809-000-0000"></div>
-          </div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Perfil profesional</label><textarea id="pf-docente-perfil" style="${textareaStyle}" placeholder="Breve biografía o semblanza de tu trayectoria profesional">${escapeHTML(docente.perfilProfesional || '')}</textarea></div>
-          <div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Filosofía de enseñanza</label><textarea id="pf-docente-filosofia" style="${textareaStyle}" placeholder="Tu visión de la educación y tu rol como guía del aprendizaje">${escapeHTML(docente.filosofiaEnsenanza || '')}</textarea></div>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
-        <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-          <span class="material-icons" style="font-size:18px;color:#455A64;">description</span> Currículum
-        </div>
-        ${cv.cvNombre
-          ? `<div style="font-size:0.85rem;color:#455A64;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:16px;">attach_file</span>${escapeHTML(cv.cvNombre)}</div>
-             <button class="btn-secundario" onclick="_descargarCVPortafolio()" style="font-size:0.8rem;padding:7px 12px;margin-bottom:12px;"><span class="material-icons">download</span> Descargar</button>`
-          : `<div style="font-size:0.82rem;color:#9E9E9E;margin-bottom:12px;">Aún no has subido tu currículum.</div>`}
-        <div>
-          <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">${cv.cvNombre ? 'Reemplazar archivo' : 'Subir archivo'}</label>
-          <input id="pf-docente-cv" type="file" accept=".pdf,.doc,.docx" onchange="_portafolioSubirCV(this)">
-          <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 8 MB. PDF o Word.</div>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
-        <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-          <span class="material-icons" style="font-size:18px;color:#455A64;">domain</span> Identidad del centro
-        </div>
-        ${centroInfo ? `
-          <div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:12px;">La administra tu centro educativo desde el panel de Superadmin.</div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Nombre del centro</div><div style="font-size:0.9rem;color:#37474F;">${escapeHTML(centroInfo.nombre || '—')}</div></div>
-            ${centroInfo.lema ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Lema / filosofía</div><div style="font-size:0.9rem;color:#37474F;">${escapeHTML(centroInfo.lema)}</div></div>` : ''}
-            ${centroInfo.mision ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Misión</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.mision)}</div></div>` : ''}
-            ${centroInfo.vision ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Visión</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.vision)}</div></div>` : ''}
-            ${centroInfo.valores ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Valores</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.valores)}</div></div>` : ''}
-            ${centroInfo.propositoAnual ? `<div><div style="font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:2px;">Propósito del año escolar</div><div style="font-size:0.88rem;color:#455A64;white-space:pre-wrap;line-height:1.5;">${escapeHTML(centroInfo.propositoAnual)}</div></div>` : ''}
-          </div>
-        ` : `<div style="font-size:0.82rem;color:#9E9E9E;">No se pudo determinar tu centro educativo, o el Superadmin todavía no ha completado esta información en el panel de Centros Educativos.</div>`}
-      </div>
-    </div>
-
-    <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
-      <button class="btn-secundario" onclick="_portafolioRestaurarDemo()"><span class="material-icons">auto_fix_high</span> Limpiar datos base</button>
-      <button class="btn-siguiente" onclick="guardarPortafolioBaseDesdeUI()"><span class="material-icons">save</span> Guardar datos base</button>
-    </div>`;
-
-  const extra = document.createElement('div');
-  extra.id = 'portafolio-evidencias';
-  extra.style.marginTop = '18px';
-  cont.appendChild(extra);
-
-  const resumen = document.createElement('div');
-  resumen.id = 'portafolio-resumen-pedagogico';
-  resumen.style.marginTop = '18px';
-  cont.appendChild(resumen);
-
-  const reflexion = document.createElement('div');
-  reflexion.id = 'portafolio-reflexion';
-  reflexion.style.marginTop = '18px';
-  cont.appendChild(reflexion);
-
-  await renderizarPortafolioEvidencias();
-  renderizarPortafolioResumenPedagogico();
-  await renderizarPortafolioReflexion();
-}
-
-async function _portafolioImprimir() {
-  const data = cargarPortafolioBase();
-  const docente = data.docente || {};
-  const centroInfo = await _portafolioCargarIdentidadCentro() || {};
-  const foto = cargarPortafolioFoto();
-  const anioSel = _portafolioAnioEnUso();
-  const reflexion = await _cargarReflexionPortafolio(anioSel);
-  const esc = escapeHTML;
-
-  const todas = await _cargarEvidenciasPortafolio();
-  const items = todas.filter(it => _portafolioEvidenciaPerteneceAnio(it, anioSel));
-  const grupos = _agruparEvidenciasPorCategoria(items);
-
-  // Las imágenes ya no viajan con la lista (viven en chunks aparte) -- se traen aparte,
-  // solo las que son imagen, para poder incrustarlas en la vista de impresión.
-  const evidenciasRef = _portafolioEvidenciasColeccion();
-  const imagenesBase64 = {};
-  for (const it of items) {
-    if (it.archivoNombre && (it.archivoMime || '').startsWith('image/') && evidenciasRef) {
-      imagenesBase64[it.id] = await _cargarArchivoEvidenciaBase64(evidenciasRef.doc(it.id), it);
-    }
-  }
-
-  const biblio = cargarBiblioteca();
-  const planes = (Array.isArray(biblio?.items) ? biblio.items : []).filter(reg => _fechaPerteneceACiclo(reg.fechaGuardado, anioSel));
-  const totalActividades = planes.reduce((acc, reg) => acc + ((reg.planificacion?.actividades || []).length), 0);
-
-  const seccionesHtml = Object.entries(PORTAFOLIO_CATEGORIAS).map(([cat, label]) => {
-    const itemsCat = grupos[cat] || [];
-    if (!itemsCat.length) return '';
-    return '<h3>' + esc(label) + '</h3>' + itemsCat.map(it => {
-      const fecha = it.fecha ? new Date(it.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-      const esImagen = (it.archivoMime || '').startsWith('image/');
-      const archivoNota = it.archivoNombre
-        ? (esImagen && imagenesBase64[it.id]
-            ? '<img src="data:' + esc(it.archivoMime) + ';base64,' + imagenesBase64[it.id] + '" style="max-width:220px;max-height:160px;margin-top:6px;border:1px solid #999;">'
-            : '<div style="font-size:9.5pt;color:#555;margin-top:4px;">Adjunto: ' + esc(it.archivoNombre) + ' (disponible en el sistema)</div>')
-        : '';
-      return '<div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #ddd;">' +
-        '<div style="font-weight:bold;">' + esc(it.titulo || 'Sin título') + ' <span style="font-weight:normal;color:#666;">— ' + fecha + '</span></div>' +
-        '<div style="white-space:pre-wrap;">' + esc(it.descripcion || '') + '</div>' +
-        archivoNota +
-        '</div>';
-    }).join('');
-  }).join('');
-
-  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
-    '<title>Portafolio Docente — ' + esc(docente.nombre || '') + '</title>' +
-    '<style>body{font-family:Arial,sans-serif;margin:16mm 16mm 12mm;font-size:11pt;color:#222;}' +
-    'h1{font-size:16pt;text-align:center;margin-bottom:4px;}' +
-    'h2{font-size:12pt;color:#444;text-align:center;margin-top:0;font-weight:normal;}' +
-    'h3{font-size:12pt;border-bottom:2px solid #333;padding-bottom:3px;margin-top:22px;}' +
-    'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
-    'td{padding:4px 6px;font-size:10.5pt;vertical-align:top;}' +
-    '.stats{display:flex;gap:14px;margin-top:14px;}' +
-    '.stat{border:1px solid #999;border-radius:6px;padding:8px 12px;text-align:center;}' +
-    '@media print{.no-print{display:none!important;}}</style></head><body>' +
-    '<div class="no-print" style="text-align:center;margin-bottom:14px;">' +
-      '<button onclick="window.print()" style="padding:9px 26px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Imprimir / Guardar PDF</button>' +
-    '</div>' +
-    '<div style="display:flex;align-items:center;gap:16px;justify-content:center;">' +
-      (foto.fotoBase64 ? '<img src="data:' + esc(foto.fotoMime) + ';base64,' + foto.fotoBase64 + '" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:1px solid #999;">' : '') +
-      '<div><h1 style="margin-bottom:0;">Portafolio Docente</h1><h2>Año escolar ' + esc(anioSel) + '</h2></div>' +
-    '</div>' +
-    '<table>' +
-      '<tr><td style="width:30%;"><b>Docente</b></td><td>' + esc(docente.nombre || '—') + '</td></tr>' +
-      '<tr><td><b>Título / cédula</b></td><td>' + esc(docente.titulo || '—') + ' · ' + esc(docente.cedula || '—') + '</td></tr>' +
-      '<tr><td><b>Cargo</b></td><td>' + esc(docente.cargo || '—') + '</td></tr>' +
-      '<tr><td><b>Centro educativo</b></td><td>' + esc(centroInfo.nombre || docente.centro || '—') + '</td></tr>' +
-      '<tr><td><b>Propósito del año</b></td><td>' + esc(centroInfo.propositoAnual || '—') + '</td></tr>' +
-    '</table>' +
-    (docente.perfilProfesional ? '<h3>Perfil profesional</h3><p style="white-space:pre-wrap;">' + esc(docente.perfilProfesional) + '</p>' : '') +
-    (docente.filosofiaEnsenanza ? '<h3>Filosofía de enseñanza</h3><p style="white-space:pre-wrap;">' + esc(docente.filosofiaEnsenanza) + '</p>' : '') +
-    ((centroInfo.mision || centroInfo.vision || centroInfo.valores)
-      ? '<h3>Identidad del centro</h3>' +
-        (centroInfo.mision ? '<p><b>Misión:</b> ' + esc(centroInfo.mision) + '</p>' : '') +
-        (centroInfo.vision ? '<p><b>Visión:</b> ' + esc(centroInfo.vision) + '</p>' : '') +
-        (centroInfo.valores ? '<p><b>Valores:</b> ' + esc(centroInfo.valores) + '</p>' : '')
-      : '') +
-    '<div class="stats">' +
-      '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + planes.length + '</div><div style="font-size:9pt;">Planificaciones</div></div>' +
-      '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + totalActividades + '</div><div style="font-size:9pt;">Actividades</div></div>' +
-      '<div class="stat"><div style="font-size:15pt;font-weight:bold;">' + items.length + '</div><div style="font-size:9pt;">Evidencias</div></div>' +
-    '</div>' +
-    (seccionesHtml || '<p style="margin-top:20px;color:#777;">Aún no hay evidencias registradas para este año escolar.</p>') +
-    ((reflexion.autoevaluacion || reflexion.planMejora)
-      ? '<h3>Reflexión y mejora continua</h3>' +
-        (reflexion.autoevaluacion ? '<p><b>Autoevaluación:</b><br><span style="white-space:pre-wrap;">' + esc(reflexion.autoevaluacion) + '</span></p>' : '') +
-        (reflexion.planMejora ? '<p><b>Plan de mejora:</b><br><span style="white-space:pre-wrap;">' + esc(reflexion.planMejora) + '</span></p>' : '')
-      : '') +
-    '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>' +
-    '</body></html>';
-
-  const win = window.open('', '_blank', 'width=820,height=950');
-  if (win) { win.document.write(html); win.document.close(); }
-}
-
-function _cargarPortafolioDesdePlanificacionActiva() {
-  const dg = planificacion?.datosGenerales || {};
-  const data = cargarPortafolioBase();
-  data.docente.nombre = dg.nombreDocente || data.docente.nombre || '';
-  data.docente.centro = dg.nombreCentro || data.docente.centro || '';
-  data.docente.cargo = dg.moduloFormativo || data.docente.cargo || '';
-  _guardarPortafolioBase(data);
-  renderizarPortafolio();
-  mostrarToast('Datos tomados de la planificación activa', 'success');
-}
-
-function _portafolioRestaurarDemo() {
-  const demo = {
-    docente: Object.assign({}, PORTAFOLIO_DOCENTE_DEFAULT),
-    centro: Object.assign({}, PORTAFOLIO_CENTRO_DEFAULT),
-    metadata: cargarPortafolioBase().metadata
-  };
-  _guardarPortafolioBase(demo);
-  renderizarPortafolio();
-  mostrarToast('Datos base limpiados', 'success');
-}
-
-function guardarPortafolioBaseDesdeUI() {
-  const data = cargarPortafolioBase();
-  data.docente.nombre = document.getElementById('pf-docente-nombre')?.value.trim() || '';
-  data.docente.titulo = document.getElementById('pf-docente-titulo')?.value.trim() || '';
-  data.docente.cedula = document.getElementById('pf-docente-cedula')?.value.trim() || '';
-  data.docente.cargo = document.getElementById('pf-docente-cargo')?.value.trim() || '';
-  data.docente.centro = document.getElementById('pf-docente-centro')?.value.trim() || '';
-  data.docente.correo = document.getElementById('pf-docente-correo')?.value.trim() || '';
-  data.docente.telefono = document.getElementById('pf-docente-telefono')?.value.trim() || '';
-  data.docente.perfilProfesional = document.getElementById('pf-docente-perfil')?.value.trim() || '';
-  data.docente.filosofiaEnsenanza = document.getElementById('pf-docente-filosofia')?.value.trim() || '';
-  // La identidad del centro (nombre/lema/misión/etc.) ya no se edita aquí -- la
-  // administra Superadmin en Centros Educativos y se lee en vivo de ahí.
-
-  _guardarPortafolioBase(data);
-  renderizarPortafolio();
-  mostrarToast('Datos base del portafolio guardados', 'success');
-}
-
-// Autoevaluación / plan de mejora: cambia cada ciclo, así que es un documento por año
-// escolar (a diferencia de los datos base, que son fijos).
-function _portafolioReflexionRef(yearId) {
-  if (!window.currentUser || typeof db === 'undefined') return null;
-  return db.collection('users').doc(window.currentUser.uid).collection('portafolio_reflexion').doc(yearId);
-}
-
-async function _cargarReflexionPortafolio(yearId) {
-  const ref = _portafolioReflexionRef(yearId);
-  if (!ref) return { autoevaluacion: '', planMejora: '' };
-  try {
-    const doc = await ref.get();
-    return doc.exists ? doc.data() : { autoevaluacion: '', planMejora: '' };
-  } catch (e) {
-    console.warn('Error cargando reflexión del portafolio:', e);
-    return { autoevaluacion: '', planMejora: '' };
-  }
-}
-
-async function renderizarPortafolioReflexion() {
-  const cont = document.getElementById('portafolio-reflexion');
-  if (!cont) return;
-
-  const anioSel = _portafolioAnioEnUso();
-  const soloLectura = anioSel !== _portafolioAnioActivo();
-  const textareaStyle = 'width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;background:#fff;line-height:1.6;resize:vertical;min-height:100px;';
-  const datos = await _cargarReflexionPortafolio(anioSel);
-
-  cont.innerHTML = `<div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;padding:16px;">
-    <div style="font-weight:800;color:#37474F;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-      <span class="material-icons" style="font-size:18px;color:#455A64;">self_improvement</span> Reflexión y mejora continua — ${escapeHTML(anioSel)}
-    </div>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div>
-        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Autoevaluación</label>
-        <textarea id="pf-reflexion-autoeval" ${soloLectura ? 'disabled' : ''} style="${textareaStyle}" placeholder="Fortalezas, áreas de oportunidad y retos superados durante el ciclo lectivo">${escapeHTML(datos.autoevaluacion || '')}</textarea>
-      </div>
-      <div>
-        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Plan de mejora</label>
-        <textarea id="pf-reflexion-plan" ${soloLectura ? 'disabled' : ''} style="${textareaStyle}" placeholder="Metas propuestas para optimizar tu práctica docente en el próximo periodo">${escapeHTML(datos.planMejora || '')}</textarea>
-      </div>
-      ${soloLectura ? '' : '<div style="display:flex;justify-content:flex-end;"><button class="btn-siguiente" onclick="guardarReflexionPortafolioDesdeUI()"><span class="material-icons">save</span> Guardar reflexión</button></div>'}
-    </div>
-  </div>`;
-}
-
-async function guardarReflexionPortafolioDesdeUI() {
-  const anioSel = _portafolioAnioEnUso();
-  const ref = _portafolioReflexionRef(anioSel);
-  if (!ref) { mostrarToast('No se pudo guardar: inicia sesión de nuevo.', 'error'); return; }
-  const autoevaluacion = (document.getElementById('pf-reflexion-autoeval')?.value || '').trim();
-  const planMejora = (document.getElementById('pf-reflexion-plan')?.value || '').trim();
-  try {
-    await ref.set({ autoevaluacion, planMejora, actualizadoEn: firebase.firestore.FieldValue.serverTimestamp() });
-    mostrarToast('Reflexión guardada', 'success');
-  } catch (e) {
-    mostrarToast('Error al guardar: ' + (e.message || e), 'error');
-  }
-}
 
 function renderizarLibreta() {
   _renderizarListaDiasLibreta();
@@ -10984,74 +9330,6 @@ function _eliminarEntradaLibreta(entryId) {
   _guardarLibreta(data);
   renderizarLibreta();
   mostrarToast('Anotación eliminada', 'success');
-}
-
-function descargarWordRegistrosLibretaDia() {
-  const data = cargarLibreta();
-  const fecha = _libretaDiaSeleccionado || new Date().toISOString().split('T')[0];
-  const entries = (data.entries || []).filter(e => e.fecha === fecha);
-  if (!entries.length) {
-    mostrarToast('No hay registros en el dia seleccionado.', 'error');
-    return;
-  }
-
-  entries.sort((a, b) => {
-    return String(a.hora || '').localeCompare(String(b.hora || ''));
-  });
-
-  const tipoLabel = (v) => (_LIBRETA_TIPOS.find(t => t.value === (v || 'general')) || _LIBRETA_TIPOS[0]).label;
-  const fechaLabel = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
-
-  const bloques = entries.map((e, idx) => {
-    return '<div class="entry">'
-      + '<div class="entry-top">'
-      + '<span class="entry-num">Registro ' + (idx + 1) + '</span>'
-      + '<span class="entry-hora">' + escapeHTML(e.hora || '—') + '</span>'
-      + '</div>'
-      + '<div class="entry-meta">Tipo: ' + escapeHTML(tipoLabel(e.tipo)) + ' · Curso: ' + escapeHTML(e.cursoNombre || '—') + '</div>'
-      + '<div class="entry-titulo">' + escapeHTML(e.titulo || 'Sin titulo') + '</div>'
-      + '<div class="entry-texto">' + escapeHTML(e.texto || '—') + '</div>'
-      + '</div>';
-  }).join('');
-
-  const now = new Date();
-  const html = '<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="es"><head><meta charset="UTF-8">' +
-    '<meta name="ProgId" content="Word.Document">' +
-    '<meta name="Generator" content="Microsoft Word 15">' +
-    '<meta name="Originator" content="Microsoft Word 15">' +
-    '<title>Mi Libreta - ' + escapeHTML(fecha) + '</title>' +
-    '<style>' +
-      'body{font-family:Calibri,Arial,sans-serif;color:#263238;font-size:11pt;line-height:1.45;}' +
-      'h1{font-size:18pt;margin:0 0 6px;color:#004D40;}' +
-      '.meta{font-size:10pt;color:#607D8B;margin-bottom:14px;}' +
-      '.entry{border:1px solid #CFE8E4;border-left:4px solid #00695C;border-radius:6px;padding:10px 12px;margin-bottom:10px;}' +
-      '.entry-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;}' +
-      '.entry-num{font-weight:700;color:#00695C;}' +
-      '.entry-hora{font-size:9pt;color:#78909C;}' +
-      '.entry-meta{font-size:9pt;color:#546E7A;margin-bottom:5px;}' +
-      '.entry-titulo{font-weight:700;color:#1B5E20;margin-bottom:4px;}' +
-      '.entry-texto{white-space:pre-wrap;}' +
-    '</style></head><body>' +
-    '<h1>Mi Libreta - Registros del dia</h1>' +
-    '<div class="meta">Fecha: ' + escapeHTML(fechaLabel) + ' · Total: ' + entries.length + ' registro(s) · Generado: ' + now.toLocaleString('es-DO') + '</div>' +
-    bloques +
-    '</body></html>';
-
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const safeFecha = String(fecha || 'dia').replace(/[^0-9-]/g, '');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'libreta-' + safeFecha + '.doc';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  mostrarToast('Word descargado del dia seleccionado', 'success');
-}
-
-function imprimirRegistrosLibreta() {
-  descargarWordRegistrosLibretaDia();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -12059,103 +10337,15 @@ function renderizarPanelCursosArchivados() {
         + '<div style="font-size:0.72rem;color:#7E57C2;margin-top:6px;">Archivado: ' + escapeHTML(fecha) + '</div>'
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
         + (cursos.length
-          ? cursos.map(c => '<button onclick="abrirCursoArchivado(\'' + escapeHTML(year) + '\',\'' + escapeHTML(c.id) + '\')" '
-            + 'style="background:#EDE7F6;color:#5E35B1;border:none;border-radius:999px;padding:4px 10px;font-size:0.73rem;font-weight:700;cursor:pointer;">'
+          ? cursos.map(c => '<span style="background:#EDE7F6;color:#5E35B1;border-radius:999px;padding:4px 10px;font-size:0.73rem;font-weight:700;">'
             + escapeHTML(c.nombre || 'Curso sin nombre')
             + ' <span style="opacity:.75;font-weight:600;">(' + Number((c.estudiantes || []).length || 0) + ')</span>'
-            + '</button>').join('')
+            + '</span>').join('')
           : '<span style="font-size:0.74rem;color:#9E9E9E;">Sin cursos en este ciclo.</span>')
         + '</div>'
         + '</details>';
     }).join('')
     + '</div>';
-}
-
-// ── Visor de solo lectura para un curso archivado + traer al ciclo activo ──
-function _renderTablaCalificacionesSoloLectura(curso) {
-  const rasKeys = Object.keys(curso.ras || {});
-  if (!rasKeys.length) {
-    return '<div style="text-align:center;padding:24px;color:#9E9E9E;">Este curso no tiene calificaciones registradas.</div>';
-  }
-  const estudiantes = curso.estudiantes || [];
-  return rasKeys.map(raKey => {
-    const raInfo = curso.ras[raKey] || {};
-    const actividades = raInfo._actividadesSnapshot || [];
-    if (!actividades.length) {
-      return '<div style="margin-bottom:18px;"><div style="font-weight:700;color:#1565C0;margin-bottom:6px;">'
-        + escapeHTML(raInfo.label || raKey) + '</div><div style="color:#9E9E9E;font-size:0.85rem;">Sin actividades registradas.</div></div>';
-    }
-    let html = '<div style="margin-bottom:22px;overflow-x:auto;">'
-      + '<div style="font-weight:700;color:#1565C0;margin-bottom:8px;">' + escapeHTML(raInfo.label || raKey)
-      + ' <span style="font-weight:400;color:#78909C;font-size:0.8rem;">(' + (raInfo.valorTotal || 0) + ' pts)</span></div>'
-      + '<table style="border-collapse:collapse;width:100%;font-size:0.82rem;">'
-      + '<thead><tr style="background:#1565C0;color:#fff;">'
-      + '<th style="padding:6px 8px;text-align:left;">Estudiante</th>'
-      + actividades.map(a => '<th style="padding:6px 6px;text-align:center;min-width:60px;" title="' + escapeHTML(a.enunciado || '') + '">'
-        + escapeHTML((a.enunciado || '').substring(0, 14)) + ((a.enunciado || '').length > 14 ? '…' : '') + '</th>').join('')
-      + '<th style="padding:6px 8px;text-align:center;background:#0D47A1;">Total RA</th>'
-      + '</tr></thead><tbody>';
-    estudiantes.forEach((est, i) => {
-      const notaRA = _calcNotaRA(curso, est.id, raKey, actividades);
-      html += '<tr style="border-bottom:1px solid #E0E0E0;' + (i % 2 ? 'background:#FAFAFA;' : '') + '">'
-        + '<td style="padding:6px 8px;">' + escapeHTML(est.nombre) + '</td>'
-        + actividades.map(a => {
-          const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
-          return '<td style="padding:6px 6px;text-align:center;">' + (nota !== undefined && nota !== null ? nota : '—') + '</td>';
-        }).join('')
-        + '<td style="padding:6px 8px;text-align:center;font-weight:700;">' + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</td>'
-        + '</tr>';
-    });
-    html += '</tbody></table></div>';
-    return html;
-  }).join('');
-}
-
-function abrirCursoArchivado(yearId, cursoId) {
-  const reg = calState.cursosArchivados?.[yearId];
-  const curso = reg?.cursos?.find(c => c.id === cursoId);
-  if (!curso) { mostrarToast('Curso archivado no encontrado', 'error'); return; }
-
-  const overlay = document.getElementById('modal-overlay');
-  const title = document.getElementById('modal-title');
-  const body = document.getElementById('modal-body');
-  if (!overlay || !body) return;
-
-  if (title) title.textContent = (curso.nombre || 'Curso archivado') + ' — ' + yearId;
-  body.innerHTML = '<div style="font-size:0.8rem;color:#78909C;margin-bottom:14px;">Ciclo ' + escapeHTML(yearId) + ' · '
-    + (curso.estudiantes || []).length + ' estudiante' + ((curso.estudiantes || []).length !== 1 ? 's' : '') + ' · Solo lectura</div>'
-    + _renderTablaCalificacionesSoloLectura(curso)
-    + '<div style="font-size:0.72rem;color:#9E9E9E;margin-top:10px;">"Traer a este año" crea un curso nuevo en el ciclo activo con la misma lista de estudiantes y estructura de RAs, con el boletín en blanco. El curso archivado no se modifica.</div>';
-
-  _usarFooterDinamico(
-    '<button class="btn-export btn-sm" style="background:#2E7D32;color:#fff;" onclick="traerCursoArchivadoAlAnioActual(\'' + escapeHTML(yearId) + '\',\'' + escapeHTML(cursoId) + '\')">'
-    + '<span class="material-icons">redo</span> Traer a este año</button>'
-    + '<button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>'
-  );
-
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-function traerCursoArchivadoAlAnioActual(yearId, cursoId) {
-  const reg = calState.cursosArchivados?.[yearId];
-  const curso = reg?.cursos?.find(c => c.id === cursoId);
-  if (!curso) { mostrarToast('Curso archivado no encontrado', 'error'); return; }
-
-  if (!confirm('¿Traer "' + curso.nombre + '" al ciclo activo? Se creará un curso nuevo con la misma lista de estudiantes y estructura de RAs, con el boletín en blanco. El curso archivado seguirá disponible tal cual está.')) return;
-
-  const copia = JSON.parse(JSON.stringify(curso));
-  copia.id = uid();
-  copia.notas = {};
-  copia.ras = {};
-
-  calState.cursos[copia.id] = copia;
-  calState.cursoActivoId = copia.id;
-  guardarCalificaciones();
-
-  cerrarModalBtn();
-  renderizarCalificaciones();
-  mostrarToast('Curso "' + copia.nombre + '" traído al ciclo activo ✓', 'success');
 }
 
 // ── Pendientes por calificar ─────────────────────────────────────────────────
@@ -15781,16 +13971,8 @@ function _renderReporte(body) {
 let _buscarSeleccionado = null; // { cursoId, estId }
 
 function abrirBuscadorEstudiante() {
-  _cerrarTodosLosModales();
-  _logElementosRequeridos('abrirBuscadorEstudiante:dom', [
-    'buscar-overlay', 'buscar-input', 'buscar-lista', 'buscar-perfil', 'buscar-resultados-count'
-  ]);
-  const overlay = _resolverOverlay('buscar-overlay');
-  if (!overlay) {
-    _logEstadoModales('abrirBuscadorEstudiante:missing-overlay');
-    return;
-  }
-  _logEstadoModales('abrirBuscadorEstudiante:before');
+  const overlay = document.getElementById('buscar-overlay');
+  if (!overlay) return;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   _buscarSeleccionado = null;
@@ -15808,7 +13990,6 @@ function abrirBuscadorEstudiante() {
   _buscarVolverListaMovil();
   // Si hay cursos, mostrar todos los estudiantes inicialmente
   buscarEstudiante('');
-  _logEstadoModales('abrirBuscadorEstudiante:after');
 }
 
 function cerrarBuscadorEstudiante() {
@@ -15969,25 +14150,8 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
   // ── Notas de clase escritas para este estudiante (vía sección del curso) ──
   // Las notas son por clase (no por estudiante), pero podemos mostrar cuántas hay
   const notasClase = Object.entries(localStorage)
-    .filter(([k, v]) => {
-      if (!(k.startsWith('notaclase_') || k.startsWith('notaclasev2_'))) return false;
-      if (!(v || '').trim()) return false;
-      const meta = _extraerMetaNotaClase(k);
-      if (!meta) return false;
-      if (meta.tipo === 'v2') {
-        const scopeCurso = (_scopeNotaClase(curso.nombre, '') || '').split('__')[0];
-        return String(meta.scopeId || '').startsWith(scopeCurso + '__');
-      }
-      return k.includes(`_${curso.nombre}_`);
-    })
-    .sort(([a], [b]) => {
-      const ma = _extraerMetaNotaClase(a);
-      const mb = _extraerMetaNotaClase(b);
-      const fa = ma?.fecha || '';
-      const fb = mb?.fecha || '';
-      if (fa === fb) return b.localeCompare(a);
-      return fb.localeCompare(fa);
-    })
+    .filter(([k]) => k.startsWith(`notaclase_`) && k.includes(`_${curso.nombre}_`))
+    .sort(([a], [b]) => b.localeCompare(a)) // más reciente primero
     .slice(0, 5);
 
   // ── Observaciones guardadas (clave por estudiante) ──
@@ -16093,14 +14257,14 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
         <span class="material-icons">edit_note</span>Notas recientes de clase (${escapeHTML(curso.nombre)})
       </div>
       ${notasClase.map(([k, v]) => {
-    const meta = _extraerMetaNotaClase(k) || {};
-    const fecha = meta.fecha || '';
-    const periodo = meta.periodo || '';
+    const parts = k.split('_'); // notaclase_FECHA_SECCION_PERIODO
+    const fecha = parts[1] || '';
+    const periodo = parts[3] || '';
     const fechaFmt = fecha ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' }) : '';
     return `<div class="perfil-nota-clase">
           <div class="perfil-nota-meta">
             <span class="material-icons" style="font-size:13px;">today</span>
-            ${fechaFmt}${periodo ? ` · P${periodo}` : ' · Nota compartida'}
+            ${fechaFmt}${periodo ? ` · P${periodo}` : ''}
           </div>
           <div class="perfil-nota-txt">${escapeHTML(v.substring(0, 160))}${v.length > 160 ? '…' : ''}</div>
         </div>`;
@@ -16819,16 +14983,8 @@ function actualizarBadgeNotificaciones() {
 
 // ── Abrir/cerrar modal ───────────────────────────────────────────
 function abrirNotificaciones() {
-  _cerrarTodosLosModales();
-  _logElementosRequeridos('abrirNotificaciones:dom', [
-    'notif-overlay', 'notif-top-body', 'notif-modal-body', 'notif-count-header', 'notif-badge'
-  ]);
-  const overlay = _resolverOverlay('notif-overlay');
-  if (!overlay) {
-    _logEstadoModales('abrirNotificaciones:missing-overlay');
-    return;
-  }
-  _logEstadoModales('abrirNotificaciones:before');
+  const overlay = document.getElementById('notif-overlay');
+  if (!overlay) return;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   // Marcar como leído: guardar IDs de lo que está visible ahora
@@ -16839,7 +14995,6 @@ function abrirNotificaciones() {
   _renderizarNotificaciones();
   _renderizarAvisosYNovedades();
   setTimeout(actualizarBadgeNotificaciones, 200);
-  _logEstadoModales('abrirNotificaciones:after');
 }
 function cerrarNotificaciones() {
   document.getElementById('notif-overlay')?.classList.add('hidden');
@@ -17926,13 +16081,10 @@ function editarCeldaHorario(diaIdx, periodoId) {
   const key = `${diaIdx}-${periodoId}`;
   const existente = data.find(e => e.dia === diaIdx && e.periodo === periodoId) || {};
   const periodo = PERIODOS.find(p => p.id === periodoId);
-  const defaultDupDia = diaIdx < (DIAS.length - 1) ? (diaIdx + 1) : diaIdx;
 
   // Obtener lista de materias ya usadas para sugerencias
   const materiasUsadas = [...new Set(data.map(e => e.materia).filter(Boolean))];
   const datalistOpts = materiasUsadas.map(m => `<option value="${escapeHTML(m)}">`).join('');
-  const diasOpts = DIAS.map((d, i) => `<option value="${i}" ${i === defaultDupDia ? 'selected' : ''}>${escapeHTML(d)}</option>`).join('');
-  const periodosOpts = PERIODOS.map(p => `<option value="${p.id}" ${p.id === periodoId ? 'selected' : ''}>Período ${p.id} (${p.hora})</option>`).join('');
 
   document.getElementById('modal-title').textContent = `${DIAS[diaIdx]} — Período ${periodoId} (${periodo.hora})`;
   document.getElementById('modal-body').innerHTML = `
@@ -17961,20 +16113,6 @@ function editarCeldaHorario(diaIdx, periodoId) {
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Notas (opcional)</label>
         <input id="hor-inp-notas" placeholder="Ej: Trae USB" value="${escapeHTML(existente.notas || '')}"
           style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
-      </div>
-      <div style="background:#F5F8FF;border:1px solid #DCE6FF;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
-        <label style="font-size:0.78rem;font-weight:700;color:#1E3A8A;display:block;">Duplicar esta clase en:</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
-          <select id="hor-dup-dia" style="width:100%;padding:8px 10px;border:1px solid #BFD2FF;border-radius:8px;font-size:0.85rem;">
-            ${diasOpts}
-          </select>
-          <select id="hor-dup-periodo" style="width:100%;padding:8px 10px;border:1px solid #BFD2FF;border-radius:8px;font-size:0.85rem;">
-            ${periodosOpts}
-          </select>
-          <button class="btn-secundario" onclick="duplicarCeldaHorario(${diaIdx},${periodoId})" style="white-space:nowrap;color:#1E3A8A;border-color:#BFD2FF;">
-            <span class="material-icons">content_copy</span> Duplicar
-          </button>
-        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #E0E0E0;flex-wrap:wrap;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
@@ -18005,51 +16143,6 @@ function guardarCeldaHorario(diaIdx, periodoId) {
   cerrarModalBtn();
   renderizarHorario();
   mostrarToast(materia ? 'Período guardado' : 'Período borrado', 'success');
-}
-
-function duplicarCeldaHorario(diaOrigen, periodoOrigen) {
-  const materia = document.getElementById('hor-inp-materia')?.value.trim();
-  const seccion = document.getElementById('hor-inp-seccion')?.value.trim();
-  const aula = document.getElementById('hor-inp-aula')?.value.trim();
-  const notas = document.getElementById('hor-inp-notas')?.value.trim();
-  const destDia = Number(document.getElementById('hor-dup-dia')?.value);
-  const destPeriodo = Number(document.getElementById('hor-dup-periodo')?.value);
-
-  if (!materia) {
-    mostrarToast('Escribe la materia antes de duplicar.', 'error');
-    return;
-  }
-  if (!Number.isInteger(destDia) || destDia < 0 || destDia >= DIAS.length) {
-    mostrarToast('Selecciona un día válido.', 'error');
-    return;
-  }
-  if (!Number.isInteger(destPeriodo) || !PERIODOS.some(p => p.id === destPeriodo)) {
-    mostrarToast('Selecciona un período válido.', 'error');
-    return;
-  }
-  if (destDia === diaOrigen && destPeriodo === periodoOrigen) {
-    mostrarToast('El destino no puede ser la misma celda.', 'error');
-    return;
-  }
-
-  const data = cargarHorario();
-  const destExistente = data.find(e => e.dia === destDia && e.periodo === destPeriodo);
-  if (destExistente && !confirm(`La celda destino ya tiene "${destExistente.materia || 'una clase'}". ¿Deseas reemplazarla?`)) {
-    return;
-  }
-
-  const limpia = data.filter(e => !(
-    (e.dia === diaOrigen && e.periodo === periodoOrigen) ||
-    (e.dia === destDia && e.periodo === destPeriodo)
-  ));
-
-  const payload = { materia, seccion, aula, notas };
-  limpia.push({ dia: diaOrigen, periodo: periodoOrigen, ...payload });
-  limpia.push({ dia: destDia, periodo: destPeriodo, ...payload });
-
-  guardarHorario(limpia);
-  renderizarHorario();
-  mostrarToast(`Clase duplicada a ${DIAS[destDia]} · P${destPeriodo}`, 'success');
 }
 
 function borrarCeldaHorario(diaIdx, periodoId) {
@@ -24051,15 +22144,6 @@ async function generarConGemini(dg, ra, fechasClase) {
 
 /** Abre el modal de configuración de la IA */
 function abrirConfigIA() {
-  _cerrarTodosLosModales();
-  _logElementosRequeridos('abrirConfigIA:dom', [
-    'modal-overlay', 'modal-title', 'modal-body', 'modal-footer'
-  ]);
-  const modalOverlay = _resolverOverlay('modal-overlay');
-  if (!modalOverlay) {
-    _logEstadoModales('abrirConfigIA:missing-overlay');
-    return;
-  }
   const groqKeyActual = getGroqKey();
   const geminiKeyActual = getGeminiKey();
   const openrouterKeyActual = getOpenRouterKey();
@@ -24122,9 +22206,8 @@ function abrirConfigIA() {
       </div>
     </div>`;
   _usarFooterDinamico('');
-  modalOverlay.classList.remove('hidden');
+  document.getElementById('modal-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  _logEstadoModales('abrirConfigIA:after');
   setTimeout(() => document.getElementById('input-groq-key')?.focus(), 100);
 }
 
@@ -26084,19 +24167,6 @@ async function archivarCicloActual() {
     const cursosArchivadosCount = _archivarCursosActivosEnCalificaciones(currentYear, createdAt);
     const horarioArchivadoCount = _archivarHorarioActual(currentYear, createdAt);
     const blogArchivadoCount = _archivarPostsBlogDocente(currentYear, createdAt);
-    const convivenciaArchivada = await _archivarConvivenciaPublicaCiclo(
-      currentYear,
-      createdAt,
-      snapshot.reportesComportamiento || [],
-      snapshot.denunciasPublicas || []
-    );
-    if (window._syncFirebaseAwait) {
-      try {
-        await _syncFirebaseAwait('blog', cargarBlog());
-      } catch (syncBlogErr) {
-        console.warn('No se pudo confirmar sincronización del blog archivado:', syncBlogErr);
-      }
-    }
 
     let firebaseArchiveOk = false;
     let firebaseStorageUsed = 'none';
@@ -26120,12 +24190,12 @@ async function archivarCicloActual() {
 
     if (firebaseArchiveOk) {
       if (firebaseStorageUsed === 'data') {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount, 'success');
       } else {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
+        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount, 'success');
       }
     } else {
-      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias + '. La sincronización en Firebase quedó pendiente.', 'warning');
+      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
     abrirBackup();
   } catch (e) {
@@ -26830,7 +24900,7 @@ async function verCicloArchivado(yearId) {
                 + '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(fallbackInfo.closedAt ? new Date(fallbackInfo.closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</div>'
               + '</div>'
             + '</div>'
-            + _renderArchiveSections(snapshot, yearId)
+            + _renderArchiveSections(snapshot)
           + '</div>';
           return;
         } catch (e) {
@@ -26860,7 +24930,7 @@ async function verCicloArchivado(yearId) {
           + '<div style="font-size:0.72rem;color:#616161;background:#F3E5F5;border-radius:999px;padding:4px 10px;font-weight:800;">Archivado: ' + escapeHTML(closedAt ? new Date(closedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</div>'
         + '</div>'
       + '</div>'
-      + _renderArchiveSections(snapshot, yearId)
+      + _renderArchiveSections(snapshot)
     + '</div>';
     return;
   } catch (e) {
@@ -26930,19 +25000,8 @@ function renderizarCiclosAcademicos() {
 }
 
 function abrirBackup() {
-  _cerrarTodosLosModales();
-  _logElementosRequeridos('abrirBackup:dom', [
-    'backup-overlay', 'backup-file-name', 'backup-preview', 'backup-btn-importar',
-    'backup-file-input', 'backup-resumen', 'backup-cal-historial', 'backup-archivar-btn', 'recup-lista'
-  ]);
   _backupFileData = null;
-  const overlay = _resolverOverlay('backup-overlay');
-  if (!overlay) {
-    _logEstadoModales('abrirBackup:missing-overlay');
-    return;
-  }
-  _logEstadoModales('abrirBackup:before');
-  overlay.classList.remove('hidden');
+  document.getElementById('backup-overlay').classList.remove('hidden');
   document.getElementById('backup-file-name').textContent = 'Seleccionar archivo .json';
   document.getElementById('backup-preview').classList.add('hidden');
   document.getElementById('backup-preview').innerHTML = '';
@@ -26996,7 +25055,6 @@ function abrirBackup() {
       }).join('');
     }
   }
-  _logEstadoModales('abrirBackup:after');
 }
 
 function cerrarBackup() {
@@ -27016,18 +25074,8 @@ function abrirHistorialCierres() {
 // MÓDULO: CONFIGURACIÓN
 // ════════════════════════════════════════════════════════════════════
 function abrirConfiguracion() {
-  _cerrarTodosLosModales();
-  _logElementosRequeridos('abrirConfiguracion:dom', [
-    'config-overlay', 'cfg-dark-mode', 'cfg-fuente-grande', 'cfg-alertas', 'cfg-manana',
-    'cfg-umbral-asist', 'cfg-umbral-riesgo', 'cfg-umbral-acts', 'cfg-touch-mode',
-    'cfg-asistencia-activa', 'cfg-asistencia-umbral-row', 'cfg-invite-code-actual'
-  ]);
-  const overlay = _resolverOverlay('config-overlay');
-  if (!overlay) {
-    _logEstadoModales('abrirConfiguracion:missing-overlay');
-    return;
-  }
-  _logEstadoModales('abrirConfiguracion:before');
+  const overlay = document.getElementById('config-overlay');
+  if (!overlay) return;
   // Cargar valores guardados en los toggles
   const dark = localStorage.getItem('cfg_dark_mode') === 'true';
   const grande = localStorage.getItem('cfg_fuente_grande') === 'true';
@@ -27066,155 +25114,17 @@ function abrirConfiguracion() {
   _cfgActualizarEstadoPin();
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  _refrescarPanelAlertasErrorConfig();
-  _logEstadoModales('abrirConfiguracion:after');
 }
 function cerrarConfiguracion() {
   document.getElementById('config-overlay')?.classList.add('hidden');
   document.body.style.overflow = '';
 }
 
-async function _refrescarPanelAlertasErrorConfig() {
-  const section = document.getElementById('cfg-error-alerts-section');
-  if (!section) return;
-
-  let allowed = false;
-  try {
-    allowed = await _esSuperadminPorPerfil();
-  } catch (_) {
-    allowed = false;
-  }
-  section.style.display = allowed ? '' : 'none';
-  if (!allowed) return;
-
-  const hasReporter = !!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.get === 'function');
-  const statusEl = document.getElementById('cfg-error-alerts-status');
-  const chkEnabled = document.getElementById('cfg-error-alerts-enabled');
-  const chkEmail = document.getElementById('cfg-error-alerts-email');
-  const chkFs = document.getElementById('cfg-error-alerts-firestore');
-  const inpTemplateId = document.getElementById('cfg-error-alerts-template-id');
-
-  if (!hasReporter) {
-    if (statusEl) statusEl.textContent = 'Reporter no disponible. Recarga la aplicación para activarlo.';
-    if (chkEnabled) chkEnabled.checked = false;
-    if (chkEmail) chkEmail.checked = false;
-    if (chkFs) chkFs.checked = false;
-    return;
-  }
-
-  const cfg = window.tinclassErrorAlertsConfig.get();
-  if (chkEnabled) chkEnabled.checked = cfg.enabled !== false;
-  if (chkEmail) chkEmail.checked = cfg.sendEmail !== false;
-  if (chkFs) chkFs.checked = cfg.saveFirestore !== false;
-  if (inpTemplateId && document.activeElement !== inpTemplateId) inpTemplateId.value = cfg.templateId || '';
-  if (statusEl) {
-    statusEl.textContent = 'Activo: ' + (cfg.enabled ? 'Sí' : 'No')
-      + ' | Correo: ' + (cfg.sendEmail ? 'Sí' : 'No')
-      + ' | Firestore: ' + (cfg.saveFirestore ? 'Sí' : 'No')
-      + ' | Severidad mínima: ' + (cfg.minSeverity || 'high');
-  }
-}
-
-function _cfgToggleErrorAlertsEnabled(on) {
-  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
-    mostrarToast('Reporter de errores no disponible', 'error');
-    return;
-  }
-  window.tinclassErrorAlertsConfig.set({ enabled: !!on });
-  _refrescarPanelAlertasErrorConfig();
-  mostrarToast(on ? 'Alertas de error activadas' : 'Alertas de error desactivadas', 'success');
-}
-
-function _cfgToggleErrorAlertsEmail(on) {
-  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
-    mostrarToast('Reporter de errores no disponible', 'error');
-    return;
-  }
-  window.tinclassErrorAlertsConfig.set({ sendEmail: !!on });
-  _refrescarPanelAlertasErrorConfig();
-  mostrarToast(on ? 'Envío de correo activado' : 'Envío de correo desactivado', 'success');
-}
-
-function _cfgToggleErrorAlertsFirestore(on) {
-  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
-    mostrarToast('Reporter de errores no disponible', 'error');
-    return;
-  }
-  window.tinclassErrorAlertsConfig.set({ saveFirestore: !!on });
-  _refrescarPanelAlertasErrorConfig();
-  mostrarToast(on ? 'Respaldo en Firestore activado' : 'Respaldo en Firestore desactivado', 'success');
-}
-
-function _cfgGuardarErrorAlertsTemplateId() {
-  if (!(window.tinclassErrorAlertsConfig && typeof window.tinclassErrorAlertsConfig.set === 'function')) {
-    mostrarToast('Reporter de errores no disponible', 'error');
-    return;
-  }
-  const input = document.getElementById('cfg-error-alerts-template-id');
-  const val = (input?.value || '').trim();
-  window.tinclassErrorAlertsConfig.set({ templateId: val });
-  _syncPreferencias();
-  mostrarToast(val ? 'Template ID guardado' : 'Template ID restablecido al valor por defecto del código', 'success');
-}
-
-async function probarAlertaErrorCorreo() {
-  const allowed = await _esSuperadminPorPerfil();
-  if (!allowed) {
-    mostrarToast('Solo superadmin puede probar alertas', 'error');
-    return;
-  }
-  if (!(typeof window.tinclassReportError === 'function')) {
-    mostrarToast('Reporter no disponible. Recarga la app.', 'error');
-    return;
-  }
-
-  const probeId = 'probe-' + Date.now();
-  const err = new Error('Prueba manual de alerta TinClass #' + probeId);
-  mostrarToast('Enviando prueba...', 'info');
-  const resultado = await window.tinclassReportError(err, {
-    type: 'manual_test',
-    source: 'settings.probe',
-    module: 'configuracion',
-    action: 'probar_alerta_error_correo',
-    severity: 'high'
-  });
-
-  const motivosSkip = {
-    'reporter-disabled': 'El reporte de errores está desactivado (activa el interruptor de arriba).',
-    'duplicate': 'Prueba ignorada por deduplicación, espera un par de minutos e intenta de nuevo.',
-    'below-min-severity': 'La severidad mínima configurada bloqueó la prueba.',
-    'burst-limit': 'Se alcanzó el límite de envíos por hora.',
-    'already-reporting': 'Ya hay un reporte en curso, intenta de nuevo en un momento.'
-  };
-
-  if (!resultado) {
-    mostrarToast('No se obtuvo respuesta del reporter. Revisa la consola.', 'error');
-    return;
-  }
-  if (!resultado.email && !resultado.firestore) {
-    mostrarToast(motivosSkip[resultado.reason] || ('Prueba no enviada: ' + (resultado.reason || 'motivo desconocido')), 'error');
-    return;
-  }
-  if (resultado.ok) {
-    const detalles = [
-      resultado.email ? ('Correo: ' + (resultado.email.ok ? 'enviado ✓' : 'falló ✗')) : null,
-      resultado.firestore ? ('Firestore: ' + (resultado.firestore.ok ? 'guardado ✓' : 'falló ✗')) : null
-    ].filter(Boolean).join(' · ');
-    mostrarToast('Prueba enviada. ' + detalles, 'success');
-  } else {
-    const razones = [
-      resultado.email && !resultado.email.ok ? ('Correo: ' + (resultado.email.reason || 'error desconocido')) : null,
-      resultado.firestore && !resultado.firestore.ok ? ('Firestore: ' + (resultado.firestore.reason || 'error desconocido')) : null
-    ].filter(Boolean).join(' · ');
-    mostrarToast('La prueba falló. ' + razones, 'error');
-  }
-}
-
 function _syncPreferencias() {
   if (!window._syncFirebase) return;
   const keys = ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana',
                  'cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral',
-                 'planificadorRA_touchMode_v1','tinclass_error_alerts_cfg_v1'];
+                 'planificadorRA_touchMode_v1'];
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
   _syncFirebase('preferencias', data);
@@ -27411,17 +25321,8 @@ document.addEventListener('touchstart', function (e) {
 // MÓDULO: ACERCA DE
 // ════════════════════════════════════════════════════════════════════
 function abrirAcercaDe() {
-  _cerrarTodosLosModales();
-  _logElementosRequeridos('abrirAcercaDe:dom', ['acercade-overlay']);
-  const overlay = _resolverOverlay('acercade-overlay');
-  if (!overlay) {
-    _logEstadoModales('abrirAcercaDe:missing-overlay');
-    return;
-  }
-  _logEstadoModales('abrirAcercaDe:before');
-  overlay.classList.remove('hidden');
+  document.getElementById('acercade-overlay')?.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  _logEstadoModales('abrirAcercaDe:after');
 }
 
 function cerrarAcercaDe() {
@@ -27549,7 +25450,6 @@ function importarDatos() {
     if (d.blog) localStorage.setItem(BLOG_KEY, d.blog);
     if (d.reportes) localStorage.setItem(REPORTES_KEY, d.reportes);
     if (d.calendarioEscolar) localStorage.setItem(CAL_ESC_KEY, d.calendarioEscolar);
-    if (d.cumpleanos) localStorage.setItem(CUMPLE_KEY, d.cumpleanos);
     if (d.stickies) localStorage.setItem(STICKIES_KEY, d.stickies);
     if (d.calBackups) localStorage.setItem(CAL_BACKUP_KEY, d.calBackups);
     if (d.geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, d.geminiKey);
@@ -27591,7 +25491,6 @@ function abrirDashboard() {
 function renderizarDashboard() {
   _actualizarPlanActivaPorFechas();
   _renderizarSaludo();
-  _renderizarBannerCalendarioDashboard();
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
@@ -27620,12 +25519,11 @@ function _renderizarSaludo() {
   const fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' · ' + ahora.getFullYear();
 
   const biblio = cargarBiblioteca();
-  const nPlans = (biblio.items || []).filter(i => _planPerteneceCicloActivo(i.id)).length;
+  const nPlans = (biblio.items || []).length;
   const nCursos = Object.keys(calState.cursos || {}).length;
   const tareas = cargarTareas();
   const nPend = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
   const nVenc = tareas.filter(t => _estadoTarea(t) === 'vencida').length;
-  const buildBadge = String(window.TINCLASS_BUILD_VERSION || 'vdev');
 
   // Clases hoy desde horario
   const horario = cargarHorario();
@@ -27639,25 +25537,25 @@ function _renderizarSaludo() {
     <div class="dash-greeting-left">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">${buildBadge}</span></div>
+      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">v15.40</span></div>
     </div>
     <div class="dash-stats-row">
-      <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
+      <div class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">folder_special</span></div>
         <div class="dash-stat-num">${nPlans}</div>
         <div class="dash-stat-lbl">Planific.</div>
       </div>
-      <div id="dash-stat-cursos" class="dash-stat-pill" title="Cursos activos" onclick="abrirCalificaciones()" style="cursor:pointer;">
+      <div class="dash-stat-pill" title="Cursos activos" onclick="abrirCalificaciones()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">school</span></div>
         <div class="dash-stat-num">${nCursos}</div>
         <div class="dash-stat-lbl">Cursos</div>
       </div>
-      <div id="dash-stat-clases-hoy" class="dash-stat-pill" title="Clases programadas hoy" onclick="abrirHorario()" style="cursor:pointer;">
+      <div class="dash-stat-pill" title="Clases programadas hoy" onclick="abrirHorario()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">today</span></div>
         <div class="dash-stat-num">${clasesHoy}</div>
         <div class="dash-stat-lbl">Clases hoy</div>
       </div>
-      <div id="dash-stat-tareas" class="dash-stat-pill ${nVenc > 0 ? 'stat-alerta' : nPend > 0 ? 'stat-warning' : ''}" title="Tareas pendientes" onclick="abrirTareas()" style="cursor:pointer;">
+      <div class="dash-stat-pill ${nVenc > 0 ? 'stat-alerta' : nPend > 0 ? 'stat-warning' : ''}" title="Tareas pendientes" onclick="abrirTareas()" style="cursor:pointer;">
         <div class="dash-stat-icon"><span class="material-icons">assignment</span></div>
         <div class="dash-stat-num">${nPend + nVenc}</div>
         <div class="dash-stat-lbl">Tareas</div>
@@ -27666,173 +25564,6 @@ function _renderizarSaludo() {
         <div class="dash-stat-icon"><span class="material-icons">history</span></div>
         <div class="dash-stat-num">↗</div>
         <div class="dash-stat-lbl">Historial</div>
-      </div>
-      <div id="btn-dash-force-update" class="dash-stat-pill" title="Forzar actualización de la app" onclick="forzarActualizacionApp()" style="cursor:pointer;display:none;">
-        <div class="dash-stat-icon"><span class="material-icons">system_update_alt</span></div>
-        <div class="dash-stat-num">↻</div>
-        <div class="dash-stat-lbl">Actualizar</div>
-      </div>
-    </div>`;
-}
-
-let _dashCalBannerFetchInFlight = false;
-
-function _dashFechaDiffDias(hoy, fecha) {
-  const a = new Date(hoy); a.setHours(0, 0, 0, 0);
-  const b = new Date(fecha); b.setHours(0, 0, 0, 0);
-  return Math.round((b.getTime() - a.getTime()) / 86400000);
-}
-
-function _dashParseDmyFecha(dmy) {
-  const m = String(dmy || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return null;
-  const fecha = new Date(`${m[3]}-${m[2]}-${m[1]}T12:00:00`);
-  if (Number.isNaN(fecha.getTime())) return null;
-  if (fecha.getDate() !== parseInt(m[1], 10) || (fecha.getMonth() + 1) !== parseInt(m[2], 10)) return null;
-  return fecha;
-}
-
-function _dashFechaCorta(fecha) {
-  return fecha.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' });
-}
-
-function _dashEtiquetaAnticipacion(dias) {
-  if (dias === 0) return 'Hoy';
-  if (dias === 1) return 'Mañana';
-  return `En ${dias} días`;
-}
-
-function _dashObtenerDatosCalendario() {
-  if (_calEsc.modo === 'personal' && _calEsc.personalDatos) return _calEsc.personalDatos;
-  if (_calEsc.adminDatos) return _calEsc.adminDatos;
-  try {
-    const raw = localStorage.getItem(CAL_ESC_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && parsed.meses) return parsed;
-  } catch (e) {}
-  return _calEscDatosVacios();
-}
-
-function _dashAsegurarCalendarioAdminBanner() {
-  if (_dashCalBannerFetchInFlight || _calEsc.adminDatos || typeof db === 'undefined') return;
-  _dashCalBannerFetchInFlight = true;
-  (async () => {
-    if (!_calEsc.centroId) {
-      _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
-    }
-    await _calEscCargarAdmin();
-    _renderizarBannerCalendarioDashboard();
-  })().finally(() => { _dashCalBannerFetchInFlight = false; });
-}
-
-function _dashParseActividadConFecha(texto) {
-  const t = String(texto || '').trim();
-  if (!t) return null;
-
-  let m = t.match(/^[Dd]el\s+(\d{2}\/\d{2}\/\d{4})\s+al\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
-  if (m) return { fechaDmy: m[1], titulo: m[3] || 'Actividad escolar' };
-
-  m = t.match(/^[Dd][íi]a\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
-  if (m) return { fechaDmy: m[1], titulo: m[2] || 'Actividad escolar' };
-
-  m = t.match(/^`?(\d{2}\/\d{2}\/\d{4})`?\s+`?(\d{2}\/\d{2}\/\d{4})`?\s+(.*)$/);
-  if (m) return { fechaDmy: m[1], titulo: m[3] || 'Actividad escolar' };
-
-  return null;
-}
-
-function _dashConstruirAvisosCalendario(datos) {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const avisos = [];
-
-  const pushAviso = (tipo, fecha, titulo, icono, anticipacionDias) => {
-    const diff = _dashFechaDiffDias(hoy, fecha);
-    if (diff < 0 || diff > anticipacionDias) return;
-    avisos.push({ tipo, fecha, titulo: String(titulo || '').trim(), icono, diff });
-  };
-
-  (_calEsc.adminDatos?.festivos || datos.festivos || []).forEach(f => {
-    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(f.fecha || '')) ? new Date(f.fecha + 'T12:00:00') : null;
-    if (!fecha || Number.isNaN(fecha.getTime())) return;
-    pushAviso('Festivo', fecha, f.motivo || 'Día festivo / no lectivo', 'event_busy', 4);
-  });
-
-  const mesNum = {
-    enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
-    julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12
-  };
-
-  Object.entries(datos.meses || {}).forEach(([mesKey, mesData]) => {
-    (mesData.actividades || []).forEach(a => {
-      const parsed = _dashParseActividadConFecha(a.texto);
-      if (!parsed) return;
-      const fecha = _dashParseDmyFecha(parsed.fechaDmy);
-      if (!fecha) return;
-      pushAviso('Actividad', fecha, parsed.titulo, 'task_alt', 2);
-    });
-
-    (mesData.efemerides || []).forEach(e => {
-      const dia = parseInt(e.dia, 10);
-      const mes = mesNum[mesKey];
-      if (!mes || !dia) return;
-
-      const y = hoy.getFullYear();
-      const cands = [new Date(y, mes - 1, dia, 12), new Date(y + 1, mes - 1, dia, 12)]
-        .filter(d => d.getMonth() === (mes - 1) && d.getDate() === dia)
-        .sort((a, b) => a - b);
-
-      const prox = cands.find(d => _dashFechaDiffDias(hoy, d) >= 0);
-      if (!prox) return;
-      pushAviso('Efeméride', prox, e.titulo || e.descripcion || 'Efeméride escolar', 'auto_stories', 2);
-    });
-  });
-
-  _listaCumpleanosOrdenada(10).forEach(c => {
-    pushAviso('Cumpleaños', c.fecha, `Cumpleaños de ${c.nombre}`, 'cake', 10);
-  });
-
-  const prioridadTipo = { Festivo: 1, 'Cumpleaños': 2, Actividad: 3, 'Efeméride': 4 };
-  avisos.sort((a, b) => (a.diff - b.diff) || ((prioridadTipo[a.tipo] || 9) - (prioridadTipo[b.tipo] || 9)) || a.titulo.localeCompare(b.titulo));
-  return avisos;
-}
-
-function _renderizarBannerCalendarioDashboard() {
-  const el = document.getElementById('dash-calendario-banner');
-  if (!el) return;
-
-  // Asegura que el calendario admin (Firestore) se cargue en segundo plano y
-  // vuelva a renderizar el banner cuando llegue, sin importar si ya hay avisos
-  // (p.ej. cumpleaños, que están disponibles de inmediato desde datos locales).
-  _dashAsegurarCalendarioAdminBanner();
-
-  const datos = _dashObtenerDatosCalendario();
-  const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 6);
-
-  if (!avisos.length) {
-    el.style.display = 'none';
-    el.innerHTML = '';
-    return;
-  }
-
-  el.style.display = 'block';
-  el.innerHTML = `
-    <div style="background:linear-gradient(135deg,#FFF8E1 0%,#FFF3E0 100%);border:1.5px solid #FFCC80;border-radius:12px;padding:10px 12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;gap:6px;font-size:0.83rem;font-weight:700;color:#E65100;">
-          <span class="material-icons" style="font-size:17px;">notifications_active</span>
-          Próximos avisos del calendario escolar
-        </div>
-        <button onclick="abrirCalendarioEscolar()" style="background:none;border:none;color:#1565C0;font-size:0.76rem;font-weight:700;cursor:pointer;">Ver calendario →</button>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${avisos.map(a => `
-          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
-            <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
-            <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff)} · ${_dashFechaCorta(a.fecha)}</span>
-            <span style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
-          </div>
-        `).join('')}
       </div>
     </div>`;
 }
@@ -28169,152 +25900,6 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   }).join('');
 }
 
-function _extraerMetaNotaClase(key) {
-  const k = String(key || '');
-  const mV2 = k.match(/^notaclasev2_(\d{4}-\d{2}-\d{2})_(.+)$/);
-  if (mV2) {
-    return { key: k, fecha: mV2[1], scopeId: mV2[2], periodo: '', tipo: 'v2' };
-  }
-
-  const m = k.match(/^notaclase_(\d{4}-\d{2}-\d{2})_(.+)_(\d+)$/);
-  if (!m) return null;
-  return { key: k, fecha: m[1], seccion: m[2], periodo: m[3], tipo: 'legacy' };
-}
-
-function _normalizarTextoNotaClase(txt) {
-  return String(txt || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function _scopeNotaClase(seccion, materia) {
-  const s = _normalizarTextoNotaClase(seccion) || 'sin_seccion';
-  const m = _normalizarTextoNotaClase(materia) || 'sin_materia';
-  return s + '__' + m;
-}
-
-function _notaClaseKeyV2(fecha, seccion, materia) {
-  return `notaclasev2_${fecha}_${_scopeNotaClase(seccion, materia)}`;
-}
-
-function _buscarNotaLegacyMismaClase(fecha, seccion) {
-  if (!fecha || !seccion) return '';
-  const pref = `notaclase_${fecha}_${seccion}_`;
-  let mejor = '';
-  try {
-    Object.keys(localStorage)
-      .filter(k => k.startsWith(pref))
-      .sort((a, b) => b.localeCompare(a))
-      .forEach((k) => {
-        if (mejor) return;
-        const txt = (localStorage.getItem(k) || '').trim();
-        if (txt) mejor = txt;
-      });
-  } catch { }
-  return mejor;
-}
-
-function _obtenerHistorialNotasClase(seccion, materia) {
-  const out = [];
-  const scopeId = _scopeNotaClase(seccion, materia);
-  const agregado = new Set();
-
-  try {
-    Object.keys(localStorage)
-      .filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_'))
-      .forEach((k) => {
-        const meta = _extraerMetaNotaClase(k);
-        if (!meta) return;
-
-        if (meta.tipo === 'v2') {
-          if (meta.scopeId !== scopeId) return;
-        } else {
-          // Compatibilidad: mostrar notas antiguas por sección aunque sean del esquema por período.
-          if (seccion && meta.seccion !== seccion) return;
-        }
-
-        const texto = (localStorage.getItem(k) || '').trim();
-        if (!texto) return;
-
-        const dedupeKey = `${meta.fecha}__${texto}`;
-        if (agregado.has(dedupeKey)) return;
-        agregado.add(dedupeKey);
-
-        out.push({ ...meta, texto, scopeId });
-      });
-  } catch (e) {
-    console.warn('Error leyendo historial de notas de clase:', e);
-  }
-
-  out.sort((a, b) => {
-    if (a.fecha === b.fecha) return Number(b.periodo) - Number(a.periodo);
-    return b.fecha.localeCompare(a.fecha);
-  });
-
-  return out;
-}
-
-function _diasTranscurridosDesde(fechaISO) {
-  try {
-    const hoy = new Date();
-    const d = new Date(fechaISO + 'T12:00:00');
-    const diff = Math.floor((hoy - d) / (1000 * 60 * 60 * 24));
-    return Number.isFinite(diff) ? Math.max(0, diff) : null;
-  } catch {
-    return null;
-  }
-}
-
-function _renderHistorialNotasClaseHTML(seccion, materia, fechaActual, color) {
-  const historial = _obtenerHistorialNotasClase(seccion, materia);
-  if (!historial.length) {
-    return `<div style="padding:10px 12px;border:1px dashed #CFD8DC;border-radius:8px;background:#FAFAFA;color:#90A4AE;font-size:0.78rem;">
-      Todavía no hay notas guardadas para esta clase.
-    </div>`;
-  }
-
-  return `<div style="display:flex;flex-direction:column;gap:8px;">${historial.map((n) => {
-    const fechaFmt = new Date(n.fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-    const esHoy = n.fecha === fechaActual;
-    const dias = _diasTranscurridosDesde(n.fecha);
-    const textoEnc = encodeURIComponent(n.texto);
-    return `<div style="border:1px solid #E0E0E0;border-radius:9px;padding:9px 10px;background:#fff;">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
-        <span style="font-size:0.73rem;color:#546E7A;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
-          <span class="material-icons" style="font-size:13px;">event</span>${escapeHTML(fechaFmt)}
-        </span>
-        ${n.periodo ? `<span style="font-size:0.69rem;background:#ECEFF1;color:#455A64;border-radius:10px;padding:2px 8px;font-weight:700;">P${escapeHTML(String(n.periodo))}</span>` : '<span style="font-size:0.69rem;background:#E3F2FD;color:#1565C0;border-radius:10px;padding:2px 8px;font-weight:700;">Compartida</span>'}
-        ${esHoy ? '<span style="font-size:0.68rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-weight:700;">Hoy</span>' : (dias !== null ? '<span style="font-size:0.68rem;background:#FFF3E0;color:#E65100;border-radius:10px;padding:2px 8px;font-weight:700;">Hace ' + dias + ' día' + (dias === 1 ? '' : 's') + '</span>' : '')}
-        <span style="margin-left:auto;font-size:0.68rem;color:#90A4AE;">${n.texto.length} caracteres</span>
-      </div>
-      <div style="font-size:0.81rem;color:#37474F;line-height:1.45;white-space:pre-wrap;border-left:3px solid ${color}33;padding-left:8px;">${escapeHTML(n.texto)}</div>
-      <div style="display:flex;justify-content:flex-end;margin-top:6px;">
-        <button onclick="_cargarNotaHistoricaEnModal('${textoEnc}')"
-          style="background:none;border:1px solid #BBDEFB;color:#1565C0;border-radius:12px;padding:3px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;">
-          <span class="material-icons" style="font-size:13px;">history</span> Cargar en nota actual
-        </button>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
-}
-
-function _cargarNotaHistoricaEnModal(textoCodificado) {
-  const ta = document.getElementById('mcl-nota-textarea');
-  if (!ta) return;
-  let texto = '';
-  try { texto = decodeURIComponent(textoCodificado || ''); } catch { texto = textoCodificado || ''; }
-  ta.value = texto;
-  ta.focus();
-  const key = ta.getAttribute('data-nota-key') || '';
-  if (key) guardarNotaClaseDebounce(key, texto);
-  const ind = document.getElementById('mcl-nota-guardada');
-  if (ind) ind.style.display = 'none';
-  mostrarToast('Nota anterior cargada en la nota actual', 'success');
-}
-
 // ── Modal de detalle de clase ────────────────────────────────────
 function abrirModalClase(encodedData) {
   let d;
@@ -28333,18 +25918,11 @@ function abrirModalClase(encodedData) {
   ];
 
   const evalKey = `eval_${d.fecha}_${d.seccion}_${d.periodo}`;
-  const notaKey = _notaClaseKeyV2(d.fecha, d.seccion || '', d.materia || '');
+  const notaKey = `notaclase_${d.fecha}_${d.seccion}_${d.periodo}`;
   let savedEval = {};
   let savedNota = '';
   try { savedEval = JSON.parse(localStorage.getItem(evalKey) || '{}'); } catch { }
   try { savedNota = localStorage.getItem(notaKey) || ''; } catch { }
-  if (!savedNota) {
-    const legacy = _buscarNotaLegacyMismaClase(d.fecha, d.seccion || '');
-    if (legacy) {
-      savedNota = legacy;
-      try { localStorage.setItem(notaKey, legacy); } catch { }
-    }
-  }
 
   const asistModuloActivo = localStorage.getItem('cfg_asistencia_activa') !== 'false';
   const asistData = cargarAsistencia();
@@ -28594,7 +26172,6 @@ function abrirModalClase(encodedData) {
           Lo que pasó realmente en clase, observaciones, pendientes para la próxima vez…
         </p>
         <textarea id="mcl-nota-textarea"
-          data-nota-key="${notaKey}"
           placeholder="Ej: Los estudiantes llegaron tarde. Cubrimos el tema hasta la sección 2. Pendiente: traer material de práctica el jueves..."
           style="width:100%;min-height:110px;padding:10px 12px;border:1.5px solid #E0E0E0;border-radius:9px;
                  font-size:0.85rem;font-family:inherit;resize:vertical;line-height:1.5;
@@ -28610,15 +26187,6 @@ function abrirModalClase(encodedData) {
             <span class="material-icons" style="font-size:13px;">delete_outline</span> Borrar nota
           </button>
         </div>` : ''}
-
-        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #E0E0E0;">
-          <div style="font-size:0.74rem;font-weight:700;color:#607D8B;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
-            <span class="material-icons" style="font-size:14px;">history</span>
-            Historial de esta clase (${escapeHTML(d.seccion || '')} · ${escapeHTML(d.materia || 'Módulo')})
-          </div>
-          <p style="font-size:0.72rem;color:#90A4AE;margin:0 0 7px;">Aquí puedes ver todo lo que anotaste en clases anteriores para este mismo grupo y módulo (P1/P2 comparten notas).</p>
-          ${_renderHistorialNotasClaseHTML(d.seccion || '', d.materia || '', d.fecha || '', color)}
-        </div>
       </div>
 
       <!-- Ir a calificaciones -->
@@ -28664,7 +26232,7 @@ function guardarNotaClaseDebounce(key, valor) {
     if (ind) { ind.style.display = 'inline'; }
     if (window._syncFirebase) {
       const data = {};
-      Object.keys(localStorage).filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')).forEach(k => { data[k] = localStorage.getItem(k); });
+      Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
       _syncFirebase('notas_clase', data);
     }
   }, 600);
@@ -28678,7 +26246,7 @@ function borrarNotaClase(key) {
   mostrarToast('Nota borrada', 'success');
   if (window._syncFirebase) {
     const data = {};
-    Object.keys(localStorage).filter(k => k.startsWith('notaclase_') || k.startsWith('notaclasev2_')).forEach(k => { data[k] = localStorage.getItem(k); });
+    Object.keys(localStorage).filter(k => k.startsWith('notaclase_')).forEach(k => { data[k] = localStorage.getItem(k); });
     _syncFirebase('notas_clase', data);
   }
 }
@@ -29135,14 +26703,8 @@ function cargarBlog() {
   }
 }
 function guardarBlog(data) {
-  const payload = {
-    ...(data || {}),
-    posts: Array.isArray(data?.posts) ? data.posts : [],
-    postsArchivados: data?.postsArchivados && typeof data.postsArchivados === 'object' ? data.postsArchivados : {},
-    _lastModified: Date.now()
-  };
-  localStorage.setItem(BLOG_KEY, JSON.stringify(payload));
-  if (window._syncFirebase) _syncFirebase('blog', payload);
+  localStorage.setItem(BLOG_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('blog', data);
 }
 
 function _archivarPostsBlogDocente(yearId, closedAt) {
@@ -29154,25 +26716,10 @@ function _archivarPostsBlogDocente(yearId, closedAt) {
     blog.postsArchivados = {};
   }
 
-  const prevReg = blog.postsArchivados[yearId] || {};
-  const prevPosts = Array.isArray(prevReg.posts) ? prevReg.posts : [];
-  const nuevosPosts = JSON.parse(JSON.stringify(postsActivos));
-  const merged = [...prevPosts, ...nuevosPosts];
-  const seen = new Set();
-  const dedup = merged.filter((p, idx) => {
-    const key = p && p.id ? ('id:' + p.id) : ('idx:' + idx + ':' + (p?.titulo || '') + ':' + (p?.creadoEn || ''));
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
   blog.postsArchivados[yearId] = {
     yearId,
-    yearLabel: yearId,
-    closedAt: closedAt || prevReg.closedAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    count: dedup.length,
-    posts: dedup
+    closedAt: closedAt || new Date().toISOString(),
+    posts: JSON.parse(JSON.stringify(postsActivos))
   };
 
   postsActivos
@@ -30166,7 +27713,6 @@ function guardarReporteNuevo(estId) {
     id:                    uid(),
     ts:                    Date.now(),
     fechaReporte:          document.getElementById('rep-f-fecha')?.value || new Date().toISOString().split('T')[0],
-    nombreDocente:         (window.currentUser?.displayName || window.currentUser?.email || '').trim(),
     cursoNombre:           (document.getElementById('rep-f-grado')?.value || '').trim(),
     estudianteNombre:      (document.getElementById('rep-f-nombre')?.value || '').trim(),
     gradoCursa:            (document.getElementById('rep-f-grado')?.value || '').trim(),
@@ -30189,7 +27735,6 @@ function guardarReporteNuevo(estId) {
   registrarCambio('Reporte académico guardado — ' + nuevo.estudianteNombre);
   mostrarToast('Reporte guardado', 'success');
   renderizarReportes(estId);
-  _generarYGuardarDocxReportePsicologia(estId, nuevo);
 }
 
 function eliminarReporte(id, estId) {
@@ -30199,39 +27744,6 @@ function eliminarReporte(id, estId) {
   guardarReportes(data);
   registrarCambio('Reporte académico eliminado');
   renderizarReportes(estId);
-}
-
-function descargarReportePsicologiaGuardado(estId, id) {
-  const rep = _obtenerReporteVistaPsicologia(estId, id);
-  if (!rep) {
-    mostrarToast('No se encontró el reporte.', 'error');
-    return;
-  }
-
-  if (rep.reporteDocxBase64) {
-    const link = document.createElement('a');
-    const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    });
-    link.href = URL.createObjectURL(blob);
-    link.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
-    link.click();
-    URL.revokeObjectURL(link.href);
-    return;
-  }
-
-  _generarBlobReportePsicologiaDocx(rep).then(generado => {
-    if (!generado) {
-      mostrarToast('No se pudo generar el Word del reporte.', 'error');
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(generado.blob);
-    link.download = generado.nombre;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    mostrarToast('Reporte exportado en Word', 'success');
-  });
 }
 
 function imprimirReporte(id, estId) {
@@ -30682,370 +28194,6 @@ function _presElegirCurso(cursoId) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// MÓDULO: CUMPLEAÑOS
-// ════════════════════════════════════════════════════════════════════
-
-const CUMPLE_KEY = 'planificadorRA_cumpleanos_v1';
-
-function cargarCumpleanos() {
-  try {
-    const raw = localStorage.getItem(CUMPLE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch { return {}; }
-}
-
-function _guardarCumpleanosData(data) {
-  localStorage.setItem(CUMPLE_KEY, JSON.stringify(data));
-  if (window._syncFirebase) _syncFirebase('cumpleanos', data);
-}
-
-// Próxima ocurrencia (este año o el siguiente) de una fecha guardada como 'YYYY-MM-DD'
-function _proximaFechaCumple(fechaISO) {
-  const m = String(fechaISO || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-  const mes = parseInt(m[1], 10), dia = parseInt(m[2], 10);
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const y = hoy.getFullYear();
-  const cands = [new Date(y, mes - 1, dia, 12), new Date(y + 1, mes - 1, dia, 12)]
-    .filter(d => d.getMonth() === (mes - 1) && d.getDate() === dia)
-    .sort((a, b) => a - b);
-  return cands.find(d => _dashFechaDiffDias(hoy, d) >= 0) || null;
-}
-
-// Lista de estudiantes (de todos los cursos activos) con cumpleaños registrado,
-// ordenada por proximidad. diasAnticipacion=null devuelve todos.
-function _listaCumpleanosOrdenada(diasAnticipacion) {
-  const data = cargarCumpleanos();
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const out = [];
-  Object.values(calState.cursos || {}).forEach(curso => {
-    (curso.estudiantes || []).forEach(est => {
-      const fechaISO = data[est.id];
-      if (!fechaISO) return;
-      const prox = _proximaFechaCumple(fechaISO);
-      if (!prox) return;
-      const diff = _dashFechaDiffDias(hoy, prox);
-      if (diasAnticipacion != null && diff > diasAnticipacion) return;
-      out.push({ estId: est.id, nombre: est.nombre, curso: curso.nombre, fechaISO, fecha: prox, diff });
-    });
-  });
-  out.sort((a, b) => a.diff - b.diff || a.nombre.localeCompare(b.nombre));
-  return out;
-}
-
-function guardarCumpleanosEstudiante(estId, fechaISO) {
-  const data = cargarCumpleanos();
-  if (fechaISO) data[estId] = fechaISO; else delete data[estId];
-  _guardarCumpleanosData(data);
-  registrarCambio('Cumpleaños actualizado');
-  renderizarCumpleanos();
-  _renderizarBannerCalendarioDashboard();
-  mostrarToast(fechaISO ? 'Cumpleaños guardado' : 'Fecha eliminada', 'success');
-}
-
-function abrirCumpleanos() {
-  _mostrarPanel('panel-cumpleanos');
-  const sel = document.getElementById('cumple-filtro-curso');
-  if (sel) {
-    const cursos = Object.values(calState.cursos || {}).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Todos los cursos</option>'
-      + cursos.map(c => `<option value="${escapeHTML(c.id)}" ${cur === c.id ? 'selected' : ''}>${escapeHTML(c.nombre)}</option>`).join('');
-  }
-  renderizarCumpleanos();
-}
-function cerrarCumpleanos() { abrirDashboard(); }
-
-function renderizarCumpleanos() {
-  const cont = document.getElementById('cumpleanos-container');
-  if (!cont) return;
-  const filtroCurso = document.getElementById('cumple-filtro-curso')?.value || '';
-  const data = cargarCumpleanos();
-
-  const proximos = _listaCumpleanosOrdenada(30);
-  const resumenHTML = proximos.length ? `
-    <div style="background:linear-gradient(135deg,#FCE4EC 0%,#F3E5F5 100%);border:1.5px solid #F8BBD0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
-      <div style="font-size:0.8rem;font-weight:700;color:#AD1457;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-        <span class="material-icons" style="font-size:17px;">cake</span> Próximos cumpleaños (30 días)
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${proximos.map(p => `
-          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #F8BBD0;border-radius:18px;padding:5px 9px;">
-            <span style="font-size:0.75rem;color:#880E4F;font-weight:700;">${escapeHTML(_dashEtiquetaAnticipacion(p.diff))}</span>
-            <span style="font-size:0.78rem;color:#424242;">${escapeHTML(p.nombre)}</span>
-            <span style="font-size:0.7rem;color:#9E9E9E;">· ${escapeHTML(p.curso)}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>` : `
-    <div style="padding:10px 12px;border:1px dashed #CFD8DC;border-radius:8px;background:#FAFAFA;color:#90A4AE;font-size:0.8rem;margin-bottom:16px;">
-      Sin cumpleaños próximos en los siguientes 30 días.
-    </div>`;
-
-  const cursos = Object.values(calState.cursos || {})
-    .filter(c => !filtroCurso || c.id === filtroCurso)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-  if (!cursos.length) {
-    cont.innerHTML = resumenHTML + `<div style="text-align:center;padding:30px;color:#9E9E9E;">No hay cursos registrados todavía.</div>`;
-    return;
-  }
-
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-
-  cont.innerHTML = resumenHTML + cursos.map(curso => {
-    const ests = [...(curso.estudiantes || [])].sort((a, b) => a.nombre.localeCompare(b.nombre));
-    if (!ests.length) return '';
-    return `
-      <div style="margin-bottom:18px;">
-        <div style="font-size:0.78rem;font-weight:800;color:#546E7A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${escapeHTML(curso.nombre)}</div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          ${ests.map(est => {
-            const fechaISO = data[est.id] || '';
-            const prox = fechaISO ? _proximaFechaCumple(fechaISO) : null;
-            const diff = prox ? _dashFechaDiffDias(hoy, prox) : null;
-            return `
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #E0E0E0;border-radius:8px;background:#fff;flex-wrap:wrap;">
-              <span class="material-icons" style="color:#AD1457;font-size:18px;">cake</span>
-              <span style="flex:1;min-width:120px;font-size:0.85rem;color:#37474F;">${escapeHTML(est.nombre)}</span>
-              <input type="date" value="${escapeHTML(fechaISO)}" id="cumple-input-${est.id}"
-                onchange="guardarCumpleanosEstudiante('${est.id}', this.value)"
-                style="padding:6px 8px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;">
-              <span style="font-size:0.72rem;font-weight:700;color:#AD1457;min-width:70px;">${diff !== null ? escapeHTML(_dashEtiquetaAnticipacion(diff)) : ''}</span>
-              ${fechaISO ? `<button onclick="guardarCumpleanosEstudiante('${est.id}','')" title="Borrar fecha" style="background:none;border:none;color:#BDBDBD;cursor:pointer;display:flex;align-items:center;">
-                <span class="material-icons" style="font-size:16px;">close</span>
-              </button>` : ''}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ════════════════════════════════════════════════════════════════════
-// MÓDULO: COMPARTIR ENTRE DOCENTES
-// ════════════════════════════════════════════════════════════════════
-
-const COMPARTIR_MAX_BYTES = 700 * 1024;
-
-let _compartirCentroId = null;
-let _compartirDocentes = [];
-
-async function abrirCompartidos() {
-  _mostrarPanel('panel-compartidos');
-  const cont = document.getElementById('compartir-container');
-  if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando...</div>';
-
-  _compartirCentroId = await _obtenerCentroIdDeUsuarioActual();
-  if (!_compartirCentroId) {
-    if (cont) cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;">No se pudo determinar tu centro educativo.</div>';
-    return;
-  }
-
-  try {
-    _compartirDocentes = await _coordGetDocentes(_compartirCentroId);
-  } catch { _compartirDocentes = []; }
-
-  renderizarCompartidos();
-}
-function cerrarCompartidos() { abrirDashboard(); }
-
-async function renderizarCompartidos() {
-  const cont = document.getElementById('compartir-container');
-  if (!cont || !_compartirCentroId) return;
-
-  let items = [];
-  let cargaError = null;
-  try {
-    const snap = await db.collection('centros').doc(_compartirCentroId).collection('compartidos').orderBy('fecha', 'desc').get();
-    items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (e) {
-    console.warn('Error cargando compartidos:', e);
-    cargaError = e;
-  }
-
-  const misUid = window.currentUser?.uid;
-
-  const composer = '<div style="margin-bottom:16px;">'
-    + '<button onclick="_toggleComposerCompartir()" class="btn-siguiente" style="font-size:0.82rem;padding:8px 16px;">'
-    + '<span class="material-icons">add</span> Compartir algo nuevo</button>'
-    + '<div id="compartir-composer" class="hidden" style="margin-top:12px;background:#fff;border:1.5px solid #E3F2FD;border-radius:10px;padding:16px;">'
-    + '<div style="display:flex;gap:16px;margin-bottom:12px;">'
-    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="compartir-tipo" value="link" checked onchange="_actualizarTipoCompartir()"> Enlace</label>'
-    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="compartir-tipo" value="documento" onchange="_actualizarTipoCompartir()"> Documento</label>'
-    + '</div>'
-    + '<input id="compartir-titulo" type="text" placeholder="Título *" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;margin-bottom:8px;box-sizing:border-box;">'
-    + '<div id="compartir-campo-url">'
-    + '<input id="compartir-url" type="text" placeholder="https://... *" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;margin-bottom:8px;box-sizing:border-box;">'
-    + '</div>'
-    + '<div id="compartir-campo-archivo" class="hidden">'
-    + '<input id="compartir-archivo" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="margin-bottom:8px;">'
-    + '<div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:8px;">Máximo 700 KB. PDF, Word, Excel o imagen.</div>'
-    + '</div>'
-    + '<textarea id="compartir-descripcion" placeholder="Descripción (opcional)" style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;margin-bottom:12px;box-sizing:border-box;resize:vertical;"></textarea>'
-    + '<div style="font-size:0.82rem;font-weight:700;color:#37474F;margin-bottom:6px;">¿Quién puede verlo?</div>'
-    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;"><input type="radio" name="compartir-vis" value="todos" checked onchange="_actualizarVisibilidadCompartir()"> Todos los docentes del centro</label>'
-    + '<label style="font-size:0.85rem;display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:8px;"><input type="radio" name="compartir-vis" value="especificos" onchange="_actualizarVisibilidadCompartir()"> Solo docentes específicos</label>'
-    + '<div id="compartir-destinatarios" class="hidden" style="max-height:150px;overflow-y:auto;border:1px solid #E0E0E0;border-radius:6px;padding:8px;margin-bottom:12px;">'
-    + (_compartirDocentes.filter(d => d.uid !== misUid).map(d =>
-        '<label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:3px 0;cursor:pointer;">'
-        + '<input type="checkbox" class="compartir-dest-check" value="' + escapeHTML(d.uid) + '"> ' + escapeHTML(d.nombre || d.email || d.uid)
-        + '</label>'
-      ).join('') || '<div style="font-size:0.8rem;color:#9E9E9E;">No hay otros docentes en tu centro todavía.</div>')
-    + '</div>'
-    + '<div id="compartir-error" style="color:#C62828;font-size:0.8rem;min-height:18px;"></div>'
-    + '<button onclick="_compartirNuevo()" class="btn-siguiente" style="font-size:0.85rem;padding:9px 18px;">'
-    + '<span class="material-icons">send</span> Compartir</button>'
-    + '</div></div>';
-
-  if (cargaError) {
-    cont.innerHTML = composer + '<div style="text-align:center;padding:30px;color:#C62828;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">error_outline</span>No se pudo cargar lo compartido (permisos de Firestore). Verifica que las reglas actualizadas estén publicadas en Firebase Console.<div style="font-size:0.72rem;color:#9E9E9E;margin-top:6px;">' + escapeHTML(cargaError.message || String(cargaError)) + '</div></div>';
-    return;
-  }
-
-  if (!items.length) {
-    cont.innerHTML = composer + '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">folder_shared</span>Nadie ha compartido nada todavía.</div>';
-    return;
-  }
-
-  cont.innerHTML = composer + '<div style="display:flex;flex-direction:column;gap:10px;">' + items.map(it => {
-    const fecha = it.fecha?.toDate ? it.fecha.toDate().toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const icono = it.tipo === 'documento' ? 'description' : 'link';
-    const visBadge = it.visibilidad === 'todos'
-      ? '<span style="background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;font-size:0.7rem;font-weight:700;">Todos</span>'
-      : '<span style="background:#FFF3E0;color:#E65100;border-radius:10px;padding:2px 8px;font-size:0.7rem;font-weight:700;">Privado (' + (it.destinatarios?.length || 0) + ')</span>';
-    const accion = it.tipo === 'documento'
-      ? '<button onclick="_descargarCompartido(\'' + it.id + '\')" style="background:none;border:1px solid #90CAF9;color:#1565C0;border-radius:16px;padding:4px 12px;font-size:0.78rem;cursor:pointer;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">download</span> Descargar</button>'
-      : '<a href="' + escapeHTML(it.url || '#') + '" target="_blank" rel="noopener" style="background:none;border:1px solid #90CAF9;color:#1565C0;border-radius:16px;padding:4px 12px;font-size:0.78rem;text-decoration:none;display:inline-flex;align-items:center;gap:3px;"><span class="material-icons" style="font-size:14px;">open_in_new</span> Abrir enlace</a>';
-    const eliminarBtn = it.autorUid === misUid
-      ? '<button onclick="_eliminarCompartido(\'' + it.id + '\')" style="background:none;border:none;color:#BDBDBD;cursor:pointer;" title="Eliminar"><span class="material-icons" style="font-size:16px;">delete_outline</span></button>'
-      : '';
-    return '<div style="background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:12px 14px;">'
-      + '<div style="display:flex;align-items:flex-start;gap:10px;">'
-      + '<span class="material-icons" style="color:#1565C0;font-size:22px;">' + icono + '</span>'
-      + '<div style="flex:1;min-width:0;">'
-      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-      + '<span style="font-weight:700;font-size:0.9rem;color:#212121;">' + escapeHTML(it.titulo || 'Sin título') + '</span>' + visBadge
-      + '</div>'
-      + (it.descripcion ? '<div style="font-size:0.82rem;color:#607D8B;margin-top:4px;">' + escapeHTML(it.descripcion) + '</div>' : '')
-      + '<div style="font-size:0.72rem;color:#B0BEC5;margin-top:6px;">' + escapeHTML(it.autorNombre || it.autorEmail || 'Docente') + ' · ' + fecha + '</div>'
-      + '<div style="margin-top:8px;">' + accion + '</div>'
-      + '</div>' + eliminarBtn
-      + '</div></div>';
-  }).join('') + '</div>';
-}
-
-function _toggleComposerCompartir() {
-  document.getElementById('compartir-composer')?.classList.toggle('hidden');
-}
-
-function _actualizarTipoCompartir() {
-  const tipo = document.querySelector('input[name="compartir-tipo"]:checked')?.value;
-  document.getElementById('compartir-campo-url')?.classList.toggle('hidden', tipo !== 'link');
-  document.getElementById('compartir-campo-archivo')?.classList.toggle('hidden', tipo !== 'documento');
-}
-
-function _actualizarVisibilidadCompartir() {
-  const vis = document.querySelector('input[name="compartir-vis"]:checked')?.value;
-  document.getElementById('compartir-destinatarios')?.classList.toggle('hidden', vis !== 'especificos');
-}
-
-async function _compartirNuevo() {
-  const errEl = document.getElementById('compartir-error');
-  if (errEl) errEl.textContent = '';
-  if (!_compartirCentroId || !window.currentUser) return;
-
-  const tipo = document.querySelector('input[name="compartir-tipo"]:checked')?.value || 'link';
-  const titulo = (document.getElementById('compartir-titulo')?.value || '').trim();
-  const descripcion = (document.getElementById('compartir-descripcion')?.value || '').trim();
-  const url = (document.getElementById('compartir-url')?.value || '').trim();
-  const fileInput = document.getElementById('compartir-archivo');
-  const file = fileInput?.files?.[0];
-  const vis = document.querySelector('input[name="compartir-vis"]:checked')?.value || 'todos';
-  const destinatarios = vis === 'especificos'
-    ? Array.from(document.querySelectorAll('.compartir-dest-check:checked')).map(c => c.value)
-    : [];
-
-  if (!titulo) { if (errEl) errEl.textContent = 'Ponle un título.'; return; }
-  if (tipo === 'link' && !/^https?:\/\//i.test(url)) { if (errEl) errEl.textContent = 'Escribe un link válido (empieza con http:// o https://).'; return; }
-  if (tipo === 'documento' && !file) { if (errEl) errEl.textContent = 'Selecciona un archivo.'; return; }
-  if (tipo === 'documento' && file.size > COMPARTIR_MAX_BYTES) { if (errEl) errEl.textContent = 'El archivo no debe superar 700 KB.'; return; }
-  if (vis === 'especificos' && !destinatarios.length) { if (errEl) errEl.textContent = 'Elige al menos un docente.'; return; }
-
-  const data = {
-    tipo, titulo, descripcion,
-    autorUid: window.currentUser.uid,
-    autorNombre: window.currentUser.displayName || '',
-    autorEmail: window.currentUser.email || '',
-    visibilidad: vis,
-    destinatarios,
-    fecha: firebase.firestore.FieldValue.serverTimestamp()
-  };
-  if (tipo === 'link') {
-    data.url = url;
-  } else {
-    try {
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result).split(',')[1]);
-        reader.onerror = () => reject(new Error('Error leyendo archivo'));
-        reader.readAsDataURL(file);
-      });
-      data.archivoBase64 = base64;
-      data.archivoNombre = file.name;
-      data.archivoMime = file.type || 'application/octet-stream';
-    } catch (e) {
-      if (errEl) errEl.textContent = 'No se pudo leer el archivo.';
-      return;
-    }
-  }
-
-  try {
-    await db.collection('centros').doc(_compartirCentroId).collection('compartidos').add(data);
-    mostrarToast('Compartido correctamente', 'success');
-    document.getElementById('compartir-composer')?.classList.add('hidden');
-    renderizarCompartidos();
-  } catch (e) {
-    if (errEl) errEl.textContent = 'Error al compartir: ' + (e.message || e);
-  }
-}
-
-async function _descargarCompartido(itemId) {
-  if (!_compartirCentroId) return;
-  try {
-    const doc = await db.collection('centros').doc(_compartirCentroId).collection('compartidos').doc(itemId).get();
-    if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
-    const it = doc.data();
-    if (!it.archivoBase64) { mostrarToast('Este item no tiene archivo', 'error'); return; }
-    const bytes = Uint8Array.from(atob(it.archivoBase64), c => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = it.archivoNombre || 'archivo';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
-  }
-}
-
-async function _eliminarCompartido(itemId) {
-  if (!_compartirCentroId) return;
-  if (!confirm('¿Eliminar este item compartido?')) return;
-  try {
-    await db.collection('centros').doc(_compartirCentroId).collection('compartidos').doc(itemId).delete();
-    mostrarToast('Eliminado', 'success');
-    renderizarCompartidos();
-  } catch (e) {
-    mostrarToast('Error al eliminar: ' + (e.message || e), 'error');
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════
 // MÓDULO: CALENDARIO ESCOLAR
 // ════════════════════════════════════════════════════════════════════
 
@@ -31062,73 +28210,14 @@ const CAL_ESC_MESES_LABEL = {
 
 let _calEsc = {
   modo: 'admin',        // 'admin' | 'personal'
-  adminDatos: null,     // datos del calendario del admin (Firestore, del centro actual)
+  adminDatos: null,     // datos del calendario del admin (Firestore)
   personalDatos: null,  // datos del usuario (localStorage)
   mesActivo: 'agosto',
   cargando: false,
-  esAdmin: false,        // solo superadmin puede editar el calendario de un centro
-  centroId: null,        // centro cuyo calendario se esta viendo/editando
-  listaCentros: [],       // solo se llena para superadmin (selector de centro)
 };
 
 function _calEscEsAdmin() {
-  return !!_calEsc.esAdmin;
-}
-
-// Resuelve el centroId del usuario logueado (docente/admin_centro/director/coordinadora),
-// leyendo su perfil y, si no tiene centroId propio, buscandolo en centros.admins.
-async function _obtenerCentroIdDeUsuarioActual() {
-  if (!window.currentUser || typeof db === 'undefined') return null;
-  try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    if (doc.exists && doc.data().centroId) return doc.data().centroId;
-  } catch {}
-  try {
-    const email = window.currentUser.email?.toLowerCase();
-    if (email) {
-      const snap = await db.collection('centros').get();
-      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
-      if (centro) {
-        // Se resolvio por coincidencia en centros.admins[], no por el campo propio.
-        // Lo respaldamos en el perfil porque varias reglas de Firestore (miCentroId())
-        // leen usuarios/{uid}.centroId directamente y no replican este fallback.
-        try { await db.collection('usuarios').doc(window.currentUser.uid).set({ centroId: centro.id }, { merge: true }); } catch {}
-        return centro.id;
-      }
-    }
-  } catch {}
-  // Superadmin sin centro propio: usar el primer centro registrado como referencia por
-  // defecto (mismo criterio que el selector del editor de calendario), para que su propio
-  // dashboard muestre avisos en vez de quedar vacío.
-  try {
-    if (await _esSuperadminPorPerfil()) {
-      const snap = await db.collection('centros').orderBy('nombre').limit(1).get();
-      if (!snap.empty) return snap.docs[0].id;
-    }
-  } catch {}
-  return null;
-}
-
-async function _calEscCargarSelectorCentros() {
-  try {
-    const snap = await db.collection('centros').orderBy('nombre').get();
-    _calEsc.listaCentros = snap.docs.map(d => ({ id: d.id, nombre: d.data().nombre || d.id }));
-  } catch (e) {
-    _calEsc.listaCentros = [];
-  }
-  if (!_calEsc.centroId && _calEsc.listaCentros.length) {
-    _calEsc.centroId = _calEsc.listaCentros[0].id;
-  }
-}
-
-function _calEscCambiarCentro(centroId) {
-  _calEsc.centroId = centroId;
-  _calEsc.cargando = true;
-  _calEscRenderizar();
-  _calEscCargarAdmin(centroId).then(() => {
-    _calEsc.cargando = false;
-    _calEscRenderizar();
-  });
+  return !!(window.currentUser && typeof ADMIN_EMAIL !== 'undefined' && window.currentUser.email === ADMIN_EMAIL);
 }
 
 function _calEscDatosActuales() {
@@ -31143,55 +28232,30 @@ function _calEscDatosVacios() {
   return { meses: d, festivos: [] };
 }
 
-// ── Cargar calendario del admin desde Firestore (del centro actual) ──
-async function _calEscCargarAdmin(centroId) {
+// ── Cargar calendario del admin desde Firestore ──────────────────────
+async function _calEscCargarAdmin() {
   if (typeof db === 'undefined') return;
-  const cid = centroId || _calEsc.centroId;
-  if (!cid) { _calEsc.adminDatos = _calEscDatosVacios(); return; }
   try {
-    const doc = await db.collection('centros').doc(cid).collection('calendario').doc('main').get();
+    const doc = await db.collection('public_calendar').doc('main').get();
     _calEsc.adminDatos = (doc.exists && doc.data()?.meses) ? doc.data() : _calEscDatosVacios();
   } catch (e) {
     _calEsc.adminDatos = _calEscDatosVacios();
   }
 }
 
-// ── Guardar calendario del admin en Firestore (del centro actual) ────
+// ── Guardar calendario del admin en Firestore ────────────────────────
 async function _calEscGuardarAdmin() {
-  if (!_calEscEsAdmin() || typeof db === 'undefined' || !_calEsc.centroId) return;
+  if (!_calEscEsAdmin() || typeof db === 'undefined') return;
   try {
-    await db.collection('centros').doc(_calEsc.centroId).collection('calendario').doc('main').set(_calEsc.adminDatos || _calEscDatosVacios());
-    mostrarToast('Calendario publicado para el centro ✓', 'success');
+    await db.collection('public_calendar').doc('main').set(_calEsc.adminDatos || _calEscDatosVacios());
+    mostrarToast('Calendario publicado para todos los docentes ✓', 'success');
   } catch (e) {
     console.error('[Calendario] Error Firestore:', e.code, e.message);
     if (e.code === 'permission-denied') {
-      mostrarToast('Sin permisos en Firestore. Verifica las reglas de centros/{id}/calendario en Firebase Console.', 'error');
+      mostrarToast('Sin permisos en Firestore. Verifica las reglas de public_calendar en Firebase Console.', 'error');
     } else {
       mostrarToast('Error al guardar en Firestore: ' + (e.message || e.code), 'error');
     }
-  }
-}
-
-// ── Copia unica del calendario global anterior (public_calendar/main) al centro actual.
-// Solo relevante para instalaciones que ya tenian datos antes de pasar a un calendario
-// por centro; no crea ningun vinculo permanente entre centros.
-async function _calEscMigrarCalendarioAntiguo() {
-  if (!_calEscEsAdmin() || !_calEsc.centroId || typeof db === 'undefined') return;
-  if (!confirm('Esto copiará el calendario compartido anterior (festivos, actividades, efemérides) al centro seleccionado. ¿Continuar?')) return;
-  try {
-    const doc = await db.collection('public_calendar').doc('main').get();
-    if (!doc.exists || !doc.data()?.meses) {
-      mostrarToast('No hay calendario anterior para copiar.', 'error');
-      return;
-    }
-    const datos = doc.data();
-    await db.collection('centros').doc(_calEsc.centroId).collection('calendario').doc('main').set(datos);
-    _calEsc.adminDatos = datos;
-    mostrarToast('Calendario anterior copiado a este centro ✓', 'success');
-    _calEscRenderizar();
-    _renderizarBannerCalendarioDashboard();
-  } catch (e) {
-    mostrarToast('Error copiando calendario: ' + (e.message || e.code), 'error');
   }
 }
 
@@ -31217,14 +28281,6 @@ async function abrirCalendarioEscolar() {
   if (c) c.innerHTML = `<div style="text-align:center;padding:40px;color:#9E9E9E;">
     <span class="material-icons" style="font-size:36px;display:block;margin-bottom:8px;">hourglass_empty</span>
     Cargando calendario...</div>`;
-
-  _calEsc.esAdmin = await _esSuperadminPorPerfil();
-
-  if (_calEsc.esAdmin) {
-    await _calEscCargarSelectorCentros();
-  } else if (!_calEsc.centroId) {
-    _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
-  }
 
   await _calEscCargarAdmin();
   _calEscCargarPersonal();
@@ -31259,21 +28315,7 @@ function _calEscRenderizarBanner() {
   if (_calEscEsAdmin()) {
     banner.style.cssText += ';background:#E8F5E9;color:#1B5E20;border-color:#A5D6A7;';
     icon.textContent = 'admin_panel_settings';
-    const selectorCentro = _calEsc.listaCentros.length
-      ? `<select onchange="_calEscCambiarCentro(this.value)"
-           style="margin-left:8px;padding:4px 8px;border-radius:8px;border:1.5px solid #A5D6A7;font-size:0.78rem;font-weight:700;color:#1B5E20;background:#fff;">
-          ${_calEsc.listaCentros.map(c => `<option value="${c.id}" ${c.id === _calEsc.centroId ? 'selected' : ''}>${escapeHTML(c.nombre)}</option>`).join('')}
-        </select>`
-      : '';
-    const calendarioVacio = !(_calEsc.adminDatos?.festivos?.length) &&
-      !Object.values(_calEsc.adminDatos?.meses || {}).some(m => (m.actividades || []).length || (m.efemerides || []).length);
-    const avisoMigrar = calendarioVacio
-      ? `<br><button onclick="_calEscMigrarCalendarioAntiguo()"
-           style="margin-top:6px;background:none;border:1px solid #2E7D32;color:#2E7D32;border-radius:14px;padding:3px 10px;font-size:0.72rem;cursor:pointer;">
-          <span class="material-icons" style="font-size:12px;vertical-align:middle;">history</span> Copiar calendario compartido anterior a este centro
-        </button>`
-      : '';
-    txt.innerHTML    = 'Editando el calendario del centro:' + selectorCentro + avisoMigrar;
+    txt.textContent  = 'Eres el administrador. Los cambios que hagas aquí se publican para todos los docentes.';
     btns.innerHTML   = `<button onclick="_calEscGuardarAdmin()"
       style="background:#2E7D32;color:#fff;border:none;border-radius:20px;padding:6px 14px;
              font-size:0.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
@@ -31428,204 +28470,24 @@ function _calEscAsegurarMes(datos, mes) {
 
 // ── CRUD Actividades ─────────────────────────────────────────────────
 function _calEscAgregarActividad(mes) {
-  _calEscModalActividad(mes, null, null);
+  const texto = prompt(`Nueva actividad para ${CAL_ESC_MESES_LABEL[mes]}:`);
+  if (!texto || !texto.trim()) return;
+  const datos = _calEscGetDatosEditables();
+  _calEscAsegurarMes(datos, mes);
+  datos.meses[mes].actividades.push({ id: uid(), texto: texto.trim() });
+  _calEscSetDatosEditables(datos);
+  _calEscRenderizarMes();
 }
 
 function _calEscEditarActividad(mes, idx) {
   const datos = _calEscGetDatosEditables();
   _calEscAsegurarMes(datos, mes);
   const act = datos.meses[mes].actividades[idx];
-  if (act) _calEscModalActividad(mes, idx, act);
-}
-
-function _calEscModalActividad(mes, idx, act) {
-  document.getElementById('cal-esc-modal-act')?.remove();
-  const overlay = document.createElement('div');
-  overlay.id = 'cal-esc-modal-act';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;padding:16px;';
-  
-  // Si tiene formato de rango "del DD/MM/AAAA al DD/MM/AAAA", intentar parsear para prellenar
-  let fDesde = '', fHasta = '', desc = act?.texto || '';
-  if (act && act.texto) {
-    const rMatch = act.texto.match(/^[Dd]el\s+(\d{2}\/\d{2}\/\d{4})\s+al\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
-    const uMatch = act.texto.match(/^[Dd]ía\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
-    if (rMatch) {
-      fDesde = rMatch[1];
-      fHasta = rMatch[2];
-      desc = rMatch[3];
-    } else if (uMatch) {
-      fDesde = uMatch[1];
-      fHasta = uMatch[1];
-      desc = uMatch[2];
-    }
-  }
-
-  // Convertir formato DD/MM/AAAA a YYYY-MM-DD para el input type="date"
-  const dToIso = (dStr) => {
-    if (!dStr) return '';
-    const parts = dStr.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    return '';
-  };
-
-  const isoDesde = dToIso(fDesde);
-  const isoHasta = dToIso(fHasta);
-
-  overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
-      <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#212121;">
-        ${idx === null ? 'Nueva actividad' : 'Editar actividad'} — ${CAL_ESC_MESES_LABEL[mes]}
-      </h3>
-      
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Desde</label>
-          <input type="date" id="cact-desde" value="${isoDesde}"
-            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;font-family:inherit;color:#212121;background:#fff;" />
-        </div>
-        <div>
-          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Hasta (opcional)</label>
-          <input type="date" id="cact-hasta" value="${isoHasta}"
-            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;font-family:inherit;color:#212121;background:#fff;" />
-        </div>
-      </div>
-
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:flex;justify-content:between;align-items:center;">
-        <span>Enunciado de la actividad o actividades</span>
-        <span style="font-size:0.75rem;font-weight:400;color:#78909C;margin-left:auto;">Puedes pegar múltiples juntas (una por línea)</span>
-      </label>
-      <textarea id="cact-texto" rows="6" placeholder="Escribe aquí tu actividad.&#10;Si pegas múltiples líneas, se agregarán como actividades con la misma fecha de forma individual."
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 16px;resize:vertical;box-sizing:border-box;font-family:inherit;min-height:100px;">${desc}</textarea>
-      
-      <div style="font-size:0.78rem;color:#78909C;line-height:1.4;margin-bottom:16px;">
-        💡 <strong>Sugerencia:</strong> Puedes pegar varias actividades con sus propias fechas. Cada línea con formato: <em>"DD/MM/AAAA  DD/MM/AAAA  Descripción de la actividad"</em> (separado por tabulaciones o espacios). Las fechas se asignarán automáticamente a cada actividad.
-      </div>
-
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button onclick="document.getElementById('cal-esc-modal-act').remove()"
-          style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
-        <button onclick="_calEscGuardarActividad('${mes}',${JSON.stringify(idx)})"
-          style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:7px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;">Guardar</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-}
-
-function _calEscGuardarActividad(mes, idx) {
-  const rawDesde = (document.getElementById('cact-desde')?.value || '').trim();
-  const rawHasta = (document.getElementById('cact-hasta')?.value || '').trim();
-  const rawText = (document.getElementById('cact-texto')?.value || '').trim();
-
-  if (!rawText) {
-    mostrarToast('Por favor escribe un enunciado', 'error');
-    return;
-  }
-
-  // Convertir formato YYYY-MM-DD a DD/MM/AAAA para guardar de forma estándar
-  const isoToDmy = (isoStr) => {
-    if (!isoStr) return '';
-    const parts = isoStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return '';
-  };
-
-  // Función para convertir DD/MM/AAAA a YYYY-MM-DD
-  const dmyToIso = (dStr) => {
-    if (!dStr) return '';
-    const parts = dStr.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    return '';
-  };
-
-  const desdePicker = isoToDmy(rawDesde);
-  const hastaPicker = isoToDmy(rawHasta);
-
-  // Dividir texto por saltos de línea para soportar guardado / pegado múltiple
-  const lineas = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  if (lineas.length === 0) {
-    mostrarToast('Por favor escribe al menos un enunciado', 'error');
-    return;
-  }
-
-  const datos = _calEscGetDatosEditables();
-  _calEscAsegurarMes(datos, mes);
-
-  if (idx === null) {
-    // Es nueva actividad (puede ser múltiple)
-    lineas.forEach(linea => {
-      // Intentar extraer fechas desde el texto de la línea
-      // Formato esperado: DD/MM/AAAA  DD/MM/AAAA  Descripción de la actividad
-      // (separado por tabulaciones o espacios)
-      const dateMatch = linea.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
-      let lineDesde, lineHasta, lineDesc;
-
-      if (dateMatch) {
-        // Fechas extraídas de la propia línea
-        lineDesde = dateMatch[1];
-        lineHasta = dateMatch[2];
-        lineDesc = dateMatch[3];
-      } else {
-        // Fallback: usar las fechas de los pickers (comportamiento anterior)
-        lineDesde = desdePicker;
-        lineHasta = hastaPicker;
-        lineDesc = linea;
-      }
-
-      // Construir el label con fechas
-      let lineFechadoLabel = '';
-      if (lineDesde) {
-        if (lineHasta && lineHasta !== lineDesde) {
-          lineFechadoLabel = `Del ${lineDesde} al ${lineHasta}: `;
-        } else {
-          lineFechadoLabel = `Día ${lineDesde}: `;
-        }
-      }
-
-      datos.meses[mes].actividades.push({
-        id: uid(),
-        texto: lineFechadoLabel + lineDesc
-      });
-    });
-    mostrarToast(lineas.length > 1 ? `${lineas.length} actividades agregadas ✓` : 'Actividad agregada ✓', 'success');
-  } else {
-    // Es edición de una actividad específica (se asume primera línea si pegara varias)
-    const act = datos.meses[mes].actividades[idx];
-    if (act) {
-      // En edición, también intentar extraer fechas de la primera línea
-      const dateMatch = lineas[0].match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
-      let editDesde, editHasta, editDesc;
-
-      if (dateMatch) {
-        editDesde = dateMatch[1];
-        editHasta = dateMatch[2];
-        editDesc = dateMatch[3];
-      } else {
-        editDesde = desdePicker;
-        editHasta = hastaPicker;
-        editDesc = lineas[0];
-      }
-
-      let editFechadoLabel = '';
-      if (editDesde) {
-        if (editHasta && editHasta !== editDesde) {
-          editFechadoLabel = `Del ${editDesde} al ${editHasta}: `;
-        } else {
-          editFechadoLabel = `Día ${editDesde}: `;
-        }
-      }
-      act.texto = editFechadoLabel + editDesc;
-      mostrarToast('Actividad actualizada ✓', 'success');
-    }
-  }
-
+  if (!act) return;
+  const nuevo = prompt('Editar actividad:', act.texto);
+  if (!nuevo || !nuevo.trim()) return;
+  act.texto = nuevo.trim();
   _calEscSetDatosEditables(datos);
-  document.getElementById('cal-esc-modal-act')?.remove();
   _calEscRenderizarMes();
 }
 
@@ -31663,31 +28525,19 @@ function _calEscModalEfemeride(mes, idx, ef) {
   overlay.id = 'cal-esc-modal-ef';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;padding:16px;';
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.18);" onclick="event.stopPropagation()">
       <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:#212121;">
         ${idx === null ? 'Nueva efeméride' : 'Editar efeméride'} — ${CAL_ESC_MESES_LABEL[mes]}
       </h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Día del mes</label>
-          <input type="number" id="cef-dia" min="1" max="31" value="${ef?.dia || ''}"
-            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Descripción (opcional)</label>
-          <input type="text" id="cef-desc" value="${ef ? escapeHTML(ef.descripcion || '') : ''}" placeholder="Breve descripción..."
-            style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;" />
-        </div>
-      </div>
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:flex;justify-content:between;align-items:center;">
-        <span>Nombre de la efeméride o efemérides</span>
-        <span style="font-size:0.75rem;font-weight:400;color:#78909C;margin-left:auto;">Puedes pegar múltiples (una por línea)</span>
-      </label>
-      <textarea id="cef-titulo" rows="6" placeholder="Escribe aquí el nombre de la efeméride.&#10;Si pegas múltiples líneas, se agregarán como efemérides con su fecha de forma individual."
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 12px;resize:vertical;box-sizing:border-box;font-family:inherit;min-height:100px;">${ef ? escapeHTML(ef.titulo) : ''}</textarea>
-      <div style="font-size:0.78rem;color:#78909C;line-height:1.4;margin-bottom:16px;">
-        💡 <strong>Sugerencia:</strong> Puedes pegar varias efemérides con sus propias fechas. Cada línea con formato: <em>"DD/MM/AAAA  DD/MM/AAAA  Nombre de la efeméride"</em> (separado por tabulaciones o espacios). El día se asignará automáticamente a cada efeméride.
-      </div>
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Día del mes</label>
+      <input type="number" id="cef-dia" min="1" max="31" value="${ef?.dia || ''}"
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin:4px 0 12px;box-sizing:border-box;" />
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Título</label>
+      <input type="text" id="cef-titulo" value="${ef ? escapeHTML(ef.titulo) : ''}" placeholder="Ej: Día de la Restauración"
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin:4px 0 12px;box-sizing:border-box;" />
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;">Descripción (opcional)</label>
+      <textarea id="cef-desc" rows="2" placeholder="Breve descripción..."
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;margin:4px 0 16px;resize:vertical;box-sizing:border-box;">${ef ? escapeHTML(ef.descripcion || '') : ''}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="document.getElementById('cal-esc-modal-ef').remove()"
           style="background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:20px;padding:7px 16px;font-size:0.82rem;cursor:pointer;">Cancelar</button>
@@ -31700,71 +28550,19 @@ function _calEscModalEfemeride(mes, idx, ef) {
 }
 
 function _calEscGuardarEfemeride(mes, idx) {
-  const rawDia   = (document.getElementById('cef-dia')?.value || '').trim();
-  const rawTexto = (document.getElementById('cef-titulo')?.value || '').trim();
-  const rawDesc  = (document.getElementById('cef-desc')?.value || '').trim();
-
-  if (!rawTexto) { mostrarToast('El título es obligatorio', 'error'); return; }
-
-  // Dividir texto por saltos de línea
-  const lineas = rawTexto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  if (lineas.length === 0) { mostrarToast('El título es obligatorio', 'error'); return; }
-
+  const dia    = parseInt(document.getElementById('cef-dia')?.value) || 0;
+  const titulo = document.getElementById('cef-titulo')?.value.trim();
+  const desc   = document.getElementById('cef-desc')?.value.trim();
+  if (!titulo) { mostrarToast('El título es obligatorio', 'error'); return; }
   const datos = _calEscGetDatosEditables();
   _calEscAsegurarMes(datos, mes);
-
+  const obj = { id: uid(), dia, titulo, descripcion: desc || '' };
   if (idx === null) {
-    // Es nueva efeméride (puede ser múltiple)
-    lineas.forEach(linea => {
-      // Intentar extraer fecha desde el texto de la línea
-      // Formato esperado: DD/MM/AAAA  DD/MM/AAAA  Nombre de la efeméride
-      // (separado por tabulaciones o espacios)
-      const dateMatch = linea.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
-      let lineDia, lineTitulo;
-
-      if (dateMatch) {
-        // Fecha extraída de la propia línea: extraer solo el día del mes
-        const fechaParts = dateMatch[1].split('/');
-        lineDia = parseInt(fechaParts[0], 10);
-        lineTitulo = dateMatch[3];
-      } else {
-        // Fallback: usar el día del picker y el texto completo
-        lineDia = parseInt(rawDia) || 0;
-        lineTitulo = linea;
-      }
-
-      datos.meses[mes].efemerides.push({
-        id: uid(),
-        dia: lineDia,
-        titulo: lineTitulo,
-        descripcion: rawDesc || ''
-      });
-    });
-    mostrarToast(lineas.length > 1 ? `${lineas.length} efemérides agregadas ✓` : 'Efeméride agregada ✓', 'success');
+    datos.meses[mes].efemerides.push(obj);
   } else {
-    // Es edición de una efeméride específica
-    const ef = datos.meses[mes].efemerides[idx];
-    if (ef) {
-      // En edición, también intentar extraer fecha de la primera línea
-      const dateMatch = lineas[0].match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.*)/);
-      let editDia, editTitulo;
-
-      if (dateMatch) {
-        const fechaParts = dateMatch[1].split('/');
-        editDia = parseInt(fechaParts[0], 10);
-        editTitulo = dateMatch[3];
-      } else {
-        editDia = parseInt(rawDia) || 0;
-        editTitulo = lineas[0];
-      }
-
-      ef.dia = editDia;
-      ef.titulo = editTitulo;
-      ef.descripcion = rawDesc || '';
-      mostrarToast('Efeméride actualizada ✓', 'success');
-    }
+    obj.id = datos.meses[mes].efemerides[idx]?.id || obj.id;
+    datos.meses[mes].efemerides[idx] = obj;
   }
-
   _calEscSetDatosEditables(datos);
   document.getElementById('cal-esc-modal-ef')?.remove();
   _calEscRenderizarMes();
@@ -31852,12 +28650,9 @@ function _calEscModalFestivo() {
 
       <div id="cfest-preview" style="min-height:32px;margin-bottom:12px;font-size:0.78rem;color:#546E7A;"></div>
 
-      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Motivo / descripción</label>
-      <textarea id="cfest-motivo" rows="5" placeholder="Ej: Semana Santa, Vacaciones de Pascua…\nO pega entradas como: 16/08/2026&#96;16/08/2026&#96;Día de la Restauración (Fiesta Nacional / Día Festivo)"
-        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:10px;box-sizing:border-box;resize:vertical;min-height:110px;font-family:inherit;"></textarea>
-      <div style="font-size:0.76rem;color:#78909C;line-height:1.45;margin-bottom:16px;">
-        Puedes pegar una o varias líneas. Formatos válidos: <strong>DD/MM/AAAA&#96;DD/MM/AAAA&#96;Descripción</strong> o <strong>DD/MM/AAAA DD/MM/AAAA Descripción</strong>. Si detecta fechas en este campo, se crean automáticamente sin usar los selectores.
-      </div>
+      <label style="font-size:0.82rem;color:#546E7A;font-weight:600;display:block;margin-bottom:4px;">Motivo / descripción (opcional)</label>
+      <input type="text" id="cfest-motivo" placeholder="Ej: Semana Santa, Vacaciones de Pascua…"
+        style="width:100%;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;" />
 
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button onclick="document.getElementById('cal-esc-modal-fest').remove()"
@@ -31872,104 +28667,11 @@ function _calEscModalFestivo() {
   setTimeout(() => { _calEscPreviewFestivos(); document.getElementById('cfest-desde')?.focus(); }, 50);
 }
 
-function _calEscNormalizarFechaDmy(valor) {
-  const texto = String(valor || '').trim();
-  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) return '';
-  const [dia, mes, anio] = texto.split('/').map(n => parseInt(n, 10));
-  const fecha = new Date(`${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}T00:00:00`);
-  if (Number.isNaN(fecha.getTime()) || fecha.getDate() !== dia || fecha.getMonth() + 1 !== mes || fecha.getFullYear() !== anio) return '';
-  return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
-}
-
-function _calEscFechaToIso(valor) {
-  const texto = String(valor || '').trim();
-  if (!texto) return '';
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
-    const f = new Date(texto + 'T00:00:00');
-    if (Number.isNaN(f.getTime())) return '';
-    return texto;
-  }
-
-  const dmy = _calEscNormalizarFechaDmy(texto);
-  if (!dmy) return '';
-  const [dia, mes, anio] = dmy.split('/');
-  return `${anio}-${mes}-${dia}`;
-}
-
-function _calEscExtraerFestivosDesdeTexto(texto) {
-  const fuente = String(texto || '').trim();
-  if (!fuente) return [];
-
-  const resultados = [];
-  const patron = /`?(\d{2}\/\d{2}\/\d{4})`?\s*`?(\d{2}\/\d{2}\/\d{4})`?\s*([\s\S]*?)(?=(?:`?\d{2}\/\d{2}\/\d{4}`?\s*`?\d{2}\/\d{2}\/\d{4}`?)|$)/g;
-  let match;
-
-  while ((match = patron.exec(fuente)) !== null) {
-    const desde = _calEscNormalizarFechaDmy(match[1]);
-    const hasta = _calEscNormalizarFechaDmy(match[2]);
-    const motivo = (match[3] || '').trim();
-    if (desde && hasta) {
-      resultados.push({ desde, hasta, motivo });
-    }
-    if (patron.lastIndex === match.index) patron.lastIndex += 1;
-  }
-
-  if (resultados.length) return resultados;
-
-  const lineas = fuente.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  lineas.forEach(linea => {
-    const lineMatch = linea.match(/^`?(\d{2}\/\d{2}\/\d{4})`?\s+`?(\d{2}\/\d{2}\/\d{4})`?\s+(.*)$/);
-    if (!lineMatch) return;
-    const desde = _calEscNormalizarFechaDmy(lineMatch[1]);
-    const hasta = _calEscNormalizarFechaDmy(lineMatch[2]);
-    const motivo = (lineMatch[3] || '').trim();
-    if (desde && hasta) resultados.push({ desde, hasta, motivo });
-  });
-
-  return resultados;
-}
-
 function _calEscPreviewFestivos() {
   const desde  = document.getElementById('cfest-desde')?.value;
   const hasta  = document.getElementById('cfest-hasta')?.value;
-  const rawMotivo = document.getElementById('cfest-motivo')?.value || '';
   const prev   = document.getElementById('cfest-preview');
   if (!prev) return;
-
-  const importados = _calEscExtraerFestivosDesdeTexto(rawMotivo);
-  if (importados.length) {
-    const ya = new Set((_calEsc.adminDatos?.festivos || []).map(f => f.fecha));
-    let nuevos = 0;
-    let repetidos = 0;
-    const etiquetas = [];
-
-    importados.forEach(item => {
-      const dias = _calEscRangoDias(item.desde, item.hasta);
-      dias.forEach(fecha => {
-        if (ya.has(fecha)) {
-          repetidos += 1;
-          return;
-        }
-        ya.add(fecha);
-        nuevos += 1;
-        if (etiquetas.length < 6) {
-          const f = new Date(fecha + 'T00:00:00');
-          etiquetas.push(f.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' }));
-        }
-      });
-    });
-
-    const mas = nuevos > 6 ? ` y ${nuevos - 6} más` : '';
-    prev.innerHTML = `
-      <div style="background:#FFF3E0;border-radius:8px;padding:8px 10px;border:1px solid #FFCC80;">
-        <strong style="color:#E65100;">${nuevos} día${nuevos !== 1 ? 's' : ''}</strong> listos para agregar desde el texto.
-        <span style="color:#546E7A;">${etiquetas.join(', ')}${mas}</span>
-        ${repetidos ? `<br><span style="color:#9E9E9E;font-size:0.74rem;">(${repetidos} ya registrado${repetidos !== 1 ? 's' : ''}, se omitirán)</span>` : ''}
-      </div>`;
-    return;
-  }
-
   if (!desde || !hasta || hasta < desde) {
     prev.innerHTML = '<span style="color:#E53935;">La fecha "Hasta" debe ser igual o posterior a "Desde".</span>';
     return;
@@ -31993,13 +28695,9 @@ function _calEscPreviewFestivos() {
 }
 
 function _calEscRangoDias(desde, hasta) {
-  const desdeIso = _calEscFechaToIso(desde);
-  const hastaIso = _calEscFechaToIso(hasta);
-  if (!desdeIso || !hastaIso || hastaIso < desdeIso) return [];
-
   const dias = [];
-  const cursor = new Date(desdeIso + 'T00:00:00');
-  const fin    = new Date(hastaIso + 'T00:00:00');
+  const cursor = new Date(desde + 'T00:00:00');
+  const fin    = new Date(hasta + 'T00:00:00');
   while (cursor <= fin) {
     dias.push(cursor.toISOString().slice(0, 10));
     cursor.setDate(cursor.getDate() + 1);
@@ -32010,48 +28708,15 @@ function _calEscRangoDias(desde, hasta) {
 function _calEscGuardarFestivo() {
   const desde  = document.getElementById('cfest-desde')?.value;
   const hasta  = document.getElementById('cfest-hasta')?.value;
-  const motivoRaw = document.getElementById('cfest-motivo')?.value || '';
-  const importados = _calEscExtraerFestivosDesdeTexto(motivoRaw);
-  const datos = _calEsc.adminDatos || _calEscDatosVacios();
-  if (!datos.festivos) datos.festivos = [];
-  const idxPorFecha = new Map();
-  datos.festivos.forEach((f, i) => idxPorFecha.set(f.fecha, i));
-
-  if (importados.length) {
-    let agregados = 0;
-    let actualizados = 0;
-    importados.forEach(item => {
-      _calEscRangoDias(item.desde, item.hasta).forEach(fecha => {
-        const idxExistente = idxPorFecha.get(fecha);
-        if (idxExistente !== undefined) {
-          const motivoNuevo = (item.motivo || '').trim();
-          if (motivoNuevo && datos.festivos[idxExistente].motivo !== motivoNuevo) {
-            datos.festivos[idxExistente].motivo = motivoNuevo;
-            actualizados += 1;
-          }
-          return;
-        }
-        datos.festivos.push({ id: uid(), fecha, motivo: (item.motivo || '').trim() });
-        idxPorFecha.set(fecha, datos.festivos.length - 1);
-        agregados += 1;
-      });
-    });
-    if (!agregados && !actualizados) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
-    _calEsc.adminDatos = datos;
-    document.getElementById('cal-esc-modal-fest')?.remove();
-    _calEscRenderizarFestivos();
-    const msgPartes = [];
-    if (agregados) msgPartes.push(`${agregados} día${agregados !== 1 ? 's' : ''} agregado${agregados !== 1 ? 's' : ''}`);
-    if (actualizados) msgPartes.push(`${actualizados} motivo${actualizados !== 1 ? 's' : ''} actualizado${actualizados !== 1 ? 's' : ''}`);
-    mostrarToast(`${msgPartes.join(' y ')}. Recuerda publicar los cambios.`, 'success');
-    return;
-  }
-
+  const motivo = document.getElementById('cfest-motivo')?.value.trim();
   if (!desde || !hasta) { mostrarToast('Selecciona las fechas', 'error'); return; }
   if (hasta < desde) { mostrarToast('La fecha "Hasta" debe ser igual o posterior a "Desde"', 'error'); return; }
-  const dias = _calEscRangoDias(desde, hasta).filter(d => !idxPorFecha.has(d));
+  const datos = _calEsc.adminDatos || _calEscDatosVacios();
+  if (!datos.festivos) datos.festivos = [];
+  const ya = datos.festivos.map(f => f.fecha);
+  const dias = _calEscRangoDias(desde, hasta).filter(d => !ya.includes(d));
   if (!dias.length) { mostrarToast('Todas esas fechas ya están registradas', 'error'); return; }
-  dias.forEach(fecha => datos.festivos.push({ id: uid(), fecha, motivo: motivoRaw.trim() || '' }));
+  dias.forEach(fecha => datos.festivos.push({ id: uid(), fecha, motivo: motivo || '' }));
   _calEsc.adminDatos = datos;
   document.getElementById('cal-esc-modal-fest')?.remove();
   _calEscRenderizarFestivos();
@@ -32091,180 +28756,6 @@ function _calEscRestaurarAdmin() {
 // ════════════════════════════════════════════════════════════════════
 // MÓDULO: REPORTES DE COMPORTAMIENTO (ESTUDIANTES)
 // ════════════════════════════════════════════════════════════════════
-
-const CONVIVENCIA_ARCHIVOS_KEY = 'planificadorRA_convivencia_archivada_v1';
-
-function _cargarConvivenciaArchivada() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(CONVIVENCIA_ARCHIVOS_KEY) || '{}') || {};
-    return {
-      reportes: raw.reportes && typeof raw.reportes === 'object' ? raw.reportes : {},
-      denuncias: raw.denuncias && typeof raw.denuncias === 'object' ? raw.denuncias : {},
-      _lastModified: Number(raw._lastModified || 0) || 0
-    };
-  } catch {
-    return { reportes: {}, denuncias: {}, _lastModified: 0 };
-  }
-}
-
-function _guardarConvivenciaArchivada(data) {
-  const payload = {
-    reportes: data?.reportes && typeof data.reportes === 'object' ? data.reportes : {},
-    denuncias: data?.denuncias && typeof data.denuncias === 'object' ? data.denuncias : {},
-    _lastModified: Date.now()
-  };
-  localStorage.setItem(CONVIVENCIA_ARCHIVOS_KEY, JSON.stringify(payload));
-  if (window._syncFirebase) _syncFirebase('convivencia_archivada', payload);
-}
-
-function _mergeItemsById(prevItems, newItems) {
-  const prev = Array.isArray(prevItems) ? prevItems : [];
-  const next = Array.isArray(newItems) ? newItems : [];
-  const merged = [...prev, ...next];
-  const seen = new Set();
-  return merged.filter((item, idx) => {
-    const key = item && item.id ? ('id:' + item.id) : ('idx:' + idx + ':' + (item?.creadoEn || item?.fecha || ''));
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-async function _eliminarDocsPublicosPorLista(colRef, items) {
-  const ids = Array.from(new Set((Array.isArray(items) ? items : []).map(x => x?.id).filter(Boolean)));
-  if (!ids.length) return;
-  const chunkSize = 450;
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    const batch = db.batch();
-    ids.slice(i, i + chunkSize).forEach(id => batch.delete(colRef.doc(id)));
-    await batch.commit();
-  }
-}
-
-async function _archivarConvivenciaPublicaCiclo(yearId, closedAt, reportesData, denunciasData) {
-  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) {
-    return { reportes: 0, denuncias: 0 };
-  }
-
-  const reportes = Array.isArray(reportesData) ? reportesData : [];
-  const denuncias = Array.isArray(denunciasData) ? denunciasData : [];
-
-  const arch = _cargarConvivenciaArchivada();
-  const prevRep = arch.reportes[yearId] || {};
-  const prevDen = arch.denuncias[yearId] || {};
-
-  const mergedRep = _mergeItemsById(prevRep.items, reportes);
-  const mergedDen = _mergeItemsById(prevDen.items, denuncias);
-
-  arch.reportes[yearId] = {
-    yearId,
-    yearLabel: yearId,
-    closedAt: closedAt || prevRep.closedAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    count: mergedRep.length,
-    items: mergedRep
-  };
-  arch.denuncias[yearId] = {
-    yearId,
-    yearLabel: yearId,
-    closedAt: closedAt || prevDen.closedAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    count: mergedDen.length,
-    items: mergedDen
-  };
-
-  _guardarConvivenciaArchivada(arch);
-  if (window._syncFirebaseAwait) {
-    try { await _syncFirebaseAwait('convivencia_archivada', _cargarConvivenciaArchivada()); } catch {}
-  }
-
-  const pbRef = db.collection('public_blogs').doc(window.currentUser.uid);
-  await _eliminarDocsPublicosPorLista(pbRef.collection('reportes_comportamiento'), reportes);
-  await _eliminarDocsPublicosPorLista(pbRef.collection('denuncias'), denuncias);
-
-  window._repCompTodos = [];
-  window._denunciasCache = [];
-
-  return { reportes: reportes.length, denuncias: denuncias.length };
-}
-
-function _panelArchivadosReportesComp(filtroCurso) {
-  const arch = _cargarConvivenciaArchivada();
-  const years = Object.keys(arch.reportes || {}).sort((a, b) => String(b).localeCompare(String(a)));
-  if (!years.length) return '';
-
-  const bloques = years.map(yearId => {
-    const reg = arch.reportes[yearId] || {};
-    let items = Array.isArray(reg.items) ? reg.items.slice() : [];
-    if (filtroCurso) items = items.filter(r => (r.cursoNombre || r.cursoId) === filtroCurso);
-    items.sort((a, b) => new Date(b.creadoEn || b.fecha || 0) - new Date(a.creadoEn || a.fecha || 0));
-    if (!items.length) return '';
-
-    return '<details style="border:1px solid #BBDEFB;border-radius:10px;padding:8px 10px;background:#F8FCFF;">'
-      + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
-      + '<span style="font-size:0.83rem;font-weight:800;color:#1565C0;">' + escapeHTML(yearId) + '</span>'
-      + '<span style="font-size:0.72rem;color:#1565C0;background:#E3F2FD;border-radius:999px;padding:3px 8px;font-weight:700;">' + items.length + ' reporte' + (items.length !== 1 ? 's' : '') + '</span>'
-      + '</summary>'
-      + '<div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">'
-      + items.slice(0, 25).map(r => {
-        const fecha = r.fecha ? new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-DO') : '—';
-        return '<div style="border:1px solid #E3F2FD;border-radius:8px;padding:8px 10px;background:#fff;">'
-          + '<div style="font-size:0.76rem;color:#1565C0;font-weight:700;">' + escapeHTML(r.cursoNombre || r.cursoId || 'Sin curso') + ' · ' + escapeHTML(fecha) + '</div>'
-          + '<div style="font-size:0.8rem;color:#37474F;margin-top:4px;">' + escapeHTML((r.descripcion || '').substring(0, 140)) + '</div>'
-          + '</div>';
-      }).join('')
-      + (items.length > 25 ? '<div style="font-size:0.72rem;color:#78909C;text-align:center;">+' + (items.length - 25) + ' más</div>' : '')
-      + '</div></details>';
-  }).filter(Boolean);
-
-  if (!bloques.length) return '';
-
-  return '<div style="border:1px solid #BBDEFB;background:#F4FAFF;border-radius:12px;padding:12px;margin-bottom:12px;">'
-    + '<div style="font-size:0.8rem;color:#1565C0;font-weight:800;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
-    + '<span class="material-icons" style="font-size:16px;">inventory_2</span>Reportes archivados por ciclo'
-    + '</div>'
-    + '<div style="display:flex;flex-direction:column;gap:8px;">' + bloques.join('') + '</div>'
-    + '</div>';
-}
-
-function _panelArchivadosDenuncias(curso) {
-  const arch = _cargarConvivenciaArchivada();
-  const years = Object.keys(arch.denuncias || {}).sort((a, b) => String(b).localeCompare(String(a)));
-  if (!years.length) return '';
-
-  const bloques = years.map(yearId => {
-    const reg = arch.denuncias[yearId] || {};
-    let items = Array.isArray(reg.items) ? reg.items.slice() : [];
-    if (curso) items = items.filter(d => d.curso === curso);
-    items.sort((a, b) => new Date(b.creadoEn || b.fecha || 0) - new Date(a.creadoEn || a.fecha || 0));
-    if (!items.length) return '';
-
-    return '<details style="border:1px solid #CE93D8;border-radius:10px;padding:8px 10px;background:#FCF7FF;">'
-      + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
-      + '<span style="font-size:0.83rem;font-weight:800;color:#6A1B9A;">' + escapeHTML(yearId) + '</span>'
-      + '<span style="font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:999px;padding:3px 8px;font-weight:700;">' + items.length + ' denuncia' + (items.length !== 1 ? 's' : '') + '</span>'
-      + '</summary>'
-      + '<div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">'
-      + items.slice(0, 25).map(d => {
-        const fecha = d.fecha ? new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-DO') : '—';
-        return '<div style="border:1px solid #EDE7F6;border-radius:8px;padding:8px 10px;background:#fff;">'
-          + '<div style="font-size:0.76rem;color:#6A1B9A;font-weight:700;">' + escapeHTML(d.curso || 'Sin curso') + ' · ' + escapeHTML(fecha) + '</div>'
-          + '<div style="font-size:0.8rem;color:#37474F;margin-top:4px;">' + escapeHTML((d.descripcion || '').substring(0, 140)) + '</div>'
-          + '</div>';
-      }).join('')
-      + (items.length > 25 ? '<div style="font-size:0.72rem;color:#78909C;text-align:center;">+' + (items.length - 25) + ' más</div>' : '')
-      + '</div></details>';
-  }).filter(Boolean);
-
-  if (!bloques.length) return '';
-
-  return '<div style="border:1px solid #CE93D8;background:#FAF5FF;border-radius:12px;padding:12px;margin-bottom:12px;">'
-    + '<div style="font-size:0.8rem;color:#6A1B9A;font-weight:800;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
-    + '<span class="material-icons" style="font-size:16px;">inventory_2</span>Denuncias archivadas por ciclo'
-    + '</div>'
-    + '<div style="display:flex;flex-direction:column;gap:8px;">' + bloques.join('') + '</div>'
-    + '</div>';
-}
 const CUENTAS_EST_KEY = 'planificadorRA_cuentas_estudiantes_v1';
 
 function _cargarCuentasEst() {
@@ -32384,7 +28875,7 @@ function renderPsicologia() {
   }
 
   const totalRep = datos.reduce((s, d) => s + d.reportes.length, 0);
-  let html = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:0.78rem;color:#9E9E9E;margin-bottom:14px;">${datos.length} estudiante${datos.length !== 1 ? 's' : ''} · ${totalRep} reporte${totalRep !== 1 ? 's' : ''}<button class="btn-secundario" onclick="_mostrarGuiaPlaceholdersPsicologia()" style="padding:6px 10px;font-size:0.75rem;border-radius:8px;">Ver placeholders Word</button></div>`;
+  let html = `<div style="font-size:0.78rem;color:#9E9E9E;margin-bottom:14px;">${datos.length} estudiante${datos.length !== 1 ? 's' : ''} · ${totalRep} reporte${totalRep !== 1 ? 's' : ''}</div>`;
 
   datos.forEach(d => {
     html += `
@@ -32416,12 +28907,6 @@ function renderPsicologia() {
               <span class="material-icons" style="font-size:11px;">description</span> Reporte formal
             </span>
             <span style="font-size:0.78rem;font-weight:600;color:#37474F;">${escapeHTML(fecha)}</span>
-            <button class="btn-icon-sm" title="Exportar a Word" onclick="exportarReportePsicologiaDocx('${r.id}','${d.estId}')" style="margin-left:auto;color:#6A1B9A;">
-              <span class="material-icons" style="font-size:16px;">description</span>
-            </button>
-            <button class="btn-icon-sm" title="Descargar Word" onclick="descargarReportePsicologiaGuardado('${d.estId}','${r.id}')" style="color:#1565C0;">
-              <span class="material-icons" style="font-size:16px;">download</span>
-            </button>
           </div>
           ${campos.map(c => `
             <div style="margin-bottom:4px;">
@@ -32445,59 +28930,6 @@ async function _syncReportePsicologia(estId, reportes) {
     await db.collection('public_blogs').doc(uid).collection('datos_padre').doc(estId)
       .set({ reportes }, { merge: true });
   } catch(e) { console.warn('sync psicologia:', e); }
-}
-
-function _esRolPsicologia(rol) {
-  return ['psicologia', 'psicologa', 'psicologo'].includes((rol || '').toLowerCase());
-}
-
-// Un usuario puede tener varios roles (campo `roles`, arreglo). Las cuentas viejas que
-// todavia no tienen ese campo caen al singular `rol`.
-function _tieneRol(perfil, rolBuscado) {
-  if (!perfil) return false;
-  const roles = Array.isArray(perfil.roles) ? perfil.roles : [perfil.rol];
-  if (rolBuscado === 'psicologia') return roles.some(r => _esRolPsicologia(r));
-  return roles.includes(rolBuscado);
-}
-
-async function _getRolActual() {
-  if (!window.currentUser) return '';
-  try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists ? (doc.data().rol || '') : '';
-  } catch {
-    return '';
-  }
-}
-
-async function _esVistaGlobalConvivencia() {
-  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-  if (esSA) return true;
-  const rol = await _getRolActual();
-  return _esRolPsicologia(rol);
-}
-
-const _cacheNombresDocentesConvivencia = {};
-
-async function _nombreDocentePorUid(uid) {
-  if (!uid) return '—';
-  if (_cacheNombresDocentesConvivencia[uid]) return _cacheNombresDocentesConvivencia[uid];
-  try {
-    const perfil = await db.collection('perfiles').doc(uid).get();
-    if (perfil.exists && perfil.data().nombre) {
-      _cacheNombresDocentesConvivencia[uid] = perfil.data().nombre;
-      return _cacheNombresDocentesConvivencia[uid];
-    }
-  } catch {}
-  try {
-    const usuario = await db.collection('usuarios').doc(uid).get();
-    if (usuario.exists && usuario.data().nombre) {
-      _cacheNombresDocentesConvivencia[uid] = usuario.data().nombre;
-      return _cacheNombresDocentesConvivencia[uid];
-    }
-  } catch {}
-  _cacheNombresDocentesConvivencia[uid] = uid;
-  return uid;
 }
 
 let _repCompTab = 'reportes';
@@ -32533,51 +28965,19 @@ async function _renderReportesRecibidos() {
   const user = window.currentUser;
   if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
 
-  const vistaGlobal = await _esVistaGlobalConvivencia();
-
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;">hourglass_empty</span>Cargando reportes...</div>';
-  const panelArchivados = _panelArchivadosReportesComp('');
 
   try {
-    let reportes = [];
-    if (vistaGlobal) {
-      try {
-        const snap = await db.collectionGroup('reportes_comportamiento').get();
-        reportes = [];
-        for (const d of snap.docs) {
-          const raw = d.data() || {};
-          const partes = d.ref.path.split('/');
-          const docenteUid = partes[1] || '';
-          reportes.push({
-            ...raw,
-            id: raw.id || d.id,
-            docenteUid,
-            docenteNombre: await _nombreDocentePorUid(docenteUid)
-          });
-        }
-      } catch (e) {
-        const permiso = (e?.code === 'permission-denied') || /insufficient permissions|permission/i.test(String(e?.message || ''));
-        if (!permiso) throw e;
-        const snap = await db.collection('public_blogs').doc(user.uid)
-          .collection('reportes_comportamiento').get();
-        reportes = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
-        mostrarToast('No se pudo abrir la vista global por permisos de Firestore. Se muestran tus reportes.', 'info');
-      }
-    } else {
-      const snap = await db.collection('public_blogs').doc(user.uid)
-        .collection('reportes_comportamiento').get();
-      reportes = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
-    }
+    const snap = await db.collection('public_blogs').doc(user.uid)
+      .collection('reportes_comportamiento').get();
 
-    reportes.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
+    const reportes = snap.docs.map(d => d.data()).sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
     if (reportes.length === 0) {
-      cont.innerHTML = panelArchivados + '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+      cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
         '<span class="material-icons" style="font-size:48px;display:block;margin-bottom:10px;">inbox</span>' +
-        (vistaGlobal
-          ? '<p>No hay reportes de comportamiento en los centros.</p>'
-          : '<p>No se han recibido reportes de comportamiento.</p><p style="font-size:0.78rem;margin-top:6px;">Comparte el enlace con tus estudiantes desde la pestaña "Enlace".</p>')
-        + '</div>';
+        '<p>No se han recibido reportes de comportamiento.</p>' +
+        '<p style="font-size:0.78rem;margin-top:6px;">Comparte el enlace con tus estudiantes desde la pestaña "Enlace".</p></div>';
       return;
     }
 
@@ -32592,10 +28992,8 @@ async function _renderReportesRecibidos() {
         ).join('') + '</div>';
     }
 
-    const vistaGlobalActiva = vistaGlobal && reportes.some(r => !!r.docenteUid);
-    cont.innerHTML = panelArchivados + filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes, { vistaGlobal: vistaGlobalActiva }) + '</div>';
+    cont.innerHTML = filtroHTML + '<div id="rep-comp-lista">' + _buildReportesHTML(reportes) + '</div>';
     window._repCompTodos = reportes;
-    window._repCompVistaGlobal = vistaGlobalActiva;
 
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:30px;color:#C62828;">Error al cargar reportes: ' + escapeHTML(e.message) + '</div>';
@@ -32606,7 +29004,7 @@ function _filtrarRepComp(curso) {
   const reportes = window._repCompTodos || [];
   const filtered = curso ? reportes.filter(r => (r.cursoNombre || r.cursoId) === curso) : reportes;
   const lista = document.getElementById('rep-comp-lista');
-  if (lista) lista.innerHTML = _buildReportesHTML(filtered, { vistaGlobal: !!window._repCompVistaGlobal });
+  if (lista) lista.innerHTML = _buildReportesHTML(filtered);
 
   // Actualizar estilos de filtros
   document.querySelectorAll('.rep-filtro-btn').forEach(b => {
@@ -32617,8 +29015,7 @@ function _filtrarRepComp(curso) {
   });
 }
 
-function _buildReportesHTML(reportes, opts = {}) {
-  const vistaGlobal = !!opts.vistaGlobal;
+function _buildReportesHTML(reportes) {
   if (!reportes.length) return '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin reportes para este filtro.</div>';
 
   const tipoLabel = { positivo: 'Positivo', negativo: 'Negativo', neutral: 'Observación' };
@@ -32633,18 +29030,6 @@ function _buildReportesHTML(reportes, opts = {}) {
     const tIcon  = tipoIcon[r.tipo] || 'info';
     const tLabel = tipoLabel[r.tipo] || 'Observación';
 
-    const docenteLinea = vistaGlobal
-      ? '<div style="font-size:0.75rem;color:#6A1B9A;display:flex;align-items:center;gap:4px;margin-bottom:6px;">'
-        + '<span class="material-icons" style="font-size:14px;">badge</span> <strong>Docente:</strong> ' + escapeHTML(r.docenteNombre || r.docenteUid || '—') +
-      '</div>'
-      : '';
-    const accionEliminar = !vistaGlobal
-      ? '<div style="margin-top:8px;text-align:right;">' +
-          '<button onclick="_eliminarReporteComp(\'' + escapeHTML(r.id) + '\')" style="background:none;border:1px solid #FFCDD2;color:#C62828;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
-            '<span class="material-icons" style="font-size:14px;">delete</span> Eliminar</button>' +
-        '</div>'
-      : '';
-
     return '<div style="background:var(--color-fondo-card,#fff);border:1px solid var(--color-borde,#E0E0E0);border-radius:10px;padding:16px;margin-bottom:10px;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
         '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:' + tStyle + ';">' +
@@ -32658,12 +29043,14 @@ function _buildReportesHTML(reportes, opts = {}) {
       '<div style="font-size:0.78rem;color:#616161;display:flex;align-items:center;gap:4px;margin-bottom:6px;">' +
         '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(r.involucrados || '') +
       '</div>' +
-      docenteLinea +
       '<div style="font-size:0.86rem;color:var(--color-texto,#424242);line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(r.descripcion || '') + '</div>' +
       '<div style="font-size:0.72rem;color:#BDBDBD;margin-top:8px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:12px;">person</span> Reportado por: ' + escapeHTML(r.reportadoPor || r.usuario || '') +
       '</div>' +
-      accionEliminar +
+      '<div style="margin-top:8px;text-align:right;">' +
+        '<button onclick="_eliminarReporteComp(\'' + escapeHTML(r.id) + '\')" style="background:none;border:1px solid #FFCDD2;color:#C62828;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
+          '<span class="material-icons" style="font-size:14px;">delete</span> Eliminar</button>' +
+      '</div>' +
     '</div>';
   }).join('');
 }
@@ -32692,7 +29079,6 @@ function _renderCuentasEstudiantes() {
 
   // Obtener cursos disponibles
   const cursos = Object.values(calState?.cursos || {});
-  const sinCursos = cursos.length === 0;
 
   let html = '<div style="background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;color:#0D47A1;display:flex;align-items:center;gap:8px;">' +
     '<span class="material-icons" style="font-size:18px;">info</span>' +
@@ -32707,13 +29093,11 @@ function _renderCuentasEstudiantes() {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
       '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Nombre del estudiante *</label>' +
         '<input id="ce-nombre" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: Juan Pérez"></div>' +
-      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Curso asignado' + (sinCursos ? ' (opcional)' : ' *') + '</label>' +
-        (sinCursos
-          ? '<input id="ce-curso-texto" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;" placeholder="Ej: 4to A (opcional, no tienes cursos creados)">'
-          : '<select id="ce-curso" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;">' +
-              cursos.map(c => '<option value="' + escapeHTML(c.id) + '" data-nombre="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>').join('') +
-            '</select>'
-        ) + '</div>' +
+      '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Curso asignado *</label>' +
+        '<select id="ce-curso" style="width:100%;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.85rem;font-family:inherit;">' +
+          (cursos.length === 0 ? '<option value="">— Sin cursos —</option>' :
+           cursos.map(c => '<option value="' + escapeHTML(c.id) + '" data-nombre="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>').join('')) +
+        '</select></div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">' +
       '<div><label style="font-size:0.75rem;font-weight:600;color:#546E7A;display:block;margin-bottom:3px;">Usuario *</label>' +
@@ -32736,7 +29120,7 @@ function _renderCuentasEstudiantes() {
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto,#212121);">' + escapeHTML(c.nombre) + '</div>' +
           '<div style="font-size:0.75rem;color:#757575;">Usuario: <strong>' + escapeHTML(c.usuario) + '</strong> · Contraseña: <strong>' + escapeHTML(c.password) + '</strong></div>' +
-          '<div style="font-size:0.72rem;color:#9E9E9E;">' + escapeHTML(c.cursoNombre || c.cursoId || 'Sin curso asignado') + '</div>' +
+          '<div style="font-size:0.72rem;color:#9E9E9E;">' + escapeHTML(c.cursoNombre || c.cursoId) + '</div>' +
         '</div>' +
         '<button onclick="_toggleCuentaEst(' + i + ')" title="' + (activo ? 'Desactivar' : 'Activar') + '" style="background:none;border:1px solid ' + (activo ? '#FFCDD2' : '#C8E6C9') + ';color:' + (activo ? '#C62828' : '#2E7D32') + ';border-radius:6px;padding:4px 8px;font-size:0.72rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:inherit;">' +
           '<span class="material-icons" style="font-size:14px;">' + (activo ? 'block' : 'check_circle') + '</span>' + (activo ? 'Desactivar' : 'Activar') +
@@ -32760,21 +29144,12 @@ function _crearCuentaEstudiante() {
   const usuario = (document.getElementById('ce-usuario')?.value || '').trim().toLowerCase();
   const pass    = (document.getElementById('ce-pass')?.value || '').trim();
   const cursoSel = document.getElementById('ce-curso');
-  const cursoTexto = document.getElementById('ce-curso-texto');
-  // Si hay <select> (el usuario tiene cursos), el curso es obligatorio. Si no hay
-  // cursos creados (p.ej. psicologo sin rol de docente), el campo es un texto libre opcional.
   const cursoId = cursoSel?.value || '';
-  const cursoNombre = cursoSel
-    ? (cursoSel.selectedOptions[0]?.dataset?.nombre || cursoId)
-    : (cursoTexto?.value || '').trim();
+  const cursoNombre = cursoSel?.selectedOptions[0]?.dataset?.nombre || cursoId;
   const errEl   = document.getElementById('ce-error');
 
-  if (!nombre || !usuario || !pass) {
+  if (!nombre || !usuario || !pass || !cursoId) {
     if (errEl) errEl.textContent = 'Completa todos los campos.';
-    return;
-  }
-  if (cursoSel && !cursoId) {
-    if (errEl) errEl.textContent = 'Selecciona un curso.';
     return;
   }
   if (usuario.length < 3) {
@@ -32900,48 +29275,19 @@ async function _renderDenunciasRecibidas() {
   const user = window.currentUser;
   if (!user) { cont.innerHTML = '<p style="color:#9E9E9E;text-align:center;padding:20px;">Inicia sesión primero.</p>'; return; }
 
-  const vistaGlobal = await _esVistaGlobalConvivencia();
-
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:#9E9E9E;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;">hourglass_empty</span>Cargando denuncias...</div>';
-  const panelArchivados = _panelArchivadosDenuncias('');
 
   try {
-    let denuncias = [];
-    if (vistaGlobal) {
-      try {
-        const snap = await db.collectionGroup('denuncias').get();
-        denuncias = [];
-        for (const d of snap.docs) {
-          const raw = d.data() || {};
-          const partes = d.ref.path.split('/');
-          const docenteUid = partes[1] || '';
-          denuncias.push({
-            ...raw,
-            id: raw.id || d.id,
-            docenteUid,
-            docenteNombre: await _nombreDocentePorUid(docenteUid)
-          });
-        }
-      } catch (e) {
-        const permiso = (e?.code === 'permission-denied') || /insufficient permissions|permission/i.test(String(e?.message || ''));
-        if (!permiso) throw e;
-        const snap = await db.collection('public_blogs').doc(user.uid)
-          .collection('denuncias').get();
-        denuncias = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
-        mostrarToast('No se pudo abrir la vista global por permisos de Firestore. Se muestran tus denuncias.', 'info');
-      }
-    } else {
-      const snap = await db.collection('public_blogs').doc(user.uid)
-        .collection('denuncias').get();
-      denuncias = snap.docs.map(d => ({ ...d.data(), id: d.data().id || d.id }));
-    }
+    const snap = await db.collection('public_blogs').doc(user.uid)
+      .collection('denuncias').get();
 
+    let denuncias = snap.docs.map(d => d.data());
     denuncias.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
 
     if (denuncias.length === 0) {
-      cont.innerHTML = panelArchivados + '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
+      cont.innerHTML = '<div style="text-align:center;padding:40px;color:#9E9E9E;">' +
         '<span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;opacity:0.4;">campaign</span>' +
-        (vistaGlobal ? 'No hay denuncias registradas en los centros.' : 'No hay denuncias recibidas.') + '</div>';
+        'No hay denuncias recibidas.</div>';
       return;
     }
 
@@ -32954,12 +29300,10 @@ async function _renderDenunciasRecibidas() {
       html += '<button onclick="_filtrarDenuncias(\'' + escapeHTML(c) + '\')" class="ra-tab" style="padding:4px 12px;border-radius:16px;border:1px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.75rem;font-weight:600;cursor:pointer;">' + escapeHTML(c) + ' (' + n + ')</button>';
     });
     html += '</div>';
-    const vistaGlobalActiva = vistaGlobal && denuncias.some(d => !!d.docenteUid);
-    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias, { vistaGlobal: vistaGlobalActiva }) + '</div>';
+    html += '<div id="den-lista-items">' + _buildDenunciasHTML(denuncias) + '</div>';
 
-    cont.innerHTML = panelArchivados + html;
+    cont.innerHTML = html;
     window._denunciasCache = denuncias;
-    window._denunciasVistaGlobal = vistaGlobalActiva;
   } catch (e) {
     cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error al cargar: ' + escapeHTML(e.message) + '</div>';
   }
@@ -32969,11 +29313,10 @@ function _filtrarDenuncias(curso) {
   const items = document.getElementById('den-lista-items');
   if (!items || !window._denunciasCache) return;
   const filtered = curso ? window._denunciasCache.filter(d => d.curso === curso) : window._denunciasCache;
-  items.innerHTML = _buildDenunciasHTML(filtered, { vistaGlobal: !!window._denunciasVistaGlobal });
+  items.innerHTML = _buildDenunciasHTML(filtered);
 }
 
-function _buildDenunciasHTML(denuncias, opts = {}) {
-  const vistaGlobal = !!opts.vistaGlobal;
+function _buildDenunciasHTML(denuncias) {
   if (!denuncias.length) return '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin denuncias en este filtro.</div>';
 
   const tipoLabels = {
@@ -32992,16 +29335,6 @@ function _buildDenunciasHTML(denuncias, opts = {}) {
       ? new Date(d.fecha + 'T12:00:00').toLocaleDateString('es', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
       : '—';
     const esAnonimo = !d.nombre || d.nombre === 'Anónimo';
-    const docenteLinea = vistaGlobal
-      ? '<div style="font-size:0.74rem;color:#6A1B9A;margin-bottom:5px;display:flex;align-items:center;gap:4px;">'
-        + '<span class="material-icons" style="font-size:13px;">badge</span><strong>Docente:</strong> ' + escapeHTML(d.docenteNombre || d.docenteUid || '—') +
-      '</div>'
-      : '';
-    const accionEliminar = !vistaGlobal
-      ? '<button onclick="_eliminarDenuncia(\'' + d.id + '\')" title="Eliminar" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:4px;">'
-          + '<span class="material-icons" style="font-size:18px;">delete_outline</span></button>'
-      : '';
-
     return '<div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07);padding:16px;margin-bottom:12px;border-left:4px solid ' + color + ';">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
         '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -33010,14 +29343,14 @@ function _buildDenunciasHTML(denuncias, opts = {}) {
           '<span style="font-size:0.72rem;color:#9E9E9E;display:flex;align-items:center;gap:3px;">' +
             '<span class="material-icons" style="font-size:13px;">schedule</span>' + escapeHTML(fechaStr) + '</span>' +
         '</div>' +
-        accionEliminar +
+        '<button onclick="_eliminarDenuncia(\'' + d.id + '\')" title="Eliminar" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:4px;">' +
+          '<span class="material-icons" style="font-size:18px;">delete_outline</span></button>' +
       '</div>' +
       '<div style="font-size:0.78rem;color:#78909C;margin-bottom:4px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:14px;">school</span> ' + escapeHTML(d.curso) +
         ' &nbsp;·&nbsp; <span class="material-icons" style="font-size:14px;">person</span> ' +
         (esAnonimo ? '<em style="color:#BDBDBD;">Anónimo</em>' : escapeHTML(d.nombre)) +
       '</div>' +
-      docenteLinea +
       '<div style="font-size:0.78rem;color:#616161;margin-bottom:6px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(d.involucrados) +
       '</div>' +
@@ -33258,15 +29591,14 @@ async function _renderDocentesCentro() {
       const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
       html += '<div style="width:44px;height:44px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1.1rem;">' + inicial + '</div>';
 
-      // Info + badge de rol (un usuario puede tener varios roles a la vez)
-      const rolesDocente = Array.isArray(d.roles) ? d.roles : [d.rol];
-      const rolBadge = [
-        rolesDocente.includes('director') ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>' : '',
-        rolesDocente.includes('coordinadora') ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>' : '',
-        rolesDocente.some(r => _esRolPsicologia(r)) ? '<span style="background:#6A1B9A;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Psicología</span>' : '',
-        rolesDocente.includes('admin_centro') ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>' : '',
-        rolesDocente.includes('docente') ? '<span style="background:#1565C0;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Docente</span>' : ''
-      ].join('');
+      // Info + badge de rol
+      const rolBadge = d.rol === 'director'
+        ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>'
+        : d.rol === 'coordinadora'
+        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>'
+        : d.rol === 'admin_centro'
+        ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>'
+        : '';
       html += '<div style="flex:1;min-width:150px;">'
         + '<div style="font-weight:700;font-size:0.95rem;color:#212121;">' + (d.nombre || 'Sin nombre') + rolBadge + '</div>'
         + '<div style="font-size:0.82rem;color:#78909C;">' + (d.email || '') + '</div>'
@@ -33279,25 +29611,15 @@ async function _renderDocentesCentro() {
         html += '<button onclick="_aprobarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">check</span> Aprobar</button>';
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">close</span> Rechazar</button>';
       } else if (tab === 'aprobados') {
-        if (!rolesDocente.includes('director')) {
+        if (d.rol !== 'director') {
           html += '<button onclick="_promoverDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#4A148C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star</span> Hacer Director</button>';
         } else {
           html += '<button onclick="_quitarDirector(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">star_border</span> Quitar Director</button>';
         }
-        if (!rolesDocente.includes('coordinadora')) {
+        if (d.rol !== 'coordinadora') {
           html += '<button onclick="_promoverCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#00695C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">supervisor_account</span> Hacer Coordinadora</button>';
         } else {
           html += '<button onclick="_quitarCoordinadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Coordinadora</button>';
-        }
-        if (!rolesDocente.some(r => _esRolPsicologia(r))) {
-          html += '<button onclick="_promoverPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#6A1B9A;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">self_improvement</span> Hacer Psicóloga</button>';
-        } else {
-          html += '<button onclick="_quitarPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Psicología</button>';
-        }
-        if (!rolesDocente.includes('docente')) {
-          html += '<button onclick="_promoverDocente(\'' + d.uid + '\')" title="Da acceso a Planificaciones y Calificaciones ademas de sus otros roles" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">school</span> Hacer Docente</button>';
-        } else {
-          html += '<button onclick="_quitarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Docente</button>';
         }
         html += '<button onclick="_rechazarDocente(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#E65100;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">block</span> Revocar</button>';
       } else {
@@ -33333,77 +29655,43 @@ async function _rechazarDocente(uid) {
 }
 
 /** Promover a director */
-// Orden de jerarquia para decidir el "rol principal" (campo singular `rol`) cuando un
-// usuario tiene varios roles a la vez -- se mantiene por compatibilidad con cualquier
-// lectura vieja que todavia compare `rol` como string exacto en vez del arreglo `roles`.
-const ORDEN_PRIORIDAD_ROLES = ['superadmin', 'admin_centro', 'director', 'coordinadora', 'psicologia', 'docente'];
-function _rolPrincipalDeRoles(roles) {
-  for (const r of ORDEN_PRIORIDAD_ROLES) { if (roles.includes(r)) return r; }
-  return roles[0] || 'docente';
-}
-
-/** Agrega/quita un rol del arreglo `roles` de un usuario (multi-rol), sincronizando el
- * campo singular `rol` con el de mayor jerarquia para compatibilidad hacia atras. */
-async function _toggleRolDocente(uid, rolKey, activar, successMsg) {
-  try {
-    const doc = await db.collection('usuarios').doc(uid).get();
-    const data = doc.data() || {};
-    let roles = Array.isArray(data.roles) ? data.roles.slice() : [data.rol || 'docente'];
-    if (activar) {
-      if (!roles.includes(rolKey)) roles.push(rolKey);
-    } else {
-      roles = roles.filter(r => r !== rolKey);
-    }
-    if (!roles.length) roles = ['docente'];
-    await db.collection('usuarios').doc(uid).update({ roles, rol: _rolPrincipalDeRoles(roles) });
-    mostrarToast(successMsg || 'Rol actualizado', 'success');
-    _renderDocentesCentro();
-  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
-}
-
 async function _promoverDirector(uid) {
   if (!confirm('¿Promover este usuario a Director del centro?')) return;
-  await _toggleRolDocente(uid, 'director', true, 'Usuario promovido a Director');
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'director' });
+    mostrarToast('Usuario promovido a Director', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
 /** Promover a coordinadora */
 async function _promoverCoordinadora(uid) {
   if (!confirm('¿Asignar el rol de Coordinadora a este usuario?')) return;
-  await _toggleRolDocente(uid, 'coordinadora', true, 'Usuario asignado como Coordinadora');
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'coordinadora' });
+    mostrarToast('Usuario asignado como Coordinadora', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
 /** Quitar rol de coordinadora */
 async function _quitarCoordinadora(uid) {
   if (!confirm('¿Quitar el rol de Coordinadora a este usuario?')) return;
-  await _toggleRolDocente(uid, 'coordinadora', false, 'Rol de Coordinadora removido');
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
+    mostrarToast('Rol de Coordinadora removido', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
 /** Quitar rol de director */
 async function _quitarDirector(uid) {
   if (!confirm('¿Quitar el rol de Director a este usuario?')) return;
-  await _toggleRolDocente(uid, 'director', false, 'Rol de Director removido');
-}
-
-/** Promover a psicología */
-async function _promoverPsicologia(uid) {
-  if (!confirm('¿Asignar el rol de Psicología a este usuario?')) return;
-  await _toggleRolDocente(uid, 'psicologia', true, 'Usuario asignado al departamento de Psicología');
-}
-
-/** Quitar rol de psicología */
-async function _quitarPsicologia(uid) {
-  if (!confirm('¿Quitar el rol de Psicología a este usuario?')) return;
-  await _toggleRolDocente(uid, 'psicologia', false, 'Rol de Psicología removido');
-}
-
-/** Dar/quitar acceso de Docente (Planificaciones/Calificaciones) -- esto es lo que permite
- * que alguien con otro rol (ej. Psicología) tambien pueda dar clases. */
-async function _promoverDocente(uid) {
-  await _toggleRolDocente(uid, 'docente', true, 'Acceso de Docente activado');
-}
-async function _quitarDocente(uid) {
-  if (!confirm('¿Quitar el acceso de Docente a este usuario? Ya no vera Planificaciones ni Calificaciones.')) return;
-  await _toggleRolDocente(uid, 'docente', false, 'Acceso de Docente removido');
+  try {
+    await db.collection('usuarios').doc(uid).update({ rol: 'docente' });
+    mostrarToast('Rol de Director removido', 'success');
+    _renderDocentesCentro();
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -33415,7 +29703,7 @@ async function _esDirector() {
   if (!window.currentUser) return false;
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && _tieneRol(doc.data(), 'director');
+    return doc.exists && doc.data().rol === 'director';
   } catch { return false; }
 }
 
@@ -33685,62 +29973,11 @@ function _verificarAccesoSuperadmin() {
   if (btn) btn.style.display = _esSuperadmin() ? '' : 'none';
 }
 
-let _cacheSuperadminPerfil = { ok: false, at: 0 };
-
-async function _esSuperadminPorPerfil() {
-  if (_esSuperadmin()) return true;
-  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) return false;
-
-  const now = Date.now();
-  if (now - _cacheSuperadminPerfil.at < 60000) return _cacheSuperadminPerfil.ok;
-
-  let ok = false;
-  try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    const rol = doc.exists ? String(doc.data().rol || '').toLowerCase().trim() : '';
-    ok = rol === 'superadmin';
-  } catch {}
-
-  _cacheSuperadminPerfil = { ok, at: now };
-  return ok;
-}
-
-async function _verificarAccesoForzarActualizacion() {
-  const btn = document.getElementById('btn-dash-force-update');
-  if (!btn) return;
-  btn.style.display = 'none';
-  const allowed = await _esSuperadminPorPerfil();
-  btn.style.display = allowed ? '' : 'none';
-}
-
 /** Abre el panel de superadmin */
 function abrirSuperadmin() {
   if (!_esSuperadmin()) { mostrarToast('Acceso denegado', 'error'); return; }
   _mostrarPanel('panel-superadmin');
   switchTabSuperadmin('centros');
-  _actualizarBadgePendientesGlobalSuperadmin();
-}
-
-// Contador de docentes/cuentas pendientes de aprobar en TODOS los centros (a diferencia
-// de ac-badge-pendientes, que es por centro dentro de Admin Centro). Solo para que el
-// superadmin lo vea de un vistazo al entrar -- no es un listado, solo el numero.
-async function _actualizarBadgePendientesGlobalSuperadmin() {
-  const cont = document.getElementById('sa-badge-pendientes-global');
-  if (!cont) return;
-  cont.innerHTML = '';
-  try {
-    const snap = await db.collection('usuarios').where('estado', '==', 'pendiente').get();
-    const n = snap.size;
-    cont.innerHTML = n > 0
-      ? '<div style="display:inline-flex;align-items:center;gap:6px;background:#FFF3E0;color:#E65100;border-radius:20px;padding:6px 14px;font-size:0.85rem;font-weight:700;">'
-        + '<span class="material-icons" style="font-size:16px;">hourglass_empty</span>'
-        + n + ' solicitud' + (n === 1 ? '' : 'es') + ' pendiente' + (n === 1 ? '' : 's') + ' de aprobar (todos los centros)'
-        + '</div>'
-      : '<div style="display:inline-flex;align-items:center;gap:6px;background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:6px 14px;font-size:0.85rem;font-weight:700;">'
-        + '<span class="material-icons" style="font-size:16px;">check_circle</span> No hay solicitudes pendientes</div>';
-  } catch (e) {
-    console.warn('No se pudo cargar el conteo de pendientes:', e);
-  }
 }
 
 /** Tabs del superadmin */
@@ -34088,88 +30325,14 @@ async function _cargarCentros() {
 }
 
 /** Renderiza lista de centros */
-// Cuentas que se registraron eligiendo "Otro" y escribieron el nombre de su centro a
-// mano (centroId vacío) -- invisibles en Admin Centro porque ese panel filtra por
-// centroId exacto. Se listan aparte para que el superadmin les asigne un centro real
-// (o cree uno primero) antes de aprobarlas.
-async function _renderPendientesSinCentro(centros) {
-  try {
-    const snap = await db.collection('usuarios').where('estado', '==', 'pendiente').get();
-    const sinCentro = snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(d => !d.centroId);
-    if (!sinCentro.length) return '';
-
-    const opcionesCentros = centros.map(c => '<option value="' + c.id + '">' + escapeHTML(c.nombre) + '</option>').join('');
-
-    let html = '<div style="background:#FFF3E0;border:1.5px solid #FFB74D;border-radius:12px;padding:16px;margin-bottom:18px;">'
-      + '<div style="font-weight:800;color:#E65100;margin-bottom:4px;display:flex;align-items:center;gap:8px;">'
-      + '<span class="material-icons">report_problem</span> Cuentas sin centro asignado (' + sinCentro.length + ')</div>'
-      + '<p style="font-size:0.8rem;color:#8D6E63;margin:0 0 12px;">Se registraron eligiendo "Otro" y escribiendo el nombre de su centro a mano. Asígnales un centro educativo real (créalo abajo primero si hace falta) para poder aprobarlas.</p>'
-      + '<div style="display:flex;flex-direction:column;gap:10px;">';
-
-    sinCentro.forEach(d => {
-      const fecha = d.createdAt ? new Date(d.createdAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-      html += '<div style="background:#fff;border:1px solid #FFE0B2;border-radius:10px;padding:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">'
-        + '<div style="flex:1;min-width:180px;">'
-        + '<div style="font-weight:700;color:#37474F;">' + escapeHTML(d.nombre || d.email || 'Sin nombre') + '</div>'
-        + '<div style="font-size:0.78rem;color:#78909C;">' + escapeHTML(d.email || '') + (fecha ? ' · ' + fecha : '') + '</div>'
-        + '<div style="font-size:0.8rem;color:#E65100;margin-top:2px;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">edit_note</span> Escribió: "' + escapeHTML(d.centroNombre || '') + '"</div>'
-        + '</div>'
-        + '<select id="sa-centro-asignar-' + d.uid + '" style="padding:7px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.82rem;">'
-        + '<option value="">— Elegir centro —</option>' + opcionesCentros + '</select>'
-        + '<button onclick="_asignarCentroYAprobar(\'' + d.uid + '\')" style="padding:7px 14px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">check</span> Asignar y aprobar</button>'
-        + '<button onclick="_rechazarPendienteSinCentro(\'' + d.uid + '\')" style="padding:7px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">close</span> Rechazar</button>'
-        + '</div>';
-    });
-
-    html += '</div></div>';
-    return html;
-  } catch (e) {
-    console.warn('Error cargando pendientes sin centro:', e);
-    return '';
-  }
-}
-
-async function _rechazarPendienteSinCentro(uid) {
-  if (!confirm('¿Rechazar esta cuenta? No podrá acceder al sistema.')) return;
-  try {
-    await db.collection('usuarios').doc(uid).update({ estado: 'rechazado', rejectedAt: new Date().toISOString(), rejectedBy: window.currentUser?.email || '' });
-    mostrarToast('Cuenta rechazada', 'success');
-    _renderCentrosEducativos();
-    _actualizarBadgePendientesGlobalSuperadmin();
-  } catch (e) {
-    mostrarToast('Error: ' + e.message, 'error');
-  }
-}
-
-async function _asignarCentroYAprobar(uid) {
-  const sel = document.getElementById('sa-centro-asignar-' + uid);
-  const centroId = sel?.value;
-  if (!centroId) { mostrarToast('Elige un centro primero', 'error'); return; }
-  const centroNombre = sel.selectedOptions[0]?.textContent || '';
-  try {
-    await db.collection('usuarios').doc(uid).update({
-      centroId, centroNombre,
-      estado: 'aprobado',
-      approvedAt: new Date().toISOString(),
-      approvedBy: window.currentUser?.email || ''
-    });
-    mostrarToast('Cuenta asignada y aprobada', 'success');
-    _renderCentrosEducativos();
-    _actualizarBadgePendientesGlobalSuperadmin();
-  } catch (e) {
-    mostrarToast('Error: ' + e.message, 'error');
-  }
-}
-
 async function _renderCentrosEducativos() {
   const cont = document.getElementById('sa-contenido');
   if (!cont) return;
   cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando centros...</div>';
 
   const centros = await _cargarCentros();
-  const pendientesSinCentroHtml = await _renderPendientesSinCentro(centros);
 
-  let html = pendientesSinCentroHtml + '<div style="margin-bottom:16px;">'
+  let html = '<div style="margin-bottom:16px;">'
     + '<button onclick="_mostrarFormCentro()" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">add</span> Crear Centro Educativo</button></div>';
 
@@ -34209,7 +30372,7 @@ async function _renderCentrosEducativos() {
 
 /** Muestra formulario para crear/editar centro */
 async function _mostrarFormCentro(centroId) {
-  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
+  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [] };
 
   if (centroId) {
     try {
@@ -34231,26 +30394,6 @@ async function _mostrarFormCentro(centroId) {
     + _inputCentro('sa-centro-email', 'Email del Centro', centro.email, 'Ej: info@liceo.edu.do')
     + _inputCentro('sa-centro-logo', 'URL del Logo', centro.logoUrl, 'https://ejemplo.com/logo.png')
     + '</div>'
-    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #1565C0;border-radius:10px;background:#E3F2FD;">'
-    + '<label style="font-size:0.82rem;font-weight:600;color:#0D47A1;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
-    + '<span class="material-icons" style="font-size:18px;">mark_email_read</span> Correo OTP de registro (EmailJS) — opcional</label>'
-    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Si este centro necesita su propia cuenta de EmailJS para el código de verificación al registrarse (para no compartir el cupo con otros centros), complétalo aquí. Déjalo vacío para usar la cuenta compartida por defecto.</p>'
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">'
-    + _inputCentro('sa-centro-emailjs-service', 'EmailJS Service ID', centro.emailjsServiceId, 'service_xxxxxxx')
-    + _inputCentro('sa-centro-emailjs-template', 'EmailJS Template ID (OTP)', centro.emailjsTemplateId, 'template_xxxxxxx')
-    + _inputCentro('sa-centro-emailjs-public-key', 'EmailJS Public Key', centro.emailjsPublicKey, 'xxxxxxxxxxxxxxxxx')
-    + '</div>'
-    + '</div>'
-    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #2E7D32;border-radius:10px;background:#E8F5E9;">'
-    + '<label style="font-size:0.82rem;font-weight:600;color:#1B5E20;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
-    + '<span class="material-icons" style="font-size:18px;">auto_stories</span> Identidad institucional</label>'
-    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Esta información aparece automáticamente en el Portafolio Docente de todos los profesores de este centro — no hace falta que cada uno la escriba por su cuenta.</p>'
-    + _inputCentro('sa-centro-lema', 'Lema / filosofía', centro.lema, 'Un lema breve del centro')
-    + _textareaCentro('sa-centro-mision', 'Misión', centro.mision, 'Misión institucional')
-    + _textareaCentro('sa-centro-vision', 'Visión', centro.vision, 'Visión institucional')
-    + _textareaCentro('sa-centro-valores', 'Valores', centro.valores, 'Valores institucionales')
-    + _textareaCentro('sa-centro-proposito', 'Propósito del año escolar', centro.propositoAnual, 'Propósito del año escolar en curso')
-    + '</div>'
     + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #7C4DFF;border-radius:10px;background:#F3E5F5;">'
     + '<label style="font-size:0.82rem;font-weight:600;color:#4527A0;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
     + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Planificación (.docx)</label>'
@@ -34260,7 +30403,6 @@ async function _mostrarFormCentro(centroId) {
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
         + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaNombre || 'plantilla.docx') + '</span>'
-        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'planificacion\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
       : '')
@@ -34275,26 +30417,10 @@ async function _mostrarFormCentro(centroId) {
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
         + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaDiariaNombre || 'plantilla_diaria.docx') + '</span>'
-        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'diaria\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaDiariaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
       : '')
     + '<input type="file" id="sa-centro-plantilla-diaria" accept=".docx" style="font-size:0.85rem;">'
-    + '</div>'
-    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #6A1B9A;border-radius:10px;background:#F3E5F5;">'
-    + '<label style="font-size:0.82rem;font-weight:600;color:#4A148C;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
-    + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Reportes de Psicología (.docx)</label>'
-    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para los reportes académicos y disciplinarios que imprime Psicología. '
-    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersPsicologia();" style="color:#6A1B9A;font-weight:600;">Ver lista de placeholders</a></p>'
-    + (centro.plantillaReportePsicologiaBase64
-      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
-        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
-        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaReportePsicologiaNombre || 'plantilla_reportes_psicologia.docx') + '</span>'
-        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'psicologia\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
-        + '<button onclick="_eliminarPlantillaReportePsicologiaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
-        + '</div>'
-      : '')
-    + '<input type="file" id="sa-centro-plantilla-reportes-psicologia" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
@@ -34307,12 +30433,6 @@ function _inputCentro(id, label, val, ph) {
   return '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">' + label + '</label>'
     + '<input type="text" id="' + id + '" value="' + (val || '').replace(/"/g, '&quot;') + '" placeholder="' + ph + '" '
     + 'style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>';
-}
-
-function _textareaCentro(id, label, val, ph) {
-  return '<div style="margin-top:10px;"><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">' + label + '</label>'
-    + '<textarea id="' + id + '" placeholder="' + ph + '" '
-    + 'style="width:100%;min-height:70px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;line-height:1.5;resize:vertical;">' + escapeHTML(val || '') + '</textarea></div>';
 }
 
 /** Guarda centro en Firestore (y sube plantilla si se seleccionó) */
@@ -34329,14 +30449,6 @@ async function _guardarCentro(centroId) {
     telefono: document.getElementById('sa-centro-telefono')?.value?.trim() || '',
     email: document.getElementById('sa-centro-email')?.value?.trim() || '',
     logoUrl: document.getElementById('sa-centro-logo')?.value?.trim() || '',
-    emailjsServiceId: document.getElementById('sa-centro-emailjs-service')?.value?.trim() || '',
-    emailjsTemplateId: document.getElementById('sa-centro-emailjs-template')?.value?.trim() || '',
-    emailjsPublicKey: document.getElementById('sa-centro-emailjs-public-key')?.value?.trim() || '',
-    lema: document.getElementById('sa-centro-lema')?.value?.trim() || '',
-    mision: document.getElementById('sa-centro-mision')?.value?.trim() || '',
-    vision: document.getElementById('sa-centro-vision')?.value?.trim() || '',
-    valores: document.getElementById('sa-centro-valores')?.value?.trim() || '',
-    propositoAnual: document.getElementById('sa-centro-proposito')?.value?.trim() || '',
     updatedAt: new Date().toISOString()
   };
 
@@ -34364,19 +30476,6 @@ async function _guardarCentro(centroId) {
     }
     if (fileDiaria.size > 5 * 1024 * 1024) {
       mostrarToast('La plantilla diaria no debe superar 5MB', 'error');
-      return;
-    }
-  }
-
-  const fileInputReportesPsicologia = document.getElementById('sa-centro-plantilla-reportes-psicologia');
-  const fileReportesPsicologia = fileInputReportesPsicologia?.files?.[0];
-  if (fileReportesPsicologia) {
-    if (!fileReportesPsicologia.name.endsWith('.docx')) {
-      mostrarToast('Solo se permiten archivos .docx para la plantilla de reportes de Psicología', 'error');
-      return;
-    }
-    if (fileReportesPsicologia.size > 5 * 1024 * 1024) {
-      mostrarToast('La plantilla de reportes de Psicología no debe superar 5MB', 'error');
       return;
     }
   }
@@ -34426,20 +30525,6 @@ async function _guardarCentro(centroId) {
       });
     }
 
-    if (fileReportesPsicologia && finalId) {
-      mostrarToast('Guardando plantilla de reportes de Psicología...', 'info');
-      const readerP = new FileReader();
-      const base64P = await new Promise((resolve, reject) => {
-        readerP.onload = () => resolve(readerP.result.split(',')[1]);
-        readerP.onerror = () => reject(new Error('Error leyendo archivo'));
-        readerP.readAsDataURL(fileReportesPsicologia);
-      });
-      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
-        plantillaReportePsicologiaBase64: base64P,
-        plantillaReportePsicologiaNombre: fileReportesPsicologia.name
-      });
-    }
-
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
   } catch (e) {
@@ -34475,67 +30560,6 @@ async function _eliminarPlantillaDiariaCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla diaria: ' + e.message, 'error');
-  }
-}
-
-/** Elimina plantilla de reportes de Psicología del centro */
-async function _eliminarPlantillaReportePsicologiaCentro(centroId) {
-  if (!confirm('¿Eliminar la plantilla Word de reportes de Psicología de este centro?')) return;
-  try {
-    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
-      plantillaReportePsicologiaBase64: firebase.firestore.FieldValue.delete(),
-      plantillaReportePsicologiaNombre: firebase.firestore.FieldValue.delete()
-    });
-    mostrarToast('Plantilla de Psicología eliminada', 'success');
-    _mostrarFormCentro(centroId);
-  } catch (e) {
-    mostrarToast('Error eliminando plantilla de Psicología: ' + e.message, 'error');
-  }
-}
-
-/** Descarga una plantilla .docx del centro desde su base64 guardado */
-async function _descargarPlantillaCentro(centroId, tipo) {
-  if (!centroId) {
-    mostrarToast('Guarda el centro primero para poder descargar la plantilla', 'error');
-    return;
-  }
-
-  const campos = {
-    planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
-    diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
-    psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' }
-  };
-
-  const cfg = campos[tipo] || campos.planificacion;
-
-  try {
-    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-    if (!doc.exists) {
-      mostrarToast('No se encontró el centro', 'error');
-      return;
-    }
-
-    const centro = doc.data() || {};
-    const base64 = centro[cfg.base64];
-    if (!base64) {
-      mostrarToast('No hay plantilla para descargar', 'error');
-      return;
-    }
-
-    const nombre = (centro[cfg.nombre] || cfg.fallback || 'plantilla.docx').trim();
-    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nombre;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    console.error('Error descargando plantilla:', e);
-    mostrarToast('Error al descargar plantilla: ' + (e.message || e), 'error');
   }
 }
 
@@ -34625,11 +30649,6 @@ function _mostrarGuiaPlaceholders() {
     ['{criterios_evaluacion}', 'Criterios de evaluación del currículo'],
     ['{recursos_didacticos}', 'Recursos didácticos disponibles'],
     ['{centro_educativo}', 'Nombre del centro educativo'],
-    ['{codigo_ra}', 'Código extraído del RA (ej: RA0208)'],
-    ['{cantidad_actividades}', 'Cantidad total de actividades de la planificación'],
-    ['{cantidad_ec}', 'Cantidad total de elementos de capacidad'],
-    ['{fecha_exportacion}', 'Fecha en que se exporta el documento'],
-    ['{hora_exportacion}', 'Hora en que se exporta el documento'],
     ['{ra1_tiempo} ... {ra10_tiempo}', 'Tiempo del RA1 al RA10 (priorización)'],
     ['{ra1_valor} ... {ra10_valor}', 'Valor del RA1 al RA10 (priorización)'],
     ['{prio_total_tiempo}', 'Total tiempo (priorización)'],
@@ -34671,13 +30690,6 @@ function _mostrarGuiaPlaceholders() {
   ).join('');
 
   document.getElementById('modal-title').textContent = 'Placeholders para Plantilla Word';
-  const dinamicoInfo = '<div style="margin-top:14px;padding:12px;background:#E8F5E9;border-radius:8px;border:1px solid #C8E6C9;">'
-    + '<strong style="color:#2E7D32;font-size:0.82rem;">Placeholders dinámicos (nuevo):</strong>'
-    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0;">Ahora puedes usar campos nuevos sin tocar código. Si el dato existe en el sistema, la plantilla lo acepta automáticamente.</p>'
-    + '<p style="font-size:0.76rem;color:#616161;margin:4px 0;"><strong>Formato recomendado:</strong> <code>{dg_campo}</code> para Datos Generales y <code>{ra_campo}</code> para datos del RA.</p>'
-    + '<p style="font-size:0.74rem;color:#757575;margin:4px 0 0;">Ejemplos: <code>{dg_nombreDocente}</code>, <code>{dg_nombre_docente}</code>, <code>{ra_descripcion}</code>, <code>{dg_codigoModulo}</code>.</p>'
-    + '</div>';
-
   document.getElementById('modal-body').innerHTML =
     '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Escribe estos placeholders dentro de tu plantilla .docx y el sistema los reemplazará con los datos reales al exportar:</p>'
     + '<div style="max-height:400px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
@@ -34685,48 +30697,7 @@ function _mostrarGuiaPlaceholders() {
     + '<th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Dato que inserta</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table></div>'
     + tablaInfo
-    + dinamicoInfo
     + '<p style="font-size:0.75rem;color:#9E9E9E;margin-top:10px;">Tip: En tu archivo Word, simplemente escribe el placeholder (ej: <code>{familia_profesional}</code>) donde quieras que aparezca el dato.</p>';
-  document.getElementById('modal-overlay').classList.remove('hidden');
-}
-
-/** Muestra guía de placeholders para la plantilla de reportes de Psicología */
-function _mostrarGuiaPlaceholdersPsicologia() {
-  const placeholders = [
-    ['{estudiante_nombre}', 'Nombre y apellido del estudiante'],
-    ['{grado_cursa}', 'Grado o curso del estudiante'],
-    ['{fecha_reporte}', 'Fecha del reporte'],
-    ['{detalles_evento}', 'Detalles del evento o situación'],
-    ['{medidas_docente}', 'Medidas trabajadas por el docente en el aula'],
-    ['{seguimiento_repetitiva}', 'Seguimiento si la falta es repetitiva'],
-    ['{firma_estudiante}', 'Firma / nombre del estudiante'],
-    ['{celular_estudiante}', 'Número celular del estudiante'],
-    ['{firma_docente}', 'Firma del docente'],
-    ['{firma_coordinacion}', 'Firma de coordinación pedagógica'],
-    ['{firma_psicologia}', 'Firma de psicología'],
-    ['{firma_tutor}', 'Firma del padre, madre o tutor'],
-    ['{telefono_tutor}', 'Teléfono del padre, madre o tutor'],
-    ['{nombre_centro}', 'Nombre del centro educativo'],
-    ['{nombre_docente}', 'Nombre del docente (opcional)'],
-    ['{curso_nombre}', 'Nombre del curso / grupo (opcional)']
-  ];
-
-  const rows = placeholders.map(([ph, desc]) =>
-    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#4A148C;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
-    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
-  ).join('');
-
-  document.getElementById('modal-title').textContent = 'Placeholders para Reportes de Psicología';
-  document.getElementById('modal-body').innerHTML =
-    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Usa estos placeholders en la plantilla Word de reportes para que se rellenen con los datos reales guardados en cada reporte:</p>'
-    + '<div style="max-height:420px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
-    + '<thead><tr><th style="padding:6px 10px;background:#6A1B9A;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #6A1B9A;">Placeholder</th>'
-    + '<th style="padding:6px 10px;background:#6A1B9A;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #6A1B9A;">Dato que inserta</th></tr></thead>'
-    + '<tbody>' + rows + '</tbody></table></div>'
-    + '<div style="margin-top:14px;padding:12px;background:#F3E5F5;border-radius:8px;border:1px solid #E1BEE7;">'
-    + '<strong style="color:#4A148C;font-size:0.82rem;">Sugerencia de diseño:</strong>'
-    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">La plantilla puede seguir el formato del formulario impreso: encabezado institucional, tabla de datos del estudiante, bloques para detalles, medidas y firmas.</p>'
-    + '</div>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
@@ -34889,7 +30860,6 @@ const OPCIONES_DOCENTES = [
   { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas y entregas' },
   { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas del docente' },
   { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación' },
-  { id: 'portafolio', label: 'Portafolio Docente', icono: 'workspace_premium', desc: 'Organizar evidencias pedagógicas y documentos docentes' },
   { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento' },
   { id: 'ia', label: 'Generación con IA', icono: 'auto_awesome', desc: 'Generar contenido con inteligencia artificial' },
   { id: 'importar', label: 'Importar Planificación', icono: 'upload_file', desc: 'Importar planificación desde archivo' },
@@ -34901,11 +30871,6 @@ const OPCIONES_DOCENTES = [
   { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios' },
   { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global de estudiantes' },
   { id: 'examenes', label: 'Exámenes y Pruebas', icono: 'quiz', desc: 'Crear exámenes en línea para estudiantes' },
-  { id: 'recuperaciones', label: 'RAs Adeudados', icono: 'assignment_return', desc: 'Recuperaciones pendientes por estudiante' },
-  { id: 'calc_asistencia', label: 'Calc. Asistencia', icono: 'calculate', desc: 'Calculadora de porcentaje de asistencia' },
-  { id: 'cumpleanos', label: 'Cumpleaños', icono: 'cake', desc: 'Registro de fechas de nacimiento de estudiantes' },
-  { id: 'compartir', label: 'Compartir', icono: 'folder_shared', desc: 'Compartir enlaces y documentos con otros docentes' },
-  { id: 'tutorial', label: 'Tutorial', icono: 'help_outline', desc: 'Guía de uso del sistema' },
 ];
 
 async function _cargarOpcionesDocentes() {
@@ -34987,7 +30952,6 @@ const OPCIONES_COORDINADORA = [
   { id: 'tareas', label: 'Tareas', icono: 'assignment', desc: 'Gestión de tareas', defecto: true },
   { id: 'notas', label: 'Notas Rápidas', icono: 'sticky_note_2', desc: 'Bloc de notas', defecto: true },
   { id: 'libreta', label: 'Libreta', icono: 'book', desc: 'Libreta de planificación', defecto: true },
-  { id: 'portafolio', label: 'Portafolio Docente', icono: 'workspace_premium', desc: 'Organizar evidencias pedagógicas y documentos docentes', defecto: true },
   { id: 'rendimiento', label: 'Rendimiento', icono: 'bar_chart', desc: 'Gráficas de rendimiento', defecto: true },
   { id: 'ia', label: 'Configurar IA', icono: 'auto_awesome', desc: 'Configuración de inteligencia artificial', defecto: false },
   { id: 'importar', label: 'Importar Planificación', icono: 'upload_file', desc: 'Importar planificación desde archivo', defecto: false },
@@ -34999,11 +30963,6 @@ const OPCIONES_COORDINADORA = [
   { id: 'auditoria', label: 'Auditoría', icono: 'history', desc: 'Historial de cambios', defecto: true },
   { id: 'buscar', label: 'Buscar Estudiante', icono: 'search', desc: 'Buscador global', defecto: true },
   { id: 'presentacion', label: 'Presentación', icono: 'slideshow', desc: 'Vista de presentación', defecto: false },
-  { id: 'recuperaciones', label: 'RAs Adeudados', icono: 'assignment_return', desc: 'Recuperaciones pendientes por estudiante', defecto: false },
-  { id: 'calc_asistencia', label: 'Calc. Asistencia', icono: 'calculate', desc: 'Calculadora de porcentaje de asistencia', defecto: false },
-  { id: 'cumpleanos', label: 'Cumpleaños', icono: 'cake', desc: 'Registro de fechas de nacimiento de estudiantes', defecto: true },
-  { id: 'compartir', label: 'Compartir', icono: 'folder_shared', desc: 'Compartir enlaces y documentos con otros docentes', defecto: true },
-  { id: 'tutorial', label: 'Tutorial', icono: 'help_outline', desc: 'Guía de uso del sistema', defecto: true },
 ];
 
 async function _cargarOpcionesCoordinadora() {
@@ -35099,10 +31058,9 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
     tareas: 'btn-dash-tareas',
     notas: 'btn-dash-notas',
     libreta: 'btn-dash-libreta',
-    portafolio: 'btn-dash-portafolio',
     rendimiento: 'btn-dash-rendimiento',
-    importar: 'btn-dash-importar',
     ia: 'btn-dash-ia',
+    importar: 'btn-dash-importar',
     backup: 'btn-dash-backup',
     blog: 'btn-dash-blog',
     calendario: 'btn-dash-calendario',
@@ -35112,11 +31070,6 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
     buscar: 'btn-buscar-est',
     presentacion: 'btn-dash-presentacion',
     examenes: 'btn-dash-examenes',
-    recuperaciones: 'btn-dash-recuperaciones',
-    calc_asistencia: 'btn-dash-calc-asistencia',
-    cumpleanos: 'btn-dash-cumpleanos',
-    compartir: 'btn-dash-compartir',
-    tutorial: 'btn-dash-tutorial',
   };
   Object.entries(mapDash).forEach(([key, btnId]) => {
     const def = defsArray ? defsArray.find(o => o.id === key) : null;
@@ -35133,41 +31086,6 @@ function _ocultarBotonesDesactivados(opciones, defsArray) {
       }
     }
   });
-
-  const mapStats = {
-    planificaciones: 'dash-stat-planificaciones',
-    calificaciones: 'dash-stat-cursos',
-    horario: 'dash-stat-clases-hoy',
-    tareas: 'dash-stat-tareas'
-  };
-
-  Object.entries(mapStats).forEach(([key, statId]) => {
-    const def = defsArray ? defsArray.find(o => o.id === key) : null;
-    const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
-    if (!activo) {
-      const stat = document.getElementById(statId);
-      if (stat) stat.style.display = 'none';
-    }
-  });
-
-  const mapSeccionesDash = {
-    estado_cursos: 'dash-cursos',
-    estadisticas_dashboard: 'dash-estadisticas'
-  };
-
-  Object.entries(mapSeccionesDash).forEach(([key, contentId]) => {
-    const def = defsArray ? defsArray.find(o => o.id === key) : null;
-    const activo = opciones[key] !== undefined ? opciones[key] : (def?.defecto ?? true);
-    if (!activo) {
-      const content = document.getElementById(contentId);
-      if (!content) return;
-      content.style.display = 'none';
-      const label = content.previousElementSibling;
-      if (label && label.classList && label.classList.contains('dash-section-label')) {
-        label.style.display = 'none';
-      }
-    }
-  });
 }
 
 // ── OPCIONES DE VISIBILIDAD PARA PSICOLOGÍA ──────────────────────
@@ -35176,9 +31094,6 @@ const OPCIONES_PSICOLOGIA = [
   { id: 'buscar',          label: 'Buscar Estudiante',      icono: 'search',              desc: 'Buscador global de estudiantes',       defecto: true  },
   { id: 'reportes',        label: 'Reportes Estudiantes',   icono: 'flag',                desc: 'Ver reportes de comportamiento',        defecto: true  },
   { id: 'denuncias',       label: 'Buzón de Denuncias',     icono: 'report',              desc: 'Denuncias anónimas de estudiantes',     defecto: true  },
-  { id: 'importar',        label: 'Importar Planificación', icono: 'upload_file',         desc: 'Importar planificación desde Word',     defecto: true  },
-  { id: 'estado_cursos',   label: 'Estado de cursos',       icono: 'school',              desc: 'Resumen de cursos en el dashboard',     defecto: true  },
-  { id: 'estadisticas_dashboard', label: 'Estadísticas de rendimiento (dashboard)', icono: 'insights', desc: 'Bloque de estadísticas rápidas en dashboard', defecto: true },
   { id: 'calendario',      label: 'Calendario Escolar',     icono: 'event',               desc: 'Calendario de actividades escolares',   defecto: true  },
   { id: 'notas',           label: 'Notas Rápidas',          icono: 'sticky_note_2',       desc: 'Bloc de notas personal',               defecto: true  },
   { id: 'blog',            label: 'Blog Educativo',         icono: 'rss_feed',            desc: 'Blog para comunicación con estudiantes',defecto: false },
@@ -35189,14 +31104,8 @@ const OPCIONES_PSICOLOGIA = [
   { id: 'calificaciones',  label: 'Libro de Calificaciones',icono: 'grade',               desc: 'Registro de notas por curso',           defecto: false },
   { id: 'horario',         label: 'Mi Horario',             icono: 'calendar_view_week',  desc: 'Horario semanal de clases',             defecto: false },
   { id: 'tareas',          label: 'Tareas',                 icono: 'assignment',          desc: 'Gestión de tareas',                     defecto: false },
-  { id: 'portafolio',      label: 'Portafolio Docente',     icono: 'workspace_premium',   desc: 'Organizar evidencias pedagógicas y documentos docentes', defecto: true },
   { id: 'rendimiento',     label: 'Rendimiento',            icono: 'bar_chart',           desc: 'Gráficas de rendimiento académico',     defecto: false },
   { id: 'auditoria',       label: 'Auditoría',              icono: 'history',             desc: 'Historial de cambios del sistema',      defecto: false },
-  { id: 'recuperaciones',  label: 'RAs Adeudados',          icono: 'assignment_return',   desc: 'Recuperaciones pendientes por estudiante', defecto: false },
-  { id: 'calc_asistencia', label: 'Calc. Asistencia',       icono: 'calculate',           desc: 'Calculadora de porcentaje de asistencia',  defecto: false },
-  { id: 'cumpleanos',      label: 'Cumpleaños',             icono: 'cake',                desc: 'Registro de fechas de nacimiento de estudiantes', defecto: true },
-  { id: 'compartir',       label: 'Compartir',              icono: 'folder_shared',       desc: 'Compartir enlaces y documentos con otros docentes', defecto: true },
-  { id: 'tutorial',        label: 'Tutorial',               icono: 'help_outline',        desc: 'Guía de uso del sistema',               defecto: true },
 ];
 
 async function _cargarOpcionesPsicologia() {
@@ -35275,13 +31184,12 @@ async function _aplicarOpcionesDocente() {
   if (esDir) return;
   const esCoord = await _esCoordinadora();
   if (esCoord) return;
-  // Usuarios de psicología tienen sus propias restricciones -- salvo que ADEMAS tengan
-  // el rol de docente (doble rol), en cuyo caso si les aplican las restricciones de docente.
+  // Usuarios de psicología tienen sus propias restricciones
   if (window.currentUser) {
     try {
       const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-      const perfil = doc.exists ? doc.data() : null;
-      if (perfil && _tieneRol(perfil, 'psicologia') && !_tieneRol(perfil, 'docente')) return;
+      const rol = doc.exists ? (doc.data().rol || '') : '';
+      if (['psicologia', 'psicologa', 'psicologo'].includes(rol)) return;
     } catch {}
   }
 
@@ -35296,7 +31204,6 @@ const _origRenderDashboard = renderizarDashboard;
 renderizarDashboard = function() {
   _origRenderDashboard();
   _verificarAccesoSuperadmin();
-  _verificarAccesoForzarActualizacion();
   _verificarAccesoAdminCentro();
   _verificarAccesoDirector();
   _verificarAccesoCoordinadora();
@@ -35359,7 +31266,7 @@ async function _esCoordinadora() {
   if (!window.currentUser) return false;
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && _tieneRol(doc.data(), 'coordinadora');
+    return doc.exists && doc.data().rol === 'coordinadora';
   } catch { return false; }
 }
 
@@ -35369,9 +31276,9 @@ async function _verificarAccesoPsicologia() {
   if (!window.currentUser) { btn.style.display = 'none'; return; }
   try {
     const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    const perfil = doc.exists ? doc.data() : null;
+    const rol = doc.exists ? (doc.data().rol || '') : '';
     const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-    const visible = (perfil && (_tieneRol(perfil, 'psicologia') || _tieneRol(perfil, 'director') || _tieneRol(perfil, 'superadmin'))) || esSA;
+    const visible = ['psicologia', 'psicologa', 'psicologo', 'director', 'superadmin'].includes(rol) || esSA;
     btn.style.display = visible ? '' : 'none';
   } catch { btn.style.display = 'none'; }
 }
@@ -35393,7 +31300,7 @@ function abrirCoordinadora() {
 }
 
 function switchTabCoordinadora(tab) {
-  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos' };
+  const tabs = { calificaciones: 'tab-coord-calificaciones', rendimiento: 'tab-coord-rendimiento', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -35402,6 +31309,7 @@ function switchTabCoordinadora(tab) {
   });
   window._coordTabActual = tab;
   if (tab === 'calificaciones') _coordMonitorCalificaciones();
+  else if (tab === 'rendimiento') _coordMonitorRendimiento();
   else if (tab === 'planificaciones') _coordMonitorPlanificaciones();
   else if (tab === 'resumen') _coordResumenDocentes();
   else if (tab === 'avisos') _coordAvisos();
@@ -36039,6 +31947,163 @@ async function _coordEliminarAviso(centroId, avisoId) {
     mostrarToast('Aviso eliminado', 'success');
     _coordAvisos();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── 5. MONITOR DE RENDIMIENTO / ALERTAS DE RIESGO ───────────────
+// Reutiliza los mismos umbrales que el panel de Rendimiento del docente
+// (_rendColorPct: ≥70% aprobado, 60-69% regular/riesgo, <60% reprobado)
+// y las mismas funciones de cálculo de nota (_calcNotaFinal, _rendMaxTotal),
+// aplicadas sobre los datos de calificaciones que Coordinadora ya descarga
+// por docente. No requiere lecturas adicionales a Firestore.
+
+async function _coordMonitorRendimiento() {
+  const cont = document.getElementById('coord-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Analizando rendimiento...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordMonitorRendimiento'); return; }
+
+  try {
+    const docentes = await _coordGetDocentes(centroId);
+    if (!docentes.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay docentes en este centro.</div>'; return; }
+
+    const listas = await Promise.all(docentes.map(async d => {
+      try {
+        const calDoc = await db.collection('users').doc(d.uid).collection('data').doc('calificaciones').get();
+        const calRaw = calDoc.exists ? calDoc.data() : {};
+        const calData = calRaw.payload ? JSON.parse(calRaw.payload) : calRaw;
+        const cursos = calData.cursos || {};
+        const filas = [];
+        Object.values(cursos).forEach(curso => {
+          const ests = curso.estudiantes || [];
+          if (!ests.length) return;
+          const maxTotal = _rendMaxTotal(curso);
+          ests.forEach(est => {
+            const nota = maxTotal > 0 ? _calcNotaFinal(curso, est.id) : null;
+            const pct = (maxTotal > 0 && nota !== null) ? nota / maxTotal : null;
+            filas.push({ estNombre: est.nombre || 'Sin nombre', cursoNombre: curso.nombre || '', docente: d.nombre || d.email || 'Sin nombre', nota, maxTotal, pct });
+          });
+        });
+        return filas;
+      } catch (e) { console.warn('Error rendimiento coord:', e); return []; }
+    }));
+
+    window._coordRendData = listas.flat();
+
+    const evaluadas  = window._coordRendData.filter(f => f.pct !== null);
+    const sinEvaluar = window._coordRendData.filter(f => f.pct === null);
+    const aprobados  = evaluadas.filter(f => f.pct >= 0.7);
+    const regulares  = evaluadas.filter(f => f.pct >= 0.6 && f.pct < 0.7);
+    const reprobados = evaluadas.filter(f => f.pct < 0.6);
+
+    let html = '<h4 style="color:#00695C;margin:0 0 14px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">insights</span> Alertas de Rendimiento por Estudiante</h4>';
+
+    html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'
+      + _coordKpiCard(aprobados.length, 'Aprobados ≥70%', '#2E7D32', '#E8F5E9', '#A5D6A7')
+      + _coordKpiCard(regulares.length, 'Regular 60–69%', '#F57F17', '#FFF8E1', '#FFE082')
+      + _coordKpiCard(reprobados.length, 'Reprobados <60%', '#C62828', '#FFEBEE', '#EF9A9A')
+      + _coordKpiCard(sinEvaluar.length, 'Sin evaluar aún', '#9E9E9E', '#F5F5F5', '#E0E0E0')
+      + '</div>';
+
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'
+      + '<span class="material-icons" style="color:#78909C;font-size:18px;">search</span>'
+      + '<input id="coord-rend-buscar" type="text" placeholder="Buscar estudiante, curso o docente..." oninput="_coordFiltrarRendimiento()" '
+      + 'style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;">'
+      + '<select id="coord-rend-filtro" onchange="_coordFiltrarRendimiento()" style="padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.85rem;color:#37474F;">'
+      + '<option value="riesgo">En riesgo (Regular + Reprobado)</option>'
+      + '<option value="todos">Todos los estudiantes</option>'
+      + '<option value="aprobados">Solo aprobados</option>'
+      + '<option value="regular">Solo regular</option>'
+      + '<option value="reprobados">Solo reprobados</option>'
+      + '<option value="sinEvaluar">Solo sin evaluar</option>'
+      + '</select>'
+      + '</div>'
+      + '<div id="coord-rend-tabla"></div>';
+
+    cont.innerHTML = html;
+    _coordFiltrarRendimiento();
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+function _coordKpiCard(num, label, fg, bg, border) {
+  return '<div style="flex:1;min-width:120px;background:' + bg + ';border:1.5px solid ' + border + ';border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:1.4rem;font-weight:700;color:' + fg + ';">' + num + '</div><div style="font-size:0.78rem;color:' + fg + ';">' + label + '</div></div>';
+}
+
+/** Devuelve { fg, label } incluso para estudiantes sin notas aún (pct === null) */
+function _coordEstadoRend(pct) {
+  if (pct === null) return { fg: '#9E9E9E', label: 'Sin evaluar' };
+  return _rendColorPct(pct);
+}
+
+/** Re-filtra y redibuja solo la tabla de estudiantes (deja el buscador y el selector intactos) */
+function _coordFiltrarRendimiento() {
+  const tabla = document.getElementById('coord-rend-tabla');
+  if (!tabla) return;
+  const todas = window._coordRendData || [];
+  const filtro = document.getElementById('coord-rend-filtro')?.value || 'riesgo';
+
+  let base;
+  if (filtro === 'todos') base = todas;
+  else if (filtro === 'aprobados') base = todas.filter(f => f.pct !== null && f.pct >= 0.7);
+  else if (filtro === 'regular') base = todas.filter(f => f.pct !== null && f.pct >= 0.6 && f.pct < 0.7);
+  else if (filtro === 'reprobados') base = todas.filter(f => f.pct !== null && f.pct < 0.6);
+  else if (filtro === 'sinEvaluar') base = todas.filter(f => f.pct === null);
+  else base = todas.filter(f => f.pct !== null && f.pct < 0.7); // riesgo (default)
+
+  base = base.slice().sort((a, b) => {
+    if (a.pct === null) return 1;
+    if (b.pct === null) return -1;
+    return a.pct - b.pct;
+  });
+
+  const q = (document.getElementById('coord-rend-buscar')?.value || '').toLowerCase().trim();
+  const filtradas = q
+    ? base.filter(f => f.estNombre.toLowerCase().includes(q) || f.cursoNombre.toLowerCase().includes(q) || f.docente.toLowerCase().includes(q))
+    : base;
+
+  if (!todas.length) {
+    tabla.innerHTML = '<div style="text-align:center;padding:20px;color:#9E9E9E;">No hay estudiantes registrados en este centro.</div>';
+    return;
+  }
+  if (!base.length) {
+    const msg = filtro === 'riesgo' ? 'Ningún estudiante en riesgo por el momento.' : 'No hay estudiantes en esta categoría.';
+    tabla.innerHTML = '<div style="text-align:center;padding:24px;color:#2E7D32;background:#E8F5E9;border-radius:10px;"><span class="material-icons" style="font-size:32px;display:block;margin-bottom:6px;">check_circle</span>' + msg + '</div>';
+    return;
+  }
+  if (!filtradas.length) {
+    tabla.innerHTML = '<div style="text-align:center;padding:20px;color:#9E9E9E;">Sin resultados para "' + escapeHTML(q) + '".</div>';
+    return;
+  }
+
+  let html = '<div style="font-size:0.75rem;color:#78909C;margin-bottom:6px;">Mostrando ' + filtradas.length + ' de ' + todas.length + ' registros (estudiante × curso)</div>';
+  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;min-width:520px;">'
+    + '<thead><tr style="background:#F5F5F5;">'
+    + '<th style="text-align:left;padding:6px 10px;border:1px solid #E0E0E0;">Estudiante</th>'
+    + '<th style="text-align:left;padding:6px 10px;border:1px solid #E0E0E0;">Curso</th>'
+    + '<th style="text-align:left;padding:6px 10px;border:1px solid #E0E0E0;">Docente</th>'
+    + '<th style="padding:6px 10px;border:1px solid #E0E0E0;width:90px;">Nota</th>'
+    + '<th style="padding:6px 10px;border:1px solid #E0E0E0;width:120px;">Estado</th>'
+    + '</tr></thead><tbody>';
+
+  filtradas.forEach(f => {
+    const col = _coordEstadoRend(f.pct);
+    const notaTxt = f.pct === null ? '—' : f.nota.toFixed(1) + '/' + f.maxTotal;
+    const estadoTxt = f.pct === null ? col.label : (f.pct * 100).toFixed(0) + '% · ' + col.label;
+    html += '<tr>'
+      + '<td style="padding:6px 10px;border:1px solid #E0E0E0;font-weight:600;">' + escapeHTML(f.estNombre) + '</td>'
+      + '<td style="padding:6px 10px;border:1px solid #E0E0E0;">' + escapeHTML(f.cursoNombre) + '</td>'
+      + '<td style="padding:6px 10px;border:1px solid #E0E0E0;color:#546E7A;">' + escapeHTML(f.docente) + '</td>'
+      + '<td style="padding:6px 10px;border:1px solid #E0E0E0;text-align:center;color:' + col.fg + ';font-weight:700;">' + notaTxt + '</td>'
+      + '<td style="padding:6px 10px;border:1px solid #E0E0E0;text-align:center;">'
+      + '<span style="background:' + col.fg + '22;color:' + col.fg + ';padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.75rem;">' + estadoTxt + '</span>'
+      + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  tabla.innerHTML = html;
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -36736,139 +32801,5 @@ renderizarDashboard = function() {
   _origRenderDashboardPagos();
   _verificarAccesoPagos();
 };
-
-function _normalizarVersion(raw) {
-  const txt = String(raw || '').trim();
-  if (!txt) return '';
-  return /^v/i.test(txt) ? txt : ('v' + txt);
-}
-
-const _iaHealthCache = {
-  data: null,
-  ts: 0,
-};
-
-async function _fetchConTimeout(url, opts = {}, timeoutMs = 4500) {
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...opts, signal: ctrl.signal });
-  } finally {
-    clearTimeout(to);
-  }
-}
-
-async function _estadoProveedorIA(nombre, key) {
-  if (!key) return { nombre, estado: 'Sin clave' };
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    return { nombre, estado: 'Sin internet' };
-  }
-
-  try {
-    let resp;
-    if (nombre === 'Groq') {
-      resp = await _fetchConTimeout('https://api.groq.com/openai/v1/models', {
-        headers: { Authorization: `Bearer ${key}` }
-      });
-    } else if (nombre === 'Google Gemini') {
-      resp = await _fetchConTimeout(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
-    } else {
-      resp = await _fetchConTimeout('https://openrouter.ai/api/v1/models', {
-        headers: { Authorization: `Bearer ${key}` }
-      });
-    }
-    return { nombre, estado: resp.ok ? 'En linea' : 'Sin conexión' };
-  } catch (e) {
-    return { nombre, estado: 'Sin conexión' };
-  }
-}
-
-async function _obtenerEstadoIAs() {
-  const now = Date.now();
-  if (_iaHealthCache.data && (now - _iaHealthCache.ts) < 120000) {
-    return _iaHealthCache.data;
-  }
-
-  const estados = await Promise.all([
-    _estadoProveedorIA('Groq', getGroqKey()),
-    _estadoProveedorIA('Google Gemini', getGeminiKey()),
-    _estadoProveedorIA('OpenRouter', getOpenRouterKey())
-  ]);
-
-  _iaHealthCache.data = estados;
-  _iaHealthCache.ts = now;
-  return estados;
-}
-
-async function _actualizarDetectorVersion() {
-  const chip = document.getElementById('version-detector');
-  if (!chip) return;
-
-  const build = _normalizarVersion(window.TINCLASS_BUILD_VERSION) || 'vdev';
-  let swVer = _normalizarVersion(window.TINCLASS_SW_VERSION) || 'vsw';
-
-  try {
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration('/');
-      const scriptURL = reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL || '';
-      const match = scriptURL.match(/[?&]v=([^&]+)/i);
-      if (match && match[1]) swVer = _normalizarVersion(match[1]) || swVer;
-    }
-  } catch {}
-
-  chip.innerHTML = `
-    <div class="version-detector-title">Version ${build.replace(/^v/i, '')}</div>
-    <div class="version-detector-row">Groq - Verificando...</div>
-    <div class="version-detector-row">Google Gemini - Verificando...</div>
-    <div class="version-detector-row">OpenRouter - Verificando...</div>
-    <div class="version-detector-foot">SW ${swVer}</div>
-  `;
-  chip.title = 'Estado de IA y versión. Clic para abrir Config. IA';
-  chip.onclick = () => abrirConfigIA();
-  chip.classList.remove('hidden');
-
-  try {
-    const estados = await _obtenerEstadoIAs();
-    chip.innerHTML = `
-      <div class="version-detector-title">Version ${build.replace(/^v/i, '')}</div>
-      ${estados.map(e => `<div class="version-detector-row">${e.nombre} - ${e.estado}</div>`).join('')}
-      <div class="version-detector-foot">SW ${swVer}</div>
-    `;
-  } catch (e) {}
-}
-
-async function forzarActualizacionApp() {
-  const allowed = await _esSuperadminPorPerfil();
-  if (!allowed) {
-    mostrarToast('Solo superadmin puede forzar actualización.', 'error');
-    return;
-  }
-  if (!confirm('Se limpiará la caché de la app y se recargará la página. ¿Continuar?')) return;
-
-  try {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-  } catch (e) {
-    console.warn('No se pudo limpiar completamente la caché/SW:', e);
-  }
-
-  const sep = window.location.href.includes('?') ? '&' : '?';
-  window.location.replace(window.location.href + sep + 'force_update=' + Date.now());
-}
-
-window.addEventListener('load', () => {
-  setTimeout(_actualizarDetectorVersion, 250);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      setTimeout(_actualizarDetectorVersion, 150);
-    });
-  }
-});
 
 // ════════════════════════════════════════════════════════════════════
