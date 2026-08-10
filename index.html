@@ -2727,6 +2727,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.12<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección general: cuota de almacenamiento agotada en móviles</div>
+              <ul class="about-ver-items">
+                <li>El error de cuota ya no era solo de los respaldos de calificaciones -- también afectaba a la Biblioteca de planificaciones en dispositivos con poco espacio.</li>
+                <li>Ahora, al restaurar cualquier store desde la nube, si no cabe se liberan primero datos prescindibles y ya respaldados (respaldos de calificaciones, notas adhesivas, cumpleaños, ciclos archivados, calendario) antes de intentarlo de nuevo -- en vez de fallar directo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.11<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4872,7 +4887,7 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.11"></script>
+  <script src="app.js?v=16.12"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 

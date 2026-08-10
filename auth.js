@@ -380,6 +380,37 @@ async function _registrarSesion(user) {
   } catch (e) { /* silencioso — no bloquea el login */ }
 }
 
+// ── Guardado en localStorage resistente a cuota agotada ───────────
+// En dispositivos con poca cuota de almacenamiento (típico en móviles), restaurar
+// todos los stores del usuario al iniciar sesión puede exceder el límite. Como todo
+// ya está respaldado en Firestore, ante un QuotaExceededError liberamos primero los
+// stores menos críticos (prescindibles, se pueden re-descargar) antes de rendirnos.
+const LS_QUOTA_SACRIFICIO = [
+  'planificadorRA_cal_backups_v1',           // respaldos de calificaciones
+  'planificadorRA_stickies_v1',              // notas adhesivas (decorativo)
+  'planificadorRA_cumpleanos_v1',            // lista de cumpleaños (solo referencia)
+  'planificadorRA_year_archives_v1',         // ciclos escolares archivados (poco uso)
+  'planificadorRA_convivencia_archivada_v1', // incidencias archivadas (histórico)
+  'planificadorRA_calendario_escolar_v1'     // calendario escolar (se puede re-descargar)
+];
+
+function _setItemQuotaSafe(key, payload) {
+  try {
+    localStorage.setItem(key, payload);
+    return true;
+  } catch (e) {
+    const esQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+    if (!esQuota) { console.warn('Error guardando en localStorage:', key, e); return false; }
+    for (const k of LS_QUOTA_SACRIFICIO) {
+      if (k === key || localStorage.getItem(k) === null) continue;
+      localStorage.removeItem(k);
+      try { localStorage.setItem(key, payload); return true; } catch (e2) { /* seguir liberando */ }
+    }
+    console.warn('Sin espacio en localStorage ni liberando stores prescindibles:', key);
+    return false;
+  }
+}
+
 // ── Cargar todos los stores desde Firestore ──────────────────────
 async function _cargarDesdeFirestore(uid) {
   try {
@@ -406,14 +437,14 @@ async function _cargarDesdeFirestore(uid) {
             // Hay planes locales que Firebase no tiene → fusionar y subir
             console.warn(`[Biblioteca] ${soloEnLocal.length} plan(es) encontrado(s) en local pero no en Firebase. Fusionando y subiendo...`);
             const merged = { items: [...firebaseItems, ...soloEnLocal] };
-            localStorage.setItem(key, JSON.stringify(merged));
+            _setItemQuotaSafe(key, JSON.stringify(merged));
             // Subir fusión a Firebase (sin await para no bloquear la carga)
             if (typeof _escribirChunksBiblioteca === 'function') {
               _escribirChunksBiblioteca(base, merged).catch(e => console.warn('Error subiendo fusión:', e));
             }
           } else if (payload) {
             // Firebase está al día → usar datos de Firebase
-            localStorage.setItem(key, payload);
+            _setItemQuotaSafe(key, payload);
           }
           // Si ni Firebase ni local tienen datos, no tocar localStorage
           return;
@@ -452,7 +483,7 @@ async function _cargarDesdeFirestore(uid) {
           let localSesiones = {};
           try { localSesiones = JSON.parse(localRaw || '{}').sesiones || {}; } catch(e) {}
           const merged = { sesiones: { ...fbSesiones, ...localSesiones } };
-          localStorage.setItem(key, JSON.stringify(merged));
+          _setItemQuotaSafe(key, JSON.stringify(merged));
           return;
         }
 
@@ -499,7 +530,7 @@ async function _cargarDesdeFirestore(uid) {
             merged.cursoActivoId = ids.length ? ids[0] : null;
           }
 
-          localStorage.setItem(key, JSON.stringify(merged));
+          _setItemQuotaSafe(key, JSON.stringify(merged));
 
           if (JSON.stringify(merged) !== JSON.stringify(fbCal) && window._syncFirebase) {
             window._syncFirebase('calificaciones', merged);
@@ -534,7 +565,7 @@ async function _cargarDesdeFirestore(uid) {
             _lastModified: Math.max(localTs, fbTs, Date.now())
           };
 
-          localStorage.setItem(key, JSON.stringify(merged));
+          _setItemQuotaSafe(key, JSON.stringify(merged));
 
           if (JSON.stringify(merged) !== JSON.stringify(fbBlog) && window._syncFirebase) {
             window._syncFirebase('blog', merged);
@@ -547,7 +578,7 @@ async function _cargarDesdeFirestore(uid) {
           try {
             const data = JSON.parse(doc.data().payload || '{}');
             Object.entries(data).forEach(([k, v]) => {
-              if (v !== null && v !== undefined) localStorage.setItem(k, v);
+              if (v !== null && v !== undefined) _setItemQuotaSafe(k, v);
             });
           } catch (e) { console.warn('Error expandiendo store dinámico:', store, e); }
           return;
@@ -555,23 +586,22 @@ async function _cargarDesdeFirestore(uid) {
 
         // cal_backups: son copias completas de calificaciones (varias a la vez) y en
         // móviles con cuota de localStorage más chica pueden no caber. No es información
-        // crítica -- ya está respaldada en Firestore -- así que ante un error de cuota se
-        // reintenta guardando solo el backup más reciente en vez de perderlos todos.
+        // crítica -- ya está respaldada en Firestore -- así que si ni liberando otros
+        // stores prescindibles cupo, se reintenta guardando solo el backup más reciente
+        // en vez de perderlos todos.
         if (store === 'cal_backups') {
-          try {
-            localStorage.setItem(key, doc.data().payload);
-          } catch (e) {
+          if (!_setItemQuotaSafe(key, doc.data().payload)) {
             try {
               const backups = JSON.parse(doc.data().payload || '[]');
               if (Array.isArray(backups) && backups.length > 1) {
-                localStorage.setItem(key, JSON.stringify(backups.slice(0, 1)));
+                _setItemQuotaSafe(key, JSON.stringify(backups.slice(0, 1)));
               }
             } catch (e2) { /* ni con uno solo cupo -- se omite, no es crítico */ }
           }
           return;
         }
 
-        localStorage.setItem(key, doc.data().payload);
+        _setItemQuotaSafe(key, doc.data().payload);
       } catch (e) {
         console.warn('Error cargando store:', store, e);
       }
