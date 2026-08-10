@@ -2727,6 +2727,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.13<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección de causa raíz: auth.js quedaba en caché viejo</div>
+              <ul class="about-ver-items">
+                <li><code>auth.js</code> era el único script que cambia seguido sin cache-busting en su URL -- podía quedar servido desde una caché vieja (CDN o del navegador) por horas, incluso después de recargar la página, mientras el número de versión mostrado ya era el nuevo.</li>
+                <li>Ahora lleva el mismo query string de versión que <code>app.js</code>, así que cada actualización fuerza una descarga fresca real.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.12<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4887,9 +4902,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.12"></script>
+  <script src="app.js?v=16.13"></script>
   <!-- Autenticación -->
-  <script src="auth.js"></script>
+  <script src="auth.js?v=16.13"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
