@@ -553,6 +553,24 @@ async function _cargarDesdeFirestore(uid) {
           return;
         }
 
+        // cal_backups: son copias completas de calificaciones (varias a la vez) y en
+        // móviles con cuota de localStorage más chica pueden no caber. No es información
+        // crítica -- ya está respaldada en Firestore -- así que ante un error de cuota se
+        // reintenta guardando solo el backup más reciente en vez de perderlos todos.
+        if (store === 'cal_backups') {
+          try {
+            localStorage.setItem(key, doc.data().payload);
+          } catch (e) {
+            try {
+              const backups = JSON.parse(doc.data().payload || '[]');
+              if (Array.isArray(backups) && backups.length > 1) {
+                localStorage.setItem(key, JSON.stringify(backups.slice(0, 1)));
+              }
+            } catch (e2) { /* ni con uno solo cupo -- se omite, no es crítico */ }
+          }
+          return;
+        }
+
         localStorage.setItem(key, doc.data().payload);
       } catch (e) {
         console.warn('Error cargando store:', store, e);

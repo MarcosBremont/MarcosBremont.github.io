@@ -11603,7 +11603,7 @@ function cargarCalificaciones() {
 
 // ── Backups automáticos de calificaciones ────────────────────────
 const CAL_BACKUP_KEY = 'planificadorRA_cal_backups_v1';
-const CAL_BACKUP_MAX = 5;
+const CAL_BACKUP_MAX = 3;
 
 function _guardarBackupCalificaciones() {
   try {
@@ -36057,6 +36057,74 @@ function _coordDescargarComentarioPorIndice(idx) {
   _coordDescargarEvidenciaComoWord(item.titulo, item.descripcion, item.fecha);
 }
 
+/** Busca en users/{uid}/data/reportes un reporte cuyo estudiante coincida con el nombre
+ *  dado -- para Reportes de evidencias VIEJAS (creadas antes de guardar refEstId/refId).
+ *  Recorre todos los estudiantes porque no se guardó el estId. Si hay más de una
+ *  coincidencia se queda con la más reciente (por ts). Best-effort: si no encuentra nada
+ *  devuelve null y el llamador debe caer al Word simple. */
+async function _coordBuscarReporteHeuristico(uid, nombreBuscado) {
+  if (!nombreBuscado) return null;
+  try {
+    const doc = await db.collection('users').doc(uid).collection('data').doc('reportes').get();
+    if (!doc.exists || !doc.data().payload) return null;
+    const data = JSON.parse(doc.data().payload);
+    const nombreNorm = nombreBuscado.trim().toLowerCase();
+    let mejor = null;
+    Object.values(data).forEach(lista => {
+      (lista || []).forEach(r => {
+        if ((r.estudianteNombre || '').trim().toLowerCase() === nombreNorm) {
+          if (!mejor || (r.ts || 0) > (mejor.ts || 0)) mejor = r;
+        }
+      });
+    });
+    return mejor;
+  } catch (e) {
+    console.warn('Error en búsqueda heurística de reporte de ' + uid + ':', e);
+    return null;
+  }
+}
+
+/** Descarga un Reporte viejo (sin refEstId/refId) desde el Portafolio de Coordinadora:
+ *  intenta ubicarlo por nombre de estudiante en users/{uid}/data/reportes para poder
+ *  regenerar el Word con la plantilla del centro; si no lo encuentra, cae al Word
+ *  simple en Arial 12 (mismo comportamiento que tenía antes de este ajuste). */
+async function _coordDescargarReporteHeuristico(idx) {
+  const item = window._coordPortafolioEvidenciasActuales?.[idx];
+  if (!item) return;
+  const uid = window._coordPortafolioEvidenciasUid;
+  const nombreBuscado = (item.titulo || '').replace(/^Reporte\s*—\s*/, '').trim();
+
+  mostrarToast('Buscando el reporte original...', 'info');
+  const rep = uid ? await _coordBuscarReporteHeuristico(uid, nombreBuscado) : null;
+  if (!rep) { _coordDescargarEvidenciaComoWord(item.titulo, item.descripcion, item.fecha); return; }
+
+  if (rep.reporteDocxBase64) {
+    const blob = new Blob([Uint8Array.from(atob(rep.reporteDocxBase64), c => c.charCodeAt(0))], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = rep.reporteDocxNombre || 'Reporte_Psicologia.docx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const generado = await _generarBlobReportePsicologiaDocx(rep);
+  if (!generado) { _coordDescargarEvidenciaComoWord(item.titulo, item.descripcion, item.fecha); return; }
+  const url = URL.createObjectURL(generado.blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = generado.nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /**
  * Ciclo escolar ("2026-2027") al que pertenece una planificación guardada,
  * usando la misma convención que _getSchoolYearKey (año escolar inicia en
@@ -36412,6 +36480,7 @@ async function _coordRenderPortafolioDocente(uid, nombre) {
     // sin tener que meter título/descripción (texto libre) dentro del onclick.
     evidencias.forEach((it, i) => { it._idx = i; });
     window._coordPortafolioEvidenciasActuales = evidencias;
+    window._coordPortafolioEvidenciasUid = uid;
     const grupos = _agruparEvidenciasPorCategoria(evidencias);
 
     let html = '<button class="btn-secundario" onclick="_coordResumenDocentes(\'' + contId + '\')" style="margin-bottom:14px;">'
@@ -36466,8 +36535,10 @@ function _coordTarjetaEvidenciaDocente(item, uid) {
   // Orden de prioridad para el botón de descarga:
   // 1) La evidencia ya trae un archivo adjunto (ej. un Reporte cuya plantilla sí generó Word al crearla).
   // 2) Viene de un Reporte de Calificaciones y tenemos con qué regenerar el Word con la plantilla del centro.
-  // 3) Viene de un Reporte sin esa referencia (evidencia vieja, de antes de este ajuste) o de un
-  //    Comentario: Word simple en Arial 12, sin plantilla, armado con lo que ya trae la evidencia.
+  // 3) Viene de un Reporte SIN esa referencia (evidencia vieja, de antes de este ajuste): se intenta
+  //    ubicar el reporte original por nombre de estudiante para igual regenerar el Word con plantilla,
+  //    y solo si no se encuentra cae al Word simple.
+  // 4) Comentario: Word simple en Arial 12, sin plantilla, armado con lo que ya trae la evidencia.
   const esReporte = item.origen === 'Calificaciones — Reportes';
   const esComentario = item.origen === 'Calificaciones — Comentarios';
   let descargarBtn = '';
@@ -36475,7 +36546,9 @@ function _coordTarjetaEvidenciaDocente(item, uid) {
     descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarEvidenciaDocente(\'' + uid + '\',\'' + item.id + '\')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">download</span> Descargar</button>';
   } else if (esReporte && item.refEstId && item.refId) {
     descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarReporteDocente(\'' + uid + '\',\'' + item.refEstId + '\',\'' + item.refId + '\')" style="padding:6px 10px;font-size:0.75rem;color:#6A1B9A;"><span class="material-icons" style="font-size:14px;">description</span> Descargar Word</button>';
-  } else if ((esReporte || esComentario) && typeof item._idx === 'number') {
+  } else if (esReporte && typeof item._idx === 'number') {
+    descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarReporteHeuristico(' + item._idx + ')" style="padding:6px 10px;font-size:0.75rem;color:#6A1B9A;"><span class="material-icons" style="font-size:14px;">description</span> Descargar Word</button>';
+  } else if (esComentario && typeof item._idx === 'number') {
     descargarBtn = '<button class="btn-secundario" onclick="_coordDescargarComentarioPorIndice(' + item._idx + ')" style="padding:6px 10px;font-size:0.75rem;"><span class="material-icons" style="font-size:14px;">description</span> Descargar Word</button>';
   }
 

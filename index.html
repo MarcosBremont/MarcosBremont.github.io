@@ -2727,6 +2727,36 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.11<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: errores de cuota de almacenamiento en móviles</div>
+              <ul class="about-ver-items">
+                <li>Se redujo de 5 a 3 la cantidad de backups automáticos de calificaciones que se guardan (ocupaban demasiado espacio en dispositivos con poca cuota de almacenamiento local).</li>
+                <li>Si aun así no cabe, ahora se reintenta guardando solo el backup más reciente en vez de fallar por completo -- ya estaban respaldados en la nube de todas formas.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.10<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Coordinadora: plantilla también para Reportes viejos del Portafolio</div>
+              <ul class="about-ver-items">
+                <li>Los Reportes guardados antes de v16.09 (sin referencia directa al reporte original) ahora se buscan por nombre de estudiante para poder regenerarlos con la plantilla del centro.</li>
+                <li>Si no se encuentra el reporte original, se mantiene el Word simple en Arial 12 como respaldo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#6A1B9A;">v16.09<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4842,7 +4872,7 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.09"></script>
+  <script src="app.js?v=16.11"></script>
   <!-- Autenticación -->
   <script src="auth.js"></script>
 
