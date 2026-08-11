@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v16.17<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cumpleaños: el guardado ahora espera la confirmación real de Firestore</div>
+              <ul class="about-ver-items">
+                <li>La fusión de la v16.16 seguía dejando una ventana de riesgo. Ahora guardar un cumpleaños espera a que Firestore confirme la escritura antes de mostrar "Cumpleaños guardado" -- si recargas justo después de ver ese mensaje, el dato ya está garantizado en la nube.</li>
+                <li>Si la escritura a la nube falla (ej. sin conexión), ahora se avisa con un mensaje claro en vez de mostrar éxito de todas formas; el cambio igual queda guardado en el dispositivo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v16.16<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5006,9 +5021,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.16"></script>
+  <script src="app.js?v=16.17"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.16"></script>
+  <script src="auth.js?v=16.17"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

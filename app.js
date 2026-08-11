@@ -30913,9 +30913,14 @@ function cargarCumpleanos() {
   } catch { return {}; }
 }
 
-function _guardarCumpleanosData(data) {
+/** Guarda en localStorage al instante (UI responde de inmediato) y ESPERA a que la
+ *  escritura en Firestore se confirme antes de resolver -- a diferencia del resto de
+ *  los stores (que usan _syncFirebase "fire and forget"), acá sí importa esperar: si el
+ *  usuario recarga la página justo después de ver el toast de "guardado", la fecha ya
+ *  tiene que estar en la nube, no a medio camino. */
+async function _guardarCumpleanosData(data) {
   localStorage.setItem(CUMPLE_KEY, JSON.stringify(data));
-  if (window._syncFirebase) _syncFirebase('cumpleanos', data);
+  if (window._syncFirebaseAwait) await _syncFirebaseAwait('cumpleanos', data);
 }
 
 // Próxima ocurrencia (este año o el siguiente) de una fecha guardada como 'YYYY-MM-DD'
@@ -30952,14 +30957,18 @@ function _listaCumpleanosOrdenada(diasAnticipacion) {
   return out;
 }
 
-function guardarCumpleanosEstudiante(estId, fechaISO) {
+async function guardarCumpleanosEstudiante(estId, fechaISO) {
   const data = cargarCumpleanos();
   if (fechaISO) data[estId] = fechaISO; else delete data[estId];
-  _guardarCumpleanosData(data);
   registrarCambio('Cumpleaños actualizado');
   renderizarCumpleanos();
   _renderizarBannerCalendarioDashboard();
-  mostrarToast(fechaISO ? 'Cumpleaños guardado' : 'Fecha eliminada', 'success');
+  try {
+    await _guardarCumpleanosData(data);
+    mostrarToast(fechaISO ? 'Cumpleaños guardado' : 'Fecha eliminada', 'success');
+  } catch (e) {
+    mostrarToast('Se guardó en este dispositivo, pero no se pudo confirmar en la nube: ' + (e.message || e), 'error');
+  }
 }
 
 function abrirCumpleanos() {

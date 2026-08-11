@@ -778,7 +778,10 @@ window._syncFirebase = function(store, data) {
     .catch(e => console.warn('Sync Firebase error [' + store + ']:', e));
 };
 
-// Versión async que garantiza el guardado antes de continuar
+// Versión async que garantiza el guardado antes de continuar. A diferencia de
+// _syncFirebase, si la escritura falla SÍ propaga el error (con throw) -- todos los
+// llamadores ya lo envuelven en su propio try/catch esperando poder reaccionar a un
+// fallo real, no solo a que la función exista.
 window._syncFirebaseAwait = async function(store, data) {
   if (!window.currentUser) return;
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
@@ -788,6 +791,7 @@ window._syncFirebaseAwait = async function(store, data) {
       .set({ payload });
   } catch (e) {
     console.warn('Sync Firebase error [' + store + ']:', e);
+    throw e;
   }
 };
 
