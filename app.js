@@ -30945,6 +30945,12 @@ function _proximaFechaCumple(fechaISO) {
 // ordenada por proximidad. diasAnticipacion=null devuelve todos.
 function _listaCumpleanosOrdenada(diasAnticipacion) {
   const data = cargarCumpleanos();
+  // calState empieza vacío y solo se puebla cuando se llama cargarCalificaciones()
+  // (ej. al abrir Calificaciones) -- si esta función corre antes de eso (ej. el
+  // aviso del Dashboard, apenas se inicia sesión), calState.cursos estaría vacío y
+  // ningún cumpleaños encontraría a su estudiante. Mismo criterio que ya usa
+  // abrirModoPresent() para lo mismo.
+  if (!Object.keys(calState.cursos || {}).length) cargarCalificaciones();
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const out = [];
   Object.values(calState.cursos || {}).forEach(curso => {

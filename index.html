@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v16.20<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: cumpleaños no aparecían en el aviso del Dashboard</div>
+              <ul class="about-ver-items">
+                <li>El aviso "Próximos avisos del calendario escolar" ya mostraba bien las Actividades, pero nunca mostraba Cumpleaños si el Libro de Calificaciones no se había abierto todavía en esa sesión -- la lista de estudiantes con la que se cruzan las fechas guardadas seguía vacía en ese momento.</li>
+                <li>Ahora se carga automáticamente antes de calcular los avisos, así que los cumpleaños aparecen desde el primer momento en que abres el Dashboard, sin depender de haber visitado Calificaciones antes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.19<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5051,9 +5066,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.19"></script>
+  <script src="app.js?v=16.20"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.19"></script>
+  <script src="auth.js?v=16.20"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
