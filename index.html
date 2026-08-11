@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v16.21<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: actividades "en curso" acaparaban todo el aviso del Dashboard</div>
+              <ul class="about-ver-items">
+                <li>El aviso ya calculaba bien los cumpleaños (v16.20), pero el banner solo muestra un puñado de avisos a la vez -- si había varias actividades de varios días "en curso" al mismo tiempo, llenaban todos los cupos visibles y no dejaban espacio para Cumpleaños, Efemérides ni Festivos.</li>
+                <li>Ahora se reserva espacio por tipo (máx. 3 de cada uno) antes de recortar el total, así ningún tipo acapara el banner.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v16.20<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5066,9 +5081,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.20"></script>
+  <script src="app.js?v=16.21"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.20"></script>
+  <script src="auth.js?v=16.21"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

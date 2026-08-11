@@ -27951,7 +27951,19 @@ function _dashConstruirAvisosCalendario(datos) {
 
   const prioridadTipo = { Festivo: 1, 'Cumpleaños': 2, Actividad: 3, 'Efeméride': 4 };
   avisos.sort((a, b) => (a.diff - b.diff) || ((prioridadTipo[a.tipo] || 9) - (prioridadTipo[b.tipo] || 9)) || a.titulo.localeCompare(b.titulo));
-  return avisos;
+
+  // El banner del Dashboard solo muestra un puñado de avisos (ver _renderizarBanner-
+  // CalendarioDashboard, slice(0,6)). Sin esto, un tipo con muchos elementos "urgentes"
+  // (ej. varias actividades de varios días "en curso", todas con diff 0) ocupa TODOS
+  // los cupos visibles y deja afuera a los demás tipos (Cumpleaños, Efemérides,
+  // Festivos) aunque también sean próximos -- por eso se limita cuántos entran por
+  // tipo antes de recortar el total, para que ningún tipo acapare el banner.
+  const MAX_POR_TIPO = 3;
+  const contadorTipo = {};
+  return avisos.filter(a => {
+    contadorTipo[a.tipo] = (contadorTipo[a.tipo] || 0) + 1;
+    return contadorTipo[a.tipo] <= MAX_POR_TIPO;
+  });
 }
 
 function _renderizarBannerCalendarioDashboard() {
@@ -27964,7 +27976,7 @@ function _renderizarBannerCalendarioDashboard() {
   _dashAsegurarCalendarioAdminBanner();
 
   const datos = _dashObtenerDatosCalendario();
-  const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 6);
+  const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 8);
 
   if (!avisos.length) {
     el.style.display = 'none';
