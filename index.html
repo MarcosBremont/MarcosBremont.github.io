@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v16.16<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: cumpleaños se perdían al recargar justo después de guardar</div>
+              <ul class="about-ver-items">
+                <li>Guardar un cumpleaños sincroniza a Firestore en segundo plano sin esperar a que termine -- si se recargaba la página muy rápido después, esa sincronización podía quedar a medias y la fecha recién guardada se perdía al restaurar desde la nube.</li>
+                <li>Ahora, igual que Calificaciones/Diarias/Blog, los cumpleaños se fusionan entre lo local y lo que hay en Firestore en vez de que uno sobreescriba al otro.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v16.15<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4991,9 +5006,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.15"></script>
+  <script src="app.js?v=16.16"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.15"></script>
+  <script src="auth.js?v=16.16"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

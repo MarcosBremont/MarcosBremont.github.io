@@ -573,6 +573,26 @@ async function _cargarDesdeFirestore(uid) {
           return;
         }
 
+        // Cumpleaños: mapa plano {estId: fechaISO}. _syncFirebase no espera a que la
+        // escritura a Firestore termine (es "fire and forget"), así que si el usuario
+        // recarga la página justo después de guardar una fecha, Firestore puede tener
+        // todavía la versión vieja. Sin esta fusión, esa versión vieja sobreescribiría
+        // el cambio recién hecho en localStorage -- por eso se fusiona por unión (local
+        // gana en conflictos, igual que el criterio de "solo en local" de biblioteca)
+        // en vez de reemplazar directo con lo que traiga Firebase.
+        if (store === 'cumpleanos') {
+          const localRaw = localStorage.getItem(key);
+          let fbData = {}, localData = {};
+          try { fbData = JSON.parse(doc.data().payload || '{}') || {}; } catch (e) {}
+          try { localData = JSON.parse(localRaw || '{}') || {}; } catch (e) {}
+          const merged = { ...fbData, ...localData };
+          _setItemQuotaSafe(key, JSON.stringify(merged));
+          if (JSON.stringify(merged) !== JSON.stringify(fbData) && window._syncFirebase) {
+            window._syncFirebase('cumpleanos', merged);
+          }
+          return;
+        }
+
         // Stores dinámicos: el payload es un objeto cuyos keys se restauran individualmente en localStorage
         if (['notas_clase', 'obs_estudiantes', 'eval_formas', 'preferencias'].includes(store)) {
           try {
