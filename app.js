@@ -30919,8 +30919,16 @@ function cargarCumpleanos() {
  *  usuario recarga la página justo después de ver el toast de "guardado", la fecha ya
  *  tiene que estar en la nube, no a medio camino. */
 async function _guardarCumpleanosData(data) {
+  console.log('[Cumpleaños] _guardarCumpleanosData -> uid=', window.currentUser?.uid, 'data=', JSON.parse(JSON.stringify(data)));
   localStorage.setItem(CUMPLE_KEY, JSON.stringify(data));
-  if (window._syncFirebaseAwait) await _syncFirebaseAwait('cumpleanos', data);
+  console.log('[Cumpleaños] localStorage escrito. Ahora en localStorage =', localStorage.getItem(CUMPLE_KEY));
+  if (window._syncFirebaseAwait) {
+    console.log('[Cumpleaños] Llamando _syncFirebaseAwait("cumpleanos", ...) hacia users/' + window.currentUser?.uid + '/data/cumpleanos');
+    await _syncFirebaseAwait('cumpleanos', data);
+    console.log('[Cumpleaños] _syncFirebaseAwait resuelta OK (Firestore confirmó la escritura).');
+  } else {
+    console.warn('[Cumpleaños] window._syncFirebaseAwait NO existe -- no se pudo sincronizar a Firestore.');
+  }
 }
 
 // Próxima ocurrencia (este año o el siguiente) de una fecha guardada como 'YYYY-MM-DD'
@@ -30958,15 +30966,20 @@ function _listaCumpleanosOrdenada(diasAnticipacion) {
 }
 
 async function guardarCumpleanosEstudiante(estId, fechaISO) {
+  console.log('[Cumpleaños] guardarCumpleanosEstudiante llamado con estId=', estId, 'fechaISO=', fechaISO);
   const data = cargarCumpleanos();
+  console.log('[Cumpleaños] Datos ANTES del cambio:', JSON.parse(JSON.stringify(data)));
   if (fechaISO) data[estId] = fechaISO; else delete data[estId];
+  console.log('[Cumpleaños] Datos DESPUÉS del cambio (a punto de guardar):', JSON.parse(JSON.stringify(data)));
   registrarCambio('Cumpleaños actualizado');
   renderizarCumpleanos();
   _renderizarBannerCalendarioDashboard();
   try {
     await _guardarCumpleanosData(data);
+    console.log('[Cumpleaños] Guardado confirmado de punta a punta para estId=', estId);
     mostrarToast(fechaISO ? 'Cumpleaños guardado' : 'Fecha eliminada', 'success');
   } catch (e) {
+    console.error('[Cumpleaños] FALLÓ el guardado en Firestore para estId=', estId, e);
     mostrarToast('Se guardó en este dispositivo, pero no se pudo confirmar en la nube: ' + (e.message || e), 'error');
   }
 }

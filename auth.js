@@ -413,6 +413,7 @@ function _setItemQuotaSafe(key, payload) {
 
 // ── Cargar todos los stores desde Firestore ──────────────────────
 async function _cargarDesdeFirestore(uid) {
+  console.log('[Cumpleaños][debug] _cargarDesdeFirestore arrancó con uid=', uid);
   try {
     const base = db.collection('users').doc(uid).collection('data');
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
@@ -488,7 +489,13 @@ async function _cargarDesdeFirestore(uid) {
         }
 
         const doc = await base.doc(store).get();
-        if (!doc.exists || !doc.data().payload) return;
+        if (store === 'cumpleanos') {
+          console.log('[Cumpleaños] _cargarDesdeFirestore leyendo users/' + uid + '/data/cumpleanos -> doc.exists=', doc.exists, 'payload=', doc.exists ? doc.data().payload : '(no existe)');
+        }
+        if (!doc.exists || !doc.data().payload) {
+          if (store === 'cumpleanos') console.warn('[Cumpleaños] Se sale temprano (doc no existe o payload vacío) -- localStorage NO se toca.');
+          return;
+        }
 
         // Calificaciones: fusionar con resolución por timestamp
         // El dispositivo con datos más recientes gana; Firebase gana en empate
@@ -586,8 +593,11 @@ async function _cargarDesdeFirestore(uid) {
           try { fbData = JSON.parse(doc.data().payload || '{}') || {}; } catch (e) {}
           try { localData = JSON.parse(localRaw || '{}') || {}; } catch (e) {}
           const merged = { ...fbData, ...localData };
+          console.log('[Cumpleaños] Fusionando -> fbData=', fbData, 'localData=', localData, 'merged=', merged);
           _setItemQuotaSafe(key, JSON.stringify(merged));
+          console.log('[Cumpleaños] localStorage QUEDÓ en:', localStorage.getItem(key));
           if (JSON.stringify(merged) !== JSON.stringify(fbData) && window._syncFirebase) {
+            console.log('[Cumpleaños] merged difiere de Firestore -- re-sincronizando de vuelta a la nube.');
             window._syncFirebase('cumpleanos', merged);
           }
           return;
