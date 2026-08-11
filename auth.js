@@ -398,7 +398,10 @@ const LS_QUOTA_SACRIFICIO = [
   'planificadorRA_cal_backups_v1'  // respaldos de calificaciones (copia redundante)
 ];
 
-function _setItemQuotaSafe(key, payload) {
+// silencioso=true evita el console.warn final (que error-reporter.js reporta como
+// alerta por correo) para casos donde fallar acá es esperable y no implica pérdida de
+// datos reales -- ver el único llamador con este flag (cal_backups) para el porqué.
+function _setItemQuotaSafe(key, payload, silencioso) {
   try {
     localStorage.setItem(key, payload);
     return true;
@@ -410,7 +413,8 @@ function _setItemQuotaSafe(key, payload) {
       localStorage.removeItem(k);
       try { localStorage.setItem(key, payload); return true; } catch (e2) { /* seguir liberando */ }
     }
-    console.warn('Sin espacio en localStorage ni liberando stores prescindibles:', key);
+    if (silencioso) console.log('Sin espacio en localStorage ni liberando stores prescindibles:', key);
+    else console.warn('Sin espacio en localStorage ni liberando stores prescindibles:', key);
     return false;
   }
 }
@@ -612,13 +616,18 @@ async function _cargarDesdeFirestore(uid) {
         // móviles con cuota de localStorage más chica pueden no caber. No es información
         // crítica -- ya está respaldada en Firestore -- así que si ni liberando otros
         // stores prescindibles cupo, se reintenta guardando solo el backup más reciente
-        // en vez de perderlos todos.
+        // en vez de perderlos todos. cal_backups es el ÚNICO store en LS_QUOTA_SACRIFICIO,
+        // así que si su propio guardado es el que falla por cuota, no hay nada más que
+        // liberar (no puede sacrificarse a sí mismo) -- eso es esperable en dispositivos
+        // muy justos de espacio, no una señal de que se esté perdiendo algo importante.
+        // Se pasa silencioso=true en ambos intentos para no generar una alerta por
+        // correo cada vez que pase (ver _setItemQuotaSafe).
         if (store === 'cal_backups') {
-          if (!_setItemQuotaSafe(key, doc.data().payload)) {
+          if (!_setItemQuotaSafe(key, doc.data().payload, true)) {
             try {
               const backups = JSON.parse(doc.data().payload || '[]');
               if (Array.isArray(backups) && backups.length > 1) {
-                _setItemQuotaSafe(key, JSON.stringify(backups.slice(0, 1)));
+                _setItemQuotaSafe(key, JSON.stringify(backups.slice(0, 1)), true);
               }
             } catch (e2) { /* ni con uno solo cupo -- se omite, no es crítico */ }
           }

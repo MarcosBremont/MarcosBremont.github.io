@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#78909C;">v16.22<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Silencia alertas benignas de cuota en respaldos de calificaciones</div>
+              <ul class="about-ver-items">
+                <li>En dispositivos muy justos de espacio, el respaldo automático de calificaciones (cal_backups) puede no caber ni reduciéndose a un solo respaldo -- es esperable y no implica pérdida de datos reales (la versión real ya está guardada aparte y en la nube). Antes esto generaba una alerta por correo cada vez; ahora solo queda en la consola.</li>
+                <li>El resto de los stores (Biblioteca, Diarias, etc.) siguen alertando igual que antes si les pasa lo mismo -- solo se silenció este caso específico, ya comprobado como inofensivo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v16.21<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5081,9 +5096,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.21"></script>
+  <script src="app.js?v=16.22"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.21"></script>
+  <script src="auth.js?v=16.22"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

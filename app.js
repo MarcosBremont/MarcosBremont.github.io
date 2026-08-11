@@ -11619,7 +11619,11 @@ function _guardarBackupCalificaciones() {
     });
     backups.unshift({ ts, label, data: current });
     while (backups.length > CAL_BACKUP_MAX) backups.pop();
-    localStorage.setItem(CAL_BACKUP_KEY, JSON.stringify(backups));
+    // silencioso=true: en dispositivos muy justos de espacio esto puede fallar por
+    // cuota sin que se pierda nada importante (es un respaldo extra, ya está la
+    // versión real en CAL_STORAGE_KEY y en Firestore) -- no debe generar una alerta.
+    if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(CAL_BACKUP_KEY, JSON.stringify(backups), true);
+    else localStorage.setItem(CAL_BACKUP_KEY, JSON.stringify(backups));
     if (window._syncFirebase) _syncFirebase('cal_backups', backups);
   } catch (e) { console.warn('Backup cal error:', e); }
 }
