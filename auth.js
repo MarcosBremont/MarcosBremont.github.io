@@ -382,16 +382,20 @@ async function _registrarSesion(user) {
 
 // ── Guardado en localStorage resistente a cuota agotada ───────────
 // En dispositivos con poca cuota de almacenamiento (típico en móviles), restaurar
-// todos los stores del usuario al iniciar sesión puede exceder el límite. Como todo
-// ya está respaldado en Firestore, ante un QuotaExceededError liberamos primero los
-// stores menos críticos (prescindibles, se pueden re-descargar) antes de rendirnos.
+// todos los stores del usuario al iniciar sesión puede exceder el límite. Ante un
+// QuotaExceededError liberamos primero stores prescindibles antes de rendirnos.
+//
+// OJO: esta lista SOLO debe tener stores que sean copias/respaldos redundantes de
+// datos que ya viven seguros en otro lado -- NO datos primarios que el usuario
+// cargó a mano. cumpleanos/calendario_escolar/year_archives/convivencia_archivada/
+// stickies estuvieron acá antes por error: al liberarse como efecto secundario de
+// que OTRO store (ej. biblioteca) no cupiera, se borraban de localStorage aunque
+// _cargarDesdeFirestore ya los hubiera restaurado correctamente en esa misma carga
+// -- el usuario veía sus cumpleaños desaparecer sin haber tocado nada ahí. Solo
+// cal_backups es realmente prescindible (es una copia extra de calificaciones,
+// que se guarda y fusiona aparte).
 const LS_QUOTA_SACRIFICIO = [
-  'planificadorRA_cal_backups_v1',           // respaldos de calificaciones
-  'planificadorRA_stickies_v1',              // notas adhesivas (decorativo)
-  'planificadorRA_cumpleanos_v1',            // lista de cumpleaños (solo referencia)
-  'planificadorRA_year_archives_v1',         // ciclos escolares archivados (poco uso)
-  'planificadorRA_convivencia_archivada_v1', // incidencias archivadas (histórico)
-  'planificadorRA_calendario_escolar_v1'     // calendario escolar (se puede re-descargar)
+  'planificadorRA_cal_backups_v1'  // respaldos de calificaciones (copia redundante)
 ];
 
 function _setItemQuotaSafe(key, payload) {
@@ -413,7 +417,6 @@ function _setItemQuotaSafe(key, payload) {
 
 // ── Cargar todos los stores desde Firestore ──────────────────────
 async function _cargarDesdeFirestore(uid) {
-  console.log('[Cumpleaños][debug] _cargarDesdeFirestore arrancó con uid=', uid);
   try {
     const base = db.collection('users').doc(uid).collection('data');
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
@@ -489,13 +492,7 @@ async function _cargarDesdeFirestore(uid) {
         }
 
         const doc = await base.doc(store).get();
-        if (store === 'cumpleanos') {
-          console.log('[Cumpleaños] _cargarDesdeFirestore leyendo users/' + uid + '/data/cumpleanos -> doc.exists=', doc.exists, 'payload=', doc.exists ? doc.data().payload : '(no existe)');
-        }
-        if (!doc.exists || !doc.data().payload) {
-          if (store === 'cumpleanos') console.warn('[Cumpleaños] Se sale temprano (doc no existe o payload vacío) -- localStorage NO se toca.');
-          return;
-        }
+        if (!doc.exists || !doc.data().payload) return;
 
         // Calificaciones: fusionar con resolución por timestamp
         // El dispositivo con datos más recientes gana; Firebase gana en empate
@@ -593,11 +590,8 @@ async function _cargarDesdeFirestore(uid) {
           try { fbData = JSON.parse(doc.data().payload || '{}') || {}; } catch (e) {}
           try { localData = JSON.parse(localRaw || '{}') || {}; } catch (e) {}
           const merged = { ...fbData, ...localData };
-          console.log('[Cumpleaños] Fusionando -> fbData=', fbData, 'localData=', localData, 'merged=', merged);
           _setItemQuotaSafe(key, JSON.stringify(merged));
-          console.log('[Cumpleaños] localStorage QUEDÓ en:', localStorage.getItem(key));
           if (JSON.stringify(merged) !== JSON.stringify(fbData) && window._syncFirebase) {
-            console.log('[Cumpleaños] merged difiere de Firestore -- re-sincronizando de vuelta a la nube.');
             window._syncFirebase('cumpleanos', merged);
           }
           return;

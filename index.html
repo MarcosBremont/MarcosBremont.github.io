@@ -2784,6 +2784,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.19<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cumpleaños: causa raíz real encontrada y corregida</div>
+              <ul class="about-ver-items">
+                <li>Con los logs de la v16.18 se detectó el problema de fondo: el sistema anti-cuota-agotada (v16.12) trataba cumpleaños, calendario escolar, ciclos archivados y notas adhesivas como "prescindibles" -- si CUALQUIER otro store (ej. Biblioteca) se quedaba sin espacio al iniciar sesión, esos datos se borraban de tu dispositivo como efecto secundario, aunque ya se hubieran restaurado bien en esa misma carga.</li>
+                <li>Ahora solo los respaldos de calificaciones (una copia redundante) se consideran prescindibles -- todo lo demás, que es información real que tú cargaste, ya no se sacrifica nunca.</li>
+                <li>También se corrigió que el selector de fecha no mostraba el valor recién guardado hasta recargar la página.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#78909C;">v16.18<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5035,9 +5051,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.18"></script>
+  <script src="app.js?v=16.19"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.18"></script>
+  <script src="auth.js?v=16.19"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

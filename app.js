@@ -30913,22 +30913,19 @@ function cargarCumpleanos() {
   } catch { return {}; }
 }
 
-/** Guarda en localStorage al instante (UI responde de inmediato) y ESPERA a que la
- *  escritura en Firestore se confirme antes de resolver -- a diferencia del resto de
- *  los stores (que usan _syncFirebase "fire and forget"), acá sí importa esperar: si el
- *  usuario recarga la página justo después de ver el toast de "guardado", la fecha ya
- *  tiene que estar en la nube, no a medio camino. */
-async function _guardarCumpleanosData(data) {
-  console.log('[Cumpleaños] _guardarCumpleanosData -> uid=', window.currentUser?.uid, 'data=', JSON.parse(JSON.stringify(data)));
+/** Escribe en localStorage de inmediato (sincrónico) -- separado de la sincronización a
+ *  Firestore para poder garantizar que la UI (picker, lista) siempre se re-renderiza
+ *  DESPUÉS de que el dato ya está en localStorage, nunca antes. */
+function _guardarCumpleanosLocal(data) {
   localStorage.setItem(CUMPLE_KEY, JSON.stringify(data));
-  console.log('[Cumpleaños] localStorage escrito. Ahora en localStorage =', localStorage.getItem(CUMPLE_KEY));
-  if (window._syncFirebaseAwait) {
-    console.log('[Cumpleaños] Llamando _syncFirebaseAwait("cumpleanos", ...) hacia users/' + window.currentUser?.uid + '/data/cumpleanos');
-    await _syncFirebaseAwait('cumpleanos', data);
-    console.log('[Cumpleaños] _syncFirebaseAwait resuelta OK (Firestore confirmó la escritura).');
-  } else {
-    console.warn('[Cumpleaños] window._syncFirebaseAwait NO existe -- no se pudo sincronizar a Firestore.');
-  }
+}
+
+/** Espera a que la escritura en Firestore se confirme antes de resolver -- a diferencia
+ *  del resto de los stores (que usan _syncFirebase "fire and forget"), acá sí importa
+ *  esperar: si el usuario recarga justo después de ver el toast de "guardado", la fecha
+ *  ya tiene que estar en la nube, no a medio camino. */
+async function _sincronizarCumpleanosFirestore(data) {
+  if (window._syncFirebaseAwait) await _syncFirebaseAwait('cumpleanos', data);
 }
 
 // Próxima ocurrencia (este año o el siguiente) de una fecha guardada como 'YYYY-MM-DD'
@@ -30966,17 +30963,19 @@ function _listaCumpleanosOrdenada(diasAnticipacion) {
 }
 
 async function guardarCumpleanosEstudiante(estId, fechaISO) {
-  console.log('[Cumpleaños] guardarCumpleanosEstudiante llamado con estId=', estId, 'fechaISO=', fechaISO);
   const data = cargarCumpleanos();
-  console.log('[Cumpleaños] Datos ANTES del cambio:', JSON.parse(JSON.stringify(data)));
   if (fechaISO) data[estId] = fechaISO; else delete data[estId];
-  console.log('[Cumpleaños] Datos DESPUÉS del cambio (a punto de guardar):', JSON.parse(JSON.stringify(data)));
+
+  // Escribir en localStorage ANTES de re-renderizar -- si no, el picker/la lista se
+  // repintan leyendo todavía el valor viejo (cargarCumpleanos lee de localStorage).
+  _guardarCumpleanosLocal(data);
+
   registrarCambio('Cumpleaños actualizado');
   renderizarCumpleanos();
   _renderizarBannerCalendarioDashboard();
+
   try {
-    await _guardarCumpleanosData(data);
-    console.log('[Cumpleaños] Guardado confirmado de punta a punta para estId=', estId);
+    await _sincronizarCumpleanosFirestore(data);
     mostrarToast(fechaISO ? 'Cumpleaños guardado' : 'Fecha eliminada', 'success');
   } catch (e) {
     console.error('[Cumpleaños] FALLÓ el guardado en Firestore para estId=', estId, e);
