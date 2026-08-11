@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v16.15<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: actividades de varios días no aparecían en el dashboard</div>
+              <ul class="about-ver-items">
+                <li>El aviso "Próximos avisos del calendario escolar" del Dashboard solo miraba la fecha de <em>inicio</em> de una actividad -- si ya había empezado (aunque siguiera vigente varios días más), se descartaba por completo en vez de mostrarse como "En curso".</li>
+                <li>Ahora una actividad con rango de fechas se muestra como "En curso" mientras hoy caiga dentro de su período, sin importar cuándo empezó.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#EF6C00;">v16.14<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -4976,9 +4991,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.14"></script>
+  <script src="app.js?v=16.15"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.14"></script>
+  <script src="auth.js?v=16.15"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

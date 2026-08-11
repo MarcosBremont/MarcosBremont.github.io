@@ -27841,7 +27841,8 @@ function _dashFechaCorta(fecha) {
   return fecha.toLocaleDateString('es-DO', { weekday: 'short', day: '2-digit', month: 'short' });
 }
 
-function _dashEtiquetaAnticipacion(dias) {
+function _dashEtiquetaAnticipacion(dias, enCurso) {
+  if (enCurso) return 'En curso';
   if (dias === 0) return 'Hoy';
   if (dias === 1) return 'Mañana';
   return `En ${dias} días`;
@@ -27875,13 +27876,13 @@ function _dashParseActividadConFecha(texto) {
   if (!t) return null;
 
   let m = t.match(/^[Dd]el\s+(\d{2}\/\d{2}\/\d{4})\s+al\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
-  if (m) return { fechaDmy: m[1], titulo: m[3] || 'Actividad escolar' };
+  if (m) return { fechaDmy: m[1], fechaHastaDmy: m[2], titulo: m[3] || 'Actividad escolar' };
 
   m = t.match(/^[Dd][íi]a\s+(\d{2}\/\d{2}\/\d{4})\s*:\s*(.*)$/);
-  if (m) return { fechaDmy: m[1], titulo: m[2] || 'Actividad escolar' };
+  if (m) return { fechaDmy: m[1], fechaHastaDmy: m[1], titulo: m[2] || 'Actividad escolar' };
 
   m = t.match(/^`?(\d{2}\/\d{2}\/\d{4})`?\s+`?(\d{2}\/\d{2}\/\d{4})`?\s+(.*)$/);
-  if (m) return { fechaDmy: m[1], titulo: m[3] || 'Actividad escolar' };
+  if (m) return { fechaDmy: m[1], fechaHastaDmy: m[2], titulo: m[3] || 'Actividad escolar' };
 
   return null;
 }
@@ -27912,9 +27913,20 @@ function _dashConstruirAvisosCalendario(datos) {
     (mesData.actividades || []).forEach(a => {
       const parsed = _dashParseActividadConFecha(a.texto);
       if (!parsed) return;
-      const fecha = _dashParseDmyFecha(parsed.fechaDmy);
-      if (!fecha) return;
-      pushAviso('Actividad', fecha, parsed.titulo, 'task_alt', 2);
+      const fechaInicio = _dashParseDmyFecha(parsed.fechaDmy);
+      if (!fechaInicio) return;
+      const fechaFin = _dashParseDmyFecha(parsed.fechaHastaDmy) || fechaInicio;
+
+      // Actividad de varios días: si ya empezó pero hoy sigue dentro del rango, no se
+      // debe filtrar por "cuántos días faltan" (la fecha de inicio ya pasó, daría un
+      // diff negativo y se perdería aunque siga vigente) -- se marca como "en curso".
+      const diffInicio = _dashFechaDiffDias(hoy, fechaInicio);
+      const diffFin = _dashFechaDiffDias(hoy, fechaFin);
+      if (diffInicio <= 0 && diffFin >= 0) {
+        avisos.push({ tipo: 'Actividad', fecha: fechaFin, titulo: parsed.titulo, icono: 'task_alt', diff: 0, enCurso: true });
+        return;
+      }
+      pushAviso('Actividad', fechaInicio, parsed.titulo, 'task_alt', 2);
     });
 
     (mesData.efemerides || []).forEach(e => {
@@ -27974,7 +27986,7 @@ function _renderizarBannerCalendarioDashboard() {
         ${avisos.map(a => `
           <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
             <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
-            <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff)} · ${_dashFechaCorta(a.fecha)}</span>
+            <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff, a.enCurso)} · ${_dashFechaCorta(a.fecha)}</span>
             <span style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
           </div>
         `).join('')}
