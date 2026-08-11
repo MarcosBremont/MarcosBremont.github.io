@@ -9529,7 +9529,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -9545,7 +9545,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -33485,6 +33485,7 @@ async function _renderDocentesCentro() {
         rolesDocente.includes('director') ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Director</span>' : '',
         rolesDocente.includes('coordinadora') ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Coordinadora</span>' : '',
         rolesDocente.some(r => _esRolPsicologia(r)) ? '<span style="background:#6A1B9A;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Psicología</span>' : '',
+        rolesDocente.includes('vinculadora') ? '<span style="background:#EF6C00;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Vinculación</span>' : '',
         rolesDocente.includes('admin_centro') ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Admin</span>' : '',
         rolesDocente.includes('docente') ? '<span style="background:#1565C0;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-left:6px;">Docente</span>' : ''
       ].join('');
@@ -33514,6 +33515,11 @@ async function _renderDocentesCentro() {
           html += '<button onclick="_promoverPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#6A1B9A;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">self_improvement</span> Hacer Psicóloga</button>';
         } else {
           html += '<button onclick="_quitarPsicologia(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Psicología</button>';
+        }
+        if (!rolesDocente.includes('vinculadora')) {
+          html += '<button onclick="_promoverVinculadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#EF6C00;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">handshake</span> Hacer Vinculación</button>';
+        } else {
+          html += '<button onclick="_quitarVinculadora(\'' + d.uid + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#78909C;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">person_remove</span> Quitar Vinculación</button>';
         }
         if (!rolesDocente.includes('docente')) {
           html += '<button onclick="_promoverDocente(\'' + d.uid + '\')" title="Da acceso a Planificaciones y Calificaciones ademas de sus otros roles" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">school</span> Hacer Docente</button>';
@@ -33558,7 +33564,7 @@ async function _rechazarDocente(uid, origen) {
 // Orden de jerarquia para decidir el "rol principal" (campo singular `rol`) cuando un
 // usuario tiene varios roles a la vez -- se mantiene por compatibilidad con cualquier
 // lectura vieja que todavia compare `rol` como string exacto en vez del arreglo `roles`.
-const ORDEN_PRIORIDAD_ROLES = ['superadmin', 'admin_centro', 'director', 'coordinadora', 'psicologia', 'docente'];
+const ORDEN_PRIORIDAD_ROLES = ['superadmin', 'admin_centro', 'director', 'coordinadora', 'psicologia', 'vinculadora', 'docente'];
 function _rolPrincipalDeRoles(roles) {
   for (const r of ORDEN_PRIORIDAD_ROLES) { if (roles.includes(r)) return r; }
   return roles[0] || 'docente';
@@ -33616,6 +33622,18 @@ async function _promoverPsicologia(uid) {
 async function _quitarPsicologia(uid) {
   if (!confirm('¿Quitar el rol de Psicología a este usuario?')) return;
   await _toggleRolDocente(uid, 'psicologia', false, 'Rol de Psicología removido');
+}
+
+/** Promover a Vinculación Sectorial */
+async function _promoverVinculadora(uid) {
+  if (!confirm('¿Asignar el rol de Vinculación Sectorial a este usuario?')) return;
+  await _toggleRolDocente(uid, 'vinculadora', true, 'Usuario asignado a Vinculación Sectorial');
+}
+
+/** Quitar rol de Vinculación Sectorial */
+async function _quitarVinculadora(uid) {
+  if (!confirm('¿Quitar el rol de Vinculación Sectorial a este usuario?')) return;
+  await _toggleRolDocente(uid, 'vinculadora', false, 'Rol de Vinculación Sectorial removido');
 }
 
 /** Dar/quitar acceso de Docente (Planificaciones/Calificaciones) -- esto es lo que permite
@@ -34453,6 +34471,21 @@ async function _mostrarFormCentro(centroId) {
       : '')
     + '<input type="file" id="sa-centro-plantilla-reportes-psicologia" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #EF6C00;border-radius:10px;background:#FFF3E0;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#E65100;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">summarize</span> Plantilla Word para Reporte de Impacto de Vinculación (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para el Reporte de Impacto del módulo de Vinculación Sectorial. Placeholders disponibles: '
+    + '<code>{centro}</code>, <code>{fecha_generacion}</code>, <code>{periodo}</code>, <code>{total_pasantias_estudiantes}</code>, <code>{total_pasantias_docentes}</code>, <code>{total_ofertas_empleo}</code>, <code>{total_talleres}</code>, <code>{total_diagnosticos}</code>, <code>{total_convenios_vigentes}</code>, <code>{total_eventos}</code>, <code>{lista_empresas_vinculadas}</code>.</p>'
+    + (centro.plantillaImpactoVinculacionBase64
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaImpactoVinculacionNombre || 'plantilla_reporte_impacto.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'impacto\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
+        + '<button onclick="_eliminarPlantillaImpactoCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '')
+    + '<input type="file" id="sa-centro-plantilla-impacto" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -34538,6 +34571,19 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  const fileInputImpacto = document.getElementById('sa-centro-plantilla-impacto');
+  const fileImpacto = fileInputImpacto?.files?.[0];
+  if (fileImpacto) {
+    if (!fileImpacto.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla de Reporte de Impacto', 'error');
+      return;
+    }
+    if (fileImpacto.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla de Reporte de Impacto no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -34597,6 +34643,20 @@ async function _guardarCentro(centroId) {
       });
     }
 
+    if (fileImpacto && finalId) {
+      mostrarToast('Guardando plantilla de Reporte de Impacto...', 'info');
+      const readerI = new FileReader();
+      const base64I = await new Promise((resolve, reject) => {
+        readerI.onload = () => resolve(readerI.result.split(',')[1]);
+        readerI.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerI.readAsDataURL(fileImpacto);
+      });
+      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
+        plantillaImpactoVinculacionBase64: base64I,
+        plantillaImpactoVinculacionNombre: fileImpacto.name
+      });
+    }
+
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
   } catch (e) {
@@ -34650,6 +34710,21 @@ async function _eliminarPlantillaReportePsicologiaCentro(centroId) {
   }
 }
 
+/** Elimina plantilla de Reporte de Impacto de Vinculación del centro */
+async function _eliminarPlantillaImpactoCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de Reporte de Impacto de este centro?')) return;
+  try {
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
+      plantillaImpactoVinculacionBase64: firebase.firestore.FieldValue.delete(),
+      plantillaImpactoVinculacionNombre: firebase.firestore.FieldValue.delete()
+    });
+    mostrarToast('Plantilla de Reporte de Impacto eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla de Reporte de Impacto: ' + e.message, 'error');
+  }
+}
+
 /** Descarga una plantilla .docx del centro desde su base64 guardado */
 async function _descargarPlantillaCentro(centroId, tipo) {
   if (!centroId) {
@@ -34660,7 +34735,8 @@ async function _descargarPlantillaCentro(centroId, tipo) {
   const campos = {
     planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
     diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
-    psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' }
+    psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' },
+    impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' }
   };
 
   const cfg = campos[tipo] || campos.planificacion;
@@ -35458,6 +35534,7 @@ renderizarDashboard = function() {
   _verificarAccesoDirector();
   _verificarAccesoCoordinadora();
   _verificarAccesoPsicologia();
+  _verificarAccesoVinculacion();
   _cargarEmailsSuperadmin(); // pre-cargar lista en background
   _cargarAvisosDocente(); // mostrar avisos al docente en dashboard
   _aplicarOpcionesDocente(); // ocultar opciones desactivadas por superadmin
@@ -35506,6 +35583,29 @@ async function _verificarAccesoCoordinadora() {
   btn.style.display = visible ? '' : 'none';
   if (visible) { _coordActualizarBadgeAlertas(); }
   else { const badge = document.getElementById('coord-alertas-badge'); if (badge) badge.style.display = 'none'; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── MÓDULO VINCULACIÓN SECTORIAL ────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+
+async function _esVinculadora() {
+  if (!window.currentUser) return false;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    return doc.exists && _tieneRol(doc.data(), 'vinculadora');
+  } catch { return false; }
+}
+
+async function _verificarAccesoVinculacion() {
+  const btn = document.getElementById('btn-dash-vinculacion');
+  if (!btn) return;
+  const esVinc = await _esVinculadora();
+  const esDir = await _esDirector();
+  const esAdmin = (await _esAdminDeCentro()).length > 0;
+  const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+  const visible = esVinc || esDir || esAdmin || esSA;
+  btn.style.display = visible ? '' : 'none';
 }
 
 function abrirCoordinadora() {
@@ -36968,6 +37068,663 @@ async function _coordActualizarBadgeAlertas() {
     if (snap.size > 0) { badge.style.display = 'flex'; badge.textContent = snap.size > 9 ? '9+' : String(snap.size); }
     else { badge.style.display = 'none'; }
   } catch { badge.style.display = 'none'; }
+}
+
+function abrirVinculacion() {
+  window._vincCentroSeleccionado = null;
+  window._vincFormAbierto = null;
+  window._vincEditId = null;
+  window._vincEditItem = null;
+  _mostrarPanel('panel-vinculacion');
+  switchTabVinculacion('pasantiasEst');
+}
+
+function switchTabVinculacion(tab) {
+  const tabs = {
+    pasantiasEst: 'tab-vinc-pasantias-est', pasantiasDoc: 'tab-vinc-pasantias-doc', bolsaEmpleo: 'tab-vinc-bolsa-empleo',
+    diagnosticos: 'tab-vinc-diagnosticos', convenios: 'tab-vinc-convenios', eventos: 'tab-vinc-eventos', reportes: 'tab-vinc-reportes'
+  };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) { el.classList.add('activo'); el.style.background = '#EF6C00'; el.style.color = '#fff'; }
+    else { el.classList.remove('activo'); el.style.background = '#F5F5F5'; el.style.color = '#616161'; }
+  });
+  window._vincTabActual = tab;
+  window._vincFormAbierto = null;
+  window._vincEditId = null;
+  window._vincEditItem = null;
+  const dispatch = {
+    pasantiasEst: _vincRenderPasantiasEst, pasantiasDoc: _vincRenderPasantiasDoc, bolsaEmpleo: _vincRenderBolsaEmpleo,
+    diagnosticos: _vincRenderDiagnosticos, convenios: _vincRenderConvenios, eventos: _vincRenderEventos, reportes: _vincReportesImpacto
+  };
+  if (dispatch[tab]) dispatch[tab]('vinc-contenido');
+}
+
+async function _vincGetCentroId() {
+  if (window._vincCentroSeleccionado) return window._vincCentroSeleccionado;
+  if (!window.currentUser) return null;
+  try {
+    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (doc.exists && doc.data().centroId) return doc.data().centroId;
+  } catch {}
+  try {
+    const email = window.currentUser.email?.toLowerCase();
+    if (email) {
+      const snap = await db.collection('centros').get();
+      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      if (centro) return centro.id;
+      const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
+      if (esSA && snap.size === 1) return snap.docs[0].id;
+    }
+  } catch {}
+  return null;
+}
+
+async function _vincMostrarSelectorCentro(cont, callback, contId) {
+  try {
+    const snap = await db.collection('centros').get();
+    const centros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!centros.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay centros registrados.</div>'; return; }
+    const args = contId ? '\'' + contId + '\'' : '';
+    let html = '<div style="text-align:center;padding:30px;">'
+      + '<span class="material-icons" style="font-size:48px;color:#EF6C00;display:block;margin-bottom:12px;">business</span>'
+      + '<p style="color:#546E7A;margin-bottom:16px;">Selecciona un centro educativo para ver sus datos:</p>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">';
+    centros.forEach(c => {
+      html += '<button onclick="window._vincCentroSeleccionado=\'' + c.id + '\';' + callback + '(' + args + ')" style="padding:12px 20px;background:#fff;border:2px solid #EF6C00;border-radius:12px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#EF6C00;transition:all 0.2s;"'
+        + ' onmouseover="this.style.background=\'#EF6C00\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#EF6C00\'">'
+        + '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;">school</span>'
+        + escapeHTML(c.nombre || c.id) + '</button>';
+    });
+    html += '</div></div>';
+    cont.innerHTML = html;
+  } catch (e) { cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>'; }
+}
+
+// ── Configuración de las 6 pestañas CRUD (motor único, parametrizado por pestaña) ──
+const VINC_TABS = {
+  pasantiasEst: {
+    coleccion: 'vinc_pasantias_estudiantes', titulo: 'Pasantías de Estudiantes', icono: 'school',
+    estados: ['activa', 'finalizada', 'cancelada'], estadoInicial: 'activa', conSeguimiento: true,
+    campos: [
+      { id: 'estudianteNombre', label: 'Nombre del estudiante', tipo: 'text', requerido: true },
+      { id: 'curso', label: 'Curso', tipo: 'text' },
+      { id: 'empresa', label: 'Empresa', tipo: 'text', requerido: true },
+      { id: 'supervisorEmpresa', label: 'Supervisor en la empresa', tipo: 'text' },
+      { id: 'contacto', label: 'Contacto (teléfono/email)', tipo: 'text' },
+      { id: 'fechaInicio', label: 'Fecha de inicio', tipo: 'date' },
+      { id: 'fechaFin', label: 'Fecha de fin', tipo: 'date' },
+      { id: 'funciones', label: 'Funciones / actividades', tipo: 'textarea' }
+    ],
+    tarjetaTitulo: it => it.estudianteNombre || 'Sin nombre',
+    tarjetaSub: it => [it.empresa, it.curso].filter(Boolean).join(' · ')
+  },
+  pasantiasDoc: {
+    coleccion: 'vinc_pasantias_docentes', titulo: 'Pasantías de Docentes', icono: 'engineering',
+    estados: ['activa', 'finalizada', 'cancelada'], estadoInicial: 'activa', conSeguimiento: true,
+    campos: [
+      { id: 'docenteNombre', label: 'Nombre del docente', tipo: 'text', requerido: true },
+      { id: 'especialidad', label: 'Especialidad / área', tipo: 'text' },
+      { id: 'empresa', label: 'Empresa', tipo: 'text', requerido: true },
+      { id: 'tipoActualizacion', label: 'Tipo de actualización técnica', tipo: 'text', ph: 'Ej. Pasantía técnica, capacitación...' },
+      { id: 'fechaInicio', label: 'Fecha de inicio', tipo: 'date' },
+      { id: 'fechaFin', label: 'Fecha de fin', tipo: 'date' },
+      { id: 'objetivos', label: 'Objetivos', tipo: 'textarea' }
+    ],
+    tarjetaTitulo: it => it.docenteNombre || 'Sin nombre',
+    tarjetaSub: it => [it.empresa, it.especialidad].filter(Boolean).join(' · ')
+  },
+  bolsaEmpleo: {
+    coleccion: 'vinc_bolsa_empleo', titulo: 'Bolsa de Empleo y Talleres', icono: 'work',
+    estados: ['abierta', 'cerrada', 'planificado', 'realizado'], estadoInicial: 'abierta', conSeguimiento: false,
+    campos: [
+      { id: 'tipo', label: 'Tipo', tipo: 'select', opciones: [['oferta', 'Oferta de empleo'], ['taller', 'Taller de orientación']], requerido: true },
+      { id: 'titulo', label: 'Título / puesto', tipo: 'text', requerido: true },
+      { id: 'empresaOFacilitador', label: 'Empresa / Facilitador', tipo: 'text' },
+      { id: 'descripcion', label: 'Descripción', tipo: 'textarea' },
+      { id: 'requisitosOTemario', label: 'Requisitos / Temario', tipo: 'textarea' },
+      { id: 'contacto', label: 'Contacto', tipo: 'text' },
+      { id: 'fecha', label: 'Fecha de publicación / del taller', tipo: 'date' },
+      { id: 'fechaCierre', label: 'Fecha de cierre (solo ofertas)', tipo: 'date' }
+    ],
+    tarjetaTitulo: it => it.titulo || 'Sin título',
+    tarjetaSub: it => [it.tipo === 'taller' ? 'Taller' : 'Oferta', it.empresaOFacilitador].filter(Boolean).join(' · ')
+  },
+  diagnosticos: {
+    coleccion: 'vinc_diagnosticos', titulo: 'Diagnósticos Empresariales', icono: 'fact_check',
+    estados: ['pendiente', 'en_proceso', 'implementado'], estadoInicial: 'pendiente', conSeguimiento: false,
+    campos: [
+      { id: 'empresa', label: 'Empresa', tipo: 'text', requerido: true },
+      { id: 'contacto', label: 'Contacto', tipo: 'text' },
+      { id: 'fecha', label: 'Fecha del diagnóstico', tipo: 'date' },
+      { id: 'necesidadesDetectadas', label: 'Necesidades detectadas', tipo: 'textarea' },
+      { id: 'areasFormativasSugeridas', label: 'Áreas formativas sugeridas', tipo: 'textarea' },
+      { id: 'accionesPropuestas', label: 'Acciones propuestas', tipo: 'textarea' }
+    ],
+    tarjetaTitulo: it => it.empresa || 'Sin nombre',
+    tarjetaSub: it => it.contacto || ''
+  },
+  convenios: {
+    coleccion: 'vinc_convenios', titulo: 'Convenios y Permisos', icono: 'gavel',
+    estados: ['vigente', 'vencido', 'en_renovacion'], estadoInicial: 'vigente', conSeguimiento: false, conAdjunto: true,
+    campos: [
+      { id: 'nombreInstitucion', label: 'Institución / Empresa', tipo: 'text', requerido: true },
+      { id: 'tipoConvenio', label: 'Tipo de convenio', tipo: 'select', opciones: [['pasantias', 'Pasantías'], ['donacion', 'Donación'], ['capacitacion', 'Capacitación'], ['otro', 'Otro']] },
+      { id: 'fechaFirma', label: 'Fecha de firma', tipo: 'date' },
+      { id: 'fechaVencimiento', label: 'Fecha de vencimiento', tipo: 'date' },
+      { id: 'responsable', label: 'Responsable', tipo: 'text' },
+      { id: 'descripcion', label: 'Descripción', tipo: 'textarea' }
+    ],
+    tarjetaTitulo: it => it.nombreInstitucion || 'Sin nombre',
+    tarjetaSub: it => it.tipoConvenio || ''
+  },
+  eventos: {
+    coleccion: 'vinc_eventos', titulo: 'Eventos Comunitarios', icono: 'event',
+    estados: ['planificado', 'realizado', 'cancelado'], estadoInicial: 'planificado', conSeguimiento: false,
+    campos: [
+      { id: 'nombreEvento', label: 'Nombre del evento', tipo: 'text', requerido: true },
+      { id: 'tipo', label: 'Tipo', tipo: 'select', opciones: [['feria_empleo', 'Feria de empleo'], ['intercambio', 'Intercambio'], ['jornada_comunitaria', 'Jornada comunitaria'], ['otro', 'Otro']] },
+      { id: 'fecha', label: 'Fecha', tipo: 'date' },
+      { id: 'lugar', label: 'Lugar', tipo: 'text' },
+      { id: 'descripcion', label: 'Descripción', tipo: 'textarea' },
+      { id: 'empresasParticipantes', label: 'Empresas/instituciones participantes', tipo: 'text' }
+    ],
+    tarjetaTitulo: it => it.nombreEvento || 'Sin nombre',
+    tarjetaSub: it => it.lugar || ''
+  }
+};
+
+const VINC_ESTADO_COLOR = {
+  activa: '#2E7D32', abierta: '#2E7D32', vigente: '#2E7D32', planificado: '#1565C0', pendiente: '#1565C0',
+  en_proceso: '#EF6C00', en_renovacion: '#EF6C00', realizado: '#00695C', implementado: '#00695C',
+  finalizada: '#607D8B', cerrada: '#607D8B', cancelada: '#C62828', cancelado: '#C62828', vencido: '#C62828'
+};
+
+function _vincEstadoLabel(estado) {
+  return {
+    activa: 'Activa', finalizada: 'Finalizada', cancelada: 'Cancelada', cancelado: 'Cancelado', abierta: 'Abierta', cerrada: 'Cerrada',
+    planificado: 'Planificado', realizado: 'Realizado', pendiente: 'Pendiente', en_proceso: 'En proceso',
+    implementado: 'Implementado', vigente: 'Vigente', vencido: 'Vencido', en_renovacion: 'En renovación'
+  }[estado] || estado;
+}
+
+function _vincCallbackNombre(tabKey) {
+  return {
+    pasantiasEst: '_vincRenderPasantiasEst', pasantiasDoc: '_vincRenderPasantiasDoc', bolsaEmpleo: '_vincRenderBolsaEmpleo',
+    diagnosticos: '_vincRenderDiagnosticos', convenios: '_vincRenderConvenios', eventos: '_vincRenderEventos'
+  }[tabKey] || '';
+}
+
+async function _vincRender(tabKey, contId) {
+  contId = contId || 'vinc-contenido';
+  window._vincActiveContId = contId;
+  window._vincTabActual = tabKey;
+  const cfg = VINC_TABS[tabKey];
+  const cont = document.getElementById(contId);
+  if (!cont || !cfg) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const centroId = await _vincGetCentroId();
+  if (!centroId) { _vincMostrarSelectorCentro(cont, _vincCallbackNombre(tabKey), contId); return; }
+
+  let items = [];
+  try {
+    const snap = await db.collection('centros').doc(centroId).collection(cfg.coleccion).orderBy('creadoEn', 'desc').get();
+    items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { console.warn('Error cargando ' + cfg.coleccion + ':', e); }
+  window._vincItemsCache = window._vincItemsCache || {};
+  window._vincItemsCache[tabKey] = items;
+
+  const filtro = (window._vincFiltroEstado && window._vincFiltroEstado[tabKey]) || 'todos';
+  const itemsFiltrados = filtro === 'todos' ? items : items.filter(it => it.estado === filtro);
+
+  let opcionesFiltro = '<option value="todos"' + (filtro === 'todos' ? ' selected' : '') + '>Todos los estados</option>';
+  cfg.estados.forEach(e => { opcionesFiltro += '<option value="' + e + '"' + (filtro === e ? ' selected' : '') + '>' + _vincEstadoLabel(e) + '</option>'; });
+
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">'
+    + '<h4 style="margin:0;color:#E65100;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">' + cfg.icono + '</span> ' + escapeHTML(cfg.titulo) + '</h4>'
+    + '<div style="display:flex;gap:8px;align-items:center;">'
+    + '<select onchange="_vincFiltrar(\'' + tabKey + '\', this.value)" style="padding:7px 10px;border:1.5px solid #FFCC80;border-radius:8px;font-size:0.82rem;background:#fff;">' + opcionesFiltro + '</select>'
+    + '<button onclick="_vincToggleForm(\'' + tabKey + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#EF6C00;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;">'
+    + '<span class="material-icons" style="font-size:16px;">' + (window._vincFormAbierto === tabKey ? 'close' : 'add') + '</span> ' + (window._vincFormAbierto === tabKey ? 'Cancelar' : 'Nuevo registro') + '</button>'
+    + '</div></div>';
+
+  if (window._vincFormAbierto === tabKey) html += _vincFormHTML(tabKey, cfg, centroId);
+
+  if (!itemsFiltrados.length) {
+    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:44px;display:block;margin-bottom:8px;">inbox</span>Sin registros' + (filtro !== 'todos' ? ' en este estado' : '') + '.</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    itemsFiltrados.forEach(it => { html += _vincTarjeta(tabKey, cfg, it); });
+    html += '</div>';
+  }
+
+  cont.innerHTML = html;
+}
+
+function _vincFiltrar(tabKey, estado) {
+  window._vincFiltroEstado = window._vincFiltroEstado || {};
+  window._vincFiltroEstado[tabKey] = estado;
+  _vincRender(tabKey, window._vincActiveContId);
+}
+
+function _vincToggleForm(tabKey) {
+  window._vincFormAbierto = window._vincFormAbierto === tabKey ? null : tabKey;
+  window._vincEditId = null;
+  window._vincEditItem = null;
+  _vincRender(tabKey, window._vincActiveContId);
+}
+
+function _vincFormHTML(tabKey, cfg, centroId) {
+  const editando = !!window._vincEditId;
+  const item = editando ? (window._vincEditItem || {}) : {};
+  let html = '<div style="background:#FFF3E0;border:1.5px solid #FFCC80;border-radius:12px;padding:16px;margin-bottom:16px;">';
+  html += '<h5 style="margin:0 0 10px;color:#E65100;">' + (editando ? 'Editar registro' : 'Nuevo registro') + '</h5>';
+  cfg.campos.forEach(c => {
+    const val = item[c.id] || '';
+    const fieldId = 'vinc-f-' + c.id;
+    html += '<div style="margin-bottom:8px;">';
+    html += '<label style="font-size:0.78rem;font-weight:600;color:#795548;display:block;margin-bottom:3px;">' + escapeHTML(c.label) + (c.requerido ? ' *' : '') + '</label>';
+    if (c.tipo === 'textarea') {
+      html += '<textarea id="' + fieldId + '" rows="2" style="width:100%;padding:8px 10px;border:1.5px solid #FFCC80;border-radius:6px;font-size:0.85rem;box-sizing:border-box;resize:vertical;">' + escapeHTML(val) + '</textarea>';
+    } else if (c.tipo === 'select') {
+      html += '<select id="' + fieldId + '" style="width:100%;padding:8px 10px;border:1.5px solid #FFCC80;border-radius:6px;font-size:0.85rem;background:#fff;box-sizing:border-box;">';
+      c.opciones.forEach(([v, label]) => { html += '<option value="' + v + '"' + (val === v ? ' selected' : '') + '>' + escapeHTML(label) + '</option>'; });
+      html += '</select>';
+    } else {
+      html += '<input type="' + c.tipo + '" id="' + fieldId + '" value="' + String(val).replace(/"/g, '&quot;') + '" placeholder="' + escapeHTML(c.ph || '') + '" style="width:100%;padding:8px 10px;border:1.5px solid #FFCC80;border-radius:6px;font-size:0.85rem;box-sizing:border-box;">';
+    }
+    html += '</div>';
+  });
+  if (cfg.conAdjunto) {
+    html += '<div style="margin-bottom:8px;">'
+      + '<label style="font-size:0.78rem;font-weight:600;color:#795548;display:block;margin-bottom:3px;">Documento adjunto (opcional, máx. 800KB)</label>'
+      + (item.documentoNombre ? '<div style="font-size:0.78rem;color:#2E7D32;margin-bottom:4px;">Actual: ' + escapeHTML(item.documentoNombre) + '</div>' : '')
+      + '<input type="file" id="vinc-f-documento" style="font-size:0.82rem;">'
+      + '</div>';
+  }
+  html += '<div style="display:flex;gap:8px;margin-top:10px;">'
+    + '<button onclick="_vincGuardar(\'' + tabKey + '\',\'' + centroId + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;"><span class="material-icons" style="font-size:16px;">save</span> Guardar</button>'
+    + '</div></div>';
+  return html;
+}
+
+async function _vincGuardar(tabKey, centroId) {
+  const cfg = VINC_TABS[tabKey];
+  const data = {};
+  for (const c of cfg.campos) {
+    const el = document.getElementById('vinc-f-' + c.id);
+    const val = el ? el.value.trim() : '';
+    if (c.requerido && !val) { mostrarToast('Completa el campo "' + c.label + '"', 'error'); return; }
+    data[c.id] = val;
+  }
+
+  try {
+    let documentoBase64 = null, documentoNombre = null;
+    if (cfg.conAdjunto) {
+      const fileInput = document.getElementById('vinc-f-documento');
+      const file = fileInput?.files?.[0];
+      if (file) {
+        if (file.size > 800 * 1024) { mostrarToast('El documento no debe superar 800KB', 'error'); return; }
+        documentoBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = () => reject(new Error('Error leyendo archivo'));
+          reader.readAsDataURL(file);
+        });
+        documentoNombre = file.name;
+      }
+    }
+
+    const editId = window._vincEditId;
+    const ref = db.collection('centros').doc(centroId).collection(cfg.coleccion);
+    if (editId) {
+      const update = { ...data };
+      if (documentoBase64) { update.documentoBase64 = documentoBase64; update.documentoNombre = documentoNombre; }
+      await ref.doc(editId).update(update);
+      mostrarToast('Registro actualizado', 'success');
+    } else {
+      const nuevo = { ...data, estado: cfg.estadoInicial, seguimiento: [], creadoPor: window.currentUser?.email || '', creadoEn: firebase.firestore.FieldValue.serverTimestamp() };
+      if (documentoBase64) { nuevo.documentoBase64 = documentoBase64; nuevo.documentoNombre = documentoNombre; }
+      await ref.add(nuevo);
+      mostrarToast('Registro guardado', 'success');
+    }
+    window._vincFormAbierto = null;
+    window._vincEditId = null;
+    window._vincEditItem = null;
+    _vincRender(tabKey, window._vincActiveContId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+function _vincEditar(tabKey, id) {
+  const item = (window._vincItemsCache?.[tabKey] || []).find(it => it.id === id);
+  if (!item) return;
+  window._vincEditId = id;
+  window._vincEditItem = item;
+  window._vincFormAbierto = tabKey;
+  _vincRender(tabKey, window._vincActiveContId);
+}
+
+async function _vincCambiarEstado(tabKey, id, nuevoEstado) {
+  const cfg = VINC_TABS[tabKey];
+  try {
+    const centroId = await _vincGetCentroId();
+    await db.collection('centros').doc(centroId).collection(cfg.coleccion).doc(id).update({ estado: nuevoEstado });
+    mostrarToast('Estado actualizado', 'success');
+    _vincRender(tabKey, window._vincActiveContId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _vincEliminar(tabKey, id) {
+  if (!confirm('¿Eliminar este registro? No se puede deshacer.')) return;
+  const cfg = VINC_TABS[tabKey];
+  try {
+    const centroId = await _vincGetCentroId();
+    await db.collection('centros').doc(centroId).collection(cfg.coleccion).doc(id).delete();
+    mostrarToast('Registro eliminado', 'success');
+    _vincRender(tabKey, window._vincActiveContId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _vincAgregarSeguimiento(tabKey, id) {
+  const cfg = VINC_TABS[tabKey];
+  const input = document.getElementById('vinc-seg-' + id);
+  const nota = input?.value?.trim();
+  if (!nota) { mostrarToast('Escribe una nota', 'error'); return; }
+  try {
+    const centroId = await _vincGetCentroId();
+    const entrada = { fecha: new Date().toISOString(), nota, autor: window.currentUser?.email || '' };
+    await db.collection('centros').doc(centroId).collection(cfg.coleccion).doc(id).update({
+      seguimiento: firebase.firestore.FieldValue.arrayUnion(entrada)
+    });
+    mostrarToast('Nota de seguimiento agregada', 'success');
+    _vincRender(tabKey, window._vincActiveContId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+function _vincDescargarAdjunto(tabKey, id) {
+  const item = (window._vincItemsCache?.[tabKey] || []).find(it => it.id === id);
+  if (!item || !item.documentoBase64) { mostrarToast('No se encontró el documento', 'error'); return; }
+  try {
+    const blob = new Blob([Uint8Array.from(atob(item.documentoBase64), c => c.charCodeAt(0))]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = item.documentoNombre || 'documento';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { mostrarToast('Error al descargar: ' + e.message, 'error'); }
+}
+
+const VINC_CAMPOS_YA_EN_TITULO = ['estudianteNombre', 'docenteNombre', 'empresa', 'titulo', 'nombreInstitucion', 'nombreEvento'];
+
+function _vincTarjeta(tabKey, cfg, it) {
+  const color = VINC_ESTADO_COLOR[it.estado] || '#607D8B';
+  let html = '<div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:12px;padding:14px 16px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:180px;">'
+    + '<div style="font-weight:700;color:#37474F;">' + escapeHTML(cfg.tarjetaTitulo(it)) + '</div>'
+    + (cfg.tarjetaSub(it) ? '<div style="font-size:0.82rem;color:#78909C;">' + escapeHTML(cfg.tarjetaSub(it)) + '</div>' : '')
+    + '</div>'
+    + '<span style="background:' + color + '22;color:' + color + ';padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">' + _vincEstadoLabel(it.estado) + '</span>'
+    + '</div>';
+
+  html += '<div style="margin-top:8px;font-size:0.82rem;color:#546E7A;line-height:1.6;">';
+  cfg.campos.forEach(c => {
+    if (VINC_CAMPOS_YA_EN_TITULO.includes(c.id)) return;
+    const val = it[c.id];
+    if (!val) return;
+    const label = c.tipo === 'select' ? (c.opciones.find(([v]) => v === val)?.[1] || val) : val;
+    html += '<div><strong>' + escapeHTML(c.label) + ':</strong> ' + escapeHTML(String(label)).replace(/\n/g, '<br>') + '</div>';
+  });
+  html += '</div>';
+
+  if (cfg.conAdjunto && it.documentoNombre) {
+    html += '<div style="margin-top:6px;font-size:0.78rem;color:#607D8B;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:14px;">attach_file</span>' + escapeHTML(it.documentoNombre) + ' <button onclick="_vincDescargarAdjunto(\'' + tabKey + '\',\'' + it.id + '\')" style="background:none;border:none;color:#1565C0;cursor:pointer;font-size:0.78rem;text-decoration:underline;">Descargar</button></div>';
+  }
+
+  if (cfg.conSeguimiento) {
+    html += '<div style="margin-top:8px;">';
+    if ((it.seguimiento || []).length) {
+      html += '<div style="font-size:0.76rem;font-weight:700;color:#795548;margin-bottom:4px;">Seguimiento:</div>';
+      it.seguimiento.forEach(s => {
+        const f = s.fecha ? new Date(s.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+        html += '<div style="font-size:0.78rem;color:#616161;padding:4px 8px;background:#fff;border-radius:6px;margin-bottom:3px;"><strong>' + f + ':</strong> ' + escapeHTML(s.nota) + '</div>';
+      });
+    }
+    html += '<div style="display:flex;gap:6px;margin-top:6px;">'
+      + '<input type="text" id="vinc-seg-' + it.id + '" placeholder="Agregar nota de seguimiento..." style="flex:1;padding:6px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.78rem;">'
+      + '<button onclick="_vincAgregarSeguimiento(\'' + tabKey + '\',\'' + it.id + '\')" style="padding:6px 12px;background:#EF6C00;color:#fff;border:none;border-radius:6px;font-size:0.75rem;cursor:pointer;">Agregar</button>'
+      + '</div></div>';
+  }
+
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">';
+  cfg.estados.forEach(e => {
+    if (e === it.estado) return;
+    html += '<button onclick="_vincCambiarEstado(\'' + tabKey + '\',\'' + it.id + '\',\'' + e + '\')" style="padding:5px 10px;background:#ECEFF1;color:#455A64;border:none;border-radius:6px;font-size:0.72rem;cursor:pointer;">Marcar ' + _vincEstadoLabel(e) + '</button>';
+  });
+  html += '<button onclick="_vincEditar(\'' + tabKey + '\',\'' + it.id + '\')" style="padding:5px 10px;background:#E3F2FD;color:#1565C0;border:none;border-radius:6px;font-size:0.72rem;cursor:pointer;">Editar</button>'
+    + '<button onclick="_vincEliminar(\'' + tabKey + '\',\'' + it.id + '\')" style="padding:5px 10px;background:#FFEBEE;color:#C62828;border:none;border-radius:6px;font-size:0.72rem;cursor:pointer;">Eliminar</button>'
+    + '</div></div>';
+  return html;
+}
+
+function _vincRenderPasantiasEst(contId) { return _vincRender('pasantiasEst', contId); }
+function _vincRenderPasantiasDoc(contId) { return _vincRender('pasantiasDoc', contId); }
+function _vincRenderBolsaEmpleo(contId) { return _vincRender('bolsaEmpleo', contId); }
+function _vincRenderDiagnosticos(contId) { return _vincRender('diagnosticos', contId); }
+function _vincRenderConvenios(contId) { return _vincRender('convenios', contId); }
+function _vincRenderEventos(contId) { return _vincRender('eventos', contId); }
+
+// ── 7ª pestaña: Reportes de Impacto (no es CRUD, cuenta los datos de las 6 anteriores) ──
+
+async function _vincReportesImpacto(contId) {
+  contId = contId || 'vinc-contenido';
+  window._vincActiveContId = contId;
+  window._vincTabActual = 'reportes';
+  const cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const centroId = await _vincGetCentroId();
+  if (!centroId) { _vincMostrarSelectorCentro(cont, '_vincReportesImpacto', contId); return; }
+
+  const hoy = new Date();
+  const inicioAnio = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
+  const hoyStr = hoy.toISOString().split('T')[0];
+  const desde = window._vincReporteDesde || inicioAnio;
+  const hasta = window._vincReporteHasta || hoyStr;
+
+  let html = '<h4 style="margin:0 0 14px;color:#E65100;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">summarize</span> Reportes de Impacto</h4>';
+  html += '<div style="background:#FFF3E0;border:1.5px solid #FFCC80;border-radius:12px;padding:16px;">'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">'
+    + '<div><label style="font-size:0.78rem;font-weight:600;color:#795548;display:block;margin-bottom:3px;">Desde</label><input type="date" id="vinc-rep-desde" value="' + desde + '" style="padding:8px 10px;border:1.5px solid #FFCC80;border-radius:6px;font-size:0.85rem;"></div>'
+    + '<div><label style="font-size:0.78rem;font-weight:600;color:#795548;display:block;margin-bottom:3px;">Hasta</label><input type="date" id="vinc-rep-hasta" value="' + hasta + '" style="padding:8px 10px;border:1.5px solid #FFCC80;border-radius:6px;font-size:0.85rem;"></div>'
+    + '<button onclick="_vincGenerarReporteImpacto(\'' + centroId + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:#EF6C00;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;"><span class="material-icons" style="font-size:16px;">description</span> Generar Reporte</button>'
+    + '</div></div>'
+    + '<div id="vinc-rep-resultado"></div>';
+
+  cont.innerHTML = html;
+}
+
+async function _vincCalcularImpacto(centroId, desde, hasta) {
+  const dentroRango = (fecha) => {
+    if (!fecha) return false;
+    const f = String(fecha).slice(0, 10);
+    return f >= desde && f <= hasta;
+  };
+  const base = db.collection('centros').doc(centroId);
+  const [pasEst, pasDoc, bolsa, diag, conv, ev] = await Promise.all([
+    base.collection('vinc_pasantias_estudiantes').get(),
+    base.collection('vinc_pasantias_docentes').get(),
+    base.collection('vinc_bolsa_empleo').get(),
+    base.collection('vinc_diagnosticos').get(),
+    base.collection('vinc_convenios').get(),
+    base.collection('vinc_eventos').get()
+  ]);
+  const pasEstF = pasEst.docs.map(d => d.data()).filter(it => dentroRango(it.fechaInicio));
+  const pasDocF = pasDoc.docs.map(d => d.data()).filter(it => dentroRango(it.fechaInicio));
+  const bolsaF = bolsa.docs.map(d => d.data()).filter(it => dentroRango(it.fecha));
+  const diagF = diag.docs.map(d => d.data()).filter(it => dentroRango(it.fecha));
+  const convF = conv.docs.map(d => d.data()).filter(it => dentroRango(it.fechaFirma));
+  const evF = ev.docs.map(d => d.data()).filter(it => dentroRango(it.fecha));
+
+  const empresas = new Set();
+  pasEstF.forEach(it => it.empresa && empresas.add(it.empresa));
+  pasDocF.forEach(it => it.empresa && empresas.add(it.empresa));
+  diagF.forEach(it => it.empresa && empresas.add(it.empresa));
+  convF.forEach(it => it.nombreInstitucion && empresas.add(it.nombreInstitucion));
+
+  return {
+    totalPasantiasEstudiantes: pasEstF.length,
+    totalPasantiasDocentes: pasDocF.length,
+    totalOfertasEmpleo: bolsaF.filter(it => it.tipo === 'oferta').length,
+    totalTalleres: bolsaF.filter(it => it.tipo === 'taller').length,
+    totalDiagnosticos: diagF.length,
+    totalConveniosVigentes: convF.filter(it => it.estado === 'vigente').length,
+    totalEventos: evF.length,
+    listaEmpresas: Array.from(empresas)
+  };
+}
+
+function _vincResumenImpactoHTML(datos, desde, hasta) {
+  const filas = [
+    ['Pasantías de estudiantes', datos.totalPasantiasEstudiantes],
+    ['Pasantías de docentes', datos.totalPasantiasDocentes],
+    ['Ofertas de empleo', datos.totalOfertasEmpleo],
+    ['Talleres de orientación', datos.totalTalleres],
+    ['Diagnósticos empresariales', datos.totalDiagnosticos],
+    ['Convenios vigentes', datos.totalConveniosVigentes],
+    ['Eventos comunitarios', datos.totalEventos]
+  ];
+  let html = '<div style="background:#fff;border:1.5px solid #FFCC80;border-radius:12px;padding:16px;margin-top:14px;">'
+    + '<div style="font-weight:700;color:#E65100;margin-bottom:10px;">Resumen del ' + desde + ' al ' + hasta + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">';
+  filas.forEach(([label, val]) => {
+    html += '<div style="background:#FFF3E0;border-radius:10px;padding:10px 14px;"><div style="font-size:1.4rem;font-weight:800;color:#EF6C00;">' + val + '</div><div style="font-size:0.75rem;color:#795548;">' + label + '</div></div>';
+  });
+  html += '</div>';
+  if (datos.listaEmpresas.length) {
+    html += '<div style="margin-top:12px;font-size:0.85rem;color:#546E7A;"><strong>Empresas/instituciones vinculadas:</strong> ' + escapeHTML(datos.listaEmpresas.join(', ')) + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+async function _vincGetPlantillaImpactoCentro() {
+  if (!window.currentUser) return null;
+  try {
+    let centroId = null;
+    const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+    if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+    if (!centroId) {
+      const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+      if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+    }
+    if (!centroId && window._vincCentroSeleccionado) centroId = window._vincCentroSeleccionado;
+    if (centroId) {
+      const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+      if (centroDoc.exists && centroDoc.data().plantillaImpactoVinculacionBase64) {
+        const centro = centroDoc.data();
+        return { base64: centro.plantillaImpactoVinculacionBase64, centroId, centroNombre: centro.nombre || '' };
+      }
+    }
+    return null;
+  } catch (e) {
+    console.warn('[PlantillaImpacto] Error obteniendo centro:', e);
+    return null;
+  }
+}
+
+async function _vincGenerarBlobReporteImpactoDocx(datos, desde, hasta) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return null;
+
+  const info = await _vincGetPlantillaImpactoCentro();
+  if (!info) return null;
+
+  const binaryStr = atob(info.base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+  const zip = new PizZip(bytes.buffer);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: '{', end: '}' },
+    nullGetter: () => ''
+  });
+
+  doc.render({
+    centro: info.centroNombre || '',
+    fecha_generacion: new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' }),
+    periodo: desde + ' al ' + hasta,
+    total_pasantias_estudiantes: datos.totalPasantiasEstudiantes,
+    total_pasantias_docentes: datos.totalPasantiasDocentes,
+    total_ofertas_empleo: datos.totalOfertasEmpleo,
+    total_talleres: datos.totalTalleres,
+    total_diagnosticos: datos.totalDiagnosticos,
+    total_convenios_vigentes: datos.totalConveniosVigentes,
+    total_eventos: datos.totalEventos,
+    lista_empresas_vinculadas: datos.listaEmpresas.join(', ')
+  });
+
+  const out = doc.getZip().generate({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  return { blob: out, nombre: 'Reporte_Impacto_Vinculacion_' + desde + '_a_' + hasta + '.docx' };
+}
+
+function _vincReporteImpactoTextoSimple(datos, desde, hasta) {
+  const filas = [
+    ['Pasantías de estudiantes', datos.totalPasantiasEstudiantes],
+    ['Pasantías de docentes', datos.totalPasantiasDocentes],
+    ['Ofertas de empleo', datos.totalOfertasEmpleo],
+    ['Talleres de orientación', datos.totalTalleres],
+    ['Diagnósticos empresariales', datos.totalDiagnosticos],
+    ['Convenios vigentes', datos.totalConveniosVigentes],
+    ['Eventos comunitarios', datos.totalEventos]
+  ];
+  const filasHtml = filas.map(([l, v]) => '<p>' + escapeHTML(l) + ': ' + v + '</p>').join('');
+  const empresasHtml = datos.listaEmpresas.length ? '<p><b>Empresas/instituciones vinculadas:</b> ' + escapeHTML(datos.listaEmpresas.join(', ')) + '</p>' : '';
+  const html = '<html xmlns:o=\'urn:schemas-microsoft-com:office:office\'' +
+    ' xmlns:w=\'urn:schemas-microsoft-com:office:word\'' +
+    ' xmlns=\'http://www.w3.org/TR/REC-html40\'>' +
+    '<head><meta charset="utf-8"/><style>body{font-family:Arial;font-size:12pt;}p{margin:0 0 10pt;}</style></head>' +
+    '<body><p><b>Reporte de Impacto — Vinculación Sectorial</b></p><p>Período: ' + desde + ' al ' + hasta + '</p>' + filasHtml + empresasHtml + '</body></html>';
+  return { html, nombre: 'Reporte_Impacto_Vinculacion_' + desde + '_a_' + hasta + '.doc' };
+}
+
+async function _vincGenerarReporteImpacto(centroId) {
+  const desde = document.getElementById('vinc-rep-desde')?.value;
+  const hasta = document.getElementById('vinc-rep-hasta')?.value;
+  if (!desde || !hasta) { mostrarToast('Selecciona el rango de fechas', 'error'); return; }
+  window._vincReporteDesde = desde;
+  window._vincReporteHasta = hasta;
+
+  const resultEl = document.getElementById('vinc-rep-resultado');
+  if (resultEl) resultEl.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Calculando...</div>';
+
+  try {
+    const datos = await _vincCalcularImpacto(centroId, desde, hasta);
+    if (resultEl) resultEl.innerHTML = _vincResumenImpactoHTML(datos, desde, hasta);
+
+    mostrarToast('Generando documento...', 'info');
+    const generado = await _vincGenerarBlobReporteImpactoDocx(datos, desde, hasta);
+    let blob, nombre;
+    if (generado) { blob = generado.blob; nombre = generado.nombre; }
+    else {
+      const docSimple = _vincReporteImpactoTextoSimple(datos, desde, hasta);
+      blob = new Blob(['﻿', docSimple.html], { type: 'application/msword' });
+      nombre = docSimple.nombre;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { mostrarToast('Error generando el reporte: ' + e.message, 'error'); }
 }
 
 // ════════════════════════════════════════════════════════════════════

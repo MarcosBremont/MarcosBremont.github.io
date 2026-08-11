@@ -558,6 +558,11 @@
           <span class="material-icons">school</span>
           <span>Panel Director</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-vinculacion" onclick="abrirVinculacion()"
+          style="--accent:#EF6C00;display:none;">
+          <span class="material-icons">handshake</span>
+          <span>Vinculación Sectorial</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-admin-centro" onclick="abrirAdminCentro()"
           style="--accent:#00695C;display:none;">
           <span class="material-icons">groups</span>
@@ -2080,6 +2085,58 @@
     </div>
   </div>
 
+  <!-- ===== PANEL VINCULACIÓN SECTORIAL ===== -->
+  <div id="panel-vinculacion" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <h2>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;">handshake</span>
+          Panel Vinculación Sectorial
+        </h2>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="ra-tab activo" id="tab-vinc-pasantias-est" onclick="switchTabVinculacion('pasantiasEst')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#EF6C00;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">school</span> Pasantías Estudiantes
+        </button>
+        <button class="ra-tab" id="tab-vinc-pasantias-doc" onclick="switchTabVinculacion('pasantiasDoc')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">engineering</span> Pasantías Docentes
+        </button>
+        <button class="ra-tab" id="tab-vinc-bolsa-empleo" onclick="switchTabVinculacion('bolsaEmpleo')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">work</span> Bolsa de Empleo
+        </button>
+        <button class="ra-tab" id="tab-vinc-diagnosticos" onclick="switchTabVinculacion('diagnosticos')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">fact_check</span> Diagnósticos
+        </button>
+        <button class="ra-tab" id="tab-vinc-convenios" onclick="switchTabVinculacion('convenios')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">gavel</span> Convenios y Permisos
+        </button>
+        <button class="ra-tab" id="tab-vinc-eventos" onclick="switchTabVinculacion('eventos')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">event</span> Eventos Comunitarios
+        </button>
+        <button class="ra-tab" id="tab-vinc-reportes" onclick="switchTabVinculacion('reportes')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">summarize</span> Reportes de Impacto
+        </button>
+      </div>
+
+      <!-- Contenido dinámico -->
+      <div id="vinc-contenido"></div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="abrirDashboard()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
   <!-- ===== PANEL PSICOLOGÍA ===== -->
   <div id="panel-psicologia" class="cal-panel hidden">
     <div class="section-card">
@@ -2723,6 +2780,23 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#EF6C00;">v16.14<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo módulo: Vinculación Sectorial</div>
+              <ul class="about-ver-items">
+                <li>Nuevo rol "Vinculación Sectorial" (asignable desde Gestión Docentes), con panel propio de 7 pestañas: Pasantías de Estudiantes, Pasantías de Docentes, Bolsa de Empleo y Talleres de Orientación, Diagnósticos Empresariales, Convenios y Permisos, Eventos Comunitarios, y Reportes de Impacto.</li>
+                <li>Cada pestaña de seguimiento permite crear, editar, cambiar de estado y eliminar registros; Pasantías además lleva una bitácora de notas de seguimiento.</li>
+                <li>Reportes de Impacto genera un resumen cuantitativo del período elegido y lo descarga en Word -- con la plantilla del centro si Superadmin la configuró, o en formato simple si no.</li>
+                <li>Director, admin_centro y Superadmin también pueden abrir este panel, igual que ya pasa con Coordinadora y Psicología.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -4902,9 +4976,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.13"></script>
+  <script src="app.js?v=16.14"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.13"></script>
+  <script src="auth.js?v=16.14"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

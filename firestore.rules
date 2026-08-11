@@ -123,6 +123,17 @@ service cloud.firestore {
         allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
       }
 
+      // Módulo de Vinculación Sectorial (pasantías, bolsa de empleo, diagnósticos
+      // empresariales, convenios, eventos comunitarios). Mismo patrón que avisos/
+      // alertas_rendimiento: regla plana, el gating de quién puede escribir vive en
+      // la UI (rol 'vinculadora' + Director/admin_centro/Superadmin), no en la regla.
+      match /vinc_pasantias_estudiantes/{id} { allow read, write: if signedIn(); }
+      match /vinc_pasantias_docentes/{id}    { allow read, write: if signedIn(); }
+      match /vinc_bolsa_empleo/{id}          { allow read, write: if signedIn(); }
+      match /vinc_diagnosticos/{id}          { allow read, write: if signedIn(); }
+      match /vinc_convenios/{id}             { allow read, write: if signedIn(); }
+      match /vinc_eventos/{id}               { allow read, write: if signedIn(); }
+
       // Compartir entre docentes del mismo centro (links/documentos), con visibilidad
       // por destinatario. Aislado por centro (a diferencia de avisos, que no lo esta).
       match /compartidos/{itemId} {
