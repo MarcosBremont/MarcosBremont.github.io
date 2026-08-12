@@ -14616,6 +14616,22 @@ function abrirTutorial() {
             {id:'tut-ia',n:14,label:'Configurar IA',bg:'#FCE4EC',c:'#AD1457'},
             {id:'tut-backup',n:15,label:'Mis Datos / Backup',bg:'#FBE9E7',c:'#BF360C'},
             {id:'tut-auditoria',n:16,label:'Auditor\u00eda',bg:'#EDE7F6',c:'#4A148C'},
+            {id:'tut-portafolio',n:17,label:'Portafolio Docente',bg:'#E0F7FA',c:'#00838F'},
+          ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
+        </div>
+
+        <!-- Grupo: Funciones adicionales -->
+        <p style="margin:0 0 4px;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#90A4AE;font-weight:700;">Funciones adicionales</p>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${[
+            {id:'tut-importar',n:18,label:'Importar Planificación',bg:'#EFEBE9',c:'#6D4C41'},
+            {id:'tut-diarias',n:19,label:'Planificaciones Diarias',bg:'#E0F2F1',c:'#00695C'},
+            {id:'tut-buscar',n:20,label:'Buscar Estudiante',bg:'#ECEFF1',c:'#37474F'},
+            {id:'tut-examenes',n:21,label:'Exámenes y Pruebas',bg:'#E3F2FD',c:'#1565C0'},
+            {id:'tut-recuperaciones',n:22,label:'RAs Adeudados',bg:'#E8F5E9',c:'#2E7D32'},
+            {id:'tut-cumpleanos',n:23,label:'Cumpleaños',bg:'#FCE4EC',c:'#AD1457'},
+            {id:'tut-compartir',n:24,label:'Compartir',bg:'#E3F2FD',c:'#1565C0'},
+            {id:'tut-presentacion',n:25,label:'Presentación',bg:'#FFF3E0',c:'#E65100'},
           ].map(t => '<a href="#'+t.id+'" onclick="event.preventDefault();document.getElementById(\''+t.id+'\').scrollIntoView({behavior:\'smooth\'})" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:'+t.bg+';border-radius:10px;text-decoration:none;color:'+t.c+';font-weight:600;font-size:0.9rem;"><span style="background:'+t.c+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">'+t.n+'</span>'+t.label+'</a>').join('')}
         </div>
       </div>
@@ -14884,7 +14900,7 @@ function abrirTutorial() {
                 <span class="material-icons" style="color:#0277BD;font-size:18px;">how_to_reg</span>
                 <strong style="color:#0277BD;">Asistencia</strong>
               </div>
-              <p>Activa el m\u00f3dulo de asistencia para llevar el registro diario de cada estudiante.</p>
+              <p>Activa el m\u00f3dulo de asistencia para llevar el registro diario de cada estudiante, con 4 estados: Presente, Tardanza, Ausente o Excusa (la excusa cuenta como presente para el porcentaje).</p>
             </div>
             <div class="tut-action-item" style="border-left:3px solid #00695C;">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
@@ -14906,6 +14922,13 @@ function abrirTutorial() {
                 <strong style="color:#1565C0;">Exportar a Word</strong>
               </div>
               <p>Descarga las calificaciones del curso en formato Word para imprimir o entregar.</p>
+            </div>
+            <div class="tut-action-item" style="border-left:3px solid #00796B;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="material-icons" style="color:#00796B;font-size:18px;">event_note</span>
+                <strong style="color:#00796B;">Eventos por estudiante</strong>
+              </div>
+              <p>Desde la fila de cada estudiante puedes registrar reuniones con familia, tutor\u00edas, incidencias o seguimientos, con fecha, participantes y acuerdos. Cada evento se guarda autom\u00e1ticamente como evidencia en tu Portafolio Docente.</p>
             </div>
           </div>
         </div>
@@ -15235,24 +15258,30 @@ function abrirTutorial() {
           </div>
 
           <p style="color:#455A64;line-height:1.6;margin-bottom:12px;">
-            TinClass puede usar inteligencia artificial para generar planificaciones diarias, instrumentos de evaluaci\u00f3n y actividades m\u00e1s completas y contextualizadas. Para esto necesitas una clave de API:
+            TinClass puede usar inteligencia artificial para generar planificaciones diarias, instrumentos de evaluaci\u00f3n y actividades m\u00e1s completas y contextualizadas. Puedes configurar hasta 3 proveedores; no hace falta tener los tres, con uno solo ya funciona.
           </p>
 
           <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#FCE4EC;color:#AD1457;">Opci\u00f3n 1</div>
-            <h4 class="tut-step-title">Groq (Recomendado)</h4>
-            <p class="tut-step-desc">Obt\u00e9n tu clave gratuita en <strong>console.groq.com</strong>. Crea una cuenta, ve a "API Keys" y genera una nueva clave. La clave comienza con <code>gsk_</code>.</p>
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">1\u00ba \u2014 M\u00e1s r\u00e1pido</div>
+            <h4 class="tut-step-title">\ud83d\udfe2 Groq</h4>
+            <p class="tut-step-desc">Obt\u00e9n tu clave gratuita en <strong>console.groq.com/keys</strong>. Crea una cuenta, ve a "API Keys" y genera una nueva clave. La clave comienza con <code>gsk_</code>.</p>
           </div>
 
           <div class="tut-step-card">
-            <div class="tut-step-badge" style="background:#FCE4EC;color:#AD1457;">Opci\u00f3n 2</div>
-            <h4 class="tut-step-title">OpenRouter (Respaldo)</h4>
-            <p class="tut-step-desc">Alternativa en <strong>openrouter.ai</strong>. Crea una cuenta, genera una clave en "Keys". La clave comienza con <code>sk-or-</code>. Se usa como respaldo cuando Groq no est\u00e1 disponible.</p>
+            <div class="tut-step-badge" style="background:#FFFDE7;color:#F57F17;">2\u00ba \u2014 1M tokens/min gratis</div>
+            <h4 class="tut-step-title">\ud83d\udfe1 Google Gemini</h4>
+            <p class="tut-step-desc">Obt\u00e9n tu clave gratuita en <strong>aistudio.google.com/apikey</strong> (no pide tarjeta). La clave comienza con <code>AIza</code>.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E3F2FD;color:#1565C0;">3\u00ba \u2014 Red de seguridad</div>
+            <h4 class="tut-step-title">\ud83d\udd35 OpenRouter</h4>
+            <p class="tut-step-desc">Alternativa en <strong>openrouter.ai/keys</strong>. Crea una cuenta, genera una clave en "Keys". La clave comienza con <code>sk-or-</code>.</p>
           </div>
 
           <div class="tut-tip">
             <span class="material-icons">lightbulb</span>
-            <span>Ambos servicios ofrecen modelos gratuitos. Sin claves de IA, el sistema sigue funcionando con generaci\u00f3n local (m\u00e1s b\u00e1sica pero funcional). Las claves se guardan en la nube y estar\u00e1n disponibles en cualquier dispositivo.</span>
+            <span>El sistema intenta en orden: Groq \u2192 Gemini \u2192 OpenRouter. Si uno falla o se queda sin cuota, pasa autom\u00e1ticamente al siguiente. Sin ninguna clave configurada, TinClass sigue funcionando con generaci\u00f3n local (m\u00e1s b\u00e1sica pero funcional). Las claves se guardan en tu navegador y se sincronizan a tu cuenta, as\u00ed que estar\u00e1n disponibles en cualquier dispositivo donde inicies sesi\u00f3n.</span>
           </div>
         </div>
       </div>
@@ -15315,10 +15344,410 @@ function abrirTutorial() {
         </div>
       </div>
 
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 19: PORTAFOLIO DOCENTE -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-portafolio" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #00838F;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#00838F;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">workspace_premium</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#00838F;font-size:1.25rem;">Portafolio Docente</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Re\u00fane tus evidencias pedag\u00f3gicas y datos profesionales en un solo lugar, listos para imprimir</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:16px;">
+            El Portafolio se organiza por <strong>a\u00f1o escolar</strong> (selector arriba de todo): si tienes a\u00f1os archivados, puedes consultarlos en modo solo lectura desde el mismo selector. El bot\u00f3n <strong>"Imprimir / Generar PDF"</strong> genera un documento completo con todo lo que hayas cargado, listo para entregar.
+          </p>
+
+          <!-- Bloque 1 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E0F7FA;color:#00838F;">Datos base</div>
+            <h4 class="tut-step-title">Datos del docente, curr\u00edculum e identidad del centro</h4>
+            <ul class="tut-list">
+              <li><strong>Datos del docente:</strong> Foto de perfil (m\u00e1x. 150 KB), nombre, t\u00edtulo, c\u00e9dula, cargo, centro, correo, tel\u00e9fono, perfil profesional y filosof\u00eda de ense\u00f1anza.</li>
+              <li><strong>"Tomar datos de la planificaci\u00f3n activa":</strong> Autocompleta nombre, centro y cargo desde la planificaci\u00f3n que tengas abierta en ese momento.</li>
+              <li><strong>Curr\u00edculum (CV):</strong> Sube tu CV en PDF o Word (m\u00e1x. 8 MB). Se puede reemplazar o descargar en cualquier momento.</li>
+              <li><strong>Identidad del centro:</strong> Muestra el nombre, lema, misi\u00f3n, visi\u00f3n, valores y prop\u00f3sito anual de tu centro. Esta informaci\u00f3n la administra el Superadmin desde "Centros Educativos" \u2014 no se edita aqu\u00ed.</li>
+              <li><strong>Guardar datos base:</strong> Confirma los cambios de esta tarjeta. "Limpiar datos base" borra todo lo escrito aqu\u00ed (no afecta evidencias ni reflexi\u00f3n).</li>
+            </ul>
+          </div>
+
+          <!-- Bloque 2 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Evidencias</div>
+            <h4 class="tut-step-title">Agregar y organizar evidencias por categor\u00eda</h4>
+            <p class="tut-step-desc">Cada evidencia se clasifica en una de estas categor\u00edas: T\u00edtulo/grado acad\u00e9mico, Desarrollo profesional/capacitaci\u00f3n, Diario reflexivo, Reuni\u00f3n/seguimiento, Acompa\u00f1amiento/observaci\u00f3n de clase, Logros y reconocimientos, u Otro.</p>
+            <ul class="tut-list">
+              <li><strong>Agregar evidencia:</strong> Completa categor\u00eda, fecha, origen/v\u00ednculo, t\u00edtulo y descripci\u00f3n (obligatorios). Puedes adjuntar un archivo (PDF, Word, Excel o imagen, m\u00e1x. 5 MB).</li>
+              <li><strong>"Tomar de la planificaci\u00f3n activa":</strong> Precarga t\u00edtulo, descripci\u00f3n y origen a partir del m\u00f3dulo y RA que tengas abierto.</li>
+              <li><strong>Evidencias autom\u00e1ticas:</strong> Algunas acciones del sistema (reportes de estudiantes, comentarios de calificaciones) crean evidencias en el Portafolio por s\u00ed solas, sin que tengas que hacer nada.</li>
+              <li><strong>Lista por categor\u00eda:</strong> Las evidencias se agrupan y muestran con fecha, descripci\u00f3n y bot\u00f3n para descargar el adjunto o quitarlas.</li>
+            </ul>
+            <div class="tut-tip">
+              <span class="material-icons">lightbulb</span>
+              <span>Los a\u00f1os escolares archivados quedan en solo lectura: podr\u00e1s ver y descargar las evidencias pasadas, pero no agregar ni borrar nada en ellos.</span>
+            </div>
+          </div>
+
+          <!-- Bloque 3 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#F3E5F5;color:#6A1B9A;">Resumen</div>
+            <h4 class="tut-step-title">Resumen pedag\u00f3gico</h4>
+            <p class="tut-step-desc">Se genera autom\u00e1ticamente a partir de tus planificaciones guardadas del a\u00f1o escolar seleccionado, sin que tengas que cargar nada manualmente:</p>
+            <ul class="tut-list">
+              <li><strong>Contadores:</strong> Total de planificaciones, actividades, instrumentos de evaluaci\u00f3n y sesiones diarias del ciclo.</li>
+              <li><strong>Planificaciones recientes:</strong> Las 5 m\u00e1s recientes, con acceso directo para abrirlas ("Ver").</li>
+            </ul>
+          </div>
+
+          <!-- Bloque 4 -->
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Reflexi\u00f3n</div>
+            <h4 class="tut-step-title">Reflexi\u00f3n y mejora continua</h4>
+            <ul class="tut-list">
+              <li><strong>Autoevaluaci\u00f3n:</strong> Fortalezas, \u00e1reas de oportunidad y retos superados durante el ciclo lectivo.</li>
+              <li><strong>Plan de mejora:</strong> Metas propuestas para optimizar tu pr\u00e1ctica docente en el pr\u00f3ximo periodo.</li>
+              <li>Esta secci\u00f3n es por a\u00f1o escolar: cada ciclo tiene su propia autoevaluaci\u00f3n y plan de mejora.</li>
+            </ul>
+            <div class="tut-tip">
+              <span class="material-icons">auto_awesome</span>
+              <span>Al imprimir el Portafolio, la reflexi\u00f3n y todas las evidencias del a\u00f1o seleccionado se incluyen autom\u00e1ticamente en el PDF final, junto con los datos del docente y del centro.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 20: IMPORTAR PLANIFICACI\u00d3N -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-importar" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #6D4C41;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#6D4C41;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">upload_file</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#6D4C41;font-size:1.25rem;">Importar Planificaci\u00f3n</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Traspasa al sistema una planificaci\u00f3n que ya tienes hecha, en 4 pasos</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:16px;">
+            \u00dasala cuando ya tengas una planificaci\u00f3n elaborada (por ejemplo, en un documento Word que preparaste antes de usar TinClass) y quieras pasarla al sistema copiando los datos, en vez de crearla desde cero con <strong>Nueva Planificaci\u00f3n</strong>.
+          </p>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#EFEBE9;color:#4E342E;">Paso 1</div>
+            <h4 class="tut-step-title">Datos Generales</h4>
+            <ul class="tut-list">
+              <li><strong>Asignar al curso:</strong> Si ya tienes cursos creados en el Libro de Calificaciones, puedes vincular esta planificaci\u00f3n directamente. Si no, podr\u00e1s asignarla despu\u00e9s.</li>
+              <li><strong>Instituci\u00f3n y m\u00f3dulo:</strong> Familia profesional, c\u00f3digo FP, bachillerato, m\u00f3dulo formativo, docente, etc. \u2014 c\u00f3pialos de tu documento existente.</li>
+              <li><strong>Horario y fechas:</strong> Cantidad de RA del m\u00f3dulo, valor en puntos de este RA, horas semanales, fecha de inicio/t\u00e9rmino y los d\u00edas de clase con sus horas.</li>
+              <li>Campos obligatorios: M\u00f3dulo Formativo, Nombre del Docente, Fecha de inicio y al menos un d\u00eda de clase marcado.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Paso 2</div>
+            <h4 class="tut-step-title">RA y Criterios</h4>
+            <ul class="tut-list">
+              <li><strong>Descripci\u00f3n del RA:</strong> Pega el texto completo del Resultado de Aprendizaje.</li>
+              <li><strong>Criterios de evaluaci\u00f3n:</strong> Uno por l\u00ednea.</li>
+              <li><strong>Recursos did\u00e1cticos</strong> disponibles para ese RA.</li>
+              <li><strong>Nivel de Bloom predominante:</strong> Elige entre Conocimiento, Comprensi\u00f3n, Aplicaci\u00f3n, An\u00e1lisis, Evaluaci\u00f3n, Creaci\u00f3n o Actitudinal (o escribe uno personalizado con "Otro").</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FFF3E0;color:#E65100;">Paso 3</div>
+            <h4 class="tut-step-title">EC y Actividades</h4>
+            <ul class="tut-list">
+              <li>Agrega uno o m\u00e1s <strong>Elementos de Capacidad (EC)</strong>: c\u00f3digo, nivel de Bloom, enunciado y horas asignadas.</li>
+              <li>Dentro de cada EC puedes agregar sus <strong>actividades de evaluaci\u00f3n</strong> correspondientes.</li>
+              <li>Usa el bot\u00f3n "Agregar EC" para sumar m\u00e1s, o el \u00edcono de basura en la tarjeta para quitar uno.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#F3E5F5;color:#6A1B9A;">Paso 4</div>
+            <h4 class="tut-step-title">Confirmar</h4>
+            <p class="tut-step-desc">Revisa el resumen completo (datos generales, RA y EC con sus actividades) y presiona <strong>"Guardar planificaci\u00f3n"</strong>. Quedar\u00e1 disponible en "Mis Planificaciones" igual que si la hubieras creado con el asistente normal.</p>
+            <div class="tut-tip">
+              <span class="material-icons">lightbulb</span>
+              <span>Puedes retroceder a cualquier paso anterior con el bot\u00f3n "Anterior" sin perder lo que ya escribiste.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 21: BUSCAR ESTUDIANTE -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-buscar" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #37474F;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#37474F;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">search</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#37474F;font-size:1.25rem;">Buscar Estudiante</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Encuentra a cualquier estudiante de todos tus cursos y revisa su ficha completa</p>
+            </div>
+          </div>
+
+          <ul class="tut-list">
+            <li><strong>Buscador:</strong> Escribe el nombre en la barra; los resultados se agrupan por curso y se resaltan las coincidencias. Sin texto, muestra todos los estudiantes de todos tus cursos.</li>
+            <li><strong>Selecci\u00f3n autom\u00e1tica:</strong> Si tu b\u00fasqueda arroja un solo resultado, se abre su ficha autom\u00e1ticamente.</li>
+            <li><strong>Ficha del estudiante:</strong> Al hacer clic en un resultado se muestra su perfil con nota final, posici\u00f3n (ranking) dentro del curso, porcentaje de asistencia (con desglose de presentes/tardanzas/ausencias/excusas), clases registradas y las notas de clase y observaciones m\u00e1s recientes.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Es la forma m\u00e1s r\u00e1pida de consultar el estado de un estudiante sin tener que entrar al Libro de Calificaciones del curso correspondiente.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 22: EX\u00c1MENES Y PRUEBAS -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-examenes" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #1565C0;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#1565C0;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">quiz</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#1565C0;font-size:1.25rem;">Ex\u00e1menes y Pruebas</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Crea ex\u00e1menes en l\u00ednea y comp\u00e1rtelos con tus estudiantes mediante un enlace</p>
+            </div>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E3F2FD;color:#1565C0;">Crear</div>
+            <h4 class="tut-step-title">Crear un examen</h4>
+            <ul class="tut-list">
+              <li><strong>Datos generales:</strong> T\u00edtulo (obligatorio), materia, curso/grupo e instrucciones opcionales para el estudiante.</li>
+              <li><strong>Tipos de pregunta:</strong> Selecci\u00f3n m\u00faltiple (4 opciones A\u2013D), Verdadero/Falso, o Respuesta abierta. Puedes agregar las que necesites y reordenarlas con las flechas \u2191 \u2193.</li>
+              <li>Cada pregunta admite una <strong>URL de imagen</strong> opcional como apoyo visual.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Publicar</div>
+            <h4 class="tut-step-title">Compartir y controlar el acceso</h4>
+            <ul class="tut-list">
+              <li><strong>Enlace:</strong> Copia el enlace \u00fanico del examen (bot\u00f3n "Enlace") y comp\u00e1rtelo con tus estudiantes por el medio que prefieras (Blog, WhatsApp, etc.). Cada estudiante lo abre en <em>examen.html</em>, escribe su nombre y n\u00famero de identificaci\u00f3n, y responde.</li>
+              <li><strong>Abrir / Cerrar:</strong> Un examen "ACTIVO" puede recibir respuestas; uno "CERRADO" no permite que nadie m\u00e1s responda. Act\u00edvalo o ci\u00e9rralo con el bot\u00f3n correspondiente en cualquier momento.</li>
+              <li><strong>Editar:</strong> Puedes modificar t\u00edtulo, preguntas u opciones aunque el examen ya est\u00e9 activo.</li>
+              <li><strong>Eliminar:</strong> Borra el examen y su configuraci\u00f3n de forma permanente.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#F3E5F5;color:#6A1B9A;">Revisar</div>
+            <h4 class="tut-step-title">Ver resultados</h4>
+            <p class="tut-step-desc">El bot\u00f3n "Resultados" muestra la lista de estudiantes que respondieron, con fecha y hora de env\u00edo. Haz clic en cada tarjeta para desplegar el detalle: cada pregunta con la respuesta que dio ese estudiante, o "Sin respuesta" si la dej\u00f3 en blanco.</p>
+          </div>
+
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Las preguntas de selecci\u00f3n m\u00faltiple y Verdadero/Falso no se corrigen autom\u00e1ticamente dentro del examen \u2014 el sistema recopila las respuestas para que t\u00fa las revises. \u00dasalo para pruebas r\u00e1pidas, diagn\u00f3sticos o quices sin necesidad de imprimir nada.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 23: RAs ADEUDADOS (RECUPERACIONES) -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-recuperaciones" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #2E7D32;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#2E7D32;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">assignment_return</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#2E7D32;font-size:1.25rem;">RAs Adeudados</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Detecta estudiantes con Resultados de Aprendizaje por debajo del m\u00ednimo y genera material de recuperaci\u00f3n</p>
+            </div>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Paso 1</div>
+            <h4 class="tut-step-title">Buscar RAs pendientes</h4>
+            <p class="tut-step-desc">El bot\u00f3n <strong>"Buscar RAs pendientes"</strong> revisa todos tus cursos y lista autom\u00e1ticamente cada estudiante con un RA por debajo del 70%. Por cada uno muestra el curso, la descripci\u00f3n del RA, la nota actual sobre el valor total, el porcentaje, cu\u00e1ntos puntos necesita para aprobar y las actividades relacionadas con sus notas.</p>
+            <ul class="tut-list">
+              <li>Marca o desmarca estudiantes individualmente, o usa "Seleccionar todo" en la parte superior de la lista.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#FCE4EC;color:#AD1457;">Paso 2</div>
+            <h4 class="tut-step-title">Generar con IA</h4>
+            <p class="tut-step-desc">Elige el tipo de recurso en el men\u00fa desplegable y presiona <strong>"Generar IA"</strong> (requiere una clave de IA configurada \u2014 ver "Configurar IA"):</p>
+            <ul class="tut-list">
+              <li><strong>Actividad:</strong> Una actividad de recuperaci\u00f3n puntual para el RA pendiente.</li>
+              <li><strong>Gu\u00eda de recuperaci\u00f3n:</strong> Un documento gu\u00eda m\u00e1s completo para que el estudiante repase el contenido.</li>
+              <li><strong>Plan de apoyo:</strong> Sugerencias estructuradas paso a paso para reforzar el RA.</li>
+            </ul>
+            <p class="tut-step-desc">El resultado se muestra agrupado por estudiante, con sus RA pendientes y las sugerencias generadas.</p>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E3F2FD;color:#1565C0;">Paso 3</div>
+            <h4 class="tut-step-title">Usar el resultado</h4>
+            <ul class="tut-list">
+              <li><strong>Crear plan(es) en Biblioteca:</strong> Convierte el resultado generado en planificaciones que quedan guardadas en "Mis Planificaciones".</li>
+              <li><strong>Copiar resultado:</strong> Copia el texto generado al portapapeles.</li>
+              <li><strong>Descargar:</strong> Exporta el resultado como JSON, TXT o Word (.docx).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 24: CUMPLEA\u00d1OS -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-cumpleanos" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #AD1457;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#AD1457;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">cake</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#AD1457;font-size:1.25rem;">Cumplea\u00f1os</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Registra las fechas de nacimiento de tus estudiantes y no te pierdas ninguna</p>
+            </div>
+          </div>
+
+          <ul class="tut-list">
+            <li><strong>Pr\u00f3ximos cumplea\u00f1os:</strong> Arriba de todo aparece un resumen con los cumplea\u00f1os de los pr\u00f3ximos 30 d\u00edas, indicando cu\u00e1nto falta y de qu\u00e9 curso es cada estudiante.</li>
+            <li><strong>Registrar fecha:</strong> Cada estudiante de tus cursos aparece en una lista con un campo de fecha. Simplemente selecciona el d\u00eda y se guarda autom\u00e1ticamente.</li>
+            <li><strong>Borrar fecha:</strong> El \u00edcono de "\u00d7" junto a la fecha la elimina si te equivocaste o ya no aplica.</li>
+            <li><strong>Filtrar por curso:</strong> Usa el selector de curso en la parte superior para ver solo los estudiantes de un grupo espec\u00edfico.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Los cumplea\u00f1os pr\u00f3ximos tambi\u00e9n pueden aparecer como aviso en el Dashboard principal, seg\u00fan la configuraci\u00f3n de tu centro.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 25: COMPARTIR -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-compartir" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #1565C0;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#1565C0;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">folder_shared</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#1565C0;font-size:1.25rem;">Compartir</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Comparte enlaces y documentos con los dem\u00e1s docentes de tu centro</p>
+            </div>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E3F2FD;color:#1565C0;">Compartir algo nuevo</div>
+            <ul class="tut-list">
+              <li><strong>Tipo:</strong> Elige entre <strong>Enlace</strong> (una URL que empiece con http:// o https://) o <strong>Documento</strong> (archivo PDF, Word, Excel o imagen, m\u00e1x. 700 KB).</li>
+              <li><strong>T\u00edtulo</strong> (obligatorio) y <strong>Descripci\u00f3n</strong> (opcional) para dar contexto a lo que compartes.</li>
+              <li><strong>\u00bfQui\u00e9n puede verlo?</strong> Puedes hacerlo visible para <strong>todos los docentes del centro</strong>, o restringirlo a <strong>docentes espec\u00edficos</strong> que selecciones de una lista.</li>
+            </ul>
+          </div>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E8F5E9;color:#2E7D32;">Ver lo compartido</div>
+            <ul class="tut-list">
+              <li>Cada elemento muestra t\u00edtulo, descripci\u00f3n, qui\u00e9n lo comparti\u00f3, la fecha y una etiqueta de visibilidad ("Todos" o "Privado" con el n\u00famero de destinatarios).</li>
+              <li><strong>Enlaces:</strong> Bot\u00f3n "Abrir enlace" que los lleva directo a la URL en una pesta\u00f1a nueva.</li>
+              <li><strong>Documentos:</strong> Bot\u00f3n "Descargar" para bajar el archivo adjunto.</li>
+              <li><strong>Eliminar:</strong> Solo el autor de cada elemento puede borrarlo (\u00edcono de basura).</li>
+            </ul>
+          </div>
+
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Es \u00fatil para compartir gu\u00edas, r\u00fabricas, plantillas o enlaces de inter\u00e9s con tus compa\u00f1eros docentes sin salir del sistema.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 26: PRESENTACI\u00d3N -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-presentacion" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #E65100;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#E65100;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">slideshow</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#E65100;font-size:1.25rem;">Presentaci\u00f3n</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Vista de pantalla completa pensada para proyectar en el aula durante la clase</p>
+            </div>
+          </div>
+
+          <ul class="tut-list">
+            <li><strong>Detecci\u00f3n autom\u00e1tica:</strong> Al abrirla, el sistema revisa tu Horario y detecta si hay una clase activa en este momento; si la encuentra, carga directamente el curso y el per\u00edodo correspondiente.</li>
+            <li><strong>Selector manual:</strong> Si no hay clase detectada, o quieres cambiarla, se abre un selector de cursos donde el curso de la clase actual aparece resaltado con la etiqueta "Ahora".</li>
+            <li><strong>Informaci\u00f3n mostrada:</strong> Nombre del curso, per\u00edodo/aula/secci\u00f3n, el objetivo de aprendizaje y la secuencia/actividades tomadas de la planificaci\u00f3n activa vinculada a ese curso.</li>
+            <li><strong>Reloj:</strong> Un reloj en vivo, siempre visible durante la presentaci\u00f3n.</li>
+            <li><strong>Temporizador:</strong> Controles para iniciar, pausar y reiniciar un cron\u00f3metro de cuenta regresiva, con botones r\u00e1pidos para sumar 5, 10, 15 o 20 minutos \u2014 \u00fatil para actividades cronometradas o ex\u00e1menes cortos.</li>
+          </ul>
+          <div class="tut-tip">
+            <span class="material-icons">lightbulb</span>
+            <span>Para que la informaci\u00f3n se muestre correctamente, el curso debe tener una planificaci\u00f3n activa vinculada y estar registrado en tu Horario con el mismo nombre o secci\u00f3n que en el Libro de Calificaciones.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <!-- SECCI\u00d3N 27: PLANIFICACIONES DIARIAS -->
+      <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+      <div id="tut-diarias" style="scroll-margin-top:20px;">
+        <div class="section-card" style="margin:0 16px 12px;border-top:4px solid #00695C;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <span style="background:#00695C;color:#fff;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <span class="material-icons">today</span>
+            </span>
+            <div>
+              <h2 style="margin:0;color:#00695C;font-size:1.25rem;">Planificaciones Diarias</h2>
+              <p style="margin:2px 0 0;color:#78909C;font-size:0.85rem;">Accede directo, sin pasar por el asistente, a las sesiones d\u00eda a d\u00eda de cualquier planificaci\u00f3n guardada</p>
+            </div>
+          </div>
+
+          <p style="color:#455A64;line-height:1.6;margin-bottom:16px;">
+            Es la misma planificaci\u00f3n diaria del <strong>Paso 5</strong> de "Nueva Planificaci\u00f3n", pero como panel independiente al que puedes entrar en cualquier momento desde el Dashboard, sin tener que reabrir todo el asistente.
+          </p>
+
+          <ul class="tut-list">
+            <li><strong>Selector de planificaci\u00f3n:</strong> Si no tienes una planificaci\u00f3n activa en el editor, el panel te deja elegir cu\u00e1l de tus planificaciones guardadas quieres trabajar.</li>
+            <li><strong>Filtrar por EC:</strong> Los chips en la parte superior filtran las sesiones por Elemento de Capacidad.</li>
+            <li><strong>Editar sesiones:</strong> Igual que en el asistente, cada sesi\u00f3n tiene inicio, desarrollo y cierre editables, con tiempo asignado por fase.</li>
+            <li><strong>Generar con IA:</strong> Si tienes una clave de IA configurada, puedes generar las sesiones autom\u00e1ticamente.</li>
+          </ul>
+
+          <div class="tut-step-card">
+            <div class="tut-step-badge" style="background:#E1F5FE;color:#0277BD;">Herramienta</div>
+            <h4 class="tut-step-title">Mover actividades de un d\u00eda</h4>
+            <p class="tut-step-desc">El bot\u00f3n <strong>"Mover un d\u00eda"</strong> (tambi\u00e9n accesible desde el Dashboard, en los avisos de "Clases de hoy / ma\u00f1ana / pasado ma\u00f1ana") sirve para cuando un d\u00eda no hay clases (feriado, imprevisto, etc.):</p>
+            <ul class="tut-list">
+              <li>Elige el d\u00eda sin clases y el sistema sugiere autom\u00e1ticamente la pr\u00f3xima fecha en que le toca clase a cada secci\u00f3n, seg\u00fan tu Horario.</li>
+              <li>Puedes ajustar manualmente la fecha sugerida para cada actividad antes de confirmar.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <!-- Footer -->
       <div style="text-align:center;padding:20px 16px 40px;color:#90A4AE;font-size:0.85rem;">
         <span class="material-icons" style="font-size:18px;vertical-align:middle;">info</span>
-        Tutorial completo de TinClass v14.0 \u2014 \u00bfNecesitas ayuda adicional? Contacta a tu administrador.
+        Tutorial completo de TinClass ${escapeHTML(window.TINCLASS_BUILD_VERSION || '')} \u2014 \u00bfNecesitas ayuda adicional? Contacta a tu administrador.
       </div>
 
     </div>
