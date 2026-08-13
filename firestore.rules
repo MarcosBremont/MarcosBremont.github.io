@@ -101,21 +101,31 @@ service cloud.firestore {
 
     match /centros/{centroId} {
       allow read: if true;
-      allow write: if signedIn();
+      // Solo Superadmin edita el documento del centro (nombre, logo, plantillas,
+      // credenciales de EmailJS, lista de admins) -- la UI para esto (Superadmin >
+      // Centros Educativos) ya esta gateada por _esSuperadmin() en el cliente; esta
+      // regla es lo que realmente lo hace cumplir del lado del servidor. Antes
+      // cualquier usuario logueado, de cualquier centro, podia sobreescribir estos
+      // campos de CUALQUIER OTRO centro (incluyendo sus credenciales de EmailJS).
+      allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
 
+      // Subcolecciones aisladas por centro: antes solo pedian signedIn(), sin comparar
+      // el centroId del usuario contra el centroId de la ruta -- cualquier docente
+      // logueado de OTRO centro que supiera/adivinara este centroId podia leer o
+      // escribir aqui. Mismo patron ya usado en /compartidos (mas abajo): superadmin
+      // pasa siempre, el resto solo si es su propio centro.
       match /avisos/{avisoId} {
-        allow read, write: if signedIn();
+        allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId);
       }
 
       // Casos de seguimiento de rendimiento académico abiertos por Coordinadora
-      // (pestaña Rendimiento del Panel Coordinadora). Mismo patrón que avisos:
-      // el gating de quién puede escribir vive en la UI, no en la regla.
+      // (pestaña Rendimiento del Panel Coordinadora).
       match /alertas_rendimiento/{alertaId} {
-        allow read, write: if signedIn();
+        allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId);
       }
 
       match /pagos_config/{doc} {
-        allow read, write: if signedIn();
+        allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId);
       }
 
       match /calendario/{doc} {
@@ -124,18 +134,18 @@ service cloud.firestore {
       }
 
       // Módulo de Vinculación Sectorial (pasantías, bolsa de empleo, diagnósticos
-      // empresariales, convenios, eventos comunitarios). Mismo patrón que avisos/
-      // alertas_rendimiento: regla plana, el gating de quién puede escribir vive en
-      // la UI (rol 'vinculadora' + Director/admin_centro/Superadmin), no en la regla.
-      match /vinc_pasantias_estudiantes/{id} { allow read, write: if signedIn(); }
-      match /vinc_pasantias_docentes/{id}    { allow read, write: if signedIn(); }
-      match /vinc_bolsa_empleo/{id}          { allow read, write: if signedIn(); }
-      match /vinc_diagnosticos/{id}          { allow read, write: if signedIn(); }
-      match /vinc_convenios/{id}             { allow read, write: if signedIn(); }
-      match /vinc_eventos/{id}               { allow read, write: if signedIn(); }
+      // empresariales, convenios, eventos comunitarios). El rol (vinculadora +
+      // Director/admin_centro/Superadmin) se sigue filtrando en la UI -- aqui solo
+      // se hace cumplir el aislamiento por centro, que antes no existia.
+      match /vinc_pasantias_estudiantes/{id} { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
+      match /vinc_pasantias_docentes/{id}    { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
+      match /vinc_bolsa_empleo/{id}          { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
+      match /vinc_diagnosticos/{id}          { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
+      match /vinc_convenios/{id}             { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
+      match /vinc_eventos/{id}               { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
 
       // Compartir entre docentes del mismo centro (links/documentos), con visibilidad
-      // por destinatario. Aislado por centro (a diferencia de avisos, que no lo esta).
+      // por destinatario adicional al aislamiento por centro.
       match /compartidos/{itemId} {
         // OJO: en consultas "list", si UN SOLO documento candidato no cumple la
         // condicion, Firestore rechaza la consulta ENTERA (no filtra en silencio).

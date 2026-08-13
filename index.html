@@ -2784,6 +2784,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v16.33<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Seguridad: aislamiento por centro en Firestore (multi-centro)</div>
+              <ul class="about-ver-items">
+                <li>Varias subcolecciones de <code>centros/{centroId}</code> (avisos, alertas de rendimiento, pagos_config, y las de Vinculación Sectorial) solo exigían estar logueado, sin comparar el centro del usuario contra el centro de la ruta -- cualquier docente logueado de OTRO centro que supiera o adivinara el ID podía leer o escribir ahí. Ahora se exige pertenecer a ese mismo centro (o ser Superadmin).</li>
+                <li>El documento del propio centro (nombre, logo, plantillas, credenciales de EmailJS, lista de administradores) se podía sobreescribir con cualquier cuenta logueada del sistema. Ahora solo Superadmin puede editarlo, igual que ya exigía la interfaz de Centros Educativos.</li>
+                <li>Reglas ya desplegadas a producción.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#0277BD;">v16.32<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5241,9 +5257,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.32"></script>
+  <script src="app.js?v=16.33"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.32"></script>
+  <script src="auth.js?v=16.33"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
