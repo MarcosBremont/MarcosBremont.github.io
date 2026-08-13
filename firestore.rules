@@ -206,6 +206,21 @@ service cloud.firestore {
       }
     }
 
+    // Evidencia adjunta a una excusa de asistencia (certificado médico, carta, etc.):
+    // un documento por (curso, fecha, estudiante), mismo criterio que portafolio_evidencias
+    // -- el adjunto no cabe en el blob de asistencia (users/{userId}/data/asistencia).
+    match /users/{userId}/asistencia_evidencias/{itemId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                     (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+
+      match /archivo/{chunkId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+        allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                       (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+      }
+    }
+
     // Autoevaluación / plan de mejora del Portafolio Docente, un documento por año escolar.
     match /users/{userId}/portafolio_reflexion/{yearId} {
       allow read, write: if signedIn() && request.auth.uid == userId;

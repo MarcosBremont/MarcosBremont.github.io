@@ -11354,6 +11354,17 @@ function _renderizarGraficasRendimiento(cursoId) {
       </div>` : ''}
     </div>
 
+    <!-- Resumen narrativo con IA -->
+    <div class="rend-card">
+      <div class="rend-card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="material-icons">auto_awesome</span>Resumen narrativo con IA
+        <button id="rend-ia-btn" class="btn-secundario" style="margin-left:auto;font-size:0.78rem;padding:6px 12px;" onclick="_rendGenerarResumenIA('${cursoId}')">
+          <span class="material-icons" style="font-size:15px;">auto_awesome</span> Generar resumen
+        </button>
+      </div>
+      <div id="rend-ia-resultado" style="font-size:0.88rem;color:#546E7A;line-height:1.65;white-space:pre-wrap;padding-top:4px;">Genera un resumen cualitativo del desempeño de este curso a partir de las gráficas de arriba.</div>
+    </div>
+
     <!-- Fila gráficas: Donut + Barras RA -->
     <div class="rend-charts-row">
       <div class="rend-card">
@@ -11427,6 +11438,82 @@ function _renderizarGraficasRendimiento(cursoId) {
       </div>
     </div>
   `;
+}
+
+/** Genera con IA un resumen cualitativo del desempeño del curso completo, a partir de
+ *  las mismas cifras que ya muestran las gráficas de Rendimiento (promedio, distribución
+ *  aprobados/riesgo/reprobados, promedio por RA, estudiantes en riesgo, mejores y peores
+ *  promedios). No inventa datos nuevos -- solo los redacta en texto corrido. */
+async function _rendGenerarResumenIA(cursoId) {
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  if (!getGroqKey() && !getGeminiKey() && !getOpenRouterKey()) {
+    mostrarToast('Configura una clave de IA primero (Configurar IA)', 'error');
+    return;
+  }
+
+  const resEl = document.getElementById('rend-ia-resultado');
+  const btnEl = document.getElementById('rend-ia-btn');
+  if (resEl) resEl.textContent = 'Generando resumen...';
+  if (btnEl) btnEl.disabled = true;
+
+  try {
+    const estudiantes = curso.estudiantes || [];
+    const maxTotal = _rendMaxTotal(curso);
+    const notasFinal = estudiantes.map(est => {
+      const nota = _calcNotaFinal(curso, est.id);
+      const pct = maxTotal > 0 && nota !== null ? nota / maxTotal : null;
+      return { nombre: est.nombre, nota, pct };
+    });
+    const conNotas = notasFinal.filter(e => e.nota !== null);
+    const verdes = conNotas.filter(e => e.pct >= 0.7).length;
+    const amarillos = conNotas.filter(e => e.pct >= 0.6 && e.pct < 0.7).length;
+    const rojos = conNotas.filter(e => e.pct < 0.6).length;
+    const promFinal = _promedioFinal(curso);
+    const promPct = (maxTotal > 0 && promFinal !== null) ? Math.round((promFinal / maxTotal) * 1000) / 10 : null;
+
+    const raData = Object.entries(curso.ras || {}).map(([rk, ra]) => ({
+      label: ra.label || ra.modulo || rk,
+      avg: _promedioColRA(curso, rk),
+      max: ra.valorTotal || 0
+    })).filter(d => d.max > 0);
+
+    const enRiesgo = _estudiantesEnRiesgo(curso);
+    const rankOrdenado = [...conNotas].sort((a, b) => b.pct - a.pct);
+    const top3 = rankOrdenado.slice(0, 3).map(e => e.nombre + ' (' + Math.round(e.pct * 100) + '%)');
+    const bottom3 = rankOrdenado.slice(-3).reverse().map(e => e.nombre + ' (' + Math.round(e.pct * 100) + '%)');
+
+    let prompt = 'Redacta un resumen cualitativo breve (4-5 párrafos cortos como máximo) del desempeño académico de este curso, en español, dirigido al propio docente. Tono profesional pero cercano. No uses markdown, ni asteriscos, ni viñetas, ni encabezados: solo texto corrido en párrafos.\n\n';
+    prompt += 'Curso: ' + (curso.nombre || 'Sin nombre') + '\n';
+    prompt += 'Estudiantes con nota registrada: ' + conNotas.length + ' de ' + estudiantes.length + '\n';
+    prompt += 'Promedio general del curso: ' + (promPct !== null ? promPct + '%' : 'sin datos suficientes') + '\n';
+    prompt += 'Aprobados (>=70%): ' + verdes + ' | En riesgo (60-69%): ' + amarillos + ' | Reprobados (<60%): ' + rojos + '\n\n';
+    if (raData.length) {
+      prompt += 'Promedio por Resultado de Aprendizaje / módulo:\n';
+      raData.forEach(d => {
+        const pct = (d.max > 0 && d.avg !== null) ? Math.round((d.avg / d.max) * 100) : null;
+        prompt += '- ' + d.label + ': ' + (pct !== null ? pct + '%' : 'sin notas aún') + '\n';
+      });
+      prompt += '\n';
+    }
+    if (enRiesgo.length) {
+      prompt += 'Estudiantes en riesgo (' + enRiesgo.length + '): ' + enRiesgo.map(e => e.nombre + (e.razones && e.razones.length ? ' (' + e.razones.join(', ') + ')' : '')).join('; ') + '\n\n';
+    }
+    if (top3.length) prompt += 'Mejores promedios: ' + top3.join(', ') + '\n';
+    if (bottom3.length) prompt += 'Promedios más bajos: ' + bottom3.join(', ') + '\n';
+    prompt += '\nDestaca las fortalezas del grupo, señala qué RA o módulos necesitan refuerzo, menciona a los estudiantes en riesgo de forma constructiva (sin ser alarmista, sin listar todos sus nombres si son muchos) y cierra con una sugerencia pedagógica concreta y accionable.';
+
+    const sysMsg = 'Eres un orientador pedagógico experto en análisis de desempeño académico. Respondes siempre en español, en texto plano (sin markdown, sin asteriscos, sin viñetas, sin encabezados), en párrafos cortos y claros, basándote únicamente en los datos que te dan -- nunca inventas cifras ni nombres que no aparezcan en el mensaje.';
+
+    const texto = await _llamarIATextoLibre(prompt, 700, sysMsg);
+    if (resEl) resEl.textContent = texto || 'No se pudo generar el resumen.';
+    mostrarToast('Resumen generado', 'success');
+  } catch (e) {
+    if (resEl) resEl.textContent = 'Error generando el resumen: ' + (e.message || e);
+    mostrarToast('Error generando resumen con IA', 'error');
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
 }
 
 const CAL_STORAGE_KEY = 'planificadorRA_calificaciones_v1';
@@ -13278,6 +13365,9 @@ function renderizarTablaCalificaciones() {
       + '<button onclick="abrirBoletinConsolidado(\'' + est.id + '\')" style="color:#00838F;">'
       + '<span class="material-icons">summarize</span> Boletín consolidado'
       + '</button>'
+      + '<button onclick="abrirGeneradorCertificado(\'' + est.id + '\')" style="color:#AD1457;">'
+      + '<span class="material-icons">workspace_premium</span> Certificado'
+      + '</button>'
       + '<button id="btn-padre-perfil-' + est.id + '" onclick="_copiarLinkPadre(\'' + est.id + '\',\'' + calState.cursoActivoId + '\',document.getElementById(\'btn-padre-perfil-' + est.id + '\'))" style="color:#AD1457;">'
       + '<span class="material-icons">supervisor_account</span> Link padres'
       + '</button>'
@@ -14113,6 +14203,145 @@ function abrirBoletinConsolidado(estId) {
   if (!w) { mostrarToast('Permite ventanas emergentes para ver el boletín', 'error'); return; }
   w.document.write(html);
   w.document.close();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: GENERADOR DE CERTIFICADOS / DIPLOMAS
+// ════════════════════════════════════════════════════════════════════
+const CERT_TIPOS = [
+  { id: 'mejor_promedio', label: 'Mejor promedio del curso', texto: 'por haber obtenido el mejor promedio académico del curso.' },
+  { id: 'asistencia_perfecta', label: 'Asistencia perfecta', texto: 'por su asistencia perfecta y compromiso durante el periodo.' },
+  { id: 'merito_academico', label: 'Mérito académico', texto: 'por su desempeño académico sobresaliente.' },
+  { id: 'participacion', label: 'Participación destacada', texto: 'por su participación destacada y compromiso en clase.' },
+  { id: 'mejora', label: 'Mayor superación / mejora', texto: 'por su notable superación y esfuerzo durante el periodo.' },
+  { id: 'otro', label: 'Otro (personalizado)', texto: '' }
+];
+
+function abrirGeneradorCertificado(estId) {
+  const cursoId = calState.cursoActivoId;
+  const curso = calState.cursos[cursoId];
+  if (!curso) { mostrarToast('Sin curso activo', 'error'); return; }
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+
+  const portBase = cargarPortafolioBase();
+  const dg = planificacion?.datosGenerales || {};
+  const docenteNombre = portBase?.docente?.nombre || dg.nombreDocente || window.currentUser?.displayName || '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'cert-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;';
+  overlay.onclick = (e) => { if (e.target === overlay) cerrarGeneradorCertificado(); };
+  overlay.innerHTML = `
+    <div style="background:var(--color-superficie,#fff);border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.22);margin:auto;" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span class="material-icons" style="color:#AD1457;font-size:24px;">workspace_premium</span>
+        <h3 style="margin:0;font-size:1rem;font-weight:800;color:var(--color-texto-primario,#212121);">Generar certificado</h3>
+      </div>
+      <p style="font-size:0.85rem;color:#546E7A;margin:0 0 14px;">Para: <strong>${escapeHTML(est.nombre)}</strong></p>
+
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Tipo de reconocimiento</label>
+      <select id="cert-tipo" onchange="_certActualizarMotivo()" style="width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">
+        ${CERT_TIPOS.map(t => `<option value="${t.id}">${escapeHTML(t.label)}</option>`).join('')}
+      </select>
+
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Título del certificado</label>
+      <input id="cert-titulo" type="text" value="Certificado de Reconocimiento" style="width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">
+
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Motivo</label>
+      <textarea id="cert-motivo" style="width:100%;min-height:70px;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.88rem;margin-bottom:12px;box-sizing:border-box;resize:vertical;">${escapeHTML(CERT_TIPOS[0].texto)}</textarea>
+
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Fecha</label>
+      <input id="cert-fecha" type="date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">
+
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Firma (nombre del docente)</label>
+      <input id="cert-firma" type="text" value="${escapeHTML(docenteNombre)}" style="width:100%;padding:9px 11px;border:1.5px solid #B0BEC5;border-radius:8px;font-size:0.9rem;margin-bottom:6px;box-sizing:border-box;">
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <button onclick="cerrarGeneradorCertificado()" style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;">Cancelar</button>
+        <button onclick="_generarCertificadoImprimir('${estId}')" style="background:#AD1457;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">
+          <span class="material-icons" style="font-size:16px;vertical-align:-3px;">print</span> Generar
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function cerrarGeneradorCertificado() {
+  document.getElementById('cert-overlay')?.remove();
+}
+
+function _certActualizarMotivo() {
+  const tipo = document.getElementById('cert-tipo')?.value;
+  const info = CERT_TIPOS.find(t => t.id === tipo);
+  const motivoEl = document.getElementById('cert-motivo');
+  if (motivoEl && info && info.texto) motivoEl.value = info.texto;
+}
+
+/** Abre el certificado imprimible en una pestaña nueva (mismo patrón que abrirBoletin)
+ *  y, en segundo plano, registra el reconocimiento como evidencia en el Portafolio
+ *  Docente bajo "Logros y reconocimientos" -- mejor esfuerzo, no bloquea si falla. */
+async function _generarCertificadoImprimir(estId) {
+  const cursoId = calState.cursoActivoId;
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+
+  const titulo = (document.getElementById('cert-titulo')?.value || 'Certificado de Reconocimiento').trim();
+  const motivo = (document.getElementById('cert-motivo')?.value || '').trim();
+  const fecha = document.getElementById('cert-fecha')?.value || new Date().toISOString().split('T')[0];
+  const firma = (document.getElementById('cert-firma')?.value || '').trim();
+
+  const centroInfo = await _portafolioCargarIdentidadCentro();
+  const esc = escapeHTML;
+  const fechaFmt = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const css = '*{box-sizing:border-box;margin:0;padding:0;}'
+    + 'body{font-family:Georgia,"Times New Roman",serif;background:#f0ede4;padding:24px;}'
+    + '.cert{max-width:900px;margin:0 auto;background:#fffdf7;border:10px double #AD1457;border-radius:6px;padding:56px 60px;text-align:center;}'
+    + '.cert-logo{width:76px;height:76px;object-fit:contain;margin:0 auto 12px;display:block;}'
+    + '.cert-centro{font-size:14px;letter-spacing:2px;text-transform:uppercase;color:#6A1B9A;font-weight:700;margin-bottom:26px;}'
+    + '.cert-titulo{font-size:34px;color:#AD1457;font-weight:700;letter-spacing:1px;margin-bottom:8px;}'
+    + '.cert-sub{font-size:15px;color:#757575;margin-bottom:34px;}'
+    + '.cert-nombre{font-size:30px;color:#212121;font-weight:700;border-bottom:2px solid #AD1457;display:inline-block;padding:0 24px 8px;margin-bottom:28px;}'
+    + '.cert-motivo{font-size:16px;color:#424242;line-height:1.7;max-width:640px;margin:0 auto 40px;}'
+    + '.cert-firmas{display:flex;justify-content:center;gap:80px;margin-top:20px;}'
+    + '.cert-firma-linea{border-top:1.5px solid #757575;padding-top:6px;font-size:13px;color:#424242;min-width:220px;}'
+    + '.cert-fecha{margin-top:34px;font-size:13px;color:#9E9E9E;}'
+    + '.btn-print{display:block;margin:24px auto 0;padding:10px 2rem;background:#AD1457;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;}'
+    + '@media print{.btn-print{display:none;}body{background:#fff;padding:0;}.cert{border-width:6px;}}';
+
+  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    + '<title>' + esc(titulo) + ' — ' + esc(est.nombre) + '</title><style>' + css + '</style></head><body>'
+    + '<div class="cert">'
+    + (centroInfo?.logoUrl ? '<img class="cert-logo" src="' + esc(centroInfo.logoUrl) + '">' : '')
+    + '<div class="cert-centro">' + esc(centroInfo?.nombre || 'Centro Educativo') + '</div>'
+    + '<div class="cert-titulo">' + esc(titulo) + '</div>'
+    + '<div class="cert-sub">Se otorga el presente reconocimiento a</div>'
+    + '<div class="cert-nombre">' + esc(est.nombre) + '</div>'
+    + (motivo ? '<div class="cert-motivo">' + esc(motivo) + '</div>' : '')
+    + '<div class="cert-firmas"><div><div class="cert-firma-linea">' + esc(firma || 'Docente') + '</div></div></div>'
+    + '<div class="cert-fecha">' + esc(fechaFmt) + '</div>'
+    + '</div>'
+    + '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'
+    + '</body></html>';
+
+  const w = window.open('', '_blank', 'width=1000,height=800');
+  if (!w) { mostrarToast('Permite ventanas emergentes para ver el certificado', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+
+  _crearEvidenciaPortafolioAuto({
+    categoria: 'logros_reconocimientos',
+    titulo: titulo + ' — ' + est.nombre,
+    descripcion: motivo || ('Certificado emitido a ' + est.nombre),
+    fecha,
+    origen: 'Generador de certificados · ' + (curso.nombre || '')
+  });
+
+  cerrarGeneradorCertificado();
+  mostrarToast('Certificado generado', 'success');
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -16079,9 +16308,11 @@ function _calcularAsistencia() {
 // ─── Abrir panel de asistencia del curso activo ──────────────────
 let _asistVistaActiva = 'pasar'; // 'pasar' | 'historial'
 
-function abrirAsistencia() {
+async function abrirAsistencia() {
   _asistVistaActiva = 'pasar';
   renderizarAsistencia();
+  await _asistCargarEvidenciasCache(calState.cursoActivoId);
+  _asistRefrescarVistaActual(); // refresca para reflejar qué días ya tienen evidencia adjunta
 }
 
 function renderizarAsistencia() {
@@ -16187,6 +16418,7 @@ function _renderPasarLista(body) {
     <div class="asist-lista" id="asist-lista-body">
       ${curso.estudiantes.map((est, i) => {
     const v = diaData[est.id] || '';
+    const tieneEvid = !!_asistEvidCache[_asistEvidenciaDocId(calState.cursoActivoId, hoy, est.id)];
     return `<div class="asist-fila" id="asist-fila-${est.id}">
           <div class="asist-num">${i + 1}</div>
           <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
@@ -16202,6 +16434,9 @@ function _renderPasarLista(body) {
             </button>
             <button class="asist-btn-estado E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E')" title="Excusa">
               <span class="material-icons">assignment_turned_in</span>E
+            </button>
+            <button class="asist-btn-estado" style="${tieneEvid ? 'background:#E3F2FD;border-color:#90CAF9;color:#1565C0;' : ''}" onclick="abrirEvidenciaAsistencia('${est.id}','${hoy}')" title="${tieneEvid ? 'Ver evidencia de excusa adjunta' : 'Adjuntar evidencia de excusa'}">
+              <span class="material-icons">attach_file</span>
             </button>
           </div>
           ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
@@ -16241,6 +16476,7 @@ function _renderPasarListaFecha(body, fecha) {
   if (listaBody) {
     listaBody.innerHTML = curso.estudiantes.map((est, i) => {
       const v = diaData[est.id] || '';
+      const tieneEvid = !!_asistEvidCache[_asistEvidenciaDocId(calState.cursoActivoId, fecha, est.id)];
       return `<div class="asist-fila" id="asist-fila-${est.id}">
         <div class="asist-num">${i + 1}</div>
         <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
@@ -16257,6 +16493,9 @@ function _renderPasarListaFecha(body, fecha) {
           <button class="asist-btn-estado E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E','${fecha}')" title="Excusa">
             <span class="material-icons">assignment_turned_in</span>E
           </button>
+          <button class="asist-btn-estado" style="${tieneEvid ? 'background:#E3F2FD;border-color:#90CAF9;color:#1565C0;' : ''}" onclick="abrirEvidenciaAsistencia('${est.id}','${fecha}')" title="${tieneEvid ? 'Ver evidencia de excusa adjunta' : 'Adjuntar evidencia de excusa'}">
+            <span class="material-icons">attach_file</span>
+          </button>
         </div>
         ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
       </div>`;
@@ -16269,6 +16508,199 @@ function _badgePctAsistencia(cursoId, estudianteId) {
   if (s.total === 0) return '<span class="asist-pct-badge" style="color:#9E9E9E;">—</span>';
   const cls = s.pct >= 80 ? 'ok' : s.pct >= 60 ? 'warn' : 'bad';
   return `<span class="asist-pct-badge ${cls}" title="${s.P}P · ${s.T}T · ${s.A}A / ${s.total} clases">${s.pct}%</span>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// EVIDENCIA ADJUNTA A UNA EXCUSA DE ASISTENCIA (certificado médico, carta, etc.)
+// ════════════════════════════════════════════════════════════════════
+// No se guarda dentro del blob de asistencia (asistencia[cursoId][fecha][estId]
+// sigue siendo un simple 'P'/'A'/'T'/'E', como espera el resto del código) -- el
+// archivo vive aparte, en su propia colección de Firestore, un documento por
+// (curso, fecha, estudiante), igual criterio que las evidencias del Portafolio.
+const ASIST_EVID_MAX_BYTES = 5 * 1024 * 1024;
+let _asistEvidCache = {}; // docId -> { archivoNombre, archivoMime, archivoChunks }
+
+function _asistEvidenciasColeccion() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('asistencia_evidencias');
+}
+
+function _asistEvidenciaDocId(cursoId, fecha, estId) {
+  return String(cursoId) + '__' + String(fecha) + '__' + String(estId);
+}
+
+async function _asistCargarEvidenciasCache(cursoId) {
+  _asistEvidCache = {};
+  const ref = _asistEvidenciasColeccion();
+  if (!ref || !cursoId) return;
+  try {
+    const snap = await ref.where('cursoId', '==', cursoId).get();
+    snap.docs.forEach(d => { _asistEvidCache[d.id] = { id: d.id, ...d.data() }; });
+  } catch (e) {
+    console.warn('Error cargando evidencias de asistencia:', e);
+  }
+}
+
+/** Refresca la vista de "Pasar lista" actual (hoy o la fecha seleccionada), sin
+ *  perder cuál de las dos se estaba mostrando -- misma lógica que _cambiarFechaLista. */
+function _asistRefrescarVistaActual() {
+  const body = document.getElementById('asist-vista-body');
+  if (!body) return;
+  if (_asistFechaSeleccionada) _renderPasarListaFecha(body, _asistFechaSeleccionada);
+  else _renderPasarLista(body);
+}
+
+function abrirEvidenciaAsistencia(estId, fecha) {
+  const cursoId = calState.cursoActivoId;
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+  if (!window.currentUser) { mostrarToast('Inicia sesión para adjuntar evidencias', 'error'); return; }
+
+  const docId = _asistEvidenciaDocId(cursoId, fecha, estId);
+  const existente = _asistEvidCache[docId] || null;
+  const fechaFmt = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const overlay = document.createElement('div');
+  overlay.id = 'asist-evid-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;';
+  overlay.onclick = (e) => { if (e.target === overlay) cerrarEvidenciaAsistencia(); };
+  overlay.innerHTML = `
+    <div style="background:var(--color-superficie,#fff);border-radius:16px;padding:24px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.22);margin:auto;" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span class="material-icons" style="color:#0277BD;font-size:24px;">attach_file</span>
+        <h3 style="margin:0;font-size:1rem;font-weight:800;color:var(--color-texto-primario,#212121);">Evidencia de excusa</h3>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-texto-secundario,#757575);margin:0 0 14px;">
+        ${escapeHTML(est.nombre)} · ${fechaFmt}
+      </p>
+      ${existente ? `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#F5F5F5;border-radius:8px;margin-bottom:14px;">
+          <span class="material-icons" style="color:#546E7A;font-size:18px;">description</span>
+          <span style="font-size:0.85rem;color:#37474F;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(existente.archivoNombre || 'Archivo adjunto')}</span>
+          <button onclick="_descargarEvidenciaAsistencia('${docId}')" title="Descargar" style="background:none;border:none;color:#1565C0;cursor:pointer;display:flex;"><span class="material-icons" style="font-size:18px;">download</span></button>
+        </div>
+      ` : ''}
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">${existente ? 'Reemplazar archivo' : 'Subir archivo (certificado médico, carta, etc.)'}</label>
+      <input id="asist-evid-archivo" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+      <div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 5 MB. PDF, Word o imagen. Al guardar, este día queda marcado como Excusa.</div>
+      <div id="asist-evid-error" style="color:#C62828;font-size:0.8rem;min-height:18px;margin-top:6px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;">
+        ${existente ? `<button onclick="_eliminarEvidenciaAsistencia('${docId}')" style="background:none;border:1.5px solid #FFCDD2;color:#C62828;border-radius:20px;padding:8px 16px;font-size:0.85rem;cursor:pointer;">Quitar evidencia</button>` : ''}
+        <button onclick="cerrarEvidenciaAsistencia()" style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;">Cancelar</button>
+        <button onclick="_guardarEvidenciaAsistencia('${cursoId}','${fecha}','${estId}')" style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function cerrarEvidenciaAsistencia() {
+  document.getElementById('asist-evid-overlay')?.remove();
+}
+
+async function _guardarEvidenciaAsistencia(cursoId, fecha, estId) {
+  const errEl = document.getElementById('asist-evid-error');
+  if (errEl) errEl.textContent = '';
+  const fileInput = document.getElementById('asist-evid-archivo');
+  let file = fileInput?.files?.[0];
+  if (!file) { if (errEl) errEl.textContent = 'Selecciona un archivo.'; return; }
+
+  if (file.size > ASIST_EVID_MAX_BYTES) {
+    if (file.type && file.type.startsWith('image/')) {
+      try { file = await _comprimirImagenParaLimite(file, ASIST_EVID_MAX_BYTES); }
+      catch { if (errEl) errEl.textContent = 'El archivo no debe superar 5 MB.'; return; }
+    }
+    if (file.size > ASIST_EVID_MAX_BYTES) { if (errEl) errEl.textContent = 'El archivo no debe superar 5 MB (no se pudo reducir más).'; return; }
+  }
+
+  const ref = _asistEvidenciasColeccion();
+  if (!ref) { if (errEl) errEl.textContent = 'No se pudo guardar: inicia sesión de nuevo.'; return; }
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('Error leyendo archivo'));
+      reader.readAsDataURL(file);
+    });
+
+    const docId = _asistEvidenciaDocId(cursoId, fecha, estId);
+    const docRef = ref.doc(docId);
+    const previo = _asistEvidCache[docId];
+    if (previo && previo.archivoChunks) {
+      await _eliminarArchivoEvidenciaChunks(docRef, previo.archivoChunks);
+    }
+    await docRef.set({
+      cursoId, fecha, estudianteId: estId,
+      archivoNombre: file.name,
+      archivoMime: file.type || 'application/octet-stream',
+      archivoChunks: 0,
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await _guardarArchivoEvidenciaChunks(docRef, base64);
+    const docGuardado = await docRef.get();
+    _asistEvidCache[docId] = { id: docId, ...docGuardado.data() };
+
+    // Adjuntar evidencia justifica la ausencia: si el día no estaba ya marcado
+    // como Excusa, se marca automáticamente.
+    const data = cargarAsistencia();
+    if (!data[cursoId]) data[cursoId] = {};
+    if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
+    if (data[cursoId][fecha][estId] !== 'E') {
+      data[cursoId][fecha][estId] = 'E';
+      guardarAsistencia(data);
+    }
+
+    mostrarToast('Evidencia guardada', 'success');
+    cerrarEvidenciaAsistencia();
+    _asistRefrescarVistaActual();
+  } catch (e) {
+    if (errEl) errEl.textContent = 'Error al guardar: ' + (e.message || e);
+  }
+}
+
+async function _eliminarEvidenciaAsistencia(docId) {
+  if (!confirm('¿Quitar la evidencia adjunta? Esto no cambia el estado de Excusa del día, solo borra el archivo.')) return;
+  const ref = _asistEvidenciasColeccion();
+  if (!ref) return;
+  try {
+    const docRef = ref.doc(docId);
+    const previo = _asistEvidCache[docId];
+    if (previo && previo.archivoChunks) await _eliminarArchivoEvidenciaChunks(docRef, previo.archivoChunks);
+    await docRef.delete();
+    delete _asistEvidCache[docId];
+    mostrarToast('Evidencia eliminada', 'success');
+    cerrarEvidenciaAsistencia();
+    _asistRefrescarVistaActual();
+  } catch (e) {
+    mostrarToast('Error al eliminar: ' + (e.message || e), 'error');
+  }
+}
+
+async function _descargarEvidenciaAsistencia(docId) {
+  const ref = _asistEvidenciasColeccion();
+  if (!ref) return;
+  try {
+    const docRef = ref.doc(docId);
+    const doc = await docRef.get();
+    if (!doc.exists) { mostrarToast('No encontrado', 'error'); return; }
+    const it = doc.data();
+    const base64 = await _cargarArchivoEvidenciaBase64(docRef, it);
+    if (!base64) { mostrarToast('Esta evidencia no tiene archivo adjunto', 'error'); return; }
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: it.archivoMime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = it.archivoNombre || 'evidencia';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
+  }
 }
 
 function marcarAsistencia(estudianteId, estado, fechaOverride) {
@@ -16800,6 +17232,17 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
       Sin calificaciones registradas aún.
     </div>`}
 
+    <!-- Resumen narrativo con IA -->
+    <div class="perfil-seccion">
+      <div class="perfil-seccion-titulo">
+        <span class="material-icons">auto_awesome</span>Resumen con IA
+        <button id="perfil-ia-btn" class="btn-secundario" style="margin-left:auto;font-size:0.72rem;padding:5px 10px;" onclick="_perfilGenerarResumenIA('${cursoId}','${estId}')">
+          <span class="material-icons" style="font-size:14px;">auto_awesome</span> Generar
+        </button>
+      </div>
+      <div id="perfil-ia-resultado" style="font-size:0.84rem;color:#546E7A;line-height:1.6;white-space:pre-wrap;">Genera un resumen cualitativo del desempeño de este estudiante a partir de sus notas y asistencia.</div>
+    </div>
+
     <!-- Notas recientes de la clase (del curso) -->
     ${notasClase.length > 0 ? `
     <div class="perfil-seccion">
@@ -16873,6 +17316,83 @@ function _renderizarPerfilEstudiante(cursoId, estId) {
 
   // Renderizar reportes de comportamiento
   _renderReportesPerfilEst(estId, est.nombre);
+}
+
+/** Genera con IA un resumen cualitativo del desempeño de UN estudiante (nota final,
+ *  posición en el curso, asistencia, desempeño por RA/módulo, y sus comentarios/eventos
+ *  más recientes). Misma idea que _rendGenerarResumenIA() pero a nivel individual. */
+async function _perfilGenerarResumenIA(cursoId, estId) {
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  const est = (curso.estudiantes || []).find(e => e.id === estId);
+  if (!est) return;
+  if (!getGroqKey() && !getGeminiKey() && !getOpenRouterKey()) {
+    mostrarToast('Configura una clave de IA primero (Configurar IA)', 'error');
+    return;
+  }
+
+  const resEl = document.getElementById('perfil-ia-resultado');
+  const btnEl = document.getElementById('perfil-ia-btn');
+  if (resEl) resEl.textContent = 'Generando resumen...';
+  if (btnEl) btnEl.disabled = true;
+
+  try {
+    const notaFinal = _calcNotaFinal(curso, estId);
+    const maxTotal = _rendMaxTotal(curso);
+    const pctFinal = (maxTotal > 0 && notaFinal !== null) ? Math.round((notaFinal / maxTotal) * 1000) / 10 : null;
+    const asist = _statsAsistencia(cursoId, estId);
+
+    const promediosCurso = (curso.estudiantes || [])
+      .map(e => ({ id: e.id, nota: _calcNotaFinal(curso, e.id) }))
+      .filter(e => e.nota !== null)
+      .sort((a, b) => b.nota - a.nota);
+    const posicion = promediosCurso.findIndex(e => e.id === estId) + 1;
+    const totalConNotas = promediosCurso.length;
+
+    const rasKeys = Object.keys(curso.ras || {});
+    const raResumen = rasKeys.map(rk => {
+      const raInfo = curso.ras[rk] || {};
+      const notaRA = _calcNotaRA(curso, estId, rk);
+      const pct = (notaRA !== null && raInfo.valorTotal) ? Math.round((notaRA / raInfo.valorTotal) * 100) : null;
+      return { label: raInfo.modulo || raInfo.label || rk, pct };
+    });
+
+    const comentarios = _getComentariosEst(estId).slice(0, 5);
+    const incidencias = _getIncidenciasEst(estId).slice(0, 5);
+
+    let prompt = 'Redacta un resumen cualitativo breve (3-4 párrafos cortos como máximo) del desempeño de este estudiante, en español, dirigido al propio docente. Tono profesional pero cercano. No uses markdown, ni asteriscos, ni viñetas, ni encabezados: solo texto corrido en párrafos.\n\n';
+    prompt += 'Estudiante: ' + est.nombre + '\n';
+    prompt += 'Curso: ' + (curso.nombre || 'Sin nombre') + '\n';
+    prompt += 'Nota final: ' + (pctFinal !== null ? pctFinal + '%' : 'sin datos suficientes') + '\n';
+    if (posicion > 0) prompt += 'Posición en el curso: ' + posicion + ' de ' + totalConNotas + ' estudiantes con notas\n';
+    prompt += 'Asistencia: ' + (asist.pct !== null ? asist.pct + '%' : 'sin registros') + ' (' + asist.P + ' presentes, ' + asist.T + ' tardanzas, ' + asist.A + ' ausencias, ' + (asist.E || 0) + ' excusas)\n\n';
+    if (raResumen.length) {
+      prompt += 'Desempeño por materia/RA:\n';
+      raResumen.forEach(r => { prompt += '- ' + r.label + ': ' + (r.pct !== null ? r.pct + '%' : 'sin notas aún') + '\n'; });
+      prompt += '\n';
+    }
+    if (comentarios.length) {
+      prompt += 'Comentarios recientes del docente: ' + comentarios.map(c => c.texto).filter(Boolean).join(' | ') + '\n';
+    }
+    if (incidencias.length) {
+      prompt += 'Eventos registrados: ' + incidencias.map(i => {
+        const tipo = INCID_TIPOS.find(t => t.id === i.tipo);
+        return (tipo ? tipo.label : i.tipo) + (i.descripcion ? (': ' + i.descripcion) : '');
+      }).join(' | ') + '\n';
+    }
+    prompt += '\nDestaca sus fortalezas, señala en qué áreas necesita apoyo, y cierra con una recomendación concreta y accionable para el docente.';
+
+    const sysMsg = 'Eres un orientador pedagógico experto en seguimiento individual de estudiantes. Respondes siempre en español, en texto plano (sin markdown, sin asteriscos, sin viñetas, sin encabezados), en párrafos cortos y claros, basándote únicamente en los datos que te dan -- nunca inventas cifras ni información que no aparezca en el mensaje.';
+
+    const texto = await _llamarIATextoLibre(prompt, 600, sysMsg);
+    if (resEl) resEl.textContent = texto || 'No se pudo generar el resumen.';
+    mostrarToast('Resumen generado', 'success');
+  } catch (e) {
+    if (resEl) resEl.textContent = 'Error generando el resumen: ' + (e.message || e);
+    mostrarToast('Error generando resumen con IA', 'error');
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
 }
 
 /** Renderiza historial de asistencia detallado en el perfil del estudiante */
