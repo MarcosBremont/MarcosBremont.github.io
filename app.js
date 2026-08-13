@@ -33877,7 +33877,7 @@ function renderPsicologia() {
   datos.forEach(d => {
     html += `
       <div style="background:#fff;border:1px solid #E0E0E0;border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-        <div style="background:linear-gradient(90deg,#F3E5F5,#EDE7F6);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="psico-rep-header" style="background:linear-gradient(90deg,#F3E5F5,#EDE7F6);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span class="material-icons" style="color:#6A1B9A;font-size:20px;">person</span>
           <strong style="color:#4A148C;font-size:0.95rem;">${escapeHTML(d.estNombre)}</strong>
           ${d.curso ? `<span style="background:#CE93D8;color:#fff;border-radius:10px;padding:1px 9px;font-size:0.72rem;font-weight:700;">${escapeHTML(d.curso)}</span>` : ''}

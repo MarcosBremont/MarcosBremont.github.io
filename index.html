@@ -2784,6 +2784,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.40<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: franja de cabecera de Reportes de Comportamiento (Psicología)</div>
+              <ul class="about-ver-items">
+                <li>La franja morada con el nombre del estudiante, el docente que reportó y el conteo de reportes (vista de Psicología en Reportes de Comportamiento) seguía en un tono pastel brillante fijo -- usa un degradado (<code>linear-gradient</code>), que la red de seguridad genérica no detecta porque solo busca colores planos. Se le dio el mismo tratamiento manual que a los banners de calendario y cumpleaños: se oscurece a un morado oscuro en vez de perder el acento de color.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.39<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5355,9 +5369,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.39"></script>
+  <script src="app.js?v=16.40"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.39"></script>
+  <script src="auth.js?v=16.40"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

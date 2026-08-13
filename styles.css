@@ -6925,6 +6925,12 @@ body.dark-mode .cumple-pill-etiqueta {
   color: #F48FB1 !important;
 }
 
+/* Franja de cabecera de cada estudiante en Reportes de Comportamiento
+   (Psicología) -- mismo caso, gradiente claro fijo. */
+body.dark-mode .psico-rep-header {
+  background: linear-gradient(90deg, #241A35, #2A1F40) !important;
+}
+
 /* Bordes grises claros -> borde oscuro de la app */
 body.dark-mode [style*="solid #E0E0E0"],
 body.dark-mode [style*="solid #CFD8DC"],
