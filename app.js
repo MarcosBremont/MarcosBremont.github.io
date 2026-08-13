@@ -29217,20 +29217,20 @@ function _renderizarBannerCalendarioDashboard() {
 
   el.style.display = 'block';
   el.innerHTML = `
-    <div style="background:linear-gradient(135deg,#FFF8E1 0%,#FFF3E0 100%);border:1.5px solid #FFCC80;border-radius:12px;padding:10px 12px;">
+    <div class="dash-cal-banner" style="background:linear-gradient(135deg,#FFF8E1 0%,#FFF3E0 100%);border:1.5px solid #FFCC80;border-radius:12px;padding:10px 12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;gap:6px;font-size:0.83rem;font-weight:700;color:#E65100;">
+        <div class="dash-cal-banner-title" style="display:flex;align-items:center;gap:6px;font-size:0.83rem;font-weight:700;color:#E65100;">
           <span class="material-icons" style="font-size:17px;">notifications_active</span>
           Próximos avisos del calendario escolar
         </div>
-        <button onclick="abrirCalendarioEscolar()" style="background:none;border:none;color:#1565C0;font-size:0.76rem;font-weight:700;cursor:pointer;">Ver calendario →</button>
+        <button onclick="abrirCalendarioEscolar()" class="dash-cal-banner-link" style="background:none;border:none;color:#1565C0;font-size:0.76rem;font-weight:700;cursor:pointer;">Ver calendario →</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${avisos.map(a => `
-          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
+          <div class="dash-cal-pill" style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
             <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
-            <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff, a.enCurso)} · ${_dashFechaCorta(a.fecha)}</span>
-            <span style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
+            <span class="dash-cal-pill-meta" style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff, a.enCurso)} · ${_dashFechaCorta(a.fecha)}</span>
+            <span class="dash-cal-pill-titulo" style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
           </div>
         `).join('')}
       </div>
@@ -29790,12 +29790,12 @@ function abrirModalClase(encodedData) {
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada${allSesiones.length > 1 ? ' (' + (idx+1) + '/' + allSesiones.length + ')' : ''}</div>
         ${(si.ra?.descripcion || si.dg?.moduloFormativo) ? `
-        <div style="background:#E8F5E9;border-left:3px solid #2E7D32;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;">
-          <div style="font-weight:700;color:#1B5E20;display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+        <div class="mcl-ra-box" style="background:#E8F5E9;border-left:3px solid #2E7D32;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;">
+          <div class="mcl-ra-box-title" style="font-weight:700;color:#1B5E20;display:flex;align-items:center;gap:5px;margin-bottom:2px;">
             <span class="material-icons" style="font-size:14px;">school</span>
             RA${si.dg?.moduloFormativo ? ' — ' + escapeHTML(si.dg.moduloFormativo) : ''}
           </div>
-          ${si.ra?.descripcion ? `<div style="color:#2E7D32;line-height:1.45;font-weight:600;">${escapeHTML(si.ra.descripcion)}</div>` : ''}
+          ${si.ra?.descripcion ? `<div class="mcl-ra-box-desc" style="color:#2E7D32;line-height:1.45;font-weight:600;">${escapeHTML(si.ra.descripcion)}</div>` : ''}
         </div>` : ''}
         <div class="mcl-actividad-txt">${escapeHTML(si.enunciado)}</div>
         ${si.instrumento ? `
@@ -29858,7 +29858,7 @@ function abrirModalClase(encodedData) {
           const actEvalKey = evalKey + '_' + si.actId;
           let actEval = {};
           try { actEval = JSON.parse(localStorage.getItem(actEvalKey) || '{}'); } catch {}
-          return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #F0F0F0;">
+          return `<div class="mcl-divisor" style="margin-top:10px;padding-top:10px;border-top:1px solid #F0F0F0;">
             <div style="font-size:0.72rem;font-weight:700;color:#78909C;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
               <span class="material-icons" style="font-size:13px;">star_rate</span>Forma de evaluación
             </div>
@@ -29875,7 +29875,7 @@ function abrirModalClase(encodedData) {
         })()}
       </div>`;
       }).join('') : `
-      <div class="mcl-seccion" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
+      <div class="mcl-seccion mcl-seccion-vacia" style="background:#F5F5F5;border-radius:8px;padding:12px;text-align:center;color:#9E9E9E;font-size:0.82rem;">
         <span class="material-icons" style="font-size:1.8rem;display:block;margin-bottom:4px;opacity:0.4;">event_note</span>
         Sin actividad planificada para esta fecha.<br>
         <button onclick="cerrarModalBtn();abrirDiarias();" style="margin-top:8px;background:none;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:4px 14px;font-size:0.78rem;cursor:pointer;">
@@ -29906,7 +29906,7 @@ function abrirModalClase(encodedData) {
       ${asistModuloActivo ? `
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">how_to_reg</span>Asistencia
-          ${asistRegistrada ? `<span style="font-size:0.7rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;">Registrada</span>` : ''}
+          ${asistRegistrada ? `<span class="mcl-badge-ok" style="font-size:0.7rem;background:#E8F5E9;color:#2E7D32;border-radius:10px;padding:2px 8px;margin-left:6px;font-weight:700;">Registrada</span>` : ''}
         </div>
         ${nEst > 0 ? `
         <div class="mcl-asist-resumen">
@@ -29958,7 +29958,7 @@ function abrirModalClase(encodedData) {
         sesionesConPlan.forEach((si, rendIdx) => {
           const rk = _getPlanIdClave(si.planId);
           const maxVal = (cursoConSeccion.ras?.[rk]?.valores?.[si.actId]) ?? 10;
-          if (rendIdx > 0) html += `<div style="height:1px;background:#F0F0F0;margin:14px 0;"></div>`;
+          if (rendIdx > 0) html += `<div class="mcl-divisor" style="height:1px;background:#F0F0F0;margin:14px 0;"></div>`;
           html += `<div style="margin-bottom:6px;">
             <div style="font-size:0.72rem;font-weight:700;color:${color};display:flex;align-items:center;gap:4px;margin-bottom:6px;">
               <span class="material-icons" style="font-size:13px;">assignment</span>
@@ -30441,14 +30441,14 @@ function _renderizarEstadisticasDashboard() {
       .sort((a, b) => a.stats.pct - b.stats.pct)
       .slice(0, 3);
 
-    html += '<div style="background:var(--card-bg,#fff);border:1px solid #E3F2FD;border-radius:12px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">';
+    html += '<div class="dash-stat-card" style="background:#fff;border:1px solid #E3F2FD;border-radius:12px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">';
 
     // Cabecera del curso
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #E3F2FD;">'
-      + '<strong style="font-size:1rem;color:var(--text-primary,#212121);">'
+    html += '<div class="dash-stat-card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #E3F2FD;">'
+      + '<strong class="dash-stat-card-title" style="font-size:1rem;color:#212121;">'
       + '<span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px;color:#1565C0;">school</span>'
       + escapeHTML(curso.nombre) + '</strong>'
-      + '<span style="font-size:0.75rem;background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:10px;">'
+      + '<span class="dash-stat-card-badge" style="font-size:0.75rem;background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:10px;">'
       + estudiantes.length + ' estudiantes</span>'
       + '</div>';
 
@@ -30480,28 +30480,28 @@ function _renderizarEstadisticasDashboard() {
       html += '<div class="dash-stat-ra-row" onclick="_irACalificacionesPlan(\'' + curso.id + '\',\'' + planId + '\')" style="margin-bottom:10px;padding:8px 8px 8px 10px;border-left:3px solid ' + barColor + ';cursor:pointer;border-radius:6px;">';
       html += '<div style="font-size:0.82rem;font-weight:700;color:#1565C0;display:flex;justify-content:space-between;align-items:center;">'
         + '<span>' + escapeHTML(moduloLabel) + (moduloLabel.length === 35 ? '…' : '') + '</span>'
-        + '<span style="font-size:0.65rem;color:#90A4AE;font-weight:400;">Ver →</span>'
+        + '<span class="dash-stat-ra-ver" style="font-size:0.65rem;color:#90A4AE;font-weight:400;">Ver →</span>'
         + '</div>';
-      if (raDesc) html += '<div style="font-size:0.72rem;color:#78909C;margin-bottom:4px;">' + escapeHTML(raDesc) + (raDesc.length === 70 ? '…' : '') + '</div>';
+      if (raDesc) html += '<div class="dash-stat-ra-desc" style="font-size:0.72rem;color:#78909C;margin-bottom:4px;">' + escapeHTML(raDesc) + (raDesc.length === 70 ? '…' : '') + '</div>';
 
       if (total > 0) {
-        html += '<div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:3px;">'
+        html += '<div class="dash-stat-ra-bar-track" style="height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:3px;">'
           + '<div style="height:8px;background:' + barColor + ';border-radius:4px;width:' + pctBar + '%;"></div></div>';
         html += '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.72rem;">'
           + '<span style="color:' + barColor + ';font-weight:600;">' + aprobados + ' aprobados</span>'
           + '<span style="color:#C62828;">' + reprobados + ' reprobados</span>'
-          + (sinNotas ? '<span style="color:#9E9E9E;">' + sinNotas + ' sin notas</span>' : '')
-          + (promedio !== null ? '<span style="color:#546E7A;margin-left:auto;">Prom: <strong>' + promedio + '</strong>/' + valorTotal + '</span>' : '')
+          + (sinNotas ? '<span class="dash-stat-ra-muted">' + sinNotas + ' sin notas</span>' : '')
+          + (promedio !== null ? '<span class="dash-stat-ra-muted" style="margin-left:auto;">Prom: <strong>' + promedio + '</strong>/' + valorTotal + '</span>' : '')
           + '</div>';
       } else {
-        html += '<div style="font-size:0.72rem;color:#9E9E9E;font-style:italic;">Sin calificaciones registradas</div>';
+        html += '<div class="dash-stat-ra-muted" style="font-size:0.72rem;font-style:italic;">Sin calificaciones registradas</div>';
       }
       html += '</div>';
     });
 
     // Alerta de inasistencias al pie de la tarjeta
     if (inasistentes.length > 0) {
-      html += '<div style="font-size:0.75rem;color:#E65100;padding-top:8px;border-top:1px dashed #FFE0B2;margin-top:6px;">'
+      html += '<div class="dash-stat-inasist" style="font-size:0.75rem;color:#E65100;padding-top:8px;border-top:1px dashed #FFE0B2;margin-top:6px;">'
         + '<span class="material-icons" style="font-size:14px;vertical-align:middle;margin-right:2px;">warning</span>'
         + '<strong>Baja asistencia:</strong> '
         + inasistentes.map(x => escapeHTML(x.nombre.split(' ')[0]) + ' (' + x.stats.pct + '% · ' + x.stats.total + ' cls)').join(' · ')

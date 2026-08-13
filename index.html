@@ -2784,6 +2784,23 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#37474F;">v16.35<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: modo oscuro en el Dashboard (banner de calendario y estadísticas)</div>
+              <ul class="about-ver-items">
+                <li>El banner "Próximos avisos del calendario escolar" se quedaba en amarillo/crema brillante incluso con el modo oscuro activado -- ahora se oscurece a un tono ámbar oscuro, con el texto e íconos ajustados para seguir siendo legibles.</li>
+                <li>Las tarjetas de "Estadísticas de rendimiento" del dashboard (fondo blanco, textos grises/negros) ahora respetan el modo oscuro.</li>
+                <li>El modal de detalle de una clase (al hacer clic en una clase del dashboard) tenía varios recuadros con fondo claro fijo (el bloque del RA, el aviso de "sin actividad planificada", el badge "Registrada" de asistencia) -- ahora también se oscurecen.</li>
+                <li>Todos estos cambios solo aplican cuando el modo oscuro está activado; en modo claro el sistema se ve exactamente igual que antes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#B71C1C;">v16.34<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5272,9 +5289,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.34"></script>
+  <script src="app.js?v=16.35"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.34"></script>
+  <script src="auth.js?v=16.35"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

@@ -6758,6 +6758,100 @@ body.dark-mode .tarea-no-entregada {
   border-left-color: #78909C !important;
 }
 
+/* Banner "Próximos avisos del calendario escolar" -- en modo claro es un
+   amarillo/crema muy vivo a propósito (llama la atención), pero en oscuro se veía
+   como un parche blanco brillante sobre el fondo oscuro. Se oscurece el tono en
+   vez de perder el acento de color. */
+body.dark-mode .dash-cal-banner {
+  background: linear-gradient(135deg, #2E2410 0%, #2E2010 100%) !important;
+  border-color: #5D4200 !important;
+}
+
+body.dark-mode .dash-cal-banner-title {
+  color: #FFB74D !important;
+}
+
+body.dark-mode .dash-cal-banner-link {
+  color: #64B5F6 !important;
+}
+
+body.dark-mode .dash-cal-pill {
+  background: var(--color-superficie) !important;
+  border-color: #5D4200 !important;
+}
+
+body.dark-mode .dash-cal-pill-meta {
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .dash-cal-pill-titulo {
+  color: var(--color-texto-primario) !important;
+}
+
+/* Tarjetas de "Estadísticas de rendimiento" del dashboard */
+body.dark-mode .dash-stat-card {
+  background: var(--color-superficie) !important;
+  border-color: var(--color-borde) !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .dash-stat-card-header {
+  border-color: var(--color-borde) !important;
+}
+
+body.dark-mode .dash-stat-card-title {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .dash-stat-card-badge {
+  background: #1A2A4A !important;
+  color: #64B5F6 !important;
+}
+
+body.dark-mode .dash-stat-ra-ver,
+body.dark-mode .dash-stat-ra-desc,
+body.dark-mode .dash-stat-ra-muted {
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .dash-stat-ra-bar-track {
+  background: var(--color-borde) !important;
+}
+
+body.dark-mode .dash-stat-inasist {
+  border-color: #5D4200 !important;
+}
+
+/* Modal de detalle de clase (abrirModalClase) -- mismos parches de fondo claro
+   sobre tarjeta oscura que el resto del dashboard. */
+body.dark-mode .mcl-ra-box {
+  background: #1A2E1A !important;
+  border-left-color: #4CAF50 !important;
+}
+
+body.dark-mode .mcl-ra-box-title {
+  color: #81C784 !important;
+}
+
+body.dark-mode .mcl-ra-box-desc {
+  color: #A5D6A7 !important;
+}
+
+body.dark-mode .mcl-seccion-vacia {
+  background: #12151F !important;
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .mcl-badge-ok {
+  background: #1A2E1A !important;
+  color: #81C784 !important;
+}
+
+body.dark-mode .mcl-divisor {
+  background: var(--color-borde) !important;
+  border-top-color: var(--color-borde) !important;
+}
+
 /* Overlay modales */
 body.dark-mode .modal-overlay {
   background: rgba(0, 0, 0, 0.75) !important;
