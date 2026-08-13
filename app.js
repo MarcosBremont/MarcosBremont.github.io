@@ -13980,18 +13980,26 @@ function abrirBoletinConsolidado(estId) {
 
       Object.values(porModulo).forEach(grupo => {
         let notaSuma = 0, totalSuma = 0, hayNota = false;
+        const detalleRA = [];
         grupo.raKeys.forEach(rk => {
           const raInfo = curso.ras[rk] || {};
           const notaRA = _calcNotaRA(curso, est.id, rk);
-          totalSuma += raInfo.valorTotal || 0;
+          const totalRA = raInfo.valorTotal || 0;
+          totalSuma += totalRA;
           if (notaRA !== null) { notaSuma += notaRA; hayNota = true; }
+          detalleRA.push({
+            label: String(raInfo.label || rk || ''),
+            notaFinal: notaRA,
+            totalPosible: totalRA,
+            pct: (notaRA !== null && totalRA > 0) ? Math.round((notaRA / totalRA) * 100) : null
+          });
         });
         const notaFinal = hayNota ? Math.round(notaSuma * 10) / 10 : null;
         const pct = (notaFinal !== null && totalSuma > 0) ? Math.round((notaFinal / totalSuma) * 100) : null;
         const label = hayVariasMaterias
           ? nombreCurso + ' — ' + (grupo.modulo || 'Sin módulo especificado')
           : nombreCurso;
-        materias.push({ label, notaFinal, totalPosible: totalSuma, pct, asist });
+        materias.push({ label, notaFinal, totalPosible: totalSuma, pct, asist, detalleRA });
       });
     });
   });
@@ -14010,12 +14018,30 @@ function abrirBoletinConsolidado(estId) {
   let filasMaterias = materias.map(m => {
     const color = m.pct === null ? '#9E9E9E' : m.pct >= 70 ? '#2E7D32' : m.pct >= 50 ? '#E65100' : '#C62828';
     const asistColor = m.asist.pct === null ? '#9E9E9E' : m.asist.pct >= 80 ? '#2E7D32' : m.asist.pct >= 60 ? '#E65100' : '#C62828';
-    return '<tr>'
-      + '<td style="padding:8px;border-bottom:1px solid #eee;font-size:0.85rem;">' + esc(m.label) + '</td>'
+    const filaPrincipal = '<tr>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;font-size:0.85rem;font-weight:700;">' + esc(m.label) + '</td>'
       + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;">' + (m.notaFinal !== null ? m.notaFinal.toFixed(1) : '—') + (m.totalPosible ? ' / ' + m.totalPosible : '') + '</td>'
       + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;color:' + color + ';">' + (m.pct !== null ? m.pct + '%' : '—') + '</td>'
       + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:' + asistColor + ';">' + (m.asist.pct !== null ? m.asist.pct + '%' : '—') + '</td>'
       + '</tr>';
+
+    // Desglose por RA: solo tiene sentido mostrarlo si la materia junta más de un RA
+    // (si es uno solo, la fila principal ya es ese RA, repetirlo sería redundante).
+    let filasDetalle = '';
+    if (m.detalleRA && m.detalleRA.length > 1) {
+      filasDetalle = m.detalleRA.map(d => {
+        const dColor = d.pct === null ? '#9E9E9E' : d.pct >= 70 ? '#2E7D32' : d.pct >= 50 ? '#E65100' : '#C62828';
+        const dLabel = d.label.length > 70 ? d.label.slice(0, 70) + '…' : d.label;
+        return '<tr style="background:#FAFAFA;">'
+          + '<td style="padding:5px 8px 5px 26px;border-bottom:1px solid #eee;font-size:0.76rem;color:#607D8B;">↳ ' + esc(dLabel) + '</td>'
+          + '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center;font-size:0.78rem;color:#546E7A;">' + (d.notaFinal !== null ? d.notaFinal.toFixed(1) : '—') + (d.totalPosible ? ' / ' + d.totalPosible : '') + '</td>'
+          + '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center;font-size:0.78rem;font-weight:600;color:' + dColor + ';">' + (d.pct !== null ? d.pct + '%' : '—') + '</td>'
+          + '<td style="padding:5px 8px;border-bottom:1px solid #eee;"></td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    return filaPrincipal + filasDetalle;
   }).join('');
   if (!filasMaterias) filasMaterias = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:#9E9E9E;">No se encontraron materias para este estudiante</td></tr>';
 
