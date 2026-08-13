@@ -17360,12 +17360,21 @@ async function _perfilGenerarResumenIA(cursoId, estId) {
     const comentarios = _getComentariosEst(estId).slice(0, 5);
     const incidencias = _getIncidenciasEst(estId).slice(0, 5);
 
+    // Solo se menciona asistencia si el docente tiene el módulo activo (config general)
+    // Y ya tiene más de 10 días registrados en este curso -- con el módulo apagado o con
+    // pocos registros, el dato no es representativo y no debería aparecer en el resumen.
+    const asistenciaActiva = localStorage.getItem('cfg_asistencia_activa') !== 'false';
+    const incluirAsistencia = asistenciaActiva && asist.total > 10;
+
     let prompt = 'Redacta un resumen cualitativo breve (3-4 párrafos cortos como máximo) del desempeño de este estudiante, en español, dirigido al propio docente. Tono profesional pero cercano. No uses markdown, ni asteriscos, ni viñetas, ni encabezados: solo texto corrido en párrafos.\n\n';
     prompt += 'Estudiante: ' + est.nombre + '\n';
     prompt += 'Curso: ' + (curso.nombre || 'Sin nombre') + '\n';
     prompt += 'Nota final: ' + (pctFinal !== null ? pctFinal + '%' : 'sin datos suficientes') + '\n';
     if (posicion > 0) prompt += 'Posición en el curso: ' + posicion + ' de ' + totalConNotas + ' estudiantes con notas\n';
-    prompt += 'Asistencia: ' + (asist.pct !== null ? asist.pct + '%' : 'sin registros') + ' (' + asist.P + ' presentes, ' + asist.T + ' tardanzas, ' + asist.A + ' ausencias, ' + (asist.E || 0) + ' excusas)\n\n';
+    if (incluirAsistencia) {
+      prompt += 'Asistencia: ' + asist.pct + '% (' + asist.P + ' presentes, ' + asist.T + ' tardanzas, ' + asist.A + ' ausencias, ' + (asist.E || 0) + ' excusas, sobre ' + asist.total + ' clases registradas)\n';
+    }
+    prompt += '\n';
     if (raResumen.length) {
       prompt += 'Desempeño por materia/RA:\n';
       raResumen.forEach(r => { prompt += '- ' + r.label + ': ' + (r.pct !== null ? r.pct + '%' : 'sin notas aún') + '\n'; });

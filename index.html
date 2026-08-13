@@ -2784,6 +2784,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v16.31<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: Resumen con IA de un estudiante mencionaba asistencia sin revisar la config</div>
+              <ul class="about-ver-items">
+                <li>El resumen narrativo con IA del perfil de un estudiante (Buscar Estudiante) siempre incluía la asistencia en el prompt, incluso con el módulo de Asistencia desactivado en Configuración. Ahora solo se menciona si el módulo está activo Y el estudiante tiene más de 10 días registrados en ese curso; si no se cumple alguna, el resumen se genera sin mencionar asistencia.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v16.30<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5212,9 +5226,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.30"></script>
+  <script src="app.js?v=16.31"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.30"></script>
+  <script src="auth.js?v=16.31"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
