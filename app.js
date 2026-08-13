@@ -13275,6 +13275,9 @@ function renderizarTablaCalificaciones() {
       + '<button onclick="abrirBoletin(\'' + est.id + '\')" style="color:#6A1B9A;">'
       + '<span class="material-icons">receipt_long</span> Boletín'
       + '</button>'
+      + '<button onclick="abrirBoletinConsolidado(\'' + est.id + '\')" style="color:#00838F;">'
+      + '<span class="material-icons">summarize</span> Boletín consolidado'
+      + '</button>'
       + '<button id="btn-padre-perfil-' + est.id + '" onclick="_copiarLinkPadre(\'' + est.id + '\',\'' + calState.cursoActivoId + '\',document.getElementById(\'btn-padre-perfil-' + est.id + '\'))" style="color:#AD1457;">'
       + '<span class="material-icons">supervisor_account</span> Link padres'
       + '</button>'
@@ -13911,6 +13914,133 @@ function abrirBoletin(estId) {
     + '<div class="resumen-card" style="background:#E8F5E9;"><div class="resumen-val" style="color:' + notaFinalColor + ';">' + (notaFinal !== null ? notaFinal.toFixed(1) : '—') + '</div><div class="resumen-label">NOTA FINAL</div></div>'
     + '</div>'
     + secComent + secIncid
+    + '<hr><button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'
+    + '</div></body></html>';
+
+  const w = window.open('', '_blank');
+  if (!w) { mostrarToast('Permite ventanas emergentes para ver el boletín', 'error'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: BOLETÍN CONSOLIDADO (todas las materias de un estudiante)
+// ════════════════════════════════════════════════════════════════════
+/** A diferencia de abrirBoletin (una sola materia), este junta al mismo estudiante
+ *  en TODOS los cursos del docente. No hay un ID de estudiante compartido entre
+ *  cursos -- cada curso genera el suyo con uid() -- así que el emparejamiento es
+ *  por nombre normalizado, igual que hace el Buscador de Estudiantes. */
+function abrirBoletinConsolidado(estId) {
+  const cursoBase = calState.cursos[calState.cursoActivoId];
+  if (!cursoBase) { mostrarToast('Sin curso activo', 'error'); return; }
+  const estBase = (cursoBase.estudiantes || []).find(e => e.id === estId);
+  if (!estBase) return;
+
+  const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const nombreNorm = _norm(estBase.nombre);
+  const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const materias = [];
+  Object.values(calState.cursos).forEach(curso => {
+    (curso.estudiantes || []).forEach(est => {
+      if (_norm(est.nombre) !== nombreNorm) return;
+      const rasKeys = Object.keys(curso.ras || {});
+      const totalPosible = rasKeys.reduce((s, rk) => s + (curso.ras[rk].valorTotal || 0), 0);
+      const notaFinal = _calcNotaFinal(curso, est.id);
+      const pct = (notaFinal !== null && totalPosible > 0) ? Math.round((notaFinal / totalPosible) * 100) : null;
+      materias.push({
+        cursoNombre: curso.nombre || 'Curso sin nombre',
+        notaFinal, totalPosible, pct,
+        asist: _statsAsistencia(curso.id, est.id),
+        comentarios: _getComentariosEst(est.id),
+        incidencias: _getIncidenciasEst(est.id)
+      });
+    });
+  });
+  materias.sort((a, b) => a.cursoNombre.localeCompare(b.cursoNombre, 'es'));
+
+  const pctsConNota = materias.map(m => m.pct).filter(p => p !== null);
+  const promedioGeneral = pctsConNota.length ? Math.round(pctsConNota.reduce((s, p) => s + p, 0) / pctsConNota.length) : null;
+  const aprobadas = materias.filter(m => m.pct !== null && m.pct >= 70).length;
+  const reprobadas = materias.filter(m => m.pct !== null && m.pct < 70).length;
+  const asistPcts = materias.map(m => m.asist.pct).filter(p => p !== null);
+  const asistPromedio = asistPcts.length ? Math.round(asistPcts.reduce((s, p) => s + p, 0) / asistPcts.length) : null;
+
+  const hoy = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  let filasMaterias = materias.map(m => {
+    const color = m.pct === null ? '#9E9E9E' : m.pct >= 70 ? '#2E7D32' : m.pct >= 50 ? '#E65100' : '#C62828';
+    const asistColor = m.asist.pct === null ? '#9E9E9E' : m.asist.pct >= 80 ? '#2E7D32' : m.asist.pct >= 60 ? '#E65100' : '#C62828';
+    return '<tr>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;font-size:0.85rem;">' + esc(m.cursoNombre) + '</td>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;">' + (m.notaFinal !== null ? m.notaFinal.toFixed(1) : '—') + (m.totalPosible ? ' / ' + m.totalPosible : '') + '</td>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;color:' + color + ';">' + (m.pct !== null ? m.pct + '%' : '—') + '</td>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:' + asistColor + ';">' + (m.asist.pct !== null ? m.asist.pct + '%' : '—') + '</td>'
+      + '</tr>';
+  }).join('');
+  if (!filasMaterias) filasMaterias = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:#9E9E9E;">No se encontraron materias para este estudiante</td></tr>';
+
+  let secObs = '';
+  materias.forEach(m => {
+    if (!m.comentarios.length && !m.incidencias.length) return;
+    secObs += '<div style="margin-top:1.2rem;"><h3 style="font-size:0.9rem;font-weight:700;color:#37474F;border-bottom:2px solid #E3F2FD;padding-bottom:4px;margin-bottom:0.6rem;">' + esc(m.cursoNombre) + '</h3>';
+    m.comentarios.slice(0, 5).forEach(c => {
+      const cat = COMENT_CATEGORIAS.find(x => x.id === c.categoria) || COMENT_CATEGORIAS[COMENT_CATEGORIAS.length - 1];
+      const fecha = new Date(c.ts).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+      secObs += '<div style="margin-bottom:0.5rem;padding:8px 10px;background:#F5F5F5;border-radius:6px;border-left:3px solid ' + cat.color + ';">'
+        + '<span style="font-size:0.7rem;font-weight:600;color:' + cat.color + ';">' + esc(cat.label) + '</span>'
+        + '<span style="font-size:0.7rem;color:#9E9E9E;margin-left:8px;">' + fecha + '</span>'
+        + '<div style="font-size:0.82rem;color:#37474F;margin-top:4px;">' + esc(c.texto) + '</div>'
+        + '</div>';
+    });
+    m.incidencias.slice(0, 4).forEach(inc => {
+      const tipo = INCID_TIPOS.find(t => t.id === inc.tipo) || INCID_TIPOS[INCID_TIPOS.length - 1];
+      secObs += '<div style="margin-bottom:0.5rem;padding:8px 10px;background:#F5F5F5;border-radius:6px;border-left:3px solid ' + tipo.color + ';">'
+        + '<span style="font-size:0.7rem;font-weight:600;color:' + tipo.color + ';">' + esc(tipo.label) + '</span>'
+        + (inc.fechaEvento ? '<span style="font-size:0.7rem;color:#9E9E9E;margin-left:8px;">' + inc.fechaEvento + '</span>' : '')
+        + (inc.descripcion ? '<div style="font-size:0.82rem;color:#37474F;margin-top:4px;">' + esc(inc.descripcion) + '</div>' : '')
+        + '</div>';
+    });
+    secObs += '</div>';
+  });
+  if (secObs) secObs = '<hr><h3 style="font-size:0.95rem;font-weight:700;color:#37474F;margin-bottom:0.5rem;">Observaciones y eventos por materia</h3>' + secObs;
+
+  const promColor = promedioGeneral === null ? '#9E9E9E' : promedioGeneral >= 70 ? '#2E7D32' : promedioGeneral >= 50 ? '#E65100' : '#C62828';
+  const asistColorGral = asistPromedio === null ? '#9E9E9E' : asistPromedio >= 80 ? '#2E7D32' : asistPromedio >= 60 ? '#E65100' : '#C62828';
+
+  const css = `*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:14px;color:#212121;background:#fff;}
+    .page{max-width:760px;margin:0 auto;padding:2rem;}
+    header{background:#00838F;color:#fff;padding:1.2rem 1.5rem;border-radius:8px 8px 0 0;}
+    h1{font-size:1.1rem;font-weight:700;}h2{font-size:0.88rem;font-weight:400;opacity:0.85;margin-top:4px;}
+    .alumno-card{background:#E0F7FA;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;}
+    .alumno-nombre{font-size:1.4rem;font-weight:800;color:#00695C;}.alumno-info{font-size:0.82rem;color:#546E7A;margin-top:4px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;}
+    th{background:#00838F;color:#fff;padding:8px;text-align:left;font-size:0.82rem;}
+    .resumen{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+    .resumen-card{flex:1;min-width:120px;background:#F5F5F5;border-radius:8px;padding:0.8rem;text-align:center;}
+    .resumen-val{font-size:1.6rem;font-weight:800;}.resumen-label{font-size:0.72rem;color:#78909C;margin-top:2px;}
+    hr{border:none;border-top:1px solid #eee;margin:1.5rem 0;}
+    .btn-print{display:block;margin:1.5rem auto 0;padding:10px 2rem;background:#00838F;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;}
+    @media print{.btn-print{display:none;}.page{padding:0;}}`;
+
+  const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    + '<title>Boletín consolidado ' + esc(estBase.nombre) + '</title><style>' + css + '</style></head><body><div class="page">'
+    + '<header><h1>📋 Boletín Consolidado</h1><h2>Todas las materias · ' + materias.length + ' curso' + (materias.length !== 1 ? 's' : '') + '</h2></header>'
+    + '<div class="alumno-card"><div>'
+    + '<div class="alumno-nombre">' + esc(estBase.nombre) + '</div>'
+    + '<div class="alumno-info">Consolidado de todos los cursos donde aparece este estudiante</div>'
+    + '</div><div style="text-align:right;font-size:0.78rem;color:#546E7A;">Emitido:<br>' + hoy + '</div></div>'
+    + '<table><thead><tr>'
+    + '<th style="width:40%;">Materia</th><th style="width:20%;text-align:center;">Nota</th>'
+    + '<th style="width:20%;text-align:center;">%</th><th style="width:20%;text-align:center;">Asistencia</th>'
+    + '</tr></thead><tbody>' + filasMaterias + '</tbody></table>'
+    + '<div class="resumen">'
+    + '<div class="resumen-card"><div class="resumen-val" style="color:#2E7D32;">' + aprobadas + '</div><div class="resumen-label">Materias aprobadas</div></div>'
+    + '<div class="resumen-card"><div class="resumen-val" style="color:' + (reprobadas ? '#C62828' : '#9E9E9E') + ';">' + reprobadas + '</div><div class="resumen-label">Materias reprobadas</div></div>'
+    + '<div class="resumen-card"><div class="resumen-val" style="color:' + asistColorGral + ';">' + (asistPromedio !== null ? asistPromedio + '%' : '—') + '</div><div class="resumen-label">Asistencia promedio</div></div>'
+    + '<div class="resumen-card" style="background:#E0F7FA;"><div class="resumen-val" style="color:' + promColor + ';">' + (promedioGeneral !== null ? promedioGeneral + '%' : '—') + '</div><div class="resumen-label">PROMEDIO GENERAL</div></div>'
+    + '</div>'
+    + secObs
     + '<hr><button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>'
     + '</div></body></html>';
 
