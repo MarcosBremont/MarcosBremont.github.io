@@ -16374,6 +16374,41 @@ function _renderizarVistaAsistencia() {
 }
 
 // ── Vista: Pasar lista ───────────────────────────────────────────
+const ASIST_AVATAR_COLORS = ['#1565C0', '#00695C', '#4527A0', '#E65100', '#AD1457', '#BF360C', '#1B5E20', '#6A1B9A'];
+function _asistAvatarColor(nombre) {
+  return ASIST_AVATAR_COLORS[(nombre || ' ').trim().charCodeAt(0) % ASIST_AVATAR_COLORS.length];
+}
+
+/** Tarjeta de un estudiante en "Pasar lista": avatar, pills circulares P/T/A/E y el
+ *  botón de evidencia aparte (para no confundirlo con un estado más). Compartida por
+ *  la vista de hoy y la vista de fecha seleccionada para no duplicar el markup. */
+function _renderTarjetaAsistencia(est, v, fecha, tieneEvid) {
+  return `<div class="asist-card" id="asist-fila-${est.id}">
+    <div class="asist-card-top">
+      <div class="asist-card-avatar" style="background:${_asistAvatarColor(est.nombre)};">${escapeHTML((est.nombre.trim()[0] || '?').toUpperCase())}</div>
+      <div class="asist-card-nombre" title="${escapeHTML(est.nombre)}">${escapeHTML(est.nombre)}</div>
+      ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
+      <button class="asist-card-evid ${tieneEvid ? 'activo' : ''}" onclick="abrirEvidenciaAsistencia('${est.id}','${fecha}')" title="${tieneEvid ? 'Ver evidencia de excusa adjunta' : 'Adjuntar evidencia de excusa'}">
+        <span class="material-icons">attach_file</span>
+      </button>
+    </div>
+    <div class="asist-pills">
+      <button class="asist-pill P ${v === 'P' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','P','${fecha}')" title="Presente">
+        <span class="material-icons">check</span>
+      </button>
+      <button class="asist-pill T ${v === 'T' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','T','${fecha}')" title="Tardanza">
+        <span class="material-icons">schedule</span>
+      </button>
+      <button class="asist-pill A ${v === 'A' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','A','${fecha}')" title="Ausente">
+        <span class="material-icons">close</span>
+      </button>
+      <button class="asist-pill E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E','${fecha}')" title="Excusa">
+        <span class="material-icons">assignment_turned_in</span>
+      </button>
+    </div>
+  </div>`;
+}
+
 function _renderPasarLista(body) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso || !curso.estudiantes) { body.innerHTML = '<p style="text-align:center;color:#9E9E9E;padding:20px;">No hay curso o estudiantes activos.</p>'; return; }
@@ -16416,31 +16451,10 @@ function _renderPasarLista(body) {
     </div>
 
     <div class="asist-lista" id="asist-lista-body">
-      ${curso.estudiantes.map((est, i) => {
+      ${curso.estudiantes.map(est => {
     const v = diaData[est.id] || '';
     const tieneEvid = !!_asistEvidCache[_asistEvidenciaDocId(calState.cursoActivoId, hoy, est.id)];
-    return `<div class="asist-fila" id="asist-fila-${est.id}">
-          <div class="asist-num">${i + 1}</div>
-          <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
-          <div class="asist-btns">
-            <button class="asist-btn-estado P ${v === 'P' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','P')" title="Presente">
-              <span class="material-icons">check_circle</span>P
-            </button>
-            <button class="asist-btn-estado T ${v === 'T' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','T')" title="Tardanza">
-              <span class="material-icons">schedule</span>T
-            </button>
-            <button class="asist-btn-estado A ${v === 'A' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','A')" title="Ausente">
-              <span class="material-icons">cancel</span>A
-            </button>
-            <button class="asist-btn-estado E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E')" title="Excusa">
-              <span class="material-icons">assignment_turned_in</span>E
-            </button>
-            <button class="asist-btn-estado" style="${tieneEvid ? 'background:#E3F2FD;border-color:#90CAF9;color:#1565C0;' : ''}" onclick="abrirEvidenciaAsistencia('${est.id}','${hoy}')" title="${tieneEvid ? 'Ver evidencia de excusa adjunta' : 'Adjuntar evidencia de excusa'}">
-              <span class="material-icons">attach_file</span>
-            </button>
-          </div>
-          ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
-        </div>`;
+    return _renderTarjetaAsistencia(est, v, hoy, tieneEvid);
   }).join('')}
     </div>`;
 }
@@ -16474,31 +16488,10 @@ function _renderPasarListaFecha(body, fecha) {
 
   const listaBody = body.querySelector('#asist-lista-body');
   if (listaBody) {
-    listaBody.innerHTML = curso.estudiantes.map((est, i) => {
+    listaBody.innerHTML = curso.estudiantes.map(est => {
       const v = diaData[est.id] || '';
       const tieneEvid = !!_asistEvidCache[_asistEvidenciaDocId(calState.cursoActivoId, fecha, est.id)];
-      return `<div class="asist-fila" id="asist-fila-${est.id}">
-        <div class="asist-num">${i + 1}</div>
-        <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
-        <div class="asist-btns">
-          <button class="asist-btn-estado P ${v === 'P' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','P','${fecha}')" title="Presente">
-            <span class="material-icons">check_circle</span>P
-          </button>
-          <button class="asist-btn-estado T ${v === 'T' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','T','${fecha}')" title="Tardanza">
-            <span class="material-icons">schedule</span>T
-          </button>
-          <button class="asist-btn-estado A ${v === 'A' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','A','${fecha}')" title="Ausente">
-            <span class="material-icons">cancel</span>A
-          </button>
-          <button class="asist-btn-estado E ${v === 'E' ? 'activo' : ''}" onclick="marcarAsistencia('${est.id}','E','${fecha}')" title="Excusa">
-            <span class="material-icons">assignment_turned_in</span>E
-          </button>
-          <button class="asist-btn-estado" style="${tieneEvid ? 'background:#E3F2FD;border-color:#90CAF9;color:#1565C0;' : ''}" onclick="abrirEvidenciaAsistencia('${est.id}','${fecha}')" title="${tieneEvid ? 'Ver evidencia de excusa adjunta' : 'Adjuntar evidencia de excusa'}">
-            <span class="material-icons">attach_file</span>
-          </button>
-        </div>
-        ${_badgePctAsistencia(calState.cursoActivoId, est.id)}
-      </div>`;
+      return _renderTarjetaAsistencia(est, v, fecha, tieneEvid);
     }).join('');
   }
 }
@@ -16725,7 +16718,7 @@ function marcarAsistencia(estudianteId, estado, fechaOverride) {
   const fila = document.getElementById('asist-fila-' + estudianteId);
   if (fila) {
     const v = data[cursoId][fecha][estudianteId] || '';
-    fila.querySelectorAll('.asist-btn-estado').forEach(btn => {
+    fila.querySelectorAll('.asist-pill').forEach(btn => {
       btn.classList.toggle('activo', btn.classList.contains(v));
     });
     const badge = fila.querySelector('.asist-pct-badge');
@@ -18338,13 +18331,13 @@ function renderizarParticipacion() {
         <span class="material-icons">table_chart</span> Historial
       </button>
     </div>
-    <div class="asist-lista" id="particip-lista-body">
+    <div class="particip-lista" id="particip-lista-body">
       ${curso.estudiantes.map((est, i) => {
         const v = diaData[est.id] || '';
-        return `<div class="asist-fila" id="particip-fila-${est.id}">
-          <div class="asist-num">${i + 1}</div>
-          <div class="asist-nombre">${escapeHTML(est.nombre)}</div>
-          <div class="asist-btns">
+        return `<div class="particip-fila" id="particip-fila-${est.id}">
+          <div class="particip-num">${i + 1}</div>
+          <div class="particip-nombre">${escapeHTML(est.nombre)}</div>
+          <div class="particip-btns">
             <button class="particip-btn D ${v === 'D' ? 'activo' : ''}" onclick="marcarParticipacion('${est.id}','D')" title="Destacado">
               <span class="material-icons">star</span>Destacado
             </button>
@@ -28678,8 +28671,11 @@ function _inyectarCSSTouch(activo) {
       body.touch-mode .btn-accion, body.touch-mode .btn-export, body.touch-mode .btn-sm {
         padding:12px 18px!important;font-size:0.95rem!important;min-height:46px!important;
       }
-      body.touch-mode .asist-btn-estado {
-        padding:14px 20px!important;font-size:1.05rem!important;min-width:58px!important;gap:6px!important;
+      body.touch-mode .asist-pill {
+        height:44px!important;
+      }
+      body.touch-mode .asist-card-evid {
+        width:34px!important;height:34px!important;
       }
       body.touch-mode .asist-row { padding:14px 12px!important;min-height:64px!important; }
       body.touch-mode button { touch-action:manipulation;-webkit-tap-highlight-color:rgba(21,101,192,0.15); }

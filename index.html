@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#0277BD;">v16.32<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño: tarjetas responsivas en Pasar Lista (Asistencia)</div>
+              <ul class="about-ver-items">
+                <li>La vista "Pasar lista" ya no es una fila apretada de nombre + 5 botones (que se desbordaba en celular). Ahora cada estudiante es una tarjeta con avatar de color, nombre, % de asistencia y pills circulares para Presente/Tardanza/Ausente/Excusa que solo se colorean cuando están seleccionados. El botón de adjuntar evidencia quedó separado visualmente de los 4 estados. Las tarjetas se acomodan solas en columnas según el ancho de pantalla.</li>
+                <li>El módulo de Participación (que compartía las clases CSS de la fila anterior) se separó a sus propias clases para no verse afectado por este cambio -- sigue viéndose exactamente igual que antes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v16.31<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5226,9 +5241,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.31"></script>
+  <script src="app.js?v=16.32"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.31"></script>
+  <script src="auth.js?v=16.32"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

@@ -5896,96 +5896,144 @@ body.dark-mode .imp-resumen-row span {
 }
 
 /* Lista de estudiantes */
+/* Grid responsiva: 1 columna en móvil, se acomodan solas más columnas en pantallas
+   anchas -- reemplaza la fila fija de antes (nombre + 5 botones en una sola línea),
+   que se desbordaba en celular. */
 .asist-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
 }
 
-.asist-fila {
+.asist-card {
+  position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   background: #fff;
   border: 1.5px solid #E0E0E0;
-  border-radius: 9px;
-  padding: 8px 12px;
-  transition: box-shadow 0.12s;
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: box-shadow 0.12s, border-color 0.12s;
 }
 
-.asist-fila:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+.asist-card:hover {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  border-color: #CFD8DC;
 }
 
-.asist-num {
-  font-size: 0.72rem;
-  color: #9E9E9E;
-  font-weight: 700;
-  width: 22px;
-  text-align: right;
+.asist-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.asist-card-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.85rem;
 }
 
-.asist-nombre {
+.asist-card-nombre {
   flex: 1;
-  font-size: 0.88rem;
-  font-weight: 600;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
   color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-body.dark-mode .asist-nombre {
+body.dark-mode .asist-card-nombre {
   color: var(--color-texto-primario) !important;
 }
 
-body.dark-mode .asist-num {
-  color: #6B7280 !important;
-}
-
-.asist-btns {
-  display: flex;
-  gap: 5px;
+.asist-card-evid {
   flex-shrink: 0;
-}
-
-.asist-btn-estado {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
   background: #F5F5F5;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  font-weight: 800;
+  color: #B0BEC5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.12s;
-  color: #757575;
 }
 
-.asist-btn-estado .material-icons {
-  font-size: 14px;
+.asist-card-evid .material-icons {
+  font-size: 15px;
 }
 
-.asist-btn-estado.P.activo {
-  background: #E8F5E9;
-  border-color: #A5D6A7;
-  color: #2E7D32;
+.asist-card-evid:hover {
+  filter: brightness(0.95);
 }
 
-.asist-btn-estado.A.activo {
-  background: #FFEBEE;
-  border-color: #FFCDD2;
-  color: #C62828;
+.asist-card-evid.activo {
+  background: #E3F2FD;
+  color: #1565C0;
 }
 
-.asist-btn-estado.T.activo {
-  background: #FFF3E0;
-  border-color: #FFE082;
-  color: #E65100;
+.asist-pills {
+  display: flex;
+  gap: 6px;
 }
 
-.asist-btn-estado:hover {
-  filter: brightness(0.94);
+.asist-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border-radius: 10px;
+  border: 1.5px solid #E0E0E0;
+  background: #FAFAFA;
+  color: #B0BEC5;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.asist-pill .material-icons {
+  font-size: 17px;
+}
+
+.asist-pill:hover {
+  border-color: #CFD8DC;
+  color: #78909C;
+}
+
+.asist-pill.P.activo {
+  background: #2E7D32;
+  border-color: #2E7D32;
+  color: #fff;
+}
+
+.asist-pill.T.activo {
+  background: #E65100;
+  border-color: #E65100;
+  color: #fff;
+}
+
+.asist-pill.A.activo {
+  background: #C62828;
+  border-color: #C62828;
+  color: #fff;
+}
+
+.asist-pill.E.activo {
+  background: #6A1B9A;
+  border-color: #6A1B9A;
+  color: #fff;
 }
 
 /* Badge % asistencia en lista */
@@ -6545,7 +6593,8 @@ body.dark-mode .dash-curso-card,
 body.dark-mode .dash-tarea-row,
 body.dark-mode .dash-stat-pill,
 body.dark-mode .mcl-seccion,
-body.dark-mode .asist-fila,
+body.dark-mode .asist-card,
+body.dark-mode .particip-fila,
 body.dark-mode .asist-panel-wrap,
 body.dark-mode .asist-rep-header,
 body.dark-mode .modal-box,
@@ -6770,13 +6819,6 @@ body.dark-mode ::-webkit-scrollbar-track {
 
 body.dark-mode ::-webkit-scrollbar-thumb {
   background: #2E3347;
-}
-
-/* Botón excusa en asistencia */
-.asist-btn-estado.E.activo {
-  background: #E3F2FD;
-  border-color: #90CAF9;
-  color: #1565C0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -7009,6 +7051,7 @@ body.fuente-grande {
 
 body.fuente-grande .tabla-cal,
 body.fuente-grande .asist-lista,
+body.fuente-grande .particip-lista,
 body.fuente-grande .tarea-card {
   font-size: 1rem !important;
 }
@@ -9197,6 +9240,61 @@ body.dark-mode .tour-spotlight {
 /* ════════════════════════════════════════════════════════════════
    PARTICIPACIÓN EN CLASE
    ════════════════════════════════════════════════════════════════ */
+/* Lista en fila (a diferencia de la grid de tarjetas de Asistencia -- el layout de
+   Participación no cambió, solo se le dieron nombres de clase propios para no
+   compartirlos con .asist-lista/.asist-fila, que ahora son la grid de tarjetas). */
+.particip-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.particip-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 9px;
+  padding: 8px 12px;
+  transition: box-shadow 0.12s;
+}
+
+.particip-fila:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.particip-num {
+  font-size: 0.72rem;
+  color: #9E9E9E;
+  font-weight: 700;
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.particip-nombre {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #212121;
+}
+
+body.dark-mode .particip-nombre {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .particip-num {
+  color: #6B7280 !important;
+}
+
+.particip-btns {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
 .particip-btn {
   display: inline-flex;
   align-items: center;
