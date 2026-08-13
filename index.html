@@ -2784,6 +2784,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00838F;">v16.28<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: Boletín consolidado agrupaba por RA en vez de por módulo/materia</div>
+              <ul class="about-ver-items">
+                <li>El fix de v16.27 mostraba una fila por cada RA, pero un módulo formativo real (ej. "Formación y Orientación Laboral") suele tener varios RA (RA1, RA2, RA3...) -- eso partía una sola materia en muchas filas sueltas. Ahora se agrupa por curso.ras[raKey].modulo (el módulo formativo real al que pertenece cada RA) y se suman entre sí los RA de un mismo módulo, mostrando una fila por materia real, cada una con su propio total.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00838F;">v16.27<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5168,9 +5182,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.27"></script>
+  <script src="app.js?v=16.28"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.27"></script>
+  <script src="auth.js?v=16.28"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

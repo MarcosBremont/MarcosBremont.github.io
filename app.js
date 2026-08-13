@@ -13940,13 +13940,17 @@ function abrirBoletinConsolidado(estId) {
   const nombreNorm = _norm(estBase.nombre);
   const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  // Una fila por MATERIA/RA, no por curso: un mismo curso acumula un RA nuevo cada vez
-  // que se le asigna una planificación distinta (así avanza el año -- RA1, RA2, ...),
-  // así que sumar todos los RA de un curso en una sola fila mezclaba materias distintas
-  // si el docente reutilizó un mismo curso para más de una materia (ej. 100 + 100 = 200).
+  // Una fila por MATERIA (módulo formativo), no por curso ni por RA individual: un
+  // mismo curso acumula un RA nuevo cada vez que se le asigna una planificación
+  // distinta, y esos RA pueden pertenecer a módulos/materias distintos si el docente
+  // reutilizó un mismo curso para más de una materia (ej. "Formación y Orientación
+  // Laboral" y "Desarrollo de Aplicaciones..." dentro del mismo curso "5to B"). Cada
+  // RA guarda su módulo de origen en curso.ras[raKey].modulo (ver _ensureRA), así que
+  // se agrupan por ahí para sumar los RA de una misma materia entre sí, sin mezclarlos
+  // con los de otra materia distinta que comparta el curso.
   const materias = [];
-  // Una entrada por curso encontrado (no por RA), para no repetir comentarios/eventos
-  // por cada materia si el curso tiene varios RA.
+  // Una entrada por curso encontrado (no por RA/materia), para no repetir comentarios
+  // ni eventos si el curso tiene varias materias o varios RA.
   const cursosMatch = [];
   Object.values(calState.cursos).forEach(curso => {
     (curso.estudiantes || []).forEach(est => {
@@ -13964,16 +13968,30 @@ function abrirBoletinConsolidado(estId) {
         materias.push({ label: nombreCurso, notaFinal: null, totalPosible: 0, pct: null, asist });
         return;
       }
+
+      const porModulo = {};
       rasKeys.forEach(rk => {
         const raInfo = curso.ras[rk] || {};
-        const notaRA = _calcNotaRA(curso, est.id, rk);
-        const totalPosible = raInfo.valorTotal || 0;
-        const pct = (notaRA !== null && totalPosible > 0) ? Math.round((notaRA / totalPosible) * 100) : null;
-        const raLabel = String(raInfo.label || rk || '');
-        const label = rasKeys.length > 1
-          ? nombreCurso + ' — ' + (raLabel.length > 45 ? raLabel.slice(0, 45) + '…' : raLabel)
+        const moduloKey = raInfo.modulo || '__sin_modulo__';
+        if (!porModulo[moduloKey]) porModulo[moduloKey] = { modulo: raInfo.modulo || '', raKeys: [] };
+        porModulo[moduloKey].raKeys.push(rk);
+      });
+      const hayVariasMaterias = Object.keys(porModulo).length > 1;
+
+      Object.values(porModulo).forEach(grupo => {
+        let notaSuma = 0, totalSuma = 0, hayNota = false;
+        grupo.raKeys.forEach(rk => {
+          const raInfo = curso.ras[rk] || {};
+          const notaRA = _calcNotaRA(curso, est.id, rk);
+          totalSuma += raInfo.valorTotal || 0;
+          if (notaRA !== null) { notaSuma += notaRA; hayNota = true; }
+        });
+        const notaFinal = hayNota ? Math.round(notaSuma * 10) / 10 : null;
+        const pct = (notaFinal !== null && totalSuma > 0) ? Math.round((notaFinal / totalSuma) * 100) : null;
+        const label = hayVariasMaterias
+          ? nombreCurso + ' — ' + (grupo.modulo || 'Sin módulo especificado')
           : nombreCurso;
-        materias.push({ label, notaFinal: notaRA, totalPosible, pct, asist });
+        materias.push({ label, notaFinal, totalPosible: totalSuma, pct, asist });
       });
     });
   });
