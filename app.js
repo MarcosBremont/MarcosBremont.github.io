@@ -13940,24 +13940,45 @@ function abrirBoletinConsolidado(estId) {
   const nombreNorm = _norm(estBase.nombre);
   const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+  // Una fila por MATERIA/RA, no por curso: un mismo curso acumula un RA nuevo cada vez
+  // que se le asigna una planificación distinta (así avanza el año -- RA1, RA2, ...),
+  // así que sumar todos los RA de un curso en una sola fila mezclaba materias distintas
+  // si el docente reutilizó un mismo curso para más de una materia (ej. 100 + 100 = 200).
   const materias = [];
+  // Una entrada por curso encontrado (no por RA), para no repetir comentarios/eventos
+  // por cada materia si el curso tiene varios RA.
+  const cursosMatch = [];
   Object.values(calState.cursos).forEach(curso => {
     (curso.estudiantes || []).forEach(est => {
       if (_norm(est.nombre) !== nombreNorm) return;
-      const rasKeys = Object.keys(curso.ras || {});
-      const totalPosible = rasKeys.reduce((s, rk) => s + (curso.ras[rk].valorTotal || 0), 0);
-      const notaFinal = _calcNotaFinal(curso, est.id);
-      const pct = (notaFinal !== null && totalPosible > 0) ? Math.round((notaFinal / totalPosible) * 100) : null;
-      materias.push({
-        cursoNombre: curso.nombre || 'Curso sin nombre',
-        notaFinal, totalPosible, pct,
-        asist: _statsAsistencia(curso.id, est.id),
+      const nombreCurso = curso.nombre || 'Curso sin nombre';
+      cursosMatch.push({
+        cursoNombre: nombreCurso,
         comentarios: _getComentariosEst(est.id),
         incidencias: _getIncidenciasEst(est.id)
       });
+
+      const asist = _statsAsistencia(curso.id, est.id);
+      const rasKeys = Object.keys(curso.ras || {});
+      if (!rasKeys.length) {
+        materias.push({ label: nombreCurso, notaFinal: null, totalPosible: 0, pct: null, asist });
+        return;
+      }
+      rasKeys.forEach(rk => {
+        const raInfo = curso.ras[rk] || {};
+        const notaRA = _calcNotaRA(curso, est.id, rk);
+        const totalPosible = raInfo.valorTotal || 0;
+        const pct = (notaRA !== null && totalPosible > 0) ? Math.round((notaRA / totalPosible) * 100) : null;
+        const raLabel = String(raInfo.label || rk || '');
+        const label = rasKeys.length > 1
+          ? nombreCurso + ' — ' + (raLabel.length > 45 ? raLabel.slice(0, 45) + '…' : raLabel)
+          : nombreCurso;
+        materias.push({ label, notaFinal: notaRA, totalPosible, pct, asist });
+      });
     });
   });
-  materias.sort((a, b) => a.cursoNombre.localeCompare(b.cursoNombre, 'es'));
+  materias.sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  const nCursos = cursosMatch.length;
 
   const pctsConNota = materias.map(m => m.pct).filter(p => p !== null);
   const promedioGeneral = pctsConNota.length ? Math.round(pctsConNota.reduce((s, p) => s + p, 0) / pctsConNota.length) : null;
@@ -13972,7 +13993,7 @@ function abrirBoletinConsolidado(estId) {
     const color = m.pct === null ? '#9E9E9E' : m.pct >= 70 ? '#2E7D32' : m.pct >= 50 ? '#E65100' : '#C62828';
     const asistColor = m.asist.pct === null ? '#9E9E9E' : m.asist.pct >= 80 ? '#2E7D32' : m.asist.pct >= 60 ? '#E65100' : '#C62828';
     return '<tr>'
-      + '<td style="padding:8px;border-bottom:1px solid #eee;font-size:0.85rem;">' + esc(m.cursoNombre) + '</td>'
+      + '<td style="padding:8px;border-bottom:1px solid #eee;font-size:0.85rem;">' + esc(m.label) + '</td>'
       + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;">' + (m.notaFinal !== null ? m.notaFinal.toFixed(1) : '—') + (m.totalPosible ? ' / ' + m.totalPosible : '') + '</td>'
       + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700;color:' + color + ';">' + (m.pct !== null ? m.pct + '%' : '—') + '</td>'
       + '<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:' + asistColor + ';">' + (m.asist.pct !== null ? m.asist.pct + '%' : '—') + '</td>'
@@ -13981,7 +14002,7 @@ function abrirBoletinConsolidado(estId) {
   if (!filasMaterias) filasMaterias = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:#9E9E9E;">No se encontraron materias para este estudiante</td></tr>';
 
   let secObs = '';
-  materias.forEach(m => {
+  cursosMatch.forEach(m => {
     if (!m.comentarios.length && !m.incidencias.length) return;
     secObs += '<div style="margin-top:1.2rem;"><h3 style="font-size:0.9rem;font-weight:700;color:#37474F;border-bottom:2px solid #E3F2FD;padding-bottom:4px;margin-bottom:0.6rem;">' + esc(m.cursoNombre) + '</h3>';
     m.comentarios.slice(0, 5).forEach(c => {
@@ -14025,7 +14046,7 @@ function abrirBoletinConsolidado(estId) {
 
   const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
     + '<title>Boletín consolidado ' + esc(estBase.nombre) + '</title><style>' + css + '</style></head><body><div class="page">'
-    + '<header><h1>📋 Boletín Consolidado</h1><h2>Todas las materias · ' + materias.length + ' curso' + (materias.length !== 1 ? 's' : '') + '</h2></header>'
+    + '<header><h1>📋 Boletín Consolidado</h1><h2>' + materias.length + ' materia' + (materias.length !== 1 ? 's' : '') + ' · ' + nCursos + ' curso' + (nCursos !== 1 ? 's' : '') + '</h2></header>'
     + '<div class="alumno-card"><div>'
     + '<div class="alumno-nombre">' + esc(estBase.nombre) + '</div>'
     + '<div class="alumno-info">Consolidado de todos los cursos donde aparece este estudiante</div>'

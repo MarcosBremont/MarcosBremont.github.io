@@ -2784,6 +2784,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00838F;">v16.27<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: Boletín consolidado sumaba materias distintas en una sola fila</div>
+              <ul class="about-ver-items">
+                <li>Cuando un mismo curso acumulaba varias planificaciones (RA) porque el docente lo reutilizó para más de una materia, el Boletín Consolidado sumaba todos esos RA en una sola fila (ej. 175.5/200), en vez de una fila por materia. Ahora cada RA del curso aparece en su propia fila con su propio total, así ninguna nota individual puede pasar del máximo configurado para esa materia. Los comentarios y eventos del curso siguen agrupados una sola vez, sin duplicarse por cada materia.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.26<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5154,9 +5168,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.26"></script>
+  <script src="app.js?v=16.27"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.26"></script>
+  <script src="auth.js?v=16.27"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
