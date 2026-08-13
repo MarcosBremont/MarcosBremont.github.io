@@ -6884,7 +6884,8 @@ body.dark-mode [style*="background:white;"] {
 /* Texto casi-negro / gris oscuro -> texto primario claro */
 body.dark-mode [style*="color:#212121;"],
 body.dark-mode [style*="color:#37474F;"],
-body.dark-mode [style*="color:#263238;"] {
+body.dark-mode [style*="color:#263238;"],
+body.dark-mode [style*="color:#1A1A2E;"] {
   color: var(--color-texto-primario) !important;
 }
 
@@ -6922,6 +6923,142 @@ body.dark-mode [style*="solid #E0E0E0"],
 body.dark-mode [style*="solid #CFD8DC"],
 body.dark-mode [style*="solid #eee" i] {
   border-color: var(--color-borde) !important;
+}
+
+/* Más fondos casi-blancos (variantes menos comunes de la misma idea) */
+body.dark-mode [style*="background:#F9FAFB;"],
+body.dark-mode [style*="background:#f9f9f9;"],
+body.dark-mode [style*="background:#F0F0F0;"],
+body.dark-mode [style*="background:#E0E0E0;"],
+body.dark-mode [style*="background:#EFEBE9;"],
+body.dark-mode [style*="background:#f0ede4;"],
+body.dark-mode [style*="background:#e8e4dc;"],
+body.dark-mode [style*="background:#fffdf7;"] {
+  background: var(--color-superficie) !important;
+}
+
+/* ── Familias de acento (banners/insignias de color, tipo "Cursos
+   archivados" o "Duplicar esta clase en") ────────────────────────────
+   Mismo problema que los blancos: fondo pastel + texto saturado del mismo
+   tono, fijos, pensados solo para modo claro. Se oscurece el fondo a un
+   tono muy oscuro de la misma familia y se aclara el texto -- así el
+   acento de color se conserva en vez de aplanarlo todo a gris. */
+
+/* Azul */
+body.dark-mode [style*="background:#E3F2FD;"],
+body.dark-mode [style*="background:#BBDEFB;"],
+body.dark-mode [style*="background:#DBEAFE;"],
+body.dark-mode [style*="background:#D6E4F0;"],
+body.dark-mode [style*="background:#F5F8FF;"],
+body.dark-mode [style*="background:#F8FCFF;"],
+body.dark-mode [style*="background:#F4FAFF;"],
+body.dark-mode [style*="background:#FAFCFF;"],
+body.dark-mode [style*="background:#F8FAFC;"],
+body.dark-mode [style*="background:#E1F5FE;"] {
+  background: #12233F !important;
+}
+body.dark-mode [style*="color:#1565C0;"],
+body.dark-mode [style*="color:#0D47A1;"],
+body.dark-mode [style*="color:#0277BD;"],
+body.dark-mode [style*="color:#1E3A8A;"],
+body.dark-mode [style*="color:#1976D2;"],
+body.dark-mode [style*="color:#0288D1;"],
+body.dark-mode [style*="color:#1A237E;"],
+body.dark-mode [style*="color:#283593;"],
+body.dark-mode [style*="color:#3949AB;"],
+body.dark-mode [style*="color:#1F3864;"] {
+  color: #64B5F6 !important;
+}
+body.dark-mode [style*="solid #90CAF9"],
+body.dark-mode [style*="solid #BFD2FF"],
+body.dark-mode [style*="solid #DCE6FF"] {
+  border-color: #1E3A5F !important;
+}
+
+/* Verde */
+body.dark-mode [style*="background:#E8F5E9;"],
+body.dark-mode [style*="background:#C8E6C9;"],
+body.dark-mode [style*="background:#F1F8E9;"] {
+  background: #122A1A !important;
+}
+body.dark-mode [style*="color:#2E7D32;"],
+body.dark-mode [style*="color:#1B5E20;"],
+body.dark-mode [style*="color:#388E3C;"] {
+  color: #81C784 !important;
+}
+body.dark-mode [style*="solid #A5D6A7"] {
+  border-color: #1B4020 !important;
+}
+
+/* Naranja / ámbar */
+body.dark-mode [style*="background:#FFF3E0;"],
+body.dark-mode [style*="background:#FFE0B2;"],
+body.dark-mode [style*="background:#FFF8E1;"],
+body.dark-mode [style*="background:#FFFDE7;"],
+body.dark-mode [style*="background:#FFF176;"],
+body.dark-mode [style*="background:#FFE082;"] {
+  background: #2E2410 !important;
+}
+body.dark-mode [style*="color:#E65100;"],
+body.dark-mode [style*="color:#EF6C00;"] {
+  color: #FFB74D !important;
+}
+body.dark-mode [style*="solid #FFCC80"],
+body.dark-mode [style*="solid #FFE0B2"] {
+  border-color: #4A3A1A !important;
+}
+
+/* Morado */
+body.dark-mode [style*="background:#F3E5F5;"],
+body.dark-mode [style*="background:#EDE7F6;"],
+body.dark-mode [style*="background:#FCFAFF;"],
+body.dark-mode [style*="background:#F7F3FF;"],
+body.dark-mode [style*="background:#E8EAF6;"],
+body.dark-mode [style*="background:#FCF7FF;"],
+body.dark-mode [style*="background:#FAF5FF;"] {
+  background: #241A35 !important;
+}
+body.dark-mode [style*="color:#6A1B9A;"],
+body.dark-mode [style*="color:#4A148C;"],
+body.dark-mode [style*="color:#4527A0;"],
+body.dark-mode [style*="color:#5E35B1;"],
+body.dark-mode [style*="color:#7E57C2;"],
+body.dark-mode [style*="color:#7B1FA2;"] {
+  color: #CE93D8 !important;
+}
+body.dark-mode [style*="solid #D1C4E9"],
+body.dark-mode [style*="solid #E1D5F6"] {
+  border-color: #3A2A50 !important;
+}
+
+/* Rojo / rosa */
+body.dark-mode [style*="background:#FFEBEE;"],
+body.dark-mode [style*="background:#FFCDD2;"] {
+  background: #2E1A1A !important;
+}
+body.dark-mode [style*="color:#C62828;"],
+body.dark-mode [style*="color:#B71C1C;"],
+body.dark-mode [style*="color:#E53935;"] {
+  color: #EF9A9A !important;
+}
+body.dark-mode [style*="background:#FCE4EC;"] {
+  background: #2A1520 !important;
+}
+body.dark-mode [style*="color:#AD1457;"] {
+  color: #F48FB1 !important;
+}
+
+/* Verde azulado / cian */
+body.dark-mode [style*="background:#E0F2F1;"],
+body.dark-mode [style*="background:#E0F7FA;"],
+body.dark-mode [style*="background:#f0f7f7;"] {
+  background: #0F2A26 !important;
+}
+body.dark-mode [style*="color:#00695C;"],
+body.dark-mode [style*="color:#006064;"],
+body.dark-mode [style*="color:#00838F;"],
+body.dark-mode [style*="color:#00796B;"] {
+  color: #4DB6AC !important;
 }
 
 /* Overlay modales */
