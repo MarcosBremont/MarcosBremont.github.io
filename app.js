@@ -26841,6 +26841,43 @@ async function archivarCicloActual() {
   }
 }
 
+/** Lee (sin descargar) el JSON completo de un ciclo archivado desde Firebase, probando
+ *  primero users/{uid}/archives (chunked) y luego el fallback users/{uid}/data. Devuelve
+ *  el string del JSON o null si no se encontró en ningún lado. Compartida por
+ *  descargarBackupArchivadoDesdeFirebase() y restaurarCicloComoActivo(). */
+async function _leerJsonSnapshotArchivado(yearId) {
+  let json = null;
+
+  try {
+    const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId);
+    const archiveDoc = await archiveRef.get();
+    if (archiveDoc.exists) {
+      const chunksSnap = await archiveRef.collection('chunks').get();
+      if (!chunksSnap.empty) {
+        const chunks = chunksSnap.docs
+          .map(doc => ({
+            index: Number(doc.data().chunkIndex),
+            payload: String(doc.data().payload || '')
+          }))
+          .sort((a, b) => a.index - b.index);
+        json = chunks.map(c => c.payload).join('');
+      }
+    }
+  } catch (readArchiveErr) {
+    console.warn('No se pudo leer backup en users/{uid}/archives:', readArchiveErr);
+  }
+
+  if (!json) {
+    try {
+      json = await _readArchiveSnapshotFromFirebaseData(window.currentUser.uid, yearId);
+    } catch (readDataErr) {
+      console.warn('No se pudo leer backup en users/{uid}/data:', readDataErr);
+    }
+  }
+
+  return json || null;
+}
+
 async function descargarBackupArchivadoDesdeFirebase(yearId) {
   if (!yearId) {
     mostrarToast('No se indicó el ciclo a descargar.', 'error');
@@ -26852,34 +26889,7 @@ async function descargarBackupArchivadoDesdeFirebase(yearId) {
   }
 
   try {
-    let json = null;
-
-    try {
-      const archiveRef = db.collection('users').doc(window.currentUser.uid).collection('archives').doc(yearId);
-      const archiveDoc = await archiveRef.get();
-      if (archiveDoc.exists) {
-        const chunksSnap = await archiveRef.collection('chunks').get();
-        if (!chunksSnap.empty) {
-          const chunks = chunksSnap.docs
-            .map(doc => ({
-              index: Number(doc.data().chunkIndex),
-              payload: String(doc.data().payload || '')
-            }))
-            .sort((a, b) => a.index - b.index);
-          json = chunks.map(c => c.payload).join('');
-        }
-      }
-    } catch (readArchiveErr) {
-      console.warn('No se pudo leer backup en users/{uid}/archives:', readArchiveErr);
-    }
-
-    if (!json) {
-      try {
-        json = await _readArchiveSnapshotFromFirebaseData(window.currentUser.uid, yearId);
-      } catch (readDataErr) {
-        console.warn('No se pudo leer backup en users/{uid}/data:', readDataErr);
-      }
-    }
+    const json = await _leerJsonSnapshotArchivado(yearId);
 
     if (!json) {
       mostrarToast('No existe un backup remoto accesible para este ciclo.', 'warning');
@@ -26907,6 +26917,57 @@ async function descargarBackupArchivadoDesdeFirebase(yearId) {
     mostrarToast('Backup del ciclo ' + yearId + ' descargado desde Firebase.', 'success');
   } catch (e) {
     mostrarToast('Error descargando backup remoto: ' + (e.message || String(e)), 'error');
+  }
+}
+
+/** "Deshacer" el cierre de un ciclo: trae de vuelta el snapshot completo guardado en
+ *  Firebase para yearId y lo aplica como si fuera un importarDatos() manual, dejando
+ *  ese año otra vez como año activo. Pensado para cuando "Cerrar ciclo y archivar" se
+ *  presionó por error. Quita la entrada de la lista de archivados porque deja de ser
+ *  un histórico -- vuelve a ser el ciclo con el que se está trabajando. */
+async function restaurarCicloComoActivo(yearId) {
+  if (!yearId) return;
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) {
+    mostrarToast('Inicia sesión para restaurar ciclos desde Firebase.', 'error');
+    return;
+  }
+
+  const activeYear = localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey();
+  if (yearId === activeYear) {
+    mostrarToast('Ese ciclo ya es el año activo.', 'info');
+    return;
+  }
+
+  if (!confirm(
+    '¿Restaurar el ciclo ' + yearId + ' como año activo?\n\n' +
+    'Esto reemplazará TODOS tus datos actuales (planificaciones, calificaciones, horario, asistencia, etc.) con el snapshot guardado de ese ciclo, y el año activo volverá a ser ' + yearId + '.\n\n' +
+    'Úsalo si cerraste el ciclo por error. Si ya agregaste datos nuevos en el ciclo que está activo ahora mismo, se perderán -- respáldalos primero si los necesitas.'
+  )) return;
+
+  try {
+    const json = await _leerJsonSnapshotArchivado(yearId);
+    if (!json) {
+      mostrarToast('No existe un backup remoto accesible para este ciclo.', 'warning');
+      return;
+    }
+
+    let d;
+    try {
+      d = JSON.parse(json);
+    } catch (_e) {
+      mostrarToast('El backup remoto está incompleto o corrupto.', 'error');
+      return;
+    }
+
+    _aplicarSnapshotBackup(d, yearId);
+
+    // Ya no es un histórico -- vuelve a ser el ciclo activo, se quita de "archivados"
+    _saveArchivedYears(_loadArchivedYears().filter(item => item.id !== yearId));
+
+    mostrarToast('Ciclo ' + yearId + ' restaurado como año activo. Recargando...', 'success');
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    mostrarToast('Error restaurando ciclo: ' + (e.message || String(e)), 'error');
   }
 }
 
@@ -27616,6 +27677,7 @@ function renderizarCiclosAcademicos() {
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
           '<button type="button" data-action="ver-archivo" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#6A1B9A;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Revisar snapshot</button>' +
           '<button type="button" data-action="descargar-archivo-nube" data-year="' + escapeHTML(item.id) + '" style="border:none;border-radius:999px;background:#1565C0;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;">Descargar backup nube</button>' +
+          '<button type="button" data-action="restaurar-como-activo" data-year="' + escapeHTML(item.id) + '" title="Deshacer el cierre de este ciclo y volver a trabajarlo" style="border:none;border-radius:999px;background:#C62828;color:#fff;font-size:0.72rem;font-weight:800;padding:8px 10px;cursor:pointer;"><span class="material-icons" style="font-size:13px;vertical-align:-2px;">undo</span> Restaurar como año activo</button>' +
         '</div>' +
       '</div>' +
       '<span class="material-icons" style="color:#90A4AE;font-size:20px;">history</span>' +
@@ -27633,6 +27695,13 @@ function renderizarCiclosAcademicos() {
     button.addEventListener('click', async (e) => {
       const yearId = e.currentTarget.dataset.year;
       await descargarBackupArchivadoDesdeFirebase(yearId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-action="restaurar-como-activo"]').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const yearId = e.currentTarget.dataset.year;
+      await restaurarCicloComoActivo(yearId);
     });
   });
 }
@@ -28206,6 +28275,72 @@ function onBackupFileSelected(input) {
   reader.readAsText(file);
 }
 
+/** Escribe en localStorage todo el contenido de un snapshot de backup (mismo formato que
+ *  genera _buildExportSnapshotAsync). Compartida por importarDatos() (archivo elegido a
+ *  mano) y restaurarCicloComoActivo() (snapshot leído directo de Firebase) para no
+ *  duplicar esta lista larga de claves en dos lugares.
+ *  forcedSchoolYear: si el snapshot no trae _meta.schoolYear, usar este como respaldo
+ *  (p.ej. el yearId del ciclo archivado que se está restaurando). */
+function _aplicarSnapshotBackup(d, forcedSchoolYear) {
+  if (d.biblioteca) localStorage.setItem(BIBLIO_KEY, d.biblioteca);
+  if (d.calificaciones) localStorage.setItem(CAL_STORAGE_KEY, d.calificaciones);
+  if (d.horario) localStorage.setItem(HORARIO_KEY, d.horario);
+  if (d.tareas) localStorage.setItem(TAREAS_KEY, d.tareas);
+  if (d.asistencia) localStorage.setItem(ASIST_KEY, d.asistencia);
+  if (d.comentarios) localStorage.setItem(COMENT_KEY, d.comentarios);
+  if (d.notasClase) {
+    try {
+      const nc = JSON.parse(d.notasClase);
+      Object.entries(nc).forEach(([k, v]) => localStorage.setItem(k, v));
+    } catch { }
+  }
+  if (d.obsEstudiantes) {
+    try {
+      const obs = JSON.parse(d.obsEstudiantes);
+      Object.entries(obs).forEach(([k, v]) => localStorage.setItem(k, v));
+    } catch { }
+  }
+  if (d.diarias) localStorage.setItem(DIARIAS_KEY, d.diarias);
+  if (d.incidencias) localStorage.setItem(INCID_KEY, d.incidencias);
+  if (d.recuperaciones) localStorage.setItem(RECUP_KEY, d.recuperaciones);
+  if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
+  if (d.notasDocente) localStorage.setItem(NOTAS_DOCENTE_KEY, d.notasDocente);
+  if (d.libreta) localStorage.setItem(LIBRETA_KEY, d.libreta);
+  if (d.evalFormas) {
+    try {
+      const ef = JSON.parse(d.evalFormas);
+      Object.entries(ef).forEach(([k, v]) => localStorage.setItem(k, v));
+    } catch { }
+  }
+  if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
+  if (d.openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, d.openrouterKey);
+  if (d.cuentasEstudiantes) localStorage.setItem(CUENTAS_EST_KEY, d.cuentasEstudiantes);
+  if (d.bitacora) localStorage.setItem(BITACORA_KEY, d.bitacora);
+  if (d.participacion) localStorage.setItem(PARTICIP_KEY, d.participacion);
+  if (d.blog) localStorage.setItem(BLOG_KEY, d.blog);
+  if (d.reportes) localStorage.setItem(REPORTES_KEY, d.reportes);
+  if (d.calendarioEscolar) localStorage.setItem(CAL_ESC_KEY, d.calendarioEscolar);
+  if (d.cumpleanos) localStorage.setItem(CUMPLE_KEY, d.cumpleanos);
+  if (d.stickies) localStorage.setItem(STICKIES_KEY, d.stickies);
+  if (d.calBackups) localStorage.setItem(CAL_BACKUP_KEY, d.calBackups);
+  if (d.geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, d.geminiKey);
+  if (d.preferencias) {
+    try {
+      const pref = JSON.parse(d.preferencias);
+      Object.entries(pref).forEach(([k, v]) => {
+        if (v !== null && v !== undefined) localStorage.setItem(k, v);
+      });
+    } catch { }
+  }
+  const schoolYear = (d._meta && d._meta.schoolYear) || forcedSchoolYear || null;
+  if (schoolYear) {
+    localStorage.setItem(ACTIVE_YEAR_KEY, schoolYear);
+    if (window._syncFirebase) {
+      window._syncFirebase('active_year', schoolYear);
+    }
+  }
+}
+
 function importarDatos() {
   if (!_backupFileData) return;
 
@@ -28217,64 +28352,7 @@ function importarDatos() {
   )) return;
 
   try {
-    const d = _backupFileData;
-
-    if (d.biblioteca) localStorage.setItem(BIBLIO_KEY, d.biblioteca);
-    if (d.calificaciones) localStorage.setItem(CAL_STORAGE_KEY, d.calificaciones);
-    if (d.horario) localStorage.setItem(HORARIO_KEY, d.horario);
-    if (d.tareas) localStorage.setItem(TAREAS_KEY, d.tareas);
-    if (d.asistencia) localStorage.setItem(ASIST_KEY, d.asistencia);
-    if (d.comentarios) localStorage.setItem(COMENT_KEY, d.comentarios);
-    if (d.notasClase) {
-      try {
-        const nc = JSON.parse(d.notasClase);
-        Object.entries(nc).forEach(([k, v]) => localStorage.setItem(k, v));
-      } catch { }
-    }
-    if (d.obsEstudiantes) {
-      try {
-        const obs = JSON.parse(d.obsEstudiantes);
-        Object.entries(obs).forEach(([k, v]) => localStorage.setItem(k, v));
-      } catch { }
-    }
-    if (d.diarias) localStorage.setItem(DIARIAS_KEY, d.diarias);
-    if (d.incidencias) localStorage.setItem(INCID_KEY, d.incidencias);
-    if (d.recuperaciones) localStorage.setItem(RECUP_KEY, d.recuperaciones);
-    if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
-    if (d.notasDocente) localStorage.setItem(NOTAS_DOCENTE_KEY, d.notasDocente);
-    if (d.libreta) localStorage.setItem(LIBRETA_KEY, d.libreta);
-    if (d.evalFormas) {
-      try {
-        const ef = JSON.parse(d.evalFormas);
-        Object.entries(ef).forEach(([k, v]) => localStorage.setItem(k, v));
-      } catch { }
-    }
-    if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
-    if (d.openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, d.openrouterKey);
-    if (d.cuentasEstudiantes) localStorage.setItem(CUENTAS_EST_KEY, d.cuentasEstudiantes);
-    if (d.bitacora) localStorage.setItem(BITACORA_KEY, d.bitacora);
-    if (d.participacion) localStorage.setItem(PARTICIP_KEY, d.participacion);
-    if (d.blog) localStorage.setItem(BLOG_KEY, d.blog);
-    if (d.reportes) localStorage.setItem(REPORTES_KEY, d.reportes);
-    if (d.calendarioEscolar) localStorage.setItem(CAL_ESC_KEY, d.calendarioEscolar);
-    if (d.cumpleanos) localStorage.setItem(CUMPLE_KEY, d.cumpleanos);
-    if (d.stickies) localStorage.setItem(STICKIES_KEY, d.stickies);
-    if (d.calBackups) localStorage.setItem(CAL_BACKUP_KEY, d.calBackups);
-    if (d.geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, d.geminiKey);
-    if (d.preferencias) {
-      try {
-        const pref = JSON.parse(d.preferencias);
-        Object.entries(pref).forEach(([k, v]) => {
-          if (v !== null && v !== undefined) localStorage.setItem(k, v);
-        });
-      } catch { }
-    }
-    if (d._meta && d._meta.schoolYear) {
-      localStorage.setItem(ACTIVE_YEAR_KEY, d._meta.schoolYear);
-      if (window._syncFirebase) {
-        window._syncFirebase('active_year', d._meta.schoolYear);
-      }
-    }
+    _aplicarSnapshotBackup(_backupFileData);
 
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
     cerrarBackup();
