@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v16.34<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Seguridad: Vinculación Sectorial solo para rol Vinculadora + Superadmin</div>
+              <ul class="about-ver-items">
+                <li>Las 6 colecciones de Vinculación Sectorial (pasantías, bolsa de empleo, diagnósticos, convenios, eventos) exigían solo pertenecer al mismo centro. Ahora además exigen tener el rol "vinculadora" (o ser Superadmin) -- Director y Admin de Centro dejaron de tener acceso, tanto en la interfaz (el botón del dashboard ya no se les muestra) como en las reglas de Firestore.</li>
+                <li>Reglas ya desplegadas a producción.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#B71C1C;">v16.33<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5257,9 +5272,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.33"></script>
+  <script src="app.js?v=16.34"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.33"></script>
+  <script src="auth.js?v=16.34"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

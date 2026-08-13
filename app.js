@@ -36883,10 +36883,8 @@ async function _verificarAccesoVinculacion() {
   const btn = document.getElementById('btn-dash-vinculacion');
   if (!btn) return;
   const esVinc = await _esVinculadora();
-  const esDir = await _esDirector();
-  const esAdmin = (await _esAdminDeCentro()).length > 0;
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-  const visible = esVinc || esDir || esAdmin || esSA;
+  const visible = esVinc || esSA;
   btn.style.display = visible ? '' : 'none';
 }
 

@@ -134,15 +134,16 @@ service cloud.firestore {
       }
 
       // Módulo de Vinculación Sectorial (pasantías, bolsa de empleo, diagnósticos
-      // empresariales, convenios, eventos comunitarios). El rol (vinculadora +
-      // Director/admin_centro/Superadmin) se sigue filtrando en la UI -- aqui solo
-      // se hace cumplir el aislamiento por centro, que antes no existia.
-      match /vinc_pasantias_estudiantes/{id} { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
-      match /vinc_pasantias_docentes/{id}    { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
-      match /vinc_bolsa_empleo/{id}          { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
-      match /vinc_diagnosticos/{id}          { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
-      match /vinc_convenios/{id}             { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
-      match /vinc_eventos/{id}               { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId); }
+      // empresariales, convenios, eventos comunitarios). Solo el rol 'vinculadora'
+      // de ese mismo centro, o Superadmin -- ni Director ni admin_centro (aunque el
+      // boton del dashboard llego a mostrarseles antes, _verificarAccesoVinculacion()
+      // ya no los deja pasar).
+      match /vinc_pasantias_estudiantes/{id} { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['vinculadora']) && miCentroId() == centroId)); }
+      match /vinc_pasantias_docentes/{id}    { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['vinculadora']) && miCentroId() == centroId)); }
+      match /vinc_bolsa_empleo/{id}          { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['vinculadora']) && miCentroId() == centroId)); }
+      match /vinc_diagnosticos/{id}          { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['vinculadora']) && miCentroId() == centroId)); }
+      match /vinc_convenios/{id}             { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['vinculadora']) && miCentroId() == centroId)); }
+      match /vinc_eventos/{id}               { allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['vinculadora']) && miCentroId() == centroId)); }
 
       // Compartir entre docentes del mismo centro (links/documentos), con visibilidad
       // por destinatario adicional al aislamiento por centro.
