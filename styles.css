@@ -6852,6 +6852,78 @@ body.dark-mode .mcl-divisor {
   border-top-color: var(--color-borde) !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   RED DE SEGURIDAD DE MODO OSCURO -- selectores por substring de [style]
+   ═══════════════════════════════════════════════════════════════════
+   El sistema tiene cientos de tarjetas/filas generadas en app.js con
+   estilos inline de un solo color fijo (blanco de fondo, texto casi negro
+   o gris) que nunca se pensaron para modo oscuro -- van apareciendo panel
+   por panel (Dashboard, Gestión de Docentes, Cumpleaños, etc.) y clasear
+   cada una una por una tomaría demasiado. En vez de eso, esto atrapa los
+   patrones de color repetidos más comunes en TODO el sistema de una vez,
+   por el contenido literal del atributo style (ej. cualquier elemento con
+   "background:#fff;" en su style, sin importar qué función lo generó).
+   El ";" al final de cada patrón es a propósito: sin él, "background:#fff"
+   también matchearía "background:#fff3e0" o "background:#fff8e1" (que sí
+   deben quedarse como colores de acento, ya tienen su propio tratamiento
+   oscuro más arriba). Los estilos inline en modo claro quedan intactos --
+   esto solo aplica bajo body.dark-mode. */
+
+/* Fondos casi-blancos de tarjetas/filas -> superficie oscura de la app */
+body.dark-mode [style*="background:#fff;"],
+body.dark-mode [style*="background: #fff;"],
+body.dark-mode [style*="background:#F5F5F5;"],
+body.dark-mode [style*="background:#FAFAFA;"],
+body.dark-mode [style*="background:#ECEFF1;"],
+body.dark-mode [style*="background:#F5F7FA;"],
+body.dark-mode [style*="background:#F8F9FA;"],
+body.dark-mode [style*="background:white;"] {
+  background: var(--color-superficie) !important;
+}
+
+/* Texto casi-negro / gris oscuro -> texto primario claro */
+body.dark-mode [style*="color:#212121;"],
+body.dark-mode [style*="color:#37474F;"],
+body.dark-mode [style*="color:#263238;"] {
+  color: var(--color-texto-primario) !important;
+}
+
+/* Texto gris medio (etiquetas, fechas, subtítulos) -> gris claro legible */
+body.dark-mode [style*="color:#78909C;"],
+body.dark-mode [style*="color:#546E7A;"],
+body.dark-mode [style*="color:#9E9E9E;"],
+body.dark-mode [style*="color:#757575;"],
+body.dark-mode [style*="color:#B0BEC5;"],
+body.dark-mode [style*="color:#616161;"],
+body.dark-mode [style*="color:#455A64;"],
+body.dark-mode [style*="color:#424242;"],
+body.dark-mode [style*="color:#90A4AE;"] {
+  color: var(--color-texto-secundario) !important;
+}
+
+/* Banner "Próximos cumpleaños" -- mismo caso que el banner del calendario:
+   gradiente claro fijo que no reacciona a las variables de color. */
+body.dark-mode .cumple-banner {
+  background: linear-gradient(135deg, #2A1020 0%, #241030 100%) !important;
+  border-color: #5D2A4A !important;
+}
+body.dark-mode .cumple-banner-title {
+  color: #F48FB1 !important;
+}
+body.dark-mode .cumple-pill {
+  border-color: #5D2A4A !important;
+}
+body.dark-mode .cumple-pill-etiqueta {
+  color: #F48FB1 !important;
+}
+
+/* Bordes grises claros -> borde oscuro de la app */
+body.dark-mode [style*="solid #E0E0E0"],
+body.dark-mode [style*="solid #CFD8DC"],
+body.dark-mode [style*="solid #eee" i] {
+  border-color: var(--color-borde) !important;
+}
+
 /* Overlay modales */
 body.dark-mode .modal-overlay {
   background: rgba(0, 0, 0, 0.75) !important;

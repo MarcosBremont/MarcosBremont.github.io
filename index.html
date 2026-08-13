@@ -2784,6 +2784,23 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#37474F;">v16.36<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Modo oscuro: red de seguridad para todo el sistema</div>
+              <ul class="about-ver-items">
+                <li>Cientos de tarjetas/filas en todos los paneles (Gestión de Docentes, Cumpleaños, y muchos más) se generan con estilos inline de un solo color fijo -- fondo blanco, texto casi negro o gris -- que nunca se pensaron para modo oscuro. Reescribir cada una a mano habría tomado demasiado, así que se agregó una regla CSS que detecta esos patrones de color por el contenido del atributo <code>style</code> (ej. cualquier elemento con <code>background:#fff;</code>) y los oscurece automáticamente en todo el sistema de una sola vez, sin tener que tocar cada pantalla.</li>
+                <li>El banner "Próximos cumpleaños" (gradiente rosado) recibió el mismo tratamiento que el del calendario: se oscurece en vez de perder el acento de color.</li>
+                <li>Sigue habiendo insignias/banners de colores específicos (naranja, morado, etc.) sin tratar todavía -- se irán resolviendo por partes.</li>
+                <li>Todo esto solo aplica con el modo oscuro activado; en modo claro no cambia nada.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#37474F;">v16.35<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5289,9 +5306,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.35"></script>
+  <script src="app.js?v=16.36"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.35"></script>
+  <script src="auth.js?v=16.36"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

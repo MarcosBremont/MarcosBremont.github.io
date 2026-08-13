@@ -32253,14 +32253,14 @@ function renderizarCumpleanos() {
 
   const proximos = _listaCumpleanosOrdenada(30);
   const resumenHTML = proximos.length ? `
-    <div style="background:linear-gradient(135deg,#FCE4EC 0%,#F3E5F5 100%);border:1.5px solid #F8BBD0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
-      <div style="font-size:0.8rem;font-weight:700;color:#AD1457;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+    <div class="cumple-banner" style="background:linear-gradient(135deg,#FCE4EC 0%,#F3E5F5 100%);border:1.5px solid #F8BBD0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <div class="cumple-banner-title" style="font-size:0.8rem;font-weight:700;color:#AD1457;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
         <span class="material-icons" style="font-size:17px;">cake</span> Próximos cumpleaños (30 días)
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${proximos.map(p => `
-          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #F8BBD0;border-radius:18px;padding:5px 9px;">
-            <span style="font-size:0.75rem;color:#880E4F;font-weight:700;">${escapeHTML(_dashEtiquetaAnticipacion(p.diff))}</span>
+          <div class="cumple-pill" style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #F8BBD0;border-radius:18px;padding:5px 9px;">
+            <span class="cumple-pill-etiqueta" style="font-size:0.75rem;color:#880E4F;font-weight:700;">${escapeHTML(_dashEtiquetaAnticipacion(p.diff))}</span>
             <span style="font-size:0.78rem;color:#424242;">${escapeHTML(p.nombre)}</span>
             <span style="font-size:0.7rem;color:#9E9E9E;">· ${escapeHTML(p.curso)}</span>
           </div>
