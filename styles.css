@@ -6989,9 +6989,11 @@ body.dark-mode [style*="solid #DCE6FF"] {
   border-color: #1E3A5F !important;
 }
 
-/* Verde */
+/* Verde -- excluye las notas adhesivas (.sticky-card/.sticky-header): sus 7
+   colores se dejan pastel a propósito, como papel de colores real, y #C8E6C9
+   es justo uno de esos 7 (coincide por casualidad con este color de acento). */
 body.dark-mode [style*="background:#E8F5E9;"],
-body.dark-mode [style*="background:#C8E6C9;"],
+body.dark-mode [style*="background:#C8E6C9;"]:not(.sticky-card):not(.sticky-header),
 body.dark-mode [style*="background:#F1F8E9;"] {
   background: #122A1A !important;
 }
@@ -7004,9 +7006,10 @@ body.dark-mode [style*="solid #A5D6A7"] {
   border-color: #1B4020 !important;
 }
 
-/* Naranja / ámbar */
+/* Naranja / ámbar -- misma excepción que el verde: #FFE0B2 es uno de los 7
+   colores de nota adhesiva, se deja pastel en esas tarjetas a propósito. */
 body.dark-mode [style*="background:#FFF3E0;"],
-body.dark-mode [style*="background:#FFE0B2;"],
+body.dark-mode [style*="background:#FFE0B2;"]:not(.sticky-card):not(.sticky-header),
 body.dark-mode [style*="background:#FFF8E1;"],
 body.dark-mode [style*="background:#FFFDE7;"],
 body.dark-mode [style*="background:#FFF176;"],
