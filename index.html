@@ -2784,6 +2784,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#37474F;">v16.24<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Evita alerta de error al abrir el archivo local sin servidor</div>
+              <ul class="about-ver-items">
+                <li>Al abrir index.html directamente como archivo (file://) en vez de por un servidor, el navegador no permite registrar el Service Worker (el origen es 'null'), lo cual generaba una alerta de error por correo aunque no afecta al sitio publicado en https. Ahora el registro del Service Worker se omite directamente cuando el protocolo no es http/https, así el intento fallido -- y la alerta -- ya no ocurren.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00838F;">v16.23<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5112,9 +5126,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.23"></script>
+  <script src="app.js?v=16.24"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.23"></script>
+  <script src="auth.js?v=16.24"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
@@ -5441,7 +5455,7 @@
 
   <!-- ===== REGISTRO SERVICE WORKER (PWA) ===== -->
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js?v=' + (window.TINCLASS_SW_VERSION || 'vsw').replace(/^v/i, ''), { scope: '/' })
           .then(reg => {
