@@ -6881,11 +6881,15 @@ body.dark-mode [style*="background:white;"] {
   background: var(--color-superficie) !important;
 }
 
-/* Texto casi-negro / gris oscuro -> texto primario claro */
+/* Texto casi-negro / gris oscuro -> texto primario claro. También íconos de
+   Material Icons que no tienen su propio color (heredan de este texto). */
 body.dark-mode [style*="color:#212121;"],
 body.dark-mode [style*="color:#37474F;"],
 body.dark-mode [style*="color:#263238;"],
-body.dark-mode [style*="color:#1A1A2E;"] {
+body.dark-mode [style*="color:#1A1A2E;"],
+body.dark-mode [style*="color:#222;"],
+body.dark-mode [style*="color:#333;"],
+body.dark-mode [style*="color:#444;"] {
   color: var(--color-texto-primario) !important;
 }
 
@@ -6898,7 +6902,10 @@ body.dark-mode [style*="color:#B0BEC5;"],
 body.dark-mode [style*="color:#616161;"],
 body.dark-mode [style*="color:#455A64;"],
 body.dark-mode [style*="color:#424242;"],
-body.dark-mode [style*="color:#90A4AE;"] {
+body.dark-mode [style*="color:#90A4AE;"],
+body.dark-mode [style*="color:#555;"],
+body.dark-mode [style*="color:#666;"],
+body.dark-mode [style*="color:#777;"] {
   color: var(--color-texto-secundario) !important;
 }
 
@@ -6954,7 +6961,8 @@ body.dark-mode [style*="background:#F8FCFF;"],
 body.dark-mode [style*="background:#F4FAFF;"],
 body.dark-mode [style*="background:#FAFCFF;"],
 body.dark-mode [style*="background:#F8FAFC;"],
-body.dark-mode [style*="background:#E1F5FE;"] {
+body.dark-mode [style*="background:#E1F5FE;"],
+body.dark-mode [style*="background:#F8FBFF;"] {
   background: #12233F !important;
 }
 body.dark-mode [style*="color:#1565C0;"],
@@ -7015,7 +7023,9 @@ body.dark-mode [style*="background:#FCFAFF;"],
 body.dark-mode [style*="background:#F7F3FF;"],
 body.dark-mode [style*="background:#E8EAF6;"],
 body.dark-mode [style*="background:#FCF7FF;"],
-body.dark-mode [style*="background:#FAF5FF;"] {
+body.dark-mode [style*="background:#FAF5FF;"],
+body.dark-mode [style*="background:#FCF4FF;"],
+body.dark-mode [style*="background:#FAF7FF;"] {
   background: #241A35 !important;
 }
 body.dark-mode [style*="color:#6A1B9A;"],
@@ -7023,7 +7033,9 @@ body.dark-mode [style*="color:#4A148C;"],
 body.dark-mode [style*="color:#4527A0;"],
 body.dark-mode [style*="color:#5E35B1;"],
 body.dark-mode [style*="color:#7E57C2;"],
-body.dark-mode [style*="color:#7B1FA2;"] {
+body.dark-mode [style*="color:#7B1FA2;"],
+body.dark-mode [style*="color:#9C27B0;"],
+body.dark-mode [style*="color:#8E24AA;"] {
   color: #CE93D8 !important;
 }
 body.dark-mode [style*="solid #D1C4E9"],
@@ -7033,18 +7045,22 @@ body.dark-mode [style*="solid #E1D5F6"] {
 
 /* Rojo / rosa */
 body.dark-mode [style*="background:#FFEBEE;"],
-body.dark-mode [style*="background:#FFCDD2;"] {
+body.dark-mode [style*="background:#FFCDD2;"],
+body.dark-mode [style*="background:#FFF5F5;"],
+body.dark-mode [style*="background:#FBE9E7;"] {
   background: #2E1A1A !important;
 }
 body.dark-mode [style*="color:#C62828;"],
 body.dark-mode [style*="color:#B71C1C;"],
-body.dark-mode [style*="color:#E53935;"] {
+body.dark-mode [style*="color:#E53935;"],
+body.dark-mode [style*="color:#ED1E24;"] {
   color: #EF9A9A !important;
 }
 body.dark-mode [style*="background:#FCE4EC;"] {
   background: #2A1520 !important;
 }
-body.dark-mode [style*="color:#AD1457;"] {
+body.dark-mode [style*="color:#AD1457;"],
+body.dark-mode [style*="color:#880E4F;"] {
   color: #F48FB1 !important;
 }
 
@@ -7057,8 +7073,20 @@ body.dark-mode [style*="background:#f0f7f7;"] {
 body.dark-mode [style*="color:#00695C;"],
 body.dark-mode [style*="color:#006064;"],
 body.dark-mode [style*="color:#00838F;"],
-body.dark-mode [style*="color:#00796B;"] {
+body.dark-mode [style*="color:#00796B;"],
+body.dark-mode [style*="color:#00897B;"],
+body.dark-mode [style*="color:#004D40;"] {
   color: #4DB6AC !important;
+}
+
+/* Marrón (raro, pero aparece en algunos iconos/etiquetas) */
+body.dark-mode [style*="color:#795548;"],
+body.dark-mode [style*="color:#BF360C;"],
+body.dark-mode [style*="color:#7B3F00;"],
+body.dark-mode [style*="color:#5D4037;"],
+body.dark-mode [style*="color:#6D4C41;"],
+body.dark-mode [style*="color:#4E342E;"] {
+  color: #BCAAA4 !important;
 }
 
 /* Overlay modales */

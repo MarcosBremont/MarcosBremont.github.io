@@ -2784,6 +2784,23 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00838F;">v16.38<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Modo oscuro: barrido completo de app.js e index.html</div>
+              <ul class="about-ver-items">
+                <li>Se hizo una auditoría automatizada de todos los colores de fondo claro y texto oscuro usados como estilo fijo en <code>app.js</code> e <code>index.html</code> (más de 2000 instancias en total). Con las reglas de v16.36/v16.37 más esta ronda (grises cortos tipo <code>#333</code>/<code>#555</code>, marrones, y algunos tonos sueltos de azul/morado/rojo/verde azulado que faltaban), la auditoría ya no encuentra ningún color problemático sin cubrir en ninguno de los dos archivos -- issue de los íconos que se veían negros incluida, ya que la mayoría heredan el color de texto de su contenedor.</li>
+                <li>Nueva Planificación (los 6 pasos) usa mayormente clases CSS ya cubiertas desde antes (<code>.section-card</code>, <code>.form-group</code>, etc.), así que ya se veía bien; esta ronda se enfocó en el resto del sistema donde aún quedaban colores sueltos.</li>
+                <li>examen.html, padre.html, alumno.html, reporte.html, denuncia.html y blog.html no tienen modo oscuro (son páginas para estudiantes/padres/público sin ese selector) -- quedan fuera de este trabajo a propósito.</li>
+                <li>Todo esto solo aplica con el modo oscuro activado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#37474F;">v16.37<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5322,9 +5339,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.37"></script>
+  <script src="app.js?v=16.38"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.37"></script>
+  <script src="auth.js?v=16.38"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
