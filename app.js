@@ -13099,24 +13099,25 @@ function renderizarTabsPlanesDelCurso() {
   }
 
   const biblio = cargarBiblioteca();
-  let html = '<div class="cal-planes-tabs">';
+  let html = '<div class="cal-planes-grid">';
   planIds.forEach(pid => {
     const reg = biblio.items.find(i => i.id === pid);
     if (!reg) return;
     const dg = reg.planificacion?.datosGenerales || {};
     const activo = pid === curso.planActivaId;
     const raDesc = reg.planificacion?.ra?.descripcion || '';
-    const raCorto = raDesc ? raDesc.substring(0, 40) + (raDesc.length > 40 ? '…' : '') : '';
-    html += `<button class="cal-plan-tab${activo ? ' activo' : ''}" onclick="activarPlanEnCurso('${pid}')">
-      <span class="material-icons" style="font-size:15px;">assignment</span>
-      <span>${escHTML((dg.moduloFormativo || reg.nombre || pid).substring(0, 30))}</span>
-      ${raCorto ? '<span style="font-size:0.68rem;opacity:0.75;margin-left:2px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">· ' + escHTML(raCorto) + '</span>' : ''}
-      <span style="font-size:0.7rem;opacity:0.7;margin-left:2px;">${dg.valorRA ? dg.valorRA + 'pts' : ''}</span>
-      <button onclick="event.stopPropagation();desasignarPlanDeCurso('${pid}')" title="Quitar del curso"
-        style="background:none;border:none;cursor:pointer;color:#B0BEC5;margin-left:4px;padding:0;line-height:1;">
-        <span class="material-icons" style="font-size:14px;">close</span>
-      </button>
-    </button>`;
+    const raCorto = raDesc ? raDesc.substring(0, 70) + (raDesc.length > 70 ? '…' : '') : '';
+    html += `<div class="cal-plan-card${activo ? ' activo' : ''}" onclick="activarPlanEnCurso('${pid}')" title="${activo ? 'Mostrando en la tabla' : 'Click para mostrar en la tabla'}">
+      <div class="cal-plan-card-top">
+        <span class="material-icons">assignment</span>
+        <span class="cal-plan-card-modulo">${escHTML((dg.moduloFormativo || reg.nombre || pid).substring(0, 40))}</span>
+        <button class="cal-plan-card-quitar" onclick="event.stopPropagation();desasignarPlanDeCurso('${pid}')" title="Quitar del curso">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      ${raCorto ? '<div class="cal-plan-card-ra">' + escHTML(raCorto) + '</div>' : ''}
+      ${dg.valorRA ? '<span class="cal-plan-card-pts">' + dg.valorRA + ' pts</span>' : ''}
+    </div>`;
   });
   html += '</div>';
   area.innerHTML = html;

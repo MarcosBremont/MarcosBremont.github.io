@@ -2784,6 +2784,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v16.42<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño: planificaciones asignadas al curso, ahora en tarjetas</div>
+              <ul class="about-ver-items">
+                <li>El selector de RA/módulos asignados a un curso (arriba del Libro de Calificaciones) eran pills largas de una sola línea que se veían apretadas y difíciles de leer, sobre todo con nombres de módulo largos. Ahora son tarjetas en una grilla responsiva: módulo en negrita arriba, descripción del RA debajo (hasta 2 líneas), puntos en una insignia, y el botón de quitar en una esquina fija -- la seleccionada se resalta con borde y fondo azul.</li>
+                <li>Reescrito con clases CSS propias en vez de estilos inline, así que también tiene su propio modo oscuro nativo (ya no depende de la red de seguridad genérica).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#F9A825;">v16.41<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5383,9 +5398,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.41"></script>
+  <script src="app.js?v=16.42"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.41"></script>
+  <script src="auth.js?v=16.42"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

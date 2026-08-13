@@ -2193,37 +2193,139 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
 }
 
 /* Pestañas de planificaciones por curso */
-.cal-planes-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.cal-planes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
   padding: 8px 0 4px;
 }
 
-.cal-plan-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.cal-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   background: #fff;
-  border: 1.5px solid #90CAF9;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #1565C0;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 12px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: all 0.15s;
-  white-space: nowrap;
 }
 
-.cal-plan-tab.activo {
-  background: #1565C0;
+.cal-plan-card:hover:not(.activo) {
+  border-color: #90CAF9;
+  background: #F5F9FF;
+}
+
+.cal-plan-card.activo {
+  background: #E3F2FD;
   border-color: #1565C0;
+  box-shadow: inset 0 0 0 1.5px #1565C0;
+}
+
+.cal-plan-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-plan-card-top > .material-icons:first-child {
+  font-size: 16px;
+  color: #1565C0;
+  flex-shrink: 0;
+}
+
+.cal-plan-card-modulo {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #0D47A1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-plan-card-quitar {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #B0BEC5;
+  padding: 2px;
+  flex-shrink: 0;
+  display: flex;
+  border-radius: 4px;
+  transition: color 0.12s;
+}
+
+.cal-plan-card-quitar .material-icons {
+  font-size: 15px;
+}
+
+.cal-plan-card-quitar:hover {
+  color: #C62828;
+}
+
+.cal-plan-card-ra {
+  font-size: 0.74rem;
+  color: #607D8B;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cal-plan-card-pts {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1565C0;
+  background: #E3F2FD;
+  border-radius: 10px;
+  padding: 1px 8px;
+  margin-top: 2px;
+}
+
+.cal-plan-card.activo .cal-plan-card-pts {
+  background: #1565C0;
   color: #fff;
 }
 
-.cal-plan-tab:hover:not(.activo) {
-  background: #E3F2FD;
+/* Modo oscuro (variables reales, no depende de la red de seguridad genérica) */
+body.dark-mode .cal-plan-card {
+  background: var(--color-superficie);
+  border-color: var(--color-borde);
+}
+
+body.dark-mode .cal-plan-card:hover:not(.activo) {
+  border-color: #1565C0;
+  background: #132A4D;
+}
+
+body.dark-mode .cal-plan-card.activo {
+  background: #132A4D;
+  border-color: #64B5F6;
+  box-shadow: inset 0 0 0 1.5px #64B5F6;
+}
+
+body.dark-mode .cal-plan-card-modulo {
+  color: #64B5F6;
+}
+
+body.dark-mode .cal-plan-card-ra {
+  color: var(--color-texto-secundario);
+}
+
+body.dark-mode .cal-plan-card-pts {
+  background: #1E3A5F;
+  color: #64B5F6;
+}
+
+body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
+  background: #1565C0;
+  color: #fff;
 }
 
 .btn-cal-add-curso {
@@ -2586,20 +2688,10 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
     padding: var(--espacio-md);
   }
 
-  /* Planificaciones asignadas: permitir scroll horizontal */
-  .cal-plan-tab {
-    white-space: normal;
-    font-size: 0.75rem;
-    padding: 5px 10px;
-    gap: 4px;
-  }
-
-  .cal-plan-tab span[style*="max-width"] {
-    max-width: 120px !important;
-  }
-
-  .cal-planes-tabs {
-    gap: 6px;
+  /* Planificaciones asignadas: una sola columna en móvil */
+  .cal-planes-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 
