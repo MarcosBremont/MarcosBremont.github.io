@@ -31339,7 +31339,7 @@ async function abrirHistorialSesiones() {
     if (!lista) return;
 
     if (snap.empty) {
-      lista.innerHTML = '<p style="text-align:center;color:var(--color-texto-sec,#757575);padding:32px 0;">No hay sesiones registradas aún.</p>';
+      lista.innerHTML = '<p style="text-align:center;color:var(--color-texto-secundario,#757575);padding:32px 0;">No hay sesiones registradas aún.</p>';
     } else {
       let html = '';
       snap.forEach(doc => {
@@ -31470,10 +31470,10 @@ function renderizarReportes(estId) {
       const resumen = (r.detallesEvento || '').substring(0, 70) + (r.detallesEvento && r.detallesEvento.length > 70 ? '…' : '');
       listaHtml +=
         '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;' +
-        'border:1px solid var(--color-borde,#E0E0E0);margin-bottom:8px;background:var(--color-fondo-card,#FAFAFA);">' +
+        'border:1px solid var(--color-borde,#E0E0E0);margin-bottom:8px;background:var(--color-superficie,#FAFAFA);">' +
           '<span class="material-icons" style="font-size:20px;color:#B71C1C;flex-shrink:0;">description</span>' +
           '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto,#212121);">' + escapeHTML(fecha) + '</div>' +
+            '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto-primario,#212121);">' + escapeHTML(fecha) + '</div>' +
             '<div style="font-size:0.78rem;color:#757575;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(resumen) + '</div>' +
           '</div>' +
           '<button class="btn-icon-sm" title="Descargar Word (plantilla del centro)" onclick="descargarReporteDocx(\'' + estId + '\',\'' + r.id + '\')" style="color:#6A1B9A;">' +
@@ -31492,7 +31492,7 @@ function renderizarReportes(estId) {
 
   // ── Estilos reutilizables ──
   const fld = 'width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--color-borde,#BDBDBD);' +
-              'border-radius:6px;font-size:0.9rem;background:var(--color-fondo,#fff);color:var(--color-texto,#212121);font-family:inherit;';
+              'border-radius:6px;font-size:0.9rem;background:var(--color-superficie,#fff);color:var(--color-texto-primario,#212121);font-family:inherit;';
   const ta  = fld + 'resize:vertical;min-height:80px;';
   const lbl = 'display:block;font-size:0.78rem;font-weight:700;color:#546E7A;margin-bottom:4px;margin-top:12px;';
 
@@ -34133,7 +34133,7 @@ function _buildReportesHTML(reportes, opts = {}) {
         '</div>'
       : '';
 
-    return '<div style="background:var(--color-fondo-card,#fff);border:1px solid var(--color-borde,#E0E0E0);border-radius:10px;padding:16px;margin-bottom:10px;">' +
+    return '<div style="background:var(--color-superficie,#fff);border:1px solid var(--color-borde,#E0E0E0);border-radius:10px;padding:16px;margin-bottom:10px;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
         '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:' + tStyle + ';">' +
           '<span class="material-icons" style="font-size:12px;">' + tIcon + '</span> ' + tLabel +
@@ -34147,7 +34147,7 @@ function _buildReportesHTML(reportes, opts = {}) {
         '<span class="material-icons" style="font-size:14px;">people</span> <strong>Involucrados:</strong> ' + escapeHTML(r.involucrados || '') +
       '</div>' +
       docenteLinea +
-      '<div style="font-size:0.86rem;color:var(--color-texto,#424242);line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(r.descripcion || '') + '</div>' +
+      '<div style="font-size:0.86rem;color:var(--color-texto-primario,#424242);line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(r.descripcion || '') + '</div>' +
       '<div style="font-size:0.72rem;color:#BDBDBD;margin-top:8px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:12px;">person</span> Reportado por: ' + escapeHTML(r.reportadoPor || r.usuario || '') +
       '</div>' +
@@ -34188,7 +34188,7 @@ function _renderCuentasEstudiantes() {
     '</div>';
 
   // Formulario nueva cuenta
-  html += '<div style="background:var(--color-fondo-card,#fff);border:1.5px solid #E3F2FD;border-radius:10px;padding:16px;margin-bottom:16px;">' +
+  html += '<div style="background:var(--color-superficie,#fff);border:1.5px solid #E3F2FD;border-radius:10px;padding:16px;margin-bottom:16px;">' +
     '<div style="font-size:0.85rem;font-weight:700;color:#1565C0;margin-bottom:12px;display:flex;align-items:center;gap:6px;">' +
       '<span class="material-icons" style="font-size:18px;">person_add</span> Nueva cuenta' +
     '</div>' +
@@ -34219,10 +34219,10 @@ function _renderCuentasEstudiantes() {
     html += '<div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#546E7A;margin-bottom:10px;">Cuentas creadas (' + cuentas.length + ')</div>';
     cuentas.forEach((c, i) => {
       const activo = c.activo !== false;
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid var(--color-borde,#E0E0E0);margin-bottom:8px;background:var(--color-fondo-card,#FAFAFA);' + (!activo ? 'opacity:0.5;' : '') + '">' +
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid var(--color-borde,#E0E0E0);margin-bottom:8px;background:var(--color-superficie,#FAFAFA);' + (!activo ? 'opacity:0.5;' : '') + '">' +
         '<span class="material-icons" style="font-size:22px;color:' + (activo ? '#1565C0' : '#BDBDBD') + ';">account_circle</span>' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto,#212121);">' + escapeHTML(c.nombre) + '</div>' +
+          '<div style="font-size:0.88rem;font-weight:600;color:var(--color-texto-primario,#212121);">' + escapeHTML(c.nombre) + '</div>' +
           '<div style="font-size:0.75rem;color:#757575;">Usuario: <strong>' + escapeHTML(c.usuario) + '</strong> · Contraseña: <strong>' + escapeHTML(c.password) + '</strong></div>' +
           '<div style="font-size:0.72rem;color:#9E9E9E;">' + escapeHTML(c.cursoNombre || c.cursoId || 'Sin curso asignado') + '</div>' +
         '</div>' +

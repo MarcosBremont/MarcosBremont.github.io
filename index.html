@@ -2784,6 +2784,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.39<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: variables de color inventadas que nunca cambiaban en modo oscuro</div>
+              <ul class="about-ver-items">
+                <li>Reportado con captura de "Reportes de Comportamiento → Cuentas de estudiantes": el formulario y la lista de cuentas seguían con fondo blanco. La causa no era falta de una regla -- era un bug real: varios lugares usaban <code>var(--color-fondo-card,#fff)</code> y <code>var(--color-texto,#212121)</code>, pero esas variables (<code>--color-fondo-card</code>, <code>--color-texto</code>, <code>--color-texto-sec</code>) nunca se definieron en ningún lado del sistema, así que <code>var()</code> siempre caía a su valor de respaldo claro sin importar el tema -- por eso ninguna regla de las rondas anteriores lo alcanzaba.</li>
+                <li>Se corrigieron los 9 usos (8 en app.js, 2 en index.html) a las variables reales que sí existen y sí cambian con el tema: <code>--color-superficie</code> y <code>--color-texto-primario</code>/<code>--color-texto-secundario</code>.</li>
+                <li>Se verificó que no queden más variables inventadas de este tipo en ningún otro lugar del sistema (las únicas restantes, <code>--ink</code>/<code>--paper</code>/<code>--mono</code>/etc., son de una plantilla de documento imprimible autocontenida que a propósito no usa modo oscuro).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00838F;">v16.38<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5339,9 +5355,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.38"></script>
+  <script src="app.js?v=16.39"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.38"></script>
+  <script src="auth.js?v=16.39"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
@@ -5408,7 +5424,7 @@
         <div class="cuenta-seccion-titulo">
           <span class="material-icons">history</span> Historial de sesiones
         </div>
-        <p style="font-size:0.83rem;color:var(--color-texto-sec,#757575);margin:0 0 10px;">
+        <p style="font-size:0.83rem;color:var(--color-texto-secundario,#757575);margin:0 0 10px;">
           Muestra los últimos accesos a la app: dispositivo, navegador y fecha/hora.
         </p>
         <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
@@ -5435,7 +5451,7 @@
             class="material-icons">close</span></button>
       </div>
       <div class="modal-body" style="padding:16px 20px;overflow-y:auto;flex:1;">
-        <div id="sesiones-loading" style="text-align:center;padding:32px;color:var(--color-texto-sec,#757575);">
+        <div id="sesiones-loading" style="text-align:center;padding:32px;color:var(--color-texto-secundario,#757575);">
           <span class="material-icons" style="font-size:36px;display:block;margin-bottom:8px;">hourglass_empty</span>
           Cargando sesiones…
         </div>
