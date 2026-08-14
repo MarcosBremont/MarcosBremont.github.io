@@ -2795,6 +2795,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.53<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: colores de fondo invisibles al imprimir el Horario</div>
+              <ul class="about-ver-items">
+                <li>En la impresión del Horario, el encabezado azul, la columna de días y los puntos de color de la leyenda no se veían -- los navegadores no imprimen colores de fondo por defecto a menos que se active manualmente "Gráficos de fondo" en el diálogo de impresión. Se fuerza esa opción desde el CSS (<code>print-color-adjust: exact</code>) para que los colores salgan siempre, sin depender de esa casilla.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#0D47A1;">v16.52<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5554,9 +5568,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.52"></script>
+  <script src="app.js?v=16.53"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.52"></script>
+  <script src="auth.js?v=16.53"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

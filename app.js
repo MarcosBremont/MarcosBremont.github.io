@@ -19158,6 +19158,7 @@ function imprimirHorario() {
   ventana.document.write(`
     <html><head><title>Mi Horario de Clases</title>
     <style>
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
       body { font-family: Arial, sans-serif; margin: 1.5cm; color: #212121; }
       h1 { color: #0D47A1; font-size: 18pt; margin: 0 0 2pt; }
       .fecha { color: #78909C; font-size: 9pt; margin-bottom: 16pt; }
