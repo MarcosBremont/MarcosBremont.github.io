@@ -2790,6 +2790,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.44<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: el tour de bienvenida marcaba lugares equivocados</div>
+              <ul class="about-ver-items">
+                <li>Dos pasos del tour ("Diarias" y "Notas Rápidas") apuntaban a botones del dashboard que están permanentemente ocultos, así que en vez de resaltar un botón, el tour mostraba una tarjeta flotando sola en el centro de la pantalla con todo oscurecido alrededor -- se sentía como si estuviera señalando el lugar equivocado.</li>
+                <li>Ahora el tour arma su lista de pasos en tiempo real y se salta automáticamente cualquier paso cuyo botón no exista o no esté visible para el usuario (por módulo desactivado o botón oculto), así siempre resalta algo real en pantalla.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v16.43<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5419,9 +5434,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.43"></script>
+  <script src="app.js?v=16.44"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.43"></script>
+  <script src="auth.js?v=16.44"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

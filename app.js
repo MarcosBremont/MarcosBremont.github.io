@@ -26346,6 +26346,7 @@ generarPlanificacion = async function () {
 const TOUR_KEY = 'tinclass_tour_done';
 let _tourPaso = 0;
 let _tourOriginalOverflow = '';
+let _tourPasosActivos = [];
 
 const TOUR_PASOS = [
   {
@@ -26442,6 +26443,15 @@ const TOUR_PASOS = [
 
 function iniciarTour() {
   _tourPaso = 0;
+  // Solo se incluyen los pasos cuyo botón existe y está visible para este usuario:
+  // los módulos desactivados (Diarias, Notas, etc.) quedan con display:none y antes
+  // el tour igual los mostraba como un paso "flotando" en el centro de la pantalla
+  // sin señalar nada real, lo cual se veía como si estuviera marcando el lugar equivocado.
+  _tourPasosActivos = TOUR_PASOS.filter(p => {
+    if (!p.target) return true;
+    const el = document.querySelector(p.target);
+    return !!el && el.offsetParent !== null;
+  });
   _tourOriginalOverflow = document.body.style.overflow;
   document.getElementById('tour-overlay').classList.remove('hidden');
   _tourRenderizarPaso(_tourPaso);
@@ -26454,14 +26464,14 @@ function _tourVerificarAutoInicio() {
 }
 
 function _tourRenderizarPaso(n) {
-  const paso = TOUR_PASOS[n];
-  const total = TOUR_PASOS.length;
+  const paso = _tourPasosActivos[n];
+  const total = _tourPasosActivos.length;
   document.getElementById('tour-icono').textContent = paso.icono;
   document.getElementById('tour-titulo').textContent = paso.titulo;
   document.getElementById('tour-desc').textContent = paso.desc;
   document.getElementById('tour-paso-label').textContent = `Paso ${n + 1} de ${total}`;
 
-  document.getElementById('tour-dots').innerHTML = TOUR_PASOS.map((_, i) =>
+  document.getElementById('tour-dots').innerHTML = _tourPasosActivos.map((_, i) =>
     `<div class="tour-dot ${i === n ? 'activo' : ''}"></div>`
   ).join('');
 
@@ -26539,7 +26549,7 @@ function _tourPosicionarCaja(targetEl) {
 }
 
 function _tourSiguiente() {
-  if (_tourPaso >= TOUR_PASOS.length - 1) { _tourFin(); return; }
+  if (_tourPaso >= _tourPasosActivos.length - 1) { _tourFin(); return; }
   _tourPaso++;
   _tourRenderizarPaso(_tourPaso);
 }
