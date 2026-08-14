@@ -2790,6 +2790,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00695C;">v16.47<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: "Error cargando comentarios: The query requires an index"</div>
+              <ul class="about-ver-items">
+                <li>La consulta de comentarios de coordinadora sobre planificaciones (filtrar por planificación y ordenar por fecha) necesitaba un índice compuesto en Firestore que no existía. Ya está creado y desplegado -- los comentarios cargan con normalidad.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v16.46<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5464,9 +5478,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.46"></script>
+  <script src="app.js?v=16.47"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.46"></script>
+  <script src="auth.js?v=16.47"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

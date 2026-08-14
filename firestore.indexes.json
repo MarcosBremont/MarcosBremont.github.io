@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "plan_comentarios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "planId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
