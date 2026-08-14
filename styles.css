@@ -6756,6 +6756,16 @@ body.dark-mode .cal-tab {
   color: var(--color-texto-primario) !important;
 }
 
+/* Estado de cursos (tarjetas del dashboard) */
+body.dark-mode .dash-curso-modulo {
+  color: var(--color-texto-secundario) !important;
+}
+
+/* Sin !important: el badge de tareas pendientes trae su propio color inline (rojo/ámbar/verde) que debe respetarse */
+body.dark-mode .dash-curso-stats span {
+  color: var(--color-texto-secundario);
+}
+
 /* Texto de tareas en dark mode */
 body.dark-mode .dt-desc,
 body.dark-mode .tarea-descripcion {
