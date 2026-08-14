@@ -21351,16 +21351,22 @@ function renderizarBiblioteca() {
   vacio.classList.add('hidden');
   grid.innerHTML = '';
 
+  // ── Separar planificaciones archivadas (individualmente, no por curso) ──
+  const activosBase = items.filter(reg => !reg.archivada);
+  const archivadosBase = items.filter(reg => reg.archivada);
+
   // ── Filtrar por búsqueda ──────────────────────────────────────
-  const filtrados = items.filter(reg => {
+  const _matchQuery = reg => {
     if (!query) return true;
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
     return [dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato,
     dg.familiaProfesional, ra.descripcion].join(' ').toLowerCase().includes(query);
-  });
+  };
+  const filtrados = activosBase.filter(_matchQuery);
+  const archivadosFiltrados = archivadosBase.filter(_matchQuery);
 
-  if (filtrados.length === 0) {
+  if (filtrados.length === 0 && archivadosFiltrados.length === 0) {
     grid.innerHTML = '<p style="text-align:center;color:#9E9E9E;padding:40px;">Sin resultados para la búsqueda.</p>';
     return;
   }
@@ -21410,7 +21416,7 @@ function renderizarBiblioteca() {
   const yearsArchivados = Object.keys(gruposArchivados).sort((a, b) => String(b).localeCompare(String(a)));
 
   // ── Renderizar función de card ────────────────────────────────
-  const _renderCard = (reg, esPlanActiva, cursoId, raNum, totalPlanes) => {
+  const _renderCard = (reg, esPlanActiva, cursoId, raNum, totalPlanes, archivada) => {
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
     const ec = reg.planificacion?.elementosCapacidad || [];
@@ -21480,9 +21486,11 @@ function renderizarBiblioteca() {
         <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')" style="width:100%;justify-content:center;">
           <span class="material-icons">folder_open</span> Cargar
         </button>
-        <button class="btn-pln-asignar" onclick="asignarPlanACurso('${reg.id}')" title="Asignar a un curso" style="width:100%;justify-content:center;">
-          <span class="material-icons">link</span> Asignar curso
-        </button>
+        ${archivada
+          ? `<button onclick="desarchivarPlanificacion('${reg.id}')" title="Desarchivar" style="width:100%;justify-content:center;background:#EDE7F6;color:#4527A0;border:1px solid #D1C4E9;border-radius:8px;padding:4px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+              <span class="material-icons" style="font-size:15px;">unarchive</span> Desarchivar</button>`
+          : `<button class="btn-pln-asignar" onclick="asignarPlanACurso('${reg.id}')" title="Asignar a un curso" style="width:100%;justify-content:center;">
+              <span class="material-icons">link</span> Asignar curso</button>`}
         <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación" style="width:100%;justify-content:center;">
           <span class="material-icons">content_copy</span> Duplicar
         </button>
@@ -21492,6 +21500,8 @@ function renderizarBiblioteca() {
         <button class="btn-pln-export" onclick="exportarDiariasDesdeListado('${reg.id}')" title="Exportar planificaciones diarias a Word" style="width:100%;justify-content:center;background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:15px;">event_note</span> Word Diarias
         </button>
+        ${archivada ? '' : `<button onclick="archivarPlanificacion('${reg.id}')" title="Archivar planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#F5F5F5;color:#546E7A;border:1px solid #E0E0E0;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
+          <span class="material-icons" style="font-size:15px;">archive</span> Archivar</button>`}
         <button onclick="cerrarPanelBiblioteca?.();cargarPlanEnPaso5('${reg.id}')" title="Ver planificaciones diarias de esta planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#E0F2F1;color:#00695C;border:1.5px solid #80CBC4;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
           <span class="material-icons" style="font-size:15px;">today</span> Ver Planificaciones Diarias
         </button>
@@ -21521,7 +21531,7 @@ function renderizarBiblioteca() {
     const cardsWrap = document.createElement('div');
     cardsWrap.className = 'pln-grupo-cards';
     planes.forEach(({ reg, esPlanActiva }, i) => {
-      cardsWrap.appendChild(_renderCard(reg, esPlanActiva, cursoId, i + 1, planes.length));
+      cardsWrap.appendChild(_renderCard(reg, esPlanActiva, cursoId, i + 1, planes.length, false));
     });
     section.appendChild(cardsWrap);
     return section;
@@ -21588,7 +21598,57 @@ function renderizarBiblioteca() {
       sinCurso.map(reg => ({ reg, esPlanActiva: false, idx: 0 })), null));
   }
 
+  // Planificaciones archivadas individualmente (independiente de si el curso está archivado)
+  if (archivadosFiltrados.length > 0) {
+    const panel = document.createElement('div');
+    panel.className = 'pln-grupo';
+    panel.style.borderColor = '#E0E0E0';
+    panel.style.background = '#FAFAFA';
+    panel.style.marginTop = '12px';
+    const header = document.createElement('div');
+    header.className = 'pln-grupo-header';
+    header.innerHTML = `
+      <span class="material-icons" style="color:#546E7A;">archive</span>
+      <span class="pln-grupo-nombre" style="color:#424242;">Planificaciones archivadas</span>
+      <span class="pln-grupo-count" style="background:#EEEEEE;color:#616161;">${archivadosFiltrados.length} plan${archivadosFiltrados.length !== 1 ? 'es' : ''}</span>
+      <span class="material-icons pln-grupo-chevron">expand_more</span>`;
+    header.addEventListener('click', () => panel.classList.toggle('pln-grupo-collapsed'));
+    panel.classList.add('pln-grupo-collapsed');
+    panel.appendChild(header);
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'pln-grupo-cards';
+    archivadosFiltrados.forEach(reg => {
+      cardsWrap.appendChild(_renderCard(reg, false, null, null, 0, true));
+    });
+    panel.appendChild(cardsWrap);
+    grid.appendChild(panel);
+  }
+
   _cargarComentariosDeMisPlanes();
+}
+
+/** Archiva una planificación individual: deja de mostrarse agrupada por curso y pasa al apartado "Planificaciones archivadas" */
+function archivarPlanificacion(id) {
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === id);
+  if (!reg) return;
+  reg.archivada = true;
+  reg.archivadaEn = new Date().toISOString();
+  persistirBiblioteca(biblio);
+  renderizarBiblioteca();
+  mostrarToast('Planificación archivada', 'info');
+}
+
+/** Devuelve una planificación archivada a su agrupación normal por curso */
+function desarchivarPlanificacion(id) {
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === id);
+  if (!reg) return;
+  reg.archivada = false;
+  delete reg.archivadaEn;
+  persistirBiblioteca(biblio);
+  renderizarBiblioteca();
+  mostrarToast('Planificación desarchivada', 'success');
 }
 
 // ── Comentarios de coordinadora sobre planificaciones (lado docente) ──────
