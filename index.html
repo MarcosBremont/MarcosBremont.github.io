@@ -1601,8 +1601,8 @@
           </label>
           <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
             style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;"
-            title="Exportar lista de alumnos a CSV">
-            <span class="material-icons">download</span> Exportar CSV
+            title="Exportar lista de alumnos (o notas del RA activo) a Excel">
+            <span class="material-icons">grid_on</span> Exportar Excel
           </button>
         </div>
         <p class="subsection-hint" style="margin-top:10px;">
@@ -2786,6 +2786,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v16.49<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño: "Exportar CSV" del Libro de Calificaciones ahora es "Exportar Excel"</div>
+              <ul class="about-ver-items">
+                <li>El botón exportaba un .csv plano donde el RA se repetía en una columna idéntica en cada fila de estudiante, y los encabezados no tenían ningún formato. Ahora exporta un archivo Excel (.xls) real: el nombre del curso y el RA aparecen una sola vez en un banner sobre la tabla, y los encabezados (Nombre, cada actividad, Total RA) van en negrita.</li>
+                <li>Cuando no hay un RA activo, sigue exportando solo la lista de nombres, también como Excel con encabezado en negrita.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5492,9 +5507,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.48"></script>
+  <script src="app.js?v=16.49"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.48"></script>
+  <script src="auth.js?v=16.49"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
