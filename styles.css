@@ -2102,21 +2102,33 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
   gap: var(--espacio-md);
   margin-bottom: var(--espacio-xl);
   flex-wrap: wrap;
-  border-bottom: 2px solid var(--color-borde);
-  padding-bottom: var(--espacio-md);
+  background: var(--color-fondo);
+  border: 1.5px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  padding: 12px 14px;
 }
 
 .cal-cursos-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: 7px;
+  font-weight: 700;
   color: var(--color-primario-dark);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 .cal-cursos-label .material-icons {
-  font-size: 20px;
+  font-size: 18px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--color-primario-surface);
+  color: var(--color-primario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cal-tabs {
@@ -2129,12 +2141,12 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
 .cal-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   border: 1.5px solid var(--color-borde);
-  background: var(--color-fondo);
+  background: var(--color-superficie);
   color: var(--color-texto-secundario);
   border-radius: var(--radio-full);
-  padding: 6px 14px;
+  padding: 7px 10px 7px 12px;
   font-size: 0.85rem;
   font-family: "Roboto", sans-serif;
   font-weight: 500;
@@ -2142,16 +2154,43 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
   transition: var(--transicion);
 }
 
+.cal-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-tab-badge {
+  background: var(--color-primario-surface);
+  color: var(--color-primario);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .cal-tab.activo {
   background: var(--color-primario);
   color: #fff;
   border-color: var(--color-primario);
-  box-shadow: var(--sombra-1);
+  box-shadow: 0 2px 8px rgba(21, 101, 192, 0.35);
+}
+
+.cal-tab.activo .cal-tab-dot {
+  background: #fff !important;
+  opacity: 0.85;
+}
+
+.cal-tab.activo .cal-tab-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .cal-tab:hover:not(.activo) {
   border-color: var(--color-primario);
   color: var(--color-primario);
+  background: var(--color-primario-surface);
 }
 
 .cal-tab-del {
@@ -2351,37 +2390,68 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
 /* Área añadir estudiantes */
 .cal-add-estudiantes {
   margin-bottom: var(--espacio-xl);
+  background: var(--color-fondo);
+  border: 1.5px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  padding: 14px 16px;
 }
 
-.cal-field-group {
+.cal-add-estudiantes-header {
   display: flex;
-  align-items: flex-start;
-  gap: var(--espacio-md);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.cal-field-group .material-icons {
-  font-size: 28px;
-  margin-top: 8px;
+.cal-add-estudiantes-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-primario-surface);
+  color: var(--color-primario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
-.cal-field-group textarea {
-  flex: 1;
+.cal-add-estudiantes-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--color-texto-primario);
+}
+
+.cal-add-estudiantes-sub {
+  font-size: 0.76rem;
+  color: var(--color-texto-secundario);
+  margin-top: 1px;
+}
+
+.cal-add-estudiantes textarea {
+  width: 100%;
+  box-sizing: border-box;
   font-family: "Roboto", sans-serif;
   font-size: 0.9rem;
   border: 1.5px solid var(--color-borde);
   border-radius: var(--radio-md);
   padding: 10px 14px;
-  background: var(--color-fondo);
+  background: var(--color-superficie);
   resize: vertical;
   outline: none;
   transition: var(--transicion);
 }
 
-.cal-field-group textarea:focus {
+.cal-add-estudiantes textarea:focus {
   border-color: var(--color-primario);
-  background: #fff;
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+}
+
+.cal-add-estudiantes-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 /* Tabla de calificaciones */
@@ -2665,22 +2735,9 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
     align-items: flex-start;
   }
 
-  .cal-field-group {
-    flex-direction: column;
-  }
-
-  .cal-field-group .material-icons:first-child {
-    display: none;
-  }
-
-  .cal-field-group textarea {
-    width: 100% !important;
-    box-sizing: border-box;
-  }
-
-  .cal-field-group .btn-siguiente,
-  .cal-field-group .btn-export {
-    align-self: stretch !important;
+  .cal-add-estudiantes-actions .btn-siguiente,
+  .cal-add-estudiantes-actions .btn-export {
+    flex: 1 1 auto;
     justify-content: center;
   }
 
@@ -7225,7 +7282,8 @@ body.dark-mode .step.active .step-circle {
 }
 
 /* Calificaciones */
-body.dark-mode .cal-cursos-bar {
+body.dark-mode .cal-cursos-bar,
+body.dark-mode .cal-add-estudiantes {
   background: #12151F !important;
   border-color: var(--color-borde) !important;
 }

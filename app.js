@@ -13068,9 +13068,9 @@ function renderizarTabsCursos() {
     const tab = document.createElement('button');
     tab.className = 'cal-tab' + (curso.id === calState.cursoActivoId ? ' activo' : '');
     const nPlanes = (curso.planIds || []).filter(id => biblioIds.has(id)).length;
-    tab.innerHTML = '<span class="material-icons" style="font-size:16px;">class</span>'
+    tab.innerHTML = '<span class="cal-tab-dot" style="background:' + _asistAvatarColor(curso.nombre) + ';"></span>'
       + escapeHTML(curso.nombre)
-      + (nPlanes ? ` <span style="background:#E3F2FD;color:#1565C0;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700;">${nPlanes}</span>` : '')
+      + (nPlanes ? ` <span class="cal-tab-badge">${nPlanes}</span>` : '')
       + '<button class="cal-tab-edit" title="Renombrar curso" onclick="event.stopPropagation();renombrarCurso(\'' + curso.id + '\')">'
       + '<span class="material-icons" style="font-size:14px;">edit</span></button>'
       + '<button class="cal-tab-del" title="Eliminar curso" onclick="event.stopPropagation();eliminarCurso(\'' + curso.id + '\')">'

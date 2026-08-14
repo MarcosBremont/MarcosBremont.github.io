@@ -1579,27 +1579,33 @@
 
       <!-- Añadir estudiantes -->
       <div class="cal-add-estudiantes" id="cal-add-estudiantes-area">
-        <div class="cal-field-group">
-          <span class="material-icons" style="color:#1565C0;">person_add</span>
-          <textarea id="input-estudiantes" rows="3"
-            placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
-          <button class="btn-siguiente" style="align-self:flex-end;white-space:nowrap;" onclick="agregarEstudiantes()">
+        <div class="cal-add-estudiantes-header">
+          <span class="material-icons cal-add-estudiantes-icon">person_add</span>
+          <div>
+            <div class="cal-add-estudiantes-title">Agregar estudiantes</div>
+            <div class="cal-add-estudiantes-sub">Uno por línea, o importa/exporta un archivo CSV</div>
+          </div>
+        </div>
+        <textarea id="input-estudiantes" rows="3"
+          placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
+        <div class="cal-add-estudiantes-actions">
+          <button class="btn-siguiente" onclick="agregarEstudiantes()">
             <span class="material-icons">group_add</span> Agregar
           </button>
           <label class="btn-export btn-sm"
-            style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;align-self:flex-end;white-space:nowrap;"
+            style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;"
             title="Importar desde archivo CSV o Excel guardado como CSV">
             <span class="material-icons">upload_file</span> Importar CSV
             <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none"
               onchange="importarAlumnosCSV(this)">
           </label>
           <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
-            style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;align-self:flex-end;white-space:nowrap;"
+            style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;"
             title="Exportar lista de alumnos a CSV">
             <span class="material-icons">download</span> Exportar CSV
           </button>
         </div>
-        <p class="subsection-hint" style="margin-top:4px;">
+        <p class="subsection-hint" style="margin-top:10px;">
           También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
           <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
           Para importar desde Excel: guarda como <strong>CSV (.csv)</strong> y usa el botón Importar CSV.
@@ -2780,6 +2786,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v16.43<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño visual: encabezado del Libro de Calificaciones</div>
+              <ul class="about-ver-items">
+                <li>La barra de selección de curso ("Curso: ...") ahora es un panel independiente con fondo propio en vez de una simple línea divisoria, y cada pestaña de curso muestra un punto de color único (por nombre) para identificarlo de un vistazo.</li>
+                <li>El bloque para agregar estudiantes se convirtió en una tarjeta con encabezado (ícono + título + descripción), el cuadro de texto ahora ocupa todo el ancho, y los botones de Agregar / Importar CSV / Exportar CSV pasaron a su propia fila debajo -- antes se apretaban todos junto al cuadro de texto.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5398,9 +5419,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.42"></script>
+  <script src="app.js?v=16.43"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.42"></script>
+  <script src="auth.js?v=16.43"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
