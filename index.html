@@ -2795,6 +2795,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#0D47A1;">v16.56<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Membrete institucional (MINERD + centro + DETP) en todos los documentos imprimibles</div>
+              <ul class="about-ver-items">
+                <li>Los documentos imprimibles (Mi Horario, Exámenes) ahora llevan el mismo encabezado de 3 logos que usa el sistema educativo dominicano: el sello de MINERD a la izquierda, el logo/nombre/dirección/teléfono del centro al centro, y el logo de DETP a la derecha. Los logos de MINERD y DETP son fijos para todos los centros; el logo del centro sigue viniendo de su propio perfil (Configuración del centro / Superadmin).</li>
+                <li>Se creó un componente de membrete compartido (<code>_encabezadoImpresionHTML</code>) para que cualquier documento imprimible futuro use el mismo encabezado sin duplicar código.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#0D47A1;">v16.55<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5596,9 +5611,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.55"></script>
+  <script src="app.js?v=16.56"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.55"></script>
+  <script src="auth.js?v=16.56"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
