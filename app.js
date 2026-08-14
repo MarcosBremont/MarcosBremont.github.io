@@ -23259,12 +23259,89 @@ function renderizarExamenes() {
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <button onclick="verResultadosExamen('${ex.id}')" style="${bS}background:#F3E5F5;color:#6A1B9A;"><span class="material-icons" style="font-size:15px;">bar_chart</span>Resultados</button>
         <button onclick="copiarLinkExamen('${ex.id}')" style="${bS}background:#E3F2FD;color:#1565C0;"><span class="material-icons" style="font-size:15px;">link</span>Enlace</button>
+        <button onclick="imprimirExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;"><span class="material-icons" style="font-size:15px;">print</span>Imprimir</button>
         <button onclick="abrirEditorExamen('${ex.id}')" style="${bS}background:#F5F5F5;color:#424242;"><span class="material-icons" style="font-size:15px;">edit</span></button>
         <button onclick="toggleActivarExamen('${ex.id}',${!activo})" style="${bS}background:${activo ? '#FFF3E0' : '#E8F5E9'};color:${activo ? '#E65100' : '#2E7D32'};">${activo ? '⏸ Cerrar' : '▶ Abrir'}</button>
         <button onclick="eliminarExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;padding:6px 8px;"><span class="material-icons" style="font-size:15px;">delete</span></button>
       </div>
     </div>`;
   }).join('');
+}
+
+/** Abre una ventana con el examen formateado en papel para imprimir / guardar como PDF */
+function imprimirExamen(examenId) {
+  const ex = _examenesCache.find(e => e.id === examenId);
+  if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
+  const preguntas = ex.preguntas || [];
+  if (!preguntas.length) { mostrarToast('Este examen no tiene preguntas', 'error'); return; }
+
+  const totalPuntos = preguntas.reduce((s, p) => s + (p.puntos || 1), 0);
+
+  const preguntasHTML = preguntas.map((p, i) => {
+    let cuerpo = '';
+    if (p.tipo === 'mc') {
+      const letras = ['A', 'B', 'C', 'D'];
+      cuerpo = '<div class="opciones">' + (p.opciones || []).map((op, oi) =>
+        op ? `<div class="opcion"><span class="casilla"></span>${letras[oi]}) ${_eHtml(op)}</div>` : ''
+      ).join('') + '</div>';
+    } else if (p.tipo === 'vf') {
+      cuerpo = '<div class="opciones"><div class="opcion"><span class="casilla"></span>Verdadero</div>'
+        + '<div class="opcion"><span class="casilla"></span>Falso</div></div>';
+    } else {
+      cuerpo = '<div class="lineas"><div></div><div></div><div></div></div>';
+    }
+    const imagen = p.imagen ? `<img src="${_eHtml(p.imagen)}" class="preg-img">` : '';
+    return `<div class="pregunta">
+        <div class="preg-enunciado"><span class="preg-num">${i + 1}.</span>${_eHtml(p.enunciado)}
+          <span class="preg-pts">(${p.puntos || 1} pt${(p.puntos || 1) !== 1 ? 's' : ''})</span>
+        </div>
+        ${imagen}
+        ${cuerpo}
+      </div>`;
+  }).join('');
+
+  const meta = [ex.materia, ex.curso].filter(Boolean).map(_eHtml).join(' · ');
+  const fecha = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const ventana = window.open('', '_blank', 'width=900,height=700');
+  if (!ventana) { mostrarToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e intenta de nuevo.', 'error'); return; }
+  ventana.document.write(`
+    <html><head><title>${_eHtml(ex.titulo || 'Examen')}</title>
+    <style>
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      body { font-family: Arial, sans-serif; margin: 1.8cm; color: #212121; font-size: 11pt; }
+      h1 { color: #0D47A1; font-size: 16pt; margin: 0 0 4pt; }
+      .meta { color: #546E7A; font-size: 9.5pt; margin-bottom: 10pt; }
+      .datos-alumno { display: flex; gap: 24px; flex-wrap: wrap; border-top: 1px solid #CFD8DC; border-bottom: 1px solid #CFD8DC; padding: 8pt 0; margin-bottom: 6pt; font-size: 10pt; }
+      .datos-alumno span { border-bottom: 1px solid #9E9E9E; min-width: 160px; display: inline-block; padding-bottom: 2px; }
+      .instrucciones { background: #FFF3E0; border: 1px solid #FFCC80; border-radius: 6px; padding: 8pt 10pt; font-size: 9.5pt; color: #E65100; margin: 10pt 0; }
+      .total-pts { text-align: right; font-size: 9.5pt; color: #546E7A; margin-bottom: 14pt; }
+      .pregunta { margin-bottom: 16pt; page-break-inside: avoid; }
+      .preg-enunciado { font-weight: bold; font-size: 11pt; }
+      .preg-num { color: #0D47A1; margin-right: 4px; }
+      .preg-pts { font-weight: normal; color: #9E9E9E; font-size: 9pt; margin-left: 6px; }
+      .preg-img { display: block; max-width: 100%; max-height: 220px; margin: 6pt 0; }
+      .opciones { margin-top: 6pt; display: flex; flex-direction: column; gap: 5pt; }
+      .opcion { display: flex; align-items: center; gap: 7px; font-size: 10.5pt; }
+      .casilla { width: 11px; height: 11px; border: 1.3px solid #616161; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+      .lineas { margin-top: 8pt; }
+      .lineas div { border-bottom: 1px solid #B0BEC5; height: 20pt; }
+      @page { margin: 1.6cm; }
+    </style>
+    </head><body>
+      <h1>${_eHtml(ex.titulo || 'Examen')}</h1>
+      <div class="meta">${meta ? meta + ' · ' : ''}Generado: ${fecha}</div>
+      <div class="datos-alumno">
+        <div>Nombre: <span>&nbsp;</span></div>
+        <div>Fecha: <span>&nbsp;</span></div>
+      </div>
+      ${ex.instrucciones ? `<div class="instrucciones"><strong>Instrucciones:</strong> ${_eHtml(ex.instrucciones)}</div>` : ''}
+      <div class="total-pts">${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''} · ${totalPuntos} punto${totalPuntos !== 1 ? 's' : ''} en total</div>
+      ${preguntasHTML}
+      <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
+    </body></html>
+  `);
+  ventana.document.close();
 }
 
 // ── Editor ────────────────────────────────────────────────────────────
