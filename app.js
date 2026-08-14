@@ -23269,11 +23269,13 @@ function renderizarExamenes() {
 }
 
 /** Abre una ventana con el examen formateado en papel para imprimir / guardar como PDF */
-function imprimirExamen(examenId) {
+async function imprimirExamen(examenId) {
   const ex = _examenesCache.find(e => e.id === examenId);
   if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
   const preguntas = ex.preguntas || [];
   if (!preguntas.length) { mostrarToast('Este examen no tiene preguntas', 'error'); return; }
+
+  const centroInfo = await _portafolioCargarIdentidadCentro();
 
   const totalPuntos = preguntas.reduce((s, p) => s + (p.puntos || 1), 0);
 
@@ -23310,6 +23312,9 @@ function imprimirExamen(examenId) {
     <style>
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
       body { font-family: Arial, sans-serif; margin: 1.8cm; color: #212121; font-size: 11pt; }
+      .encabezado { display: flex; align-items: center; gap: 12px; margin-bottom: 8pt; }
+      .encabezado img { width: 54px; height: 54px; object-fit: contain; flex-shrink: 0; }
+      .encabezado-centro { font-size: 10.5pt; font-weight: bold; color: #37474F; }
       h1 { color: #0D47A1; font-size: 16pt; margin: 0 0 4pt; }
       .meta { color: #546E7A; font-size: 9.5pt; margin-bottom: 10pt; }
       .datos-alumno { display: flex; gap: 24px; flex-wrap: wrap; border-top: 1px solid #CFD8DC; border-bottom: 1px solid #CFD8DC; padding: 8pt 0; margin-bottom: 6pt; font-size: 10pt; }
@@ -23329,6 +23334,10 @@ function imprimirExamen(examenId) {
       @page { margin: 1.6cm; }
     </style>
     </head><body>
+      ${centroInfo?.logoUrl || centroInfo?.nombre ? `<div class="encabezado">
+        ${centroInfo.logoUrl ? `<img src="${_eHtml(centroInfo.logoUrl)}">` : ''}
+        ${centroInfo.nombre ? `<div class="encabezado-centro">${_eHtml(centroInfo.nombre)}</div>` : ''}
+      </div>` : ''}
       <h1>${_eHtml(ex.titulo || 'Examen')}</h1>
       <div class="meta">${meta ? meta + ' · ' : ''}Generado: ${fecha}</div>
       <div class="datos-alumno">
