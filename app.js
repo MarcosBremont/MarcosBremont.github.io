@@ -21265,6 +21265,11 @@ function renderizarBiblioteca() {
         ${horasTotal ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
         ${dg.valorRA ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
       </div>
+      <button class="pln-card-comentarios-badge" data-plan-id="${reg.id}" onclick="event.stopPropagation();_verComentariosPlanDocente('${reg.id}')"
+        style="display:none;align-items:center;gap:5px;background:#EDE7F6;color:#4527A0;border:1px solid #D1C4E9;border-radius:8px;padding:5px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;margin-bottom:8px;width:100%;justify-content:center;font-family:inherit;">
+        <span class="material-icons" style="font-size:15px;">forum</span>
+        <span class="pln-coment-count">0</span> comentario(s) de tu coordinador(a)
+      </button>
       <div class="pln-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
         <button class="btn-pln-cargar" onclick="cargarPlanificacionGuardada('${reg.id}')" style="width:100%;justify-content:center;">
           <span class="material-icons">folder_open</span> Cargar
@@ -21375,6 +21380,86 @@ function renderizarBiblioteca() {
   if (sinCurso.length > 0) {
     grid.appendChild(_renderGrupo('Sin curso asignado', 'folder_off', '#78909C',
       sinCurso.map(reg => ({ reg, esPlanActiva: false, idx: 0 })), null));
+  }
+
+  _cargarComentariosDeMisPlanes();
+}
+
+// ── Comentarios de coordinadora sobre planificaciones (lado docente) ──────
+let _planComentariosPorId = {}; // { planId: [ {id, texto, coordNombre, fecha, leido}, ... ] }
+
+/** Trae en segundo plano los comentarios que la coordinadora dejó en las planificaciones propias y pinta los badges */
+async function _cargarComentariosDeMisPlanes() {
+  if (!window.currentUser || !window.currentUser.uid || !window.firebase || !firebase.firestore || !db) return;
+  try {
+    const snap = await db.collection('users').doc(window.currentUser.uid).collection('plan_comentarios')
+      .orderBy('fecha', 'desc').get();
+    _planComentariosPorId = {};
+    snap.forEach(doc => {
+      const c = { id: doc.id, ...doc.data() };
+      (_planComentariosPorId[c.planId] = _planComentariosPorId[c.planId] || []).push(c);
+    });
+    _pintarBadgesComentariosPlan();
+  } catch (e) {
+    console.warn('[Comentarios] Error cargando comentarios de planificaciones:', e);
+  }
+}
+
+function _pintarBadgesComentariosPlan() {
+  document.querySelectorAll('.pln-card-comentarios-badge').forEach(el => {
+    const planId = el.dataset.planId;
+    const coms = _planComentariosPorId[planId] || [];
+    if (!coms.length) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    const conteo = el.querySelector('.pln-coment-count');
+    if (conteo) conteo.textContent = coms.length;
+    const noLeidos = coms.some(c => !c.leido);
+    el.style.background = noLeidos ? '#FFF3E0' : '#EDE7F6';
+    el.style.color = noLeidos ? '#E65100' : '#4527A0';
+    el.style.borderColor = noLeidos ? '#FFB74D' : '#D1C4E9';
+  });
+}
+
+/** Abre un modal de solo lectura con los comentarios que la coordinadora dejó sobre una planificación, y los marca como leídos */
+async function _verComentariosPlanDocente(planId) {
+  const coms = (_planComentariosPorId[planId] || []).slice();
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  if (!overlay || !body) return;
+  if (title) title.textContent = 'Comentarios de tu coordinador(a)';
+
+  body.innerHTML = !coms.length
+    ? '<p style="color:#9E9E9E;text-align:center;padding:20px;">Sin comentarios todavía.</p>'
+    : '<div style="display:flex;flex-direction:column;gap:10px;">' + coms.map(c => {
+        const fecha = c.fecha ? new Date(c.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        return '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:10px;padding:10px 12px;">'
+          + '<div style="font-weight:700;font-size:0.85rem;color:#1565C0;">' + escHTML(c.coordNombre || 'Coordinador(a)') + '</div>'
+          + '<div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:6px;">' + fecha + '</div>'
+          + '<div style="font-size:0.85rem;color:#212121;white-space:pre-wrap;">' + escHTML(c.texto || '') + '</div>'
+          + '</div>';
+      }).join('') + '</div>';
+
+  _usarFooterDinamico('<button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>');
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  const noLeidos = coms.filter(c => !c.leido);
+  if (noLeidos.length && window.currentUser) {
+    try {
+      const batch = db.batch();
+      noLeidos.forEach(c => {
+        const ref = db.collection('users').doc(window.currentUser.uid).collection('plan_comentarios').doc(c.id);
+        batch.update(ref, { leido: true });
+        c.leido = true;
+        const original = (_planComentariosPorId[planId] || []).find(x => x.id === c.id);
+        if (original) original.leido = true;
+      });
+      await batch.commit();
+      _pintarBadgesComentariosPlan();
+    } catch (e) {
+      console.warn('[Comentarios] Error marcando como leído:', e);
+    }
   }
 }
 
@@ -37666,7 +37751,7 @@ function _coordToggleDetallePlan(idx) {
       + (ciclo === 'Sin fecha' ? 'Sin fecha identificada' : 'Ciclo ' + ciclo + (esActual ? ' (actual)' : '')) + ' — ' + itemsCiclo.length + ' plan' + (itemsCiclo.length > 1 ? 'es' : '')
       + '</summary>'
       + '<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">'
-      + itemsCiclo.map(_coordPlanItemHTML).join('')
+      + itemsCiclo.map(item => _coordPlanItemHTML(item, idx)).join('')
       + '</div></details>';
   });
 
@@ -37675,7 +37760,7 @@ function _coordToggleDetallePlan(idx) {
 }
 
 /** Tarjeta de detalle de una planificación individual (usada en el drill-down de Coordinadora) */
-function _coordPlanItemHTML(item) {
+function _coordPlanItemHTML(item, idx) {
   const plan = item.planificacion || {};
   const raDesc = plan.ra?.descripcion || '';
   const raCorto = raDesc.substring(0, 60) + (raDesc.length > 60 ? '...' : '');
@@ -37703,8 +37788,142 @@ function _coordPlanItemHTML(item) {
     });
     h += '</div></details>';
   }
+
+  h += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">'
+    + '<button onclick="_coordVerPlanCompleto(' + idx + ',\'' + item.id + '\')" style="background:#EDE7F6;color:#4527A0;border:1px solid #D1C4E9;border-radius:8px;padding:4px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:inherit;">'
+    + '<span class="material-icons" style="font-size:14px;">visibility</span> Ver completa / Comentar</button>'
+    + '<button onclick="_coordDescargarPlanWord(' + idx + ',\'' + item.id + '\')" style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:inherit;">'
+    + '<span class="material-icons" style="font-size:14px;">description</span> Descargar Word</button>'
+    + '</div>';
+
   h += '</div>';
   return h;
+}
+
+/** Ver el contenido completo (no resumido) de una planificación de un docente, con opción de descargar Word y dejar comentarios */
+function _coordVerPlanCompleto(idx, planId) {
+  const d = window._coordPlanData?.[idx];
+  const item = d?.planItems.find(p => p.id === planId);
+  if (!item || !item.planificacion) { mostrarToast('No se pudo cargar esta planificación', 'error'); return; }
+
+  const backupPlan = planificacion;
+  let contenido = '';
+  try {
+    planificacion = JSON.parse(JSON.stringify(item.planificacion));
+    renderizarVistaPrevia();
+    contenido = document.getElementById('vista-previa')?.innerHTML || '<p>No se pudo generar la vista previa.</p>';
+  } finally {
+    planificacion = backupPlan;
+  }
+
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  if (!overlay || !body) return;
+  if (title) title.textContent = (d.nombre || d.email || 'Docente') + ' — Planificación completa';
+
+  body.innerHTML = '<div style="max-height:45vh;overflow-y:auto;border:1px solid #E0E0E0;border-radius:10px;padding:12px;margin-bottom:16px;">'
+    + contenido + '</div>'
+    + '<div style="font-size:0.85rem;font-weight:700;color:#00695C;margin-bottom:8px;display:flex;align-items:center;gap:6px;">'
+    + '<span class="material-icons" style="font-size:18px;">forum</span> Comentarios para ' + escapeHTML((d.nombre || d.email || 'el docente').split(' ')[0]) + '</div>'
+    + '<div id="coord-comentarios-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">'
+    + '<div style="color:#9E9E9E;font-size:0.82rem;">Cargando comentarios...</div></div>'
+    + '<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">'
+    + '<textarea id="coord-comentario-texto" rows="2" placeholder="Escribe una observación o retroalimentación sobre esta planificación..." style="flex:1;min-width:200px;padding:8px 10px;border:1.5px solid #E0E0E0;border-radius:8px;font-family:inherit;font-size:0.85rem;resize:vertical;box-sizing:border-box;"></textarea>'
+    + '<button class="btn-export btn-sm" style="background:#00695C;color:#fff;white-space:nowrap;" onclick="_coordEnviarComentarioPlan(' + idx + ',\'' + planId + '\')">'
+    + '<span class="material-icons">send</span> Enviar</button>'
+    + '</div>';
+
+  _usarFooterDinamico(
+    '<button class="btn-export btn-sm" style="background:#1565C0;color:#fff;" onclick="_coordDescargarPlanWord(' + idx + ',\'' + planId + '\')">'
+    + '<span class="material-icons">description</span> Descargar Word</button>'
+    + '<button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>'
+  );
+
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  _coordCargarComentariosPlan(d.uid, planId);
+}
+
+/** Carga y pinta la lista de comentarios de una planificación dentro del modal de Coordinadora */
+async function _coordCargarComentariosPlan(docenteUid, planId) {
+  const cont = document.getElementById('coord-comentarios-lista');
+  if (!cont) return;
+  try {
+    const snap = await db.collection('users').doc(docenteUid).collection('plan_comentarios')
+      .where('planId', '==', planId).orderBy('fecha', 'desc').get();
+    if (snap.empty) {
+      cont.innerHTML = '<div style="color:#9E9E9E;font-size:0.82rem;">Sin comentarios todavía.</div>';
+      return;
+    }
+    cont.innerHTML = snap.docs.map(doc => {
+      const c = doc.data();
+      const fecha = c.fecha ? new Date(c.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const estadoLabel = c.leido ? '<span style="color:#2E7D32;">Leído</span>' : '<span style="color:#E65100;">Sin leer</span>';
+      return '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:8px 10px;">'
+        + '<div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:3px;">' + escapeHTML(c.coordNombre || 'Tú') + ' · ' + fecha + ' · ' + estadoLabel + '</div>'
+        + '<div style="font-size:0.85rem;color:#212121;white-space:pre-wrap;">' + escapeHTML(c.texto || '') + '</div>'
+        + '</div>';
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#C62828;font-size:0.82rem;">Error cargando comentarios: ' + e.message + '</div>';
+  }
+}
+
+/** Envía un comentario de la Coordinadora sobre la planificación de un docente */
+async function _coordEnviarComentarioPlan(idx, planId) {
+  const d = window._coordPlanData?.[idx];
+  const item = d?.planItems.find(p => p.id === planId);
+  const textarea = document.getElementById('coord-comentario-texto');
+  const texto = (textarea?.value || '').trim();
+  if (!item) return;
+  if (!texto) { mostrarToast('Escribe un comentario primero', 'warning'); return; }
+  if (!window.currentUser) return;
+
+  try {
+    let coordNombre = window.currentUser.displayName || window.currentUser.email || 'Coordinador(a)';
+    try {
+      const miPerfil = await db.collection('usuarios').doc(window.currentUser.uid).get();
+      if (miPerfil.exists && miPerfil.data().nombre) coordNombre = miPerfil.data().nombre;
+    } catch {}
+
+    await db.collection('users').doc(d.uid).collection('plan_comentarios').add({
+      planId,
+      planNombre: item.nombre || item.planificacion?.datosGenerales?.moduloFormativo || '',
+      texto,
+      coordUid: window.currentUser.uid,
+      coordNombre,
+      centroId: await _coordGetCentroId(),
+      fecha: new Date().toISOString(),
+      leido: false,
+    });
+
+    if (textarea) textarea.value = '';
+    mostrarToast('Comentario enviado', 'success');
+    _coordCargarComentariosPlan(d.uid, planId);
+  } catch (e) {
+    mostrarToast('Error al enviar comentario: ' + e.message, 'error');
+  }
+}
+
+/** Descarga a Word una planificación de un docente vista desde el drill-down de Coordinadora */
+async function _coordDescargarPlanWord(idx, planId) {
+  const d = window._coordPlanData?.[idx];
+  const item = d?.planItems.find(p => p.id === planId);
+  if (!item || !item.planificacion) { mostrarToast('No se pudo cargar esta planificación', 'error'); return; }
+
+  const backupPlan = planificacion;
+  try {
+    planificacion = JSON.parse(JSON.stringify(item.planificacion));
+    mostrarToast('Exportando a Word...', 'info');
+    await _exportarConPlantillaCentro() || _exportarWordHTML();
+  } catch (e) {
+    console.warn('[CoordExport] Error:', e);
+    mostrarToast('Error al exportar: ' + e.message, 'error');
+  } finally {
+    planificacion = backupPlan;
+  }
 }
 
 // ── 3. RESUMEN POR DOCENTE ──────────────────────────────────────

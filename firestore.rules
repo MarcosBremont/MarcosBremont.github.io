@@ -198,6 +198,25 @@ service cloud.firestore {
       allow read, write: if signedIn() && request.auth.uid == userId;
     }
 
+    // Comentarios de un supervisor (coordinadora/director/admin_centro) sobre una
+    // planificación específica de un docente: feedback dirigido. El docente dueño
+    // solo puede leer y marcar como leído (affectedKeys hasOnly 'leido'), nunca
+    // editar el texto ni crear comentarios a nombre de un supervisor. Solo el autor
+    // del comentario (o superadmin) puede borrarlo.
+    match /users/{userId}/plan_comentarios/{comentarioId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow update: if signedIn() && request.auth.uid == userId &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leido']);
+
+      allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                     (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+      allow create: if (isSuperadminByEmail() || currentRole() == 'superadmin') ||
+                       (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId) &&
+                        request.resource.data.coordUid == request.auth.uid);
+      allow delete: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                       (hasRole(['coordinadora', 'director', 'admin_centro']) && resource.data.coordUid == request.auth.uid);
+    }
+
     // Evidencias del Portafolio Docente: un documento por evidencia (a diferencia de
     // users/{userId}/data/{doc}, que guarda un blob unico) para poder adjuntar archivos
     // sin toparse con el limite de 1 MiB por documento de Firestore. Sin chequeo por
