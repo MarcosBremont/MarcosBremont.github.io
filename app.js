@@ -68,6 +68,7 @@ function exportarAlumnosCSV() {
   const raInfo = raKey ? curso.ras?.[raKey] : null;
 
   const thStyle = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #78909C;text-align:center;white-space:nowrap;';
+  const thStyleAct = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #78909C;text-align:center;white-space:normal;max-width:160px;';
   const tdStyle = 'padding:5px 8px;border:1px solid #CFD8DC;';
 
   let bodyHTML, filename;
@@ -87,7 +88,7 @@ function exportarAlumnosCSV() {
       ecCounters[ecBase] = (ecCounters[ecBase] || 0) + 1;
       const actLabel = 'Act ' + ecBase + '.' + ecCounters[ecBase];
       const max = raInfo.valores?.[a.id] ?? '';
-      return { id: a.id, label: actLabel + (max !== '' ? ' (' + max + 'pts)' : '') };
+      return { id: a.id, label: actLabel + (max !== '' ? ' (' + max + 'pts)' : ''), enunciado: a.enunciado || '' };
     });
 
     const totalCols = 2 + actCols.length; // Nombre + actividades + Total RA
@@ -97,7 +98,9 @@ function exportarAlumnosCSV() {
 
     const headerRow = '<tr>'
       + '<th style="' + thStyle + '">Nombre</th>'
-      + actCols.map(c => '<th style="' + thStyle + '">' + escapeHTML(c.label) + '</th>').join('')
+      + actCols.map(c => '<th style="' + thStyleAct + '">' + escapeHTML(c.label)
+          + (c.enunciado ? '<br><span style="font-weight:normal;font-size:10px;color:#E3F2FD;">' + escapeHTML(c.enunciado) + '</span>' : '')
+          + '</th>').join('')
       + '<th style="' + thStyle + '">Total RA</th>'
       + '</tr>';
 
