@@ -37861,13 +37861,32 @@ async function _coordCargarComentariosPlan(docenteUid, planId) {
       const c = doc.data();
       const fecha = c.fecha ? new Date(c.fecha).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
       const estadoLabel = c.leido ? '<span style="color:#2E7D32;">Leído</span>' : '<span style="color:#E65100;">Sin leer</span>';
-      return '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:8px 10px;">'
+      const puedeBorrar = window.currentUser && c.coordUid === window.currentUser.uid;
+      return '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:8px 10px;display:flex;gap:8px;align-items:flex-start;">'
+        + '<div style="flex:1;min-width:0;">'
         + '<div style="font-size:0.72rem;color:#9E9E9E;margin-bottom:3px;">' + escapeHTML(c.coordNombre || 'Tú') + ' · ' + fecha + ' · ' + estadoLabel + '</div>'
         + '<div style="font-size:0.85rem;color:#212121;white-space:pre-wrap;">' + escapeHTML(c.texto || '') + '</div>'
+        + '</div>'
+        + (puedeBorrar
+          ? '<button onclick="_coordEliminarComentarioPlan(\'' + docenteUid + '\',\'' + planId + '\',\'' + doc.id + '\')" title="Eliminar comentario" style="background:none;border:none;color:#BDBDBD;cursor:pointer;padding:2px;display:flex;flex-shrink:0;">'
+            + '<span class="material-icons" style="font-size:17px;">delete_outline</span></button>'
+          : '')
         + '</div>';
     }).join('');
   } catch (e) {
     cont.innerHTML = '<div style="color:#C62828;font-size:0.82rem;">Error cargando comentarios: ' + e.message + '</div>';
+  }
+}
+
+/** Elimina un comentario propio dejado sobre la planificación de un docente */
+async function _coordEliminarComentarioPlan(docenteUid, planId, comentarioId) {
+  if (!confirm('¿Eliminar este comentario? Esta acción no se puede deshacer.')) return;
+  try {
+    await db.collection('users').doc(docenteUid).collection('plan_comentarios').doc(comentarioId).delete();
+    mostrarToast('Comentario eliminado', 'success');
+    _coordCargarComentariosPlan(docenteUid, planId);
+  } catch (e) {
+    mostrarToast('Error al eliminar comentario: ' + e.message, 'error');
   }
 }
 
