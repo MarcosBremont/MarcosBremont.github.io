@@ -23548,6 +23548,13 @@ async function guardarExamen() {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection('examenes').add(data);
       mostrarToast('Examen creado y activado', 'success');
+
+      _crearEvidenciaPortafolioAuto({
+        categoria: 'otro',
+        titulo: ex.titulo,
+        descripcion: ex.preguntas.length + ' pregunta' + (ex.preguntas.length !== 1 ? 's' : '') + (ex.instrucciones ? '\n\n' + ex.instrucciones : ''),
+        origen: 'Exámenes y Pruebas · ' + [ex.materia, ex.curso].filter(Boolean).join(' · ')
+      });
     }
     cerrarEditorExamen();
     _cargarExamenes();
@@ -31041,6 +31048,7 @@ function _blogRenderCard(p) {
         ? `<button onclick="verEntregasPost('${p.id}')" style="color:#1565C0;"><span class="material-icons">folder_open</span> Entregas</button>`
         : ''}
       <button onclick="_duplicarPostACurso('${p.id}')" style="color:#00695C;"><span class="material-icons">content_copy</span> Duplicar</button>
+      <button onclick="imprimirPost('${p.id}')" style="color:#C62828;"><span class="material-icons">print</span> Imprimir</button>
       <button onclick="eliminarPost('${p.id}')" style="color:#C62828;margin-left:auto;"><span class="material-icons">delete</span></button>
     </div>
   </div>`;
@@ -31300,6 +31308,60 @@ function _ejecutarDuplicarPost(postId) {
   mostrarToast(`Post duplicado a ${count} curso${count > 1 ? 's' : ''} como borrador`, 'success');
 }
 
+/** Abre una ventana con el post (tarea/información) formateado en papel para imprimir / guardar como PDF */
+async function imprimirPost(id) {
+  const blog = cargarBlog();
+  const post = (blog.posts || []).find(p => p.id === id);
+  if (!post) { mostrarToast('Post no encontrado', 'error'); return; }
+
+  const centroInfo = await _portafolioCargarIdentidadCentro();
+  const tipoMap = {
+    pc:       { label: 'Tarea en PC' },
+    cuaderno: { label: 'Tarea en cuaderno' },
+    info:     { label: 'Información' }
+  };
+  const tipoLabel = (tipoMap[post.tipo] || tipoMap.info).label;
+  const fecha = post.fechaLimite
+    ? new Date(post.fechaLimite + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '';
+  const generado = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+  const adjuntos = post.adjuntos || [];
+
+  const ventana = window.open('', '_blank', 'width=900,height=700');
+  if (!ventana) { mostrarToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e intenta de nuevo.', 'error'); return; }
+  ventana.document.write(`
+    <html><head><title>${escapeHTML(post.titulo || 'Post')}</title>
+    <style>
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      body { font-family: Arial, sans-serif; margin: 1.8cm; color: #212121; font-size: 11pt; }
+      ${MEMBRETE_CSS}
+      .tipo-badge { display: inline-block; background: #E3F2FD; color: #1565C0; border-radius: 20px; padding: 3px 12px; font-size: 9pt; font-weight: bold; margin-bottom: 8pt; }
+      h1 { color: #0D47A1; font-size: 16pt; margin: 0 0 6pt; }
+      .meta { color: #546E7A; font-size: 9.5pt; margin-bottom: 14pt; border-bottom: 1px solid #CFD8DC; padding-bottom: 10pt; }
+      .meta div { margin-bottom: 3pt; }
+      .contenido { font-size: 11pt; line-height: 1.6; white-space: pre-wrap; margin-bottom: 16pt; }
+      .adjuntos { font-size: 9.5pt; color: #546E7A; border-top: 1px dashed #CFD8DC; padding-top: 8pt; }
+      .adjuntos strong { color: #37474F; }
+      @page { margin: 1.6cm; }
+    </style>
+    </head><body>
+      ${_encabezadoImpresionHTML(centroInfo)}
+      <span class="tipo-badge">${escapeHTML(tipoLabel)}</span>
+      <h1>${escapeHTML(post.titulo || 'Sin título')}</h1>
+      <div class="meta">
+        <div><strong>Curso:</strong> ${escapeHTML(post.cursoNombre || '—')}</div>
+        ${post.raLabel ? `<div><strong>RA / Planificación:</strong> ${escapeHTML(post.raLabel)}</div>` : ''}
+        ${fecha ? `<div><strong>Fecha límite:</strong> ${escapeHTML(fecha)}</div>` : ''}
+        <div>Generado: ${generado}</div>
+      </div>
+      <div class="contenido">${escapeHTML(post.contenido || '')}</div>
+      ${adjuntos.length ? `<div class="adjuntos"><strong>Archivos adjuntos (disponibles en el post digital):</strong> ${adjuntos.map(a => escapeHTML(a.nombre)).join(', ')}</div>` : ''}
+      <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
+    </body></html>
+  `);
+  ventana.document.close();
+}
+
 function publicarPost(id) {
   const blog = cargarBlog();
   const post = (blog.posts || []).find(p => p.id === id);
@@ -31308,6 +31370,14 @@ function publicarPost(id) {
   guardarBlog(blog);
   _blogPublicarEnFirestore(post);
   renderizarBlog();
+
+  _crearEvidenciaPortafolioAuto({
+    categoria: 'otro',
+    titulo: post.titulo || 'Post del Blog',
+    descripcion: (post.contenido || '').substring(0, 500),
+    origen: 'Blog del Docente · ' + (post.cursoNombre || '')
+  });
+
   mostrarToast('Post publicado ✓', 'success');
 }
 
