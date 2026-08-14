@@ -19668,6 +19668,73 @@ function renderizarTareas() {
   }).join('');
 }
 
+/** Abre una ventana con la lista de tareas (respetando el filtro activo) formateada para imprimir / guardar como PDF */
+async function imprimirTareas() {
+  const tareas = cargarTareas();
+  const filtroActivo = document.querySelector('.tarea-filtro-btn.activo')?.dataset.filtro || 'todas';
+  const filtroSeccion = document.getElementById('tarea-filtro-seccion')?.value || '';
+
+  let filtradas = tareas.map(t => ({ ...t, _estado: _estadoTarea(t) }));
+  if (filtroActivo !== 'todas') filtradas = filtradas.filter(t => t._estado === filtroActivo);
+  if (filtroSeccion) filtradas = filtradas.filter(t => t.seccion === filtroSeccion);
+  if (!filtradas.length) { mostrarToast('No hay tareas para imprimir con este filtro', 'error'); return; }
+
+  filtradas.sort((a, b) => {
+    if (!a.fechaLimite) return 1;
+    if (!b.fechaLimite) return -1;
+    return new Date(a.fechaLimite) - new Date(b.fechaLimite);
+  });
+
+  const centroInfo = await _portafolioCargarIdentidadCentro();
+  const estadoLabel = { pendiente: 'Pendiente', entregada: 'Entregada', vencida: 'Vencida', no_entregada: 'No entregada' };
+  const estadoColor = { pendiente: '#E65100', entregada: '#2E7D32', vencida: '#C62828', no_entregada: '#546E7A' };
+
+  const filas = filtradas.map(t => {
+    const fechaFmt = t.fechaLimite
+      ? new Date(t.fechaLimite + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) + (t.horaLimite ? ' ' + t.horaLimite : '')
+      : '—';
+    return `<tr>
+      <td class="chk"><span class="casilla"></span></td>
+      <td>${escapeHTML(t.descripcion)}${t.observaciones ? `<div class="obs">${escapeHTML(t.observaciones)}</div>` : ''}</td>
+      <td>${escapeHTML(t.seccion || '—')}</td>
+      <td>${escapeHTML(fechaFmt)}</td>
+      <td><span class="estado" style="color:${estadoColor[t._estado]};">${estadoLabel[t._estado]}</span></td>
+    </tr>`;
+  }).join('');
+
+  const fecha = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+  const filtroLabel = filtroActivo === 'todas' ? 'Todas' : estadoLabel[filtroActivo];
+
+  const ventana = window.open('', '_blank', 'width=1000,height=700');
+  if (!ventana) { mostrarToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e intenta de nuevo.', 'error'); return; }
+  ventana.document.write(`
+    <html><head><title>Tareas</title>
+    <style>
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      body { font-family: Arial, sans-serif; margin: 1.6cm; color: #212121; font-size: 10.5pt; }
+      ${MEMBRETE_CSS}
+      h1 { color: #0D47A1; font-size: 16pt; margin: 0 0 4pt; }
+      .meta { color: #546E7A; font-size: 9pt; margin-bottom: 14pt; }
+      table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+      th, td { border: 1px solid #CFD8DC; padding: 6px 8px; text-align: left; vertical-align: top; }
+      th { background: #0D47A1; color: #fff; font-size: 9pt; }
+      td.chk { text-align: center; width: 28px; }
+      .casilla { width: 12px; height: 12px; border: 1.3px solid #616161; border-radius: 3px; display: inline-block; }
+      .obs { font-size: 8.5pt; color: #78909C; margin-top: 2pt; }
+      .estado { font-weight: bold; font-size: 8.5pt; }
+      @page { margin: 1.4cm; }
+    </style>
+    </head><body>
+      ${_encabezadoImpresionHTML(centroInfo)}
+      <h1>Tareas</h1>
+      <div class="meta">Filtro: ${escapeHTML(filtroLabel)}${filtroSeccion ? ' · Sección: ' + escapeHTML(filtroSeccion) : ''} · Generado: ${fecha}</div>
+      <table><thead><tr><th></th><th>Descripción</th><th>Sección</th><th>Fecha límite</th><th>Estado</th></tr></thead>
+      <tbody>${filas}</tbody></table>
+      <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
+    </body></html>
+  `);
+  ventana.document.close();
+}
 
 function abrirNuevaTarea(seccionSugerida) {
   _abrirModalTarea(null, seccionSugerida);
@@ -19754,6 +19821,13 @@ function _guardarTarea(id) {
     }
   } else {
     tareas.push({ id: uid(), descripcion: desc, seccion, fechaLimite: fecha, horaLimite: hora, observaciones: obs, estado: 'pendiente', creadaEn: new Date().toISOString() });
+    _crearEvidenciaPortafolioAuto({
+      categoria: 'otro',
+      titulo: desc.substring(0, 80),
+      descripcion: obs || desc,
+      fecha,
+      origen: 'Tareas' + (seccion ? ' · ' + seccion : '')
+    });
   }
   guardarTareas(tareas);
   cerrarModalBtn();
@@ -34864,6 +34938,10 @@ function _buildDenunciasHTML(denuncias, opts = {}) {
         + '<span class="material-icons" style="font-size:13px;">badge</span><strong>Docente:</strong> ' + escapeHTML(d.docenteNombre || d.docenteUid || '—') +
       '</div>'
       : '';
+    const accionImprimir = !vistaGlobal
+      ? '<button onclick="imprimirDenuncia(\'' + d.id + '\')" title="Imprimir" style="background:none;border:none;color:#6A1B9A;cursor:pointer;padding:4px;">'
+          + '<span class="material-icons" style="font-size:18px;">print</span></button>'
+      : '';
     const accionEliminar = !vistaGlobal
       ? '<button onclick="_eliminarDenuncia(\'' + d.id + '\')" title="Eliminar" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:4px;">'
           + '<span class="material-icons" style="font-size:18px;">delete_outline</span></button>'
@@ -34877,7 +34955,7 @@ function _buildDenunciasHTML(denuncias, opts = {}) {
           '<span style="font-size:0.72rem;color:#9E9E9E;display:flex;align-items:center;gap:3px;">' +
             '<span class="material-icons" style="font-size:13px;">schedule</span>' + escapeHTML(fechaStr) + '</span>' +
         '</div>' +
-        accionEliminar +
+        '<div>' + accionImprimir + accionEliminar + '</div>' +
       '</div>' +
       '<div style="font-size:0.78rem;color:#78909C;margin-bottom:4px;display:flex;align-items:center;gap:4px;">' +
         '<span class="material-icons" style="font-size:14px;">school</span> ' + escapeHTML(d.curso) +
@@ -34891,6 +34969,76 @@ function _buildDenunciasHTML(denuncias, opts = {}) {
       '<div style="font-size:0.85rem;color:#424242;line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escapeHTML(d.descripcion) + '</div>' +
     '</div>';
   }).join('');
+}
+
+/** Abre una ventana con el reporte de una denuncia formateado para imprimir / entregar a dirección, y la registra como evidencia en el Portafolio */
+async function imprimirDenuncia(id) {
+  const d = (window._denunciasCache || []).find(x => x.id === id);
+  if (!d) { mostrarToast('Denuncia no encontrada', 'error'); return; }
+
+  const tipoLabels = {
+    acoso: 'Acoso / Bullying', pelea: 'Pelea / Agresión', robo: 'Robo / Hurto',
+    discriminacion: 'Discriminación', sustancias: 'Sustancias prohibidas',
+    vandalismo: 'Vandalismo', amenaza: 'Amenaza', otro: 'Otro'
+  };
+  const tipoLabel = tipoLabels[d.tipo] || d.tipo || 'Otro';
+  const fechaStr = d.fecha
+    ? new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—';
+  const esAnonimo = !d.nombre || d.nombre === 'Anónimo';
+  const generado = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const centroInfo = await _portafolioCargarIdentidadCentro();
+
+  const ventana = window.open('', '_blank', 'width=900,height=700');
+  if (!ventana) { mostrarToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e intenta de nuevo.', 'error'); return; }
+  ventana.document.write(`
+    <html><head><title>Reporte de Denuncia</title>
+    <style>
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      body { font-family: Arial, sans-serif; margin: 1.8cm; color: #212121; font-size: 11pt; }
+      ${MEMBRETE_CSS}
+      .tipo-badge { display: inline-block; background: #F3E5F5; color: #6A1B9A; border-radius: 20px; padding: 3px 12px; font-size: 9pt; font-weight: bold; margin-bottom: 8pt; }
+      h1 { color: #6A1B9A; font-size: 16pt; margin: 0 0 10pt; }
+      .campos { border-collapse: collapse; width: 100%; margin-bottom: 14pt; }
+      .campos td { border: 1px solid #CFD8DC; padding: 6px 10px; font-size: 10pt; }
+      .campos td.label { background: #F5F5F5; font-weight: bold; width: 160px; color: #37474F; }
+      .descripcion-title { font-weight: bold; font-size: 10.5pt; color: #37474F; margin-bottom: 6pt; }
+      .descripcion { font-size: 10.5pt; line-height: 1.6; white-space: pre-wrap; border: 1px solid #CFD8DC; border-radius: 6px; padding: 10pt; min-height: 100pt; }
+      .firma { margin-top: 40pt; display: flex; justify-content: space-between; gap: 40px; }
+      .firma div { border-top: 1px solid #616161; padding-top: 6pt; font-size: 9.5pt; color: #424242; flex: 1; text-align: center; }
+      .gen { margin-top: 14pt; font-size: 8.5pt; color: #9E9E9E; }
+      @page { margin: 1.6cm; }
+    </style>
+    </head><body>
+      ${_encabezadoImpresionHTML(centroInfo)}
+      <span class="tipo-badge">${escapeHTML(tipoLabel)}</span>
+      <h1>Reporte de Denuncia Escolar</h1>
+      <table class="campos">
+        <tr><td class="label">Curso / Sección</td><td>${escapeHTML(d.curso || '—')}</td></tr>
+        <tr><td class="label">Fecha del incidente</td><td>${escapeHTML(fechaStr)}</td></tr>
+        <tr><td class="label">Reportado por</td><td>${esAnonimo ? 'Anónimo' : escapeHTML(d.nombre)}</td></tr>
+        <tr><td class="label">Involucrados</td><td>${escapeHTML(d.involucrados || '—')}</td></tr>
+      </table>
+      <div class="descripcion-title">Descripción del incidente</div>
+      <div class="descripcion">${escapeHTML(d.descripcion || '')}</div>
+      <div class="firma">
+        <div>Docente / Encargado</div>
+        <div>Dirección / Coordinación</div>
+      </div>
+      <div class="gen">Generado: ${generado}</div>
+      <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
+    </body></html>
+  `);
+  ventana.document.close();
+
+  _crearEvidenciaPortafolioAuto({
+    categoria: 'otro',
+    titulo: 'Denuncia: ' + tipoLabel + (d.curso ? ' — ' + d.curso : ''),
+    descripcion: d.descripcion || '',
+    fecha: d.fecha,
+    origen: 'Buzón de Denuncias'
+  });
 }
 
 async function _eliminarDenuncia(id) {

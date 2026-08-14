@@ -1694,7 +1694,10 @@
       <div class="section-header">
         <span class="material-icons section-icon" style="background:#FFF3E0;color:#E65100;">assignment</span>
         <h2>Tareas</h2>
-        <div style="margin-left:auto;">
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn-export btn-print btn-sm" onclick="imprimirTareas()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
           <button class="btn-siguiente" onclick="abrirNuevaTarea()" style="font-size:0.82rem;padding:8px 16px;">
             <span class="material-icons">add</span> Nueva tarea
           </button>
@@ -2791,6 +2794,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.58<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Imprimir en Tareas y Denuncias + registro automático en Portafolio</div>
+              <ul class="about-ver-items">
+                <li>Tareas tiene un botón "Imprimir" que genera un checklist en papel de la lista visible (respeta el filtro de estado y de sección activos). Cada tarea nueva que crees también se registra como evidencia en el Portafolio Docente.</li>
+                <li>Cada denuncia recibida en el Buzón de Denuncias tiene un botón de imprimir que genera un reporte formal (tipo, curso, involucrados, descripción, líneas de firma) listo para entregar a Dirección o Coordinación -- al imprimirla, también se registra como evidencia en el Portafolio ("seguimiento" del caso). Ambas acciones solo aparecen en tus propias denuncias, no en la vista global de convivencia de otros docentes.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5626,9 +5644,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.57"></script>
+  <script src="app.js?v=16.58"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.57"></script>
+  <script src="auth.js?v=16.58"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
