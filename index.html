@@ -1668,6 +1668,11 @@
       <div class="section-header">
         <span class="material-icons section-icon" style="background:#E3F2FD;color:#0D47A1;">calendar_view_week</span>
         <h2>Mi Horario de Clases</h2>
+        <div style="margin-left:auto;">
+          <button class="btn-export btn-print btn-sm" onclick="imprimirHorario()">
+            <span class="material-icons">print</span> Imprimir
+          </button>
+        </div>
       </div>
       <p style="font-size:0.82rem;color:#78909C;margin:0 0 12px;">
         <span class="material-icons" style="font-size:14px;vertical-align:middle;">info</span>
@@ -2786,6 +2791,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0D47A1;">v16.52<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: botón de Imprimir en Mi Horario de Clases</div>
+              <ul class="about-ver-items">
+                <li>El panel de Mi Horario tenía la tabla interactiva (con drag &amp; drop y celdas para editar) pero no una forma de imprimirla. Ahora el botón "Imprimir" abre una vista limpia en una ventana nueva (día × período, con materia/sección/aula y la leyenda de colores) lista para imprimir o guardar como PDF.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5535,9 +5554,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.51"></script>
+  <script src="app.js?v=16.52"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.51"></script>
+  <script src="auth.js?v=16.52"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">

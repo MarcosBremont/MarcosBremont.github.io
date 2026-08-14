@@ -19114,6 +19114,77 @@ function guardarHorario(data) {
   if (window._syncFirebase) _syncFirebase('horario', data);
 }
 
+/** Abre una ventana con el horario formateado para imprimir / guardar como PDF */
+function imprimirHorario() {
+  const data = cargarHorario();
+  const colores = _horarioColores();
+  const mapa = {};
+  data.forEach(e => { mapa[`${e.dia}-${e.periodo}`] = e; });
+
+  let tabla = '<table><thead><tr><th>Día / Período</th>';
+  PERIODOS.forEach(p => { tabla += `<th>${escapeHTML(p.label)}<span class="hora">${escapeHTML(p.hora)}</span></th>`; });
+  tabla += '</tr></thead><tbody>';
+
+  DIAS.forEach((dia, di) => {
+    tabla += `<tr><td class="dia">${escapeHTML(dia)}</td>`;
+    PERIODOS.forEach(p => {
+      const e = mapa[`${di}-${p.id}`];
+      if (e && e.materia) {
+        const color = colores[e.materia.trim()] || '#78909C';
+        tabla += `<td style="border-left:3px solid ${color};">`
+          + `<div class="materia" style="color:${color};">${escapeHTML(e.materia)}</div>`
+          + (e.seccion ? `<div class="seccion">${escapeHTML(e.seccion)}</div>` : '')
+          + (e.aula ? `<div class="aula">${escapeHTML(e.aula)}</div>` : '')
+          + '</td>';
+      } else {
+        tabla += '<td class="vacio">—</td>';
+      }
+    });
+    tabla += '</tr>';
+  });
+  tabla += '</tbody></table>';
+
+  const leyendaItems = Object.entries(colores);
+  const leyenda = leyendaItems.length
+    ? '<div class="leyenda">' + leyendaItems.map(([mat, col]) =>
+        `<span class="ley-item"><span class="dot" style="background:${col};"></span>${escapeHTML(mat)}</span>`
+      ).join('') + '</div>'
+    : '';
+
+  const fecha = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const ventana = window.open('', '_blank', 'width=1000,height=700');
+  if (!ventana) { mostrarToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e intenta de nuevo.', 'error'); return; }
+  ventana.document.write(`
+    <html><head><title>Mi Horario de Clases</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 1.5cm; color: #212121; }
+      h1 { color: #0D47A1; font-size: 18pt; margin: 0 0 2pt; }
+      .fecha { color: #78909C; font-size: 9pt; margin-bottom: 16pt; }
+      table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+      th, td { border: 1px solid #CFD8DC; padding: 6px 4px; text-align: center; vertical-align: top; }
+      th { background: #0D47A1; color: #fff; font-size: 8.5pt; }
+      th .hora { display: block; font-weight: normal; font-size: 7.5pt; opacity: .85; }
+      td.dia { background: #E3F2FD; color: #0D47A1; font-weight: bold; text-align: left; white-space: nowrap; }
+      td.vacio { color: #BDBDBD; }
+      .materia { font-weight: bold; font-size: 9pt; }
+      .seccion, .aula { font-size: 8pt; color: #546E7A; }
+      .leyenda { margin-top: 16pt; display: flex; flex-wrap: wrap; gap: 10px; }
+      .ley-item { display: inline-flex; align-items: center; gap: 4px; font-size: 8.5pt; }
+      .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+      @page { size: landscape; margin: 1.2cm; }
+    </style>
+    </head><body>
+      <h1>Mi Horario de Clases</h1>
+      <div class="fecha">Generado: ${fecha}</div>
+      ${tabla}
+      ${leyenda}
+      <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
+    </body></html>
+  `);
+  ventana.document.close();
+}
+
 function abrirHorario() {
   _mostrarPanel('panel-horario');
   renderizarHorario();
