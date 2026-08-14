@@ -67,70 +67,76 @@ function exportarAlumnosCSV() {
   const actividades = planActiva?.actividades?.filter(a => !a.esComplementario) || [];
   const raInfo = raKey ? curso.ras?.[raKey] : null;
 
+  if (!raKey || !actividades.length || !raInfo) {
+    // Sin RA activo: solo nombres, como CSV plano real -- así sigue siendo
+    // compatible con "Importar CSV" (que lee texto plano, no HTML/Excel).
+    const csv = 'Nombre\n' + curso.estudiantes.map(e => '"' + e.nombre.replace(/"/g, '""') + '"').join('\n');
+    const filename = 'alumnos-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '.csv';
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    mostrarToast('Lista exportada', 'success');
+    return;
+  }
+
+  // Con RA activo: notas del RA, exportadas como Excel con formato (bold,
+  // banner con el RA una sola vez) -- este archivo no está pensado para
+  // reimportarse como lista de alumnos, por eso puede usar el truco HTML/.xls.
   const thStyle = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #78909C;text-align:center;white-space:nowrap;';
   const thStyleAct = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #78909C;text-align:center;white-space:normal;max-width:160px;';
   const tdStyle = 'padding:5px 8px;border:1px solid #CFD8DC;';
 
-  let bodyHTML, filename;
+  // Exportar con notas del RA activo. El RA se muestra UNA sola vez, en un
+  // banner sobre la tabla, en vez de repetido en una columna por estudiante.
+  const dg = planActiva.datosGenerales || {};
+  const ra = planActiva.ra || {};
+  const raLabel = ra.descripcion || [dg.moduloFormativo, ra.resultado].filter(Boolean).join(' · ') || raKey;
 
-  if (raKey && actividades.length && raInfo) {
-    // Exportar con notas del RA activo. El RA se muestra UNA sola vez, en un
-    // banner sobre la tabla, en vez de repetido en una columna por estudiante.
-    const dg = planActiva.datosGenerales || {};
-    const ra = planActiva.ra || {};
-    const raLabel = ra.descripcion || [dg.moduloFormativo, ra.resultado].filter(Boolean).join(' · ') || raKey;
+  const ecCounters = {};
+  const actCols = actividades.map(a => {
+    const ecBase = a.ecCodigo
+      ? a.ecCodigo.replace(/^E\.C\./i, '').replace(/^EC/i, '').trim()
+      : '?';
+    ecCounters[ecBase] = (ecCounters[ecBase] || 0) + 1;
+    const actLabel = 'Act ' + ecBase + '.' + ecCounters[ecBase];
+    const max = raInfo.valores?.[a.id] ?? '';
+    return { id: a.id, label: actLabel + (max !== '' ? ' (' + max + 'pts)' : ''), enunciado: a.enunciado || '' };
+  });
 
-    const ecCounters = {};
-    const actCols = actividades.map(a => {
-      const ecBase = a.ecCodigo
-        ? a.ecCodigo.replace(/^E\.C\./i, '').replace(/^EC/i, '').trim()
-        : '?';
-      ecCounters[ecBase] = (ecCounters[ecBase] || 0) + 1;
-      const actLabel = 'Act ' + ecBase + '.' + ecCounters[ecBase];
-      const max = raInfo.valores?.[a.id] ?? '';
-      return { id: a.id, label: actLabel + (max !== '' ? ' (' + max + 'pts)' : ''), enunciado: a.enunciado || '' };
-    });
+  const totalCols = 2 + actCols.length; // Nombre + actividades + Total RA
+  const banner = '<tr><td colspan="' + totalCols + '" style="background:#0D47A1;color:#ffffff;font-weight:bold;padding:8px;font-size:13px;">'
+    + escapeHTML((curso.nombre || 'Curso') + ' — ' + raLabel + ' (Valor máximo RA: ' + (raInfo.valorTotal ?? '—') + ' pts)')
+    + '</td></tr>';
 
-    const totalCols = 2 + actCols.length; // Nombre + actividades + Total RA
-    const banner = '<tr><td colspan="' + totalCols + '" style="background:#0D47A1;color:#ffffff;font-weight:bold;padding:8px;font-size:13px;">'
-      + escapeHTML((curso.nombre || 'Curso') + ' — ' + raLabel + ' (Valor máximo RA: ' + (raInfo.valorTotal ?? '—') + ' pts)')
-      + '</td></tr>';
+  const headerRow = '<tr>'
+    + '<th style="' + thStyle + '">Nombre</th>'
+    + actCols.map(c => '<th style="' + thStyleAct + '">' + escapeHTML(c.label)
+        + (c.enunciado ? '<br><span style="font-weight:normal;font-size:10px;color:#E3F2FD;">' + escapeHTML(c.enunciado) + '</span>' : '')
+        + '</th>').join('')
+    + '<th style="' + thStyle + '">Total RA</th>'
+    + '</tr>';
 
-    const headerRow = '<tr>'
-      + '<th style="' + thStyle + '">Nombre</th>'
-      + actCols.map(c => '<th style="' + thStyleAct + '">' + escapeHTML(c.label)
-          + (c.enunciado ? '<br><span style="font-weight:normal;font-size:10px;color:#E3F2FD;">' + escapeHTML(c.enunciado) + '</span>' : '')
-          + '</th>').join('')
-      + '<th style="' + thStyle + '">Total RA</th>'
-      + '</tr>';
-
-    const filas = curso.estudiantes.map(est => {
-      const notasEst = curso.notas?.[est.id]?.[raKey] || {};
-      const actCeldas = actCols.map(c => {
-        const n = notasEst[c.id];
-        return '<td style="' + tdStyle + 'text-align:center;">' + ((n !== undefined && n !== null) ? n : '') + '</td>';
-      }).join('');
-      const total = _calcNotaRA(curso, est.id, raKey, actividades);
-      return '<tr>'
-        + '<td style="' + tdStyle + '">' + escapeHTML(est.nombre) + '</td>'
-        + actCeldas
-        + '<td style="' + tdStyle + 'text-align:center;font-weight:bold;">' + (total !== null ? total : '') + '</td>'
-        + '</tr>';
+  const filas = curso.estudiantes.map(est => {
+    const notasEst = curso.notas?.[est.id]?.[raKey] || {};
+    const actCeldas = actCols.map(c => {
+      const n = notasEst[c.id];
+      return '<td style="' + tdStyle + 'text-align:center;">' + ((n !== undefined && n !== null) ? n : '') + '</td>';
     }).join('');
+    const total = _calcNotaRA(curso, est.id, raKey, actividades);
+    return '<tr>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(est.nombre) + '</td>'
+      + actCeldas
+      + '<td style="' + tdStyle + 'text-align:center;font-weight:bold;">' + (total !== null ? total : '') + '</td>'
+      + '</tr>';
+  }).join('');
 
-    bodyHTML = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;">'
-      + banner + headerRow + filas + '</table>';
-    filename = 'notas-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '-' + raKey + '.xls';
-    mostrarToast('Notas del RA exportadas', 'success');
-  } else {
-    // Sin RA activo: solo nombres
-    bodyHTML = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;">'
-      + '<tr><th style="' + thStyle + '">Nombre</th></tr>'
-      + curso.estudiantes.map(e => '<tr><td style="' + tdStyle + '">' + escapeHTML(e.nombre) + '</td></tr>').join('')
-      + '</table>';
-    filename = 'alumnos-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '.xls';
-    mostrarToast('Lista exportada', 'success');
-  }
+  const bodyHTML = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;">'
+    + banner + headerRow + filas + '</table>';
+  const filename = 'notas-' + (curso.nombre || 'curso').replace(/\s+/g, '_') + '-' + raKey + '.xls';
+  mostrarToast('Notas del RA exportadas', 'success');
 
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
     + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';

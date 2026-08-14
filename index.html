@@ -2790,6 +2790,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.51<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: "Importar CSV" quedó incompatible con la lista exportada</div>
+              <ul class="about-ver-items">
+                <li>Al convertir "Exportar CSV" a Excel con formato (v16.49), la lista simple de alumnos (cuando no hay un RA activo) también empezó a exportarse como archivo .xls con HTML adentro. "Importar CSV" espera texto plano separado por comas, así que si alguien reimportaba ese archivo, se importaba basura en vez de nombres. Se revierte esa lista simple a CSV real -- la tabla de notas del RA (que sí necesita negrita y el banner con el RA una sola vez) se mantiene como Excel, ya que ese archivo no está pensado para reimportarse.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v16.50<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5521,9 +5535,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.50"></script>
+  <script src="app.js?v=16.51"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.50"></script>
+  <script src="auth.js?v=16.51"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
