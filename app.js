@@ -9556,7 +9556,7 @@ function _mostrarPanel(panelId) {
   });
   _stepSectionsOcultas = true;
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -9572,7 +9572,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
@@ -9970,6 +9970,79 @@ async function _portafolioSubirFoto(inputEl) {
     mostrarToast('Foto actualizada', 'success');
   } catch (e) {
     mostrarToast('No se pudo procesar la imagen: ' + (e.message || e), 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MI PERFIL — Información personal, foto, contraseña y correo
+// ════════════════════════════════════════════════════════════════════
+
+/** Abre el panel "Mi Perfil": información personal, foto, cambiar contraseña/correo */
+function abrirPerfil() {
+  _mostrarPanel('panel-perfil');
+  // Limpiar campos sensibles y mensajes cada vez que se entra
+  ['cuenta-pass-actual', 'cuenta-pass-nueva', 'cuenta-pass-nueva2', 'cuenta-pass-para-email'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  if (typeof _cuentaMsg === 'function') { _cuentaMsg('email', ''); _cuentaMsg('pass', ''); }
+  renderizarPerfil();
+}
+
+function cerrarPerfil() { abrirDashboard(); }
+
+/** Pinta la foto de perfil (comparte la misma foto que el Portafolio Docente) */
+function _perfilPintarAvatar(foto) {
+  const el = document.getElementById('perfil-avatar-preview');
+  if (!el) return;
+  el.innerHTML = foto?.fotoBase64
+    ? `<img src="data:${escapeHTML(foto.fotoMime)};base64,${foto.fotoBase64}">`
+    : '<span class="material-icons">person</span>';
+}
+
+/** Sube una nueva foto de perfil, reutilizando la misma lógica (compresión + guardado) del Portafolio Docente */
+async function _perfilSubirFoto(inputEl) {
+  await _portafolioSubirFoto(inputEl);
+  _perfilPintarAvatar(cargarPortafolioFoto());
+}
+
+const PERFIL_ROL_LABELS = {
+  docente: 'Docente', director: 'Director', coordinadora: 'Coordinadora',
+  admin_centro: 'Administración', vinculadora: 'Vinculadora',
+  psicologia: 'Psicología', superadmin: 'Superadministrador'
+};
+
+/** Rellena el panel Mi Perfil con la foto, nombre/usuario/email/rol del usuario y prepara el campo de cambio de correo */
+async function renderizarPerfil() {
+  const user = window.currentUser;
+  if (!user) return;
+
+  _perfilPintarAvatar(cargarPortafolioFoto());
+
+  const elEmail = document.getElementById('perfil-email');
+  const elUsuario = document.getElementById('perfil-usuario');
+  const elNombre = document.getElementById('perfil-nombre');
+  const elRol = document.getElementById('perfil-rol');
+  const emailNuevoInput = document.getElementById('cuenta-email-nuevo');
+
+  if (elEmail) elEmail.textContent = user.email || '—';
+  if (elUsuario) elUsuario.textContent = user.email || '—';
+  if (emailNuevoInput) emailNuevoInput.value = user.email || '';
+  if (elNombre) elNombre.textContent = user.displayName || 'Sin nombre';
+  if (elRol) elRol.textContent = 'Cargando...';
+
+  try {
+    const doc = await db.collection('usuarios').doc(user.uid).get();
+    const data = doc.exists ? doc.data() : {};
+    if (elNombre && data.nombre) elNombre.textContent = data.nombre;
+    if (elRol) {
+      const roles = data.roles || (data.rol ? [data.rol] : []);
+      const labels = roles.map(r => PERFIL_ROL_LABELS[r] || r).filter(Boolean);
+      elRol.textContent = labels.length ? labels.join(' · ') : 'Docente';
+    }
+  } catch (e) {
+    console.warn('[Perfil] Error cargando datos de usuario:', e);
+    if (elRol) elRol.textContent = '—';
   }
 }
 

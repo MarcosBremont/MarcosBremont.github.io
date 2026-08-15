@@ -1348,8 +1348,8 @@ function _actualizarHeaderUsuario(user) {
       </button>
       <div class="user-menu" id="user-menu">
         <div class="user-menu-email">${user.email}</div>
-        <button class="user-menu-item" onclick="_cerrarUserMenu();abrirMiCuenta()">
-          <span class="material-icons" style="font-size:18px;">manage_accounts</span> Mi cuenta
+        <button class="user-menu-item" onclick="_cerrarUserMenu();abrirPerfil()">
+          <span class="material-icons" style="font-size:18px;">account_circle</span> Mi Perfil
         </button>
         <button class="user-menu-item danger" onclick="authCerrarSesion()">
           <span class="material-icons" style="font-size:18px;">logout</span> Cerrar sesión
@@ -1384,28 +1384,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ================================================================
-// MI CUENTA — Cambiar email y contraseña
+// MI CUENTA — Cambiar email y contraseña (UI en panel-perfil, ver app.js: abrirPerfil)
 // ================================================================
-
-function abrirMiCuenta() {
-  const user = window.currentUser;
-  if (!user) return;
-  // Poblar email actual
-  const emailInput = document.getElementById('cuenta-email-nuevo');
-  if (emailInput) emailInput.value = user.email || '';
-  // Limpiar campos de contraseña y mensajes
-  ['cuenta-pass-actual','cuenta-pass-nueva','cuenta-pass-nueva2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  _cuentaMsg('email', '');
-  _cuentaMsg('pass', '');
-  document.getElementById('cuenta-overlay')?.classList.remove('hidden');
-}
-
-function cerrarMiCuenta() {
-  document.getElementById('cuenta-overlay')?.classList.add('hidden');
-}
 
 // Reautenticar (necesario antes de cambiar email o contraseña)
 async function _reautenticar(passActual) {

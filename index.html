@@ -1688,6 +1688,146 @@
     </div>
   </div>
 
+  <!-- ===== PANEL MI PERFIL ===== -->
+  <div id="panel-perfil" class="cal-panel hidden">
+    <div class="section-card">
+      <div class="section-header">
+        <span class="material-icons section-icon" style="background:#EDE7F6;color:#6A1B9A;">account_circle</span>
+        <h2>Mi Perfil</h2>
+      </div>
+
+      <!-- Información Personal -->
+      <div class="perfil-card perfil-card-morado">
+        <div class="perfil-card-header">
+          <span class="material-icons">person</span> Información Personal
+        </div>
+        <div class="perfil-card-body">
+          <div class="perfil-avatar-wrap">
+            <div class="perfil-avatar" id="perfil-avatar-preview">
+              <span class="material-icons">person</span>
+            </div>
+            <label class="perfil-btn-foto">
+              <span class="material-icons">image</span> Cambiar Imagen de Perfil
+              <input type="file" accept="image/*" style="display:none" onchange="_perfilSubirFoto(this)">
+            </label>
+          </div>
+          <div class="perfil-info-grid">
+            <div class="perfil-info-item">
+              <div class="perfil-info-icon" style="background:#EDE7F6;color:#6A1B9A;"><span class="material-icons">badge</span></div>
+              <div>
+                <div class="perfil-info-label">Nombre Completo</div>
+                <div class="perfil-info-valor" id="perfil-nombre">—</div>
+              </div>
+            </div>
+            <div class="perfil-info-item">
+              <div class="perfil-info-icon" style="background:#E3F2FD;color:#1565C0;"><span class="material-icons">person_outline</span></div>
+              <div>
+                <div class="perfil-info-label">Usuario</div>
+                <div class="perfil-info-valor" id="perfil-usuario">—</div>
+              </div>
+            </div>
+            <div class="perfil-info-item">
+              <div class="perfil-info-icon" style="background:#E8F5E9;color:#2E7D32;"><span class="material-icons">mail_outline</span></div>
+              <div>
+                <div class="perfil-info-label">Email</div>
+                <div class="perfil-info-valor" id="perfil-email">—</div>
+              </div>
+            </div>
+            <div class="perfil-info-item">
+              <div class="perfil-info-icon" style="background:#FFF3E0;color:#E65100;"><span class="material-icons">work_outline</span></div>
+              <div>
+                <div class="perfil-info-label">Rol</div>
+                <div class="perfil-info-valor" id="perfil-rol">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cambiar Contraseña -->
+      <div class="perfil-card perfil-card-rojo">
+        <div class="perfil-card-header">
+          <span class="material-icons">lock</span> Cambiar Contraseña
+        </div>
+        <div class="perfil-card-body">
+          <div class="perfil-pass-grid">
+            <div class="auth-field">
+              <label for="cuenta-pass-actual">Contraseña Actual</label>
+              <div class="auth-pass-wrap">
+                <input type="password" id="cuenta-pass-actual" placeholder="Ingrese su contraseña actual" autocomplete="current-password">
+                <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-actual',this)" tabindex="-1" aria-label="Mostrar contraseña">
+                  <span class="material-icons">visibility</span>
+                </button>
+              </div>
+            </div>
+            <div class="auth-field">
+              <label for="cuenta-pass-nueva">Nueva Contraseña</label>
+              <div class="auth-pass-wrap">
+                <input type="password" id="cuenta-pass-nueva" placeholder="Ingrese su nueva contraseña" autocomplete="new-password">
+                <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-nueva',this)" tabindex="-1" aria-label="Mostrar contraseña">
+                  <span class="material-icons">visibility</span>
+                </button>
+              </div>
+            </div>
+            <div class="auth-field">
+              <label for="cuenta-pass-nueva2">Confirmar Nueva Contraseña</label>
+              <div class="auth-pass-wrap">
+                <input type="password" id="cuenta-pass-nueva2" placeholder="Confirme su nueva contraseña" autocomplete="new-password">
+                <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-nueva2',this)" tabindex="-1" aria-label="Mostrar contraseña">
+                  <span class="material-icons">visibility</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="auth-error" id="cuenta-msg-pass"></div>
+          <div style="text-align:center;margin-top:16px;">
+            <button class="perfil-btn-pass" id="cuenta-btn-pass" onclick="authCambiarPassword()">
+              <div class="auth-spinner" id="cuenta-spin-pass"></div>
+              <span class="material-icons">lock_reset</span> Cambiar Contraseña
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cambiar correo electrónico -->
+      <div class="perfil-card perfil-card-azul">
+        <div class="perfil-card-header">
+          <span class="material-icons">email</span> Cambiar Correo Electrónico
+        </div>
+        <div class="perfil-card-body">
+          <div class="perfil-pass-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="auth-field">
+              <label for="cuenta-email-nuevo">Nuevo Correo</label>
+              <input type="email" id="cuenta-email-nuevo" placeholder="nuevo@ejemplo.com" autocomplete="email">
+            </div>
+            <div class="auth-field">
+              <label for="cuenta-pass-para-email">Contraseña Actual (para confirmar)</label>
+              <input type="password" id="cuenta-pass-para-email" placeholder="••••••••" autocomplete="current-password">
+            </div>
+          </div>
+          <div class="auth-error" id="cuenta-msg-email"></div>
+          <div style="text-align:center;margin-top:16px;">
+            <button class="perfil-btn-pass" id="cuenta-btn-email" onclick="authCambiarEmail()" style="background:linear-gradient(135deg,#1565C0,#1976D2);">
+              <div class="auth-spinner" id="cuenta-spin-email"></div>
+              <span class="material-icons">save</span> Guardar Correo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn-secundario" onclick="abrirHistorialSesiones()">
+          <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
+        </button>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-anterior" onclick="cerrarPerfil()">
+        <span class="material-icons">arrow_back</span> Volver
+      </button>
+    </div>
+  </div>
+
   <!-- ===== PANEL TAREAS ===== -->
   <div id="panel-tareas" class="cal-panel hidden">
     <div class="section-card">
@@ -2794,6 +2934,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.61<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: página "Mi Perfil"</div>
+              <ul class="about-ver-items">
+                <li>Se agregó una página "Mi Perfil" (accesible desde el menú del usuario, arriba a la derecha → "Mi Perfil"): tarjeta morada con foto de perfil (comparte la misma foto que el Portafolio Docente), nombre completo, usuario, email y rol; tarjeta roja para cambiar la contraseña; y tarjeta azul para cambiar el correo electrónico, más un acceso al historial de sesiones.</li>
+                <li>Esto reemplaza al modal "Mi cuenta" que existía antes con la misma función de cambiar contraseña/correo -- toda esa lógica se conservó igual, solo cambió la presentación a una página completa con mejor diseño.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5674,90 +5829,11 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.60"></script>
+  <script src="app.js?v=16.61"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.60"></script>
+  <script src="auth.js?v=16.61"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
-  <div id="cuenta-overlay" class="modal-overlay hidden" onclick="this.id==='cuenta-overlay'&&cerrarMiCuenta()">
-    <div class="modal-box" style="max-width:480px;" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h3><span class="material-icons"
-            style="vertical-align:middle;margin-right:6px;font-size:20px;">manage_accounts</span>Mi cuenta</h3>
-        <button class="modal-close" onclick="cerrarMiCuenta()"><span class="material-icons">close</span></button>
-      </div>
-      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:24px;">
-
-        <!-- Cambiar correo -->
-        <div class="cuenta-seccion">
-          <div class="cuenta-seccion-titulo">
-            <span class="material-icons">email</span> Cambiar correo electrónico
-          </div>
-          <div class="auth-field">
-            <label for="cuenta-email-nuevo">Nuevo correo</label>
-            <input type="email" id="cuenta-email-nuevo" placeholder="nuevo@ejemplo.com" autocomplete="email" />
-          </div>
-          <div class="auth-field">
-            <label for="cuenta-pass-para-email">Contraseña actual (para confirmar)</label>
-            <input type="password" id="cuenta-pass-para-email" placeholder="••••••••" autocomplete="current-password" />
-          </div>
-          <div class="auth-error" id="cuenta-msg-email"></div>
-          <button class="auth-btn-primary" id="cuenta-btn-email" onclick="authCambiarEmail()">
-            <div class="auth-spinner" id="cuenta-spin-email"></div>
-            <span class="material-icons">save</span> Guardar correo
-          </button>
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--color-borde,#E0E0E0);">
-
-        <!-- Cambiar contraseña -->
-        <div class="cuenta-seccion">
-          <div class="cuenta-seccion-titulo">
-            <span class="material-icons">lock_reset</span> Cambiar contraseña
-          </div>
-          <div class="auth-field">
-            <label for="cuenta-pass-actual">Contraseña actual</label>
-            <input type="password" id="cuenta-pass-actual" placeholder="••••••••" autocomplete="current-password" />
-          </div>
-          <div class="auth-field">
-            <label for="cuenta-pass-nueva">Nueva contraseña</label>
-            <input type="password" id="cuenta-pass-nueva" placeholder="Mínimo 6 caracteres"
-              autocomplete="new-password" />
-          </div>
-          <div class="auth-field">
-            <label for="cuenta-pass-nueva2">Confirmar nueva contraseña</label>
-            <input type="password" id="cuenta-pass-nueva2" placeholder="Repite la nueva contraseña"
-              autocomplete="new-password" />
-          </div>
-          <div class="auth-error" id="cuenta-msg-pass"></div>
-          <button class="auth-btn-primary" id="cuenta-btn-pass" onclick="authCambiarPassword()">
-            <div class="auth-spinner" id="cuenta-spin-pass"></div>
-            <span class="material-icons">lock</span> Cambiar contraseña
-          </button>
-        </div>
-
-      </div>
-      <!-- Historial de sesiones -->
-      <div class="cuenta-seccion" style="margin:0 0 4px;">
-        <hr style="border:none;border-top:1px solid var(--color-borde,#E0E0E0);margin-bottom:16px;">
-        <div class="cuenta-seccion-titulo">
-          <span class="material-icons">history</span> Historial de sesiones
-        </div>
-        <p style="font-size:0.83rem;color:var(--color-texto-secundario,#757575);margin:0 0 10px;">
-          Muestra los últimos accesos a la app: dispositivo, navegador y fecha/hora.
-        </p>
-        <button class="btn-secundario" style="width:100%;justify-content:center;gap:6px;"
-          onclick="cerrarMiCuenta();abrirHistorialSesiones()">
-          <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
-        </button>
-      </div>
-
-      <div class="modal-footer" style="justify-content:flex-end;">
-        <button class="btn-secundario" onclick="cerrarMiCuenta()">Cerrar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
   <div id="sesiones-overlay" class="modal-overlay hidden"
     onclick="this.id==='sesiones-overlay'&&cerrarHistorialSesiones()">
