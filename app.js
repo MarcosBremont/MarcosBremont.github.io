@@ -13114,22 +13114,23 @@ function renderizarTabsPlanesDelCurso() {
   if (!curso) { area.innerHTML = ''; return; }
 
   const planIds = curso.planIds || [];
-  if (planIds.length === 0) {
+  const biblio = cargarBiblioteca();
+  const regsVisibles = planIds.map(pid => biblio.items.find(i => i.id === pid)).filter(reg => reg && !reg.archivada);
+
+  if (planIds.length === 0 || regsVisibles.length === 0) {
     area.innerHTML = `
       <div style="padding:10px 0;font-size:0.85rem;color:#78909C;display:flex;align-items:center;gap:8px;">
         <span class="material-icons" style="font-size:18px;">info</span>
-        Este curso no tiene planificaciones asignadas. 
+        ${planIds.length === 0 ? 'Este curso no tiene planificaciones asignadas.' : 'Todas las planificaciones asignadas a este curso están archivadas.'}
         <button onclick="abrirPlanificaciones()" style="background:none;border:none;color:#1565C0;cursor:pointer;font-weight:600;font-size:0.85rem;text-decoration:underline;">Ir a Mis Planificaciones</button>
-        para asignar una.
+        ${planIds.length === 0 ? 'para asignar una.' : 'para desarchivarla.'}
       </div>`;
     return;
   }
 
-  const biblio = cargarBiblioteca();
   let html = '<div class="cal-planes-grid">';
-  planIds.forEach(pid => {
-    const reg = biblio.items.find(i => i.id === pid);
-    if (!reg) return;
+  regsVisibles.forEach(reg => {
+    const pid = reg.id;
     const dg = reg.planificacion?.datosGenerales || {};
     const activo = pid === curso.planActivaId;
     const raDesc = reg.planificacion?.ra?.descripcion || '';
@@ -29446,7 +29447,7 @@ function _renderizarSaludo() {
   const fechaStr = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' · ' + ahora.getFullYear();
 
   const biblio = cargarBiblioteca();
-  const nPlans = (biblio.items || []).filter(i => _planPerteneceCicloActivo(i.id)).length;
+  const nPlans = (biblio.items || []).filter(i => !i.archivada && _planPerteneceCicloActivo(i.id)).length;
   const nCursos = Object.keys(calState.cursos || {}).length;
   const tareas = cargarTareas();
   const nPend = tareas.filter(t => _estadoTarea(t) === 'pendiente').length;
