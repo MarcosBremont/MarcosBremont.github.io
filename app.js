@@ -19965,76 +19965,10 @@ function filtrarTareas(filtro) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-
-
-  // Inyectar botón en el header si no existe
-
-
-
-  const headerInner = document.querySelector('.header-inner');
-
-
-
-  if (headerInner && !document.getElementById('btn-calificaciones')) {
-
-
-
-    const btnCal = document.createElement('button');
-
-
-
-    btnCal.id = 'btn-calificaciones';
-
-
-
-    btnCal.className = 'btn-calificaciones';
-
-
-
-    btnCal.title = 'Libro de Calificaciones';
-
-
-
-    btnCal.innerHTML = '<span class="material-icons">grade</span><span class="btn-nueva-label">Calificaciones</span>';
-
-
-
-    btnCal.onclick = abrirCalificaciones;
-
-
-
-    // Insert before "Nueva Planificación" button
-
-
-
-    const btnNueva = document.getElementById('btn-nueva-planificacion');
-
-
-
-    if (btnNueva) {
-
-
-
-      headerInner.insertBefore(btnCal, btnNueva);
-
-
-
-    } else {
-
-
-
-      headerInner.appendChild(btnCal);
-
-
-
-    }
-
-
-
-  }
-
-
-
+  // Los accesos a Calificaciones/Planificaciones/Horario/Tareas ya no se
+  // inyectan en el header: ese header quedó reservado solo para Buscar,
+  // Notificaciones, Configuración, Mis datos y Mi Perfil -- los demás
+  // módulos ya están en "Accesos rápidos" del Dashboard.
 
 
 
@@ -20049,8 +19983,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (modalFooter && !modalFooter.id) modalFooter.id = 'modal-footer';
 
-  // Botón "Planificaciones" en el header
-  if (headerInner && !document.getElementById('btn-planificaciones')) {
+  // Botón "Planificaciones" en el header (deshabilitado, ver nota arriba)
+  if (false && !document.getElementById('btn-planificaciones')) {
     const btnPln = document.createElement('button');
     btnPln.id = 'btn-planificaciones';
     btnPln.className = 'btn-planificaciones';
@@ -20070,8 +20004,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // Botón Horario en el header
-  if (headerInner && !document.getElementById('btn-horario')) {
+  // Botón Horario en el header (deshabilitado, ver nota arriba)
+  if (false && !document.getElementById('btn-horario')) {
     const btnHor = document.createElement('button');
     btnHor.id = 'btn-horario';
     btnHor.className = 'btn-planificaciones';
@@ -20082,8 +20016,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnPlnRef) headerInner.insertBefore(btnHor, btnPlnRef);
     else headerInner.appendChild(btnHor);
   }
-  // Botón Tareas en el header
-  if (headerInner && !document.getElementById('btn-tareas')) {
+  // Botón Tareas en el header (deshabilitado, ver nota arriba)
+  if (false && !document.getElementById('btn-tareas')) {
     const btnTar = document.createElement('button');
     btnTar.id = 'btn-tareas';
     btnTar.className = 'btn-planificaciones';
@@ -29536,7 +29470,7 @@ function _renderizarSaludo() {
   const el = document.getElementById('dash-greeting');
   if (!el) return;
   el.innerHTML = `
-    <div class="dash-greeting-left">
+    <div class="dash-greeting-left" data-daynum="${ahora.getDate()}">
       <div class="dash-greeting-date">${fechaStr}</div>
       <div class="dash-greeting-title">${saludo}${nombre}</div>
       <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">${buildBadge}</span></div>

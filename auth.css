@@ -67,7 +67,7 @@ html:has(#auth-overlay:not(.hidden)) {
 .auth-app-name {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #1565C0;
+  color: #1F54A8;
   line-height: 1.2;
 }
 
@@ -98,8 +98,8 @@ html:has(#auth-overlay:not(.hidden)) {
 }
 
 .auth-tab.activo {
-  color: #1565C0;
-  border-bottom-color: #1565C0;
+  color: #1F54A8;
+  border-bottom-color: #1F54A8;
 }
 
 /* Formulario */
@@ -133,7 +133,7 @@ html:has(#auth-overlay:not(.hidden)) {
 }
 
 .auth-field input:focus {
-  border-color: #1565C0;
+  border-color: #1F54A8;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
 }
@@ -164,7 +164,7 @@ html:has(#auth-overlay:not(.hidden)) {
 }
 
 .auth-eye-btn:hover {
-  color: #1565C0;
+  color: #1F54A8;
 }
 
 .auth-eye-btn .material-icons {
@@ -192,7 +192,7 @@ html:has(#auth-overlay:not(.hidden)) {
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  background: linear-gradient(135deg, #1565C0, #1976D2);
+  background: linear-gradient(135deg, #1F54A8, #3568B8);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -336,7 +336,7 @@ html:has(#auth-overlay:not(.hidden)) {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1565C0, #7E57C2);
+  background: linear-gradient(135deg, #1F54A8, #7E57C2);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 800;
@@ -510,7 +510,7 @@ body.dark-mode .btn-user-name {
   gap: 7px;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #1565C0;
+  color: #1F54A8;
   margin-bottom: 2px;
 }
 

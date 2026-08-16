@@ -168,10 +168,6 @@
         <span class="material-icons">search</span>
         <span class="btn-nueva-label">Buscar</span>
       </button>
-      <button id="btn-config-ia" class="btn-config-ia" onclick="abrirConfigIA()" title="Configurar clave de IA (Groq)">
-        <span class="material-icons">settings</span>
-        <span class="btn-nueva-label">Config. IA</span>
-      </button>
       <button id="btn-backup" class="btn-config-ia" onclick="abrirBackup()" title="Exportar / Importar todos los datos">
         <span class="material-icons">backup</span>
         <span class="btn-nueva-label">Mis datos</span>
@@ -180,14 +176,6 @@
         title="Configuración de la app">
         <span class="material-icons">tune</span>
         <span class="btn-nueva-label">Config.</span>
-      </button>
-      <button id="btn-acercade" class="btn-config-ia" onclick="abrirAcercaDe()" title="Acerca de TinClass">
-        <span class="material-icons">info_outline</span>
-        <span class="btn-nueva-label">Info</span>
-      </button>
-      <button id="btn-nueva-planificacion" class="btn-nueva" title="Nueva Planificación">
-        <span class="material-icons">add_circle_outline</span>
-        <span class="btn-nueva-label">Nueva Planificación</span>
       </button>
       <!-- Usuario autenticado -->
       <div id="auth-user-wrap"></div>
@@ -2934,6 +2922,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1F54A8;">v16.62<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño visual: Dashboard y barra superior</div>
+              <ul class="about-ver-items">
+                <li><strong>Dashboard:</strong> "Accesos rápidos" pasó de tarjetas grandes a un mosaico compacto de tarjetas cuadradas con ícono en insignia circular; el saludo ahora es una tarjeta blanca con el círculo del día del mes, y las tarjetas de Hoy/Mañana/Pasado mañana/Tareas próximas tienen bordes más redondeados y sombra suave.</li>
+                <li><strong>Diseño general:</strong> bordes más redondeados y sombras más suaves en todo el sistema (variables de diseño compartidas), y el azul principal cambió a un tono nuevo (#1F54A8), incluida la pantalla de inicio de sesión.</li>
+                <li><strong>Barra superior:</strong> se quitaron los accesos a Config IA, Info, Nueva Planificación, y los accesos a Tareas/Horario/Planificaciones/Calificaciones que se agregaban ahí automáticamente -- todos ya estaban duplicados en "Accesos rápidos" del Dashboard. Solo quedan Avisos, Buscar, Mis datos, Configuración y Mi Perfil, con un estilo uniforme (antes cada botón tenía un color distinto).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5829,9 +5833,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.61"></script>
+  <script src="app.js?v=16.62"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.61"></script>
+  <script src="auth.js?v=16.62"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
