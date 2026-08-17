@@ -524,6 +524,16 @@ async function _cargarDesdeFirestore(uid) {
           const cursosMerged = localGana
             ? { ...fbCursos, ...localCursos }
             : { ...localCursos, ...fbCursos };
+
+          // Cursos eliminados en este dispositivo (ver _registrarCursoEliminado en
+          // app.js): la unión de arriba no puede distinguir "eliminado" de "todavía
+          // no sincronizado", así que se excluyen explícitamente sin importar qué
+          // traiga Firestore.
+          try {
+            const eliminados = JSON.parse(localStorage.getItem('planificadorRA_cal_cursos_eliminados_v1') || '[]');
+            eliminados.forEach(e => { delete cursosMerged[e.id]; });
+          } catch (e) {}
+
           const cursosArchivadosMerged = { ...fbArchivados, ...localArchivados };
 
           const merged = {
@@ -794,8 +804,10 @@ window._syncFirebase = function(store, data) {
 // Versión async que garantiza el guardado antes de continuar. A diferencia de
 // _syncFirebase, si la escritura falla SÍ propaga el error (con throw) -- todos los
 // llamadores ya lo envuelven en su propio try/catch esperando poder reaccionar a un
-// fallo real, no solo a que la función exista.
-window._syncFirebaseAwait = async function(store, data) {
+// fallo real, no solo a que la función exista. silencioso=true evita el console.warn
+// (que error-reporter.js reporta como alerta por correo) para casos donde el
+// llamador va a reintentar por su cuenta y solo el fallo final importa.
+window._syncFirebaseAwait = async function(store, data, silencioso) {
   if (!window.currentUser) return;
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
   try {
@@ -803,7 +815,7 @@ window._syncFirebaseAwait = async function(store, data) {
       .collection('data').doc(store)
       .set({ payload });
   } catch (e) {
-    console.warn('Sync Firebase error [' + store + ']:', e);
+    if (!silencioso) console.warn('Sync Firebase error [' + store + ']:', e);
     throw e;
   }
 };

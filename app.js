@@ -2,6 +2,26 @@ function escapeHTML(s) { if (s === null || s === undefined) return ""; return St
 window.__TINCLASS_APP_READY__ = true;
 
 // ─── Funciones de gestión de cursos ───────────────────────────────
+const CAL_CURSOS_ELIMINADOS_KEY = 'planificadorRA_cal_cursos_eliminados_v1';
+const CAL_CURSOS_ELIMINADOS_DIAS = 30;
+
+/** Registra que un curso se eliminó. Al recargar, _cargarDesdeFirestore fusiona los
+ *  cursos locales con los de Firestore como una UNIÓN de claves (para no perder
+ *  cursos creados offline que todavía no sincronizaron) -- pero una unión nunca puede
+ *  "borrar" una clave, solo agregar/sobreescribir. Si Firestore todavía tiene la
+ *  versión vieja del curso (ej. porque se recargó justo antes de que la sincronización
+ *  terminara), el curso eliminado resucitaba siempre. Esta lista de "tumbas" le dice a
+ *  la fusión que excluya explícitamente esos ids sin importar qué traiga Firestore. */
+function _registrarCursoEliminado(id) {
+  try {
+    const hoy = Date.now();
+    let lista = JSON.parse(localStorage.getItem(CAL_CURSOS_ELIMINADOS_KEY) || '[]');
+    lista = lista.filter(e => hoy - e.ts < CAL_CURSOS_ELIMINADOS_DIAS * 86400000);
+    lista.push({ id, ts: hoy });
+    localStorage.setItem(CAL_CURSOS_ELIMINADOS_KEY, JSON.stringify(lista));
+  } catch (e) { console.warn('No se pudo registrar el curso eliminado:', e); }
+}
+
 function eliminarCurso(id) {
   const curso = calState.cursos[id];
   if (!curso) return;
@@ -11,6 +31,7 @@ function eliminarCurso(id) {
     const ids = Object.keys(calState.cursos);
     calState.cursoActivoId = ids.length ? ids[0] : null;
   }
+  _registrarCursoEliminado(id);
   guardarCalificaciones();
   renderizarCalificaciones();
   registrarCambio(`Curso eliminado: "${curso.nombre}"`);
@@ -9992,10 +10013,19 @@ function abrirPerfil() {
     if (el) el.value = '';
   });
   if (typeof _cuentaMsg === 'function') { _cuentaMsg('email', ''); _cuentaMsg('pass', ''); }
+  _perfilCambiarTab('info');
   renderizarPerfil();
 }
 
 function cerrarPerfil() { abrirDashboard(); }
+
+/** Cambia entre las pestañas de la barra lateral de Mi Perfil ("Información Personal" / "Inicio de Sesión") */
+function _perfilCambiarTab(tab) {
+  ['info', 'login'].forEach(t => {
+    document.getElementById('perfil-tab-' + t)?.classList.toggle('hidden', t !== tab);
+    document.getElementById('perfil-nav-' + t)?.classList.toggle('activo', t === tab);
+  });
+}
 
 /** Pinta la foto de perfil (comparte la misma foto que el Portafolio Docente) */
 function _perfilPintarAvatar(foto) {
@@ -10031,14 +10061,12 @@ async function renderizarPerfil() {
   const elUsuario = document.getElementById('perfil-usuario');
   const elNombre = document.getElementById('perfil-nombre');
   const elRol = document.getElementById('perfil-rol');
-  const elPreviewEmail = document.getElementById('perfil-preview-email');
   const elPreviewNombre = document.getElementById('perfil-preview-nombre');
   const elPreviewRol = document.getElementById('perfil-preview-rol');
   const emailNuevoInput = document.getElementById('cuenta-email-nuevo');
 
   if (elEmail) elEmail.textContent = user.email || '—';
   if (elUsuario) elUsuario.textContent = user.email || '—';
-  if (elPreviewEmail) elPreviewEmail.textContent = user.email || '—';
   if (emailNuevoInput) emailNuevoInput.value = user.email || '';
   if (elNombre) elNombre.textContent = user.displayName || 'Sin nombre';
   if (elPreviewNombre) elPreviewNombre.textContent = user.displayName || 'Sin nombre';
@@ -11829,8 +11857,27 @@ function _guardarBackupCalificaciones() {
     // versión real en CAL_STORAGE_KEY y en Firestore) -- no debe generar una alerta.
     if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(CAL_BACKUP_KEY, JSON.stringify(backups), true);
     else localStorage.setItem(CAL_BACKUP_KEY, JSON.stringify(backups));
-    if (window._syncFirebase) _syncFirebase('cal_backups', backups);
+    _sincronizarBackupsFirestore(backups);
   } catch (e) { console.warn('Backup cal error:', e); }
+}
+
+/** Sincroniza cal_backups a Firestore, recortando a la mitad la cantidad de respaldos
+ *  si el arreglo completo supera el límite de 1 MiB por documento de Firestore (puede
+ *  pasar con varios cursos grandes). No es información crítica -- es un respaldo
+ *  redundante, ya está la versión real en calificaciones -- así que se reintenta en
+ *  silencio en vez de generar una alerta por correo. */
+async function _sincronizarBackupsFirestore(backups) {
+  if (typeof _syncFirebaseAwait !== 'function') return;
+  let intento = backups;
+  while (intento.length > 0) {
+    try {
+      await _syncFirebaseAwait('cal_backups', intento, true);
+      return;
+    } catch (e) {
+      if (intento.length === 1) return;
+      intento = intento.slice(0, Math.max(1, Math.floor(intento.length / 2)));
+    }
+  }
 }
 
 function restaurarBackupCalificaciones(idx) {

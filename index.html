@@ -1678,147 +1678,130 @@
 
   <!-- ===== PANEL MI PERFIL ===== -->
   <div id="panel-perfil" class="cal-panel hidden">
-    <div class="section-card">
-      <div class="section-header">
-        <span class="material-icons section-icon" style="background:#EDE7F6;color:#6A1B9A;">account_circle</span>
-        <h2>Mi Perfil</h2>
+    <div class="perfil-shell">
+      <!-- Barra lateral: foto, nombre, rol y navegación -->
+      <div class="perfil-sidebar">
+        <div class="perfil-preview-avatar-wrap">
+          <div class="perfil-avatar" id="perfil-avatar-preview">
+            <span class="material-icons">person</span>
+          </div>
+          <label class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
+            <span class="material-icons">edit</span>
+            <input type="file" accept="image/*" style="display:none" onchange="_perfilSubirFoto(this)">
+          </label>
+        </div>
+        <div class="perfil-sidebar-nombre" id="perfil-preview-nombre">—</div>
+        <div class="perfil-sidebar-rol" id="perfil-preview-rol">—</div>
+
+        <nav class="perfil-sidebar-nav">
+          <button class="perfil-nav-item activo" id="perfil-nav-info" onclick="_perfilCambiarTab('info')">
+            <span class="material-icons">person</span> Información Personal
+          </button>
+          <button class="perfil-nav-item" id="perfil-nav-login" onclick="_perfilCambiarTab('login')">
+            <span class="material-icons">lock</span> Inicio de Sesión
+          </button>
+          <button class="perfil-nav-item perfil-nav-item-salir" onclick="authCerrarSesion()">
+            <span class="material-icons">logout</span> Cerrar Sesión
+          </button>
+        </nav>
       </div>
 
-      <!-- Información Personal -->
-      <div class="perfil-card perfil-card-morado">
-        <div class="perfil-card-header">
-          <span class="material-icons">person</span> Información Personal
-        </div>
-        <div class="perfil-card-body">
-          <div class="perfil-personal-layout">
-            <div class="perfil-info-grid">
-              <div class="perfil-info-item">
-                <div class="perfil-info-icon" style="background:#EDE7F6;color:#6A1B9A;"><span class="material-icons">badge</span></div>
-                <div>
-                  <div class="perfil-info-label">Nombre Completo</div>
-                  <div class="perfil-info-valor" id="perfil-nombre">—</div>
-                </div>
-              </div>
-              <div class="perfil-info-item">
-                <div class="perfil-info-icon" style="background:#E3F2FD;color:#1565C0;"><span class="material-icons">person_outline</span></div>
-                <div>
-                  <div class="perfil-info-label">Usuario</div>
-                  <div class="perfil-info-valor" id="perfil-usuario">—</div>
-                </div>
-              </div>
-              <div class="perfil-info-item">
-                <div class="perfil-info-icon" style="background:#E8F5E9;color:#2E7D32;"><span class="material-icons">mail_outline</span></div>
-                <div>
-                  <div class="perfil-info-label">Email</div>
-                  <div class="perfil-info-valor" id="perfil-email">—</div>
-                </div>
-              </div>
-              <div class="perfil-info-item">
-                <div class="perfil-info-icon" style="background:#FFF3E0;color:#E65100;"><span class="material-icons">work_outline</span></div>
-                <div>
-                  <div class="perfil-info-label">Rol</div>
-                  <div class="perfil-info-valor" id="perfil-rol">—</div>
-                </div>
-              </div>
+      <!-- Contenido -->
+      <div class="perfil-content">
+        <!-- Pestaña: Información Personal -->
+        <div id="perfil-tab-info" class="perfil-tab">
+          <h2 class="perfil-content-titulo">Información Personal</h2>
+          <div class="perfil-form-grid">
+            <div class="perfil-field">
+              <label>Nombre Completo</label>
+              <div class="perfil-field-valor" id="perfil-nombre">—</div>
             </div>
-
-            <div class="perfil-preview-panel">
-              <div class="perfil-preview-label">Vista previa</div>
-              <div class="perfil-preview-avatar-wrap">
-                <div class="perfil-avatar" id="perfil-avatar-preview">
-                  <span class="material-icons">person</span>
-                </div>
-                <label class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
-                  <span class="material-icons">edit</span>
-                  <input type="file" accept="image/*" style="display:none" onchange="_perfilSubirFoto(this)">
-                </label>
-              </div>
-              <div class="perfil-preview-nombre" id="perfil-preview-nombre">—</div>
-              <div class="perfil-preview-rol" id="perfil-preview-rol">—</div>
-              <div class="perfil-preview-email-pill">
-                <span class="material-icons">mail_outline</span>
-                <span id="perfil-preview-email">—</span>
-              </div>
+            <div class="perfil-field">
+              <label>Usuario</label>
+              <div class="perfil-field-valor" id="perfil-usuario">—</div>
+            </div>
+            <div class="perfil-field">
+              <label>Email</label>
+              <div class="perfil-field-valor" id="perfil-email">—</div>
+            </div>
+            <div class="perfil-field">
+              <label>Rol</label>
+              <div class="perfil-field-valor" id="perfil-rol">—</div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Cambiar Contraseña -->
-      <div class="perfil-card perfil-card-rojo">
-        <div class="perfil-card-header">
-          <span class="material-icons">lock</span> Cambiar Contraseña
-        </div>
-        <div class="perfil-card-body">
-          <div class="perfil-pass-grid">
-            <div class="auth-field">
-              <label for="cuenta-pass-actual">Contraseña Actual</label>
-              <div class="auth-pass-wrap">
-                <input type="password" id="cuenta-pass-actual" placeholder="Ingrese su contraseña actual" autocomplete="current-password">
-                <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-actual',this)" tabindex="-1" aria-label="Mostrar contraseña">
-                  <span class="material-icons">visibility</span>
-                </button>
+        <!-- Pestaña: Inicio de Sesión y Contraseña -->
+        <div id="perfil-tab-login" class="perfil-tab hidden">
+          <h2 class="perfil-content-titulo">Inicio de Sesión y Contraseña</h2>
+
+          <div class="perfil-subseccion">
+            <h3 class="perfil-subseccion-titulo">Correo electrónico</h3>
+            <div class="perfil-form-grid">
+              <div class="perfil-field">
+                <label for="cuenta-email-nuevo">Nuevo Correo</label>
+                <input type="email" id="cuenta-email-nuevo" class="perfil-input" placeholder="nuevo@ejemplo.com" autocomplete="email">
+              </div>
+              <div class="perfil-field">
+                <label for="cuenta-pass-para-email">Contraseña Actual (para confirmar)</label>
+                <input type="password" id="cuenta-pass-para-email" class="perfil-input" placeholder="••••••••" autocomplete="current-password">
               </div>
             </div>
-            <div class="auth-field">
-              <label for="cuenta-pass-nueva">Nueva Contraseña</label>
-              <div class="auth-pass-wrap">
-                <input type="password" id="cuenta-pass-nueva" placeholder="Ingrese su nueva contraseña" autocomplete="new-password">
-                <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-nueva',this)" tabindex="-1" aria-label="Mostrar contraseña">
-                  <span class="material-icons">visibility</span>
-                </button>
-              </div>
-            </div>
-            <div class="auth-field">
-              <label for="cuenta-pass-nueva2">Confirmar Nueva Contraseña</label>
-              <div class="auth-pass-wrap">
-                <input type="password" id="cuenta-pass-nueva2" placeholder="Confirme su nueva contraseña" autocomplete="new-password">
-                <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-nueva2',this)" tabindex="-1" aria-label="Mostrar contraseña">
-                  <span class="material-icons">visibility</span>
-                </button>
-              </div>
+            <div class="auth-error" id="cuenta-msg-email"></div>
+            <div class="perfil-acciones-form">
+              <button class="perfil-btn-guardar" id="cuenta-btn-email" onclick="authCambiarEmail()">
+                <div class="auth-spinner" id="cuenta-spin-email"></div>
+                Guardar Correo
+              </button>
             </div>
           </div>
-          <div class="auth-error" id="cuenta-msg-pass"></div>
-          <div style="text-align:center;margin-top:16px;">
-            <button class="perfil-btn-pass" id="cuenta-btn-pass" onclick="authCambiarPassword()">
-              <div class="auth-spinner" id="cuenta-spin-pass"></div>
-              <span class="material-icons">lock_reset</span> Cambiar Contraseña
+
+          <div class="perfil-subseccion">
+            <h3 class="perfil-subseccion-titulo">Contraseña</h3>
+            <div class="perfil-form-grid perfil-form-grid-3">
+              <div class="perfil-field">
+                <label for="cuenta-pass-actual">Contraseña Actual</label>
+                <div class="auth-pass-wrap">
+                  <input type="password" id="cuenta-pass-actual" class="perfil-input" placeholder="Ingrese su contraseña actual" autocomplete="current-password">
+                  <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-actual',this)" tabindex="-1" aria-label="Mostrar contraseña">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                </div>
+              </div>
+              <div class="perfil-field">
+                <label for="cuenta-pass-nueva">Nueva Contraseña</label>
+                <div class="auth-pass-wrap">
+                  <input type="password" id="cuenta-pass-nueva" class="perfil-input" placeholder="Ingrese su nueva contraseña" autocomplete="new-password">
+                  <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-nueva',this)" tabindex="-1" aria-label="Mostrar contraseña">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                </div>
+              </div>
+              <div class="perfil-field">
+                <label for="cuenta-pass-nueva2">Confirmar Nueva Contraseña</label>
+                <div class="auth-pass-wrap">
+                  <input type="password" id="cuenta-pass-nueva2" class="perfil-input" placeholder="Confirme su nueva contraseña" autocomplete="new-password">
+                  <button type="button" class="auth-eye-btn" onclick="_togglePassVis('cuenta-pass-nueva2',this)" tabindex="-1" aria-label="Mostrar contraseña">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="auth-error" id="cuenta-msg-pass"></div>
+            <div class="perfil-acciones-form">
+              <button class="perfil-btn-guardar" id="cuenta-btn-pass" onclick="authCambiarPassword()">
+                <div class="auth-spinner" id="cuenta-spin-pass"></div>
+                Cambiar Contraseña
+              </button>
+            </div>
+          </div>
+
+          <div class="perfil-subseccion" style="text-align:center;border-bottom:none;padding-bottom:0;">
+            <button class="btn-secundario" onclick="abrirHistorialSesiones()">
+              <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
             </button>
           </div>
         </div>
-      </div>
-
-      <!-- Cambiar correo electrónico -->
-      <div class="perfil-card perfil-card-azul">
-        <div class="perfil-card-header">
-          <span class="material-icons">email</span> Cambiar Correo Electrónico
-        </div>
-        <div class="perfil-card-body">
-          <div class="perfil-pass-grid" style="grid-template-columns:1fr 1fr;">
-            <div class="auth-field">
-              <label for="cuenta-email-nuevo">Nuevo Correo</label>
-              <input type="email" id="cuenta-email-nuevo" placeholder="nuevo@ejemplo.com" autocomplete="email">
-            </div>
-            <div class="auth-field">
-              <label for="cuenta-pass-para-email">Contraseña Actual (para confirmar)</label>
-              <input type="password" id="cuenta-pass-para-email" placeholder="••••••••" autocomplete="current-password">
-            </div>
-          </div>
-          <div class="auth-error" id="cuenta-msg-email"></div>
-          <div style="text-align:center;margin-top:16px;">
-            <button class="perfil-btn-pass" id="cuenta-btn-email" onclick="authCambiarEmail()" style="background:linear-gradient(135deg,#1565C0,#1976D2);">
-              <div class="auth-spinner" id="cuenta-spin-email"></div>
-              <span class="material-icons">save</span> Guardar Correo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div style="text-align:center;margin-top:8px;">
-        <button class="btn-secundario" onclick="abrirHistorialSesiones()">
-          <span class="material-icons" style="font-size:18px;">devices</span> Ver historial de sesiones
-        </button>
       </div>
     </div>
     <div class="nav-buttons">
@@ -2934,6 +2917,49 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.67<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: un curso eliminado volvía a aparecer al recargar</div>
+              <ul class="about-ver-items">
+                <li>Al recargar, la fusión entre lo local y Firestore era una unión de cursos -- podía "revivir" un curso recién eliminado si Firestore todavía tenía la versión vieja, porque una unión nunca puede representar una eliminación. Ahora se guarda una lista de cursos eliminados en el dispositivo y la fusión los excluye siempre, sin importar qué traiga la nube.</li>
+                <li>También se corrige que el respaldo automático de calificaciones podía fallar al sincronizar a Firestore si el conjunto de respaldos superaba el límite de 1 MB por documento -- ahora se reintenta con menos respaldos en silencio, sin generar una alerta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#E67E22;">v16.66<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mi Perfil: acento naranja</div>
+              <ul class="about-ver-items">
+                <li>El color de acento de Mi Perfil (lápiz de editar foto, pestaña activa, botones de guardar) cambia de morado a naranja, igualando la referencia de diseño solicitada.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.65<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño completo de Mi Perfil: barra lateral + pestañas</div>
+              <ul class="about-ver-items">
+                <li>Se reemplaza la fila de tarjetas apiladas por un layout de barra lateral (foto con lápiz de editar superpuesto, nombre, rol, y navegación) más un panel de contenido con pestañas: "Información Personal" y "Inicio de Sesión" (que agrupa el cambio de correo y de contraseña, antes en tarjetas separadas). Se agrega "Cerrar Sesión" directo desde la barra lateral.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5874,9 +5900,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.64"></script>
+  <script src="app.js?v=16.67"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.64"></script>
+  <script src="auth.js?v=16.67"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
