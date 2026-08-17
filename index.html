@@ -2925,6 +2925,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.71<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: cursos archivados que se "desarchivaban" solos</div>
+              <ul class="about-ver-items">
+                <li>Al archivar el ciclo (cerrar y archivar cursos), la sincronización con Firebase a veces traía de vuelta la copia vieja de los cursos que ya se habían archivado, haciendo que reaparecieran como activos.</li>
+                <li>Ahora, si un curso ya quedó guardado dentro de un ciclo archivado, nunca vuelve a aparecer en cursos activos, sin importar qué copia tenga Firebase.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v16.70<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5948,9 +5963,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.70"></script>
+  <script src="app.js?v=16.71"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.70"></script>
+  <script src="auth.js?v=16.71"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

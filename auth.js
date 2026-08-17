@@ -536,6 +536,17 @@ async function _cargarDesdeFirestore(uid) {
 
           const cursosArchivadosMerged = { ...fbArchivados, ...localArchivados };
 
+          // Cursos archivados (cierre de ciclo, ver _archivarCursosActivosEnCalificaciones
+          // en app.js): igual que con los eliminados, la unión de arriba no puede
+          // distinguir "recién archivado" de "todavía no sincronizado" -- si un curso ya
+          // quedó guardado dentro de algún ciclo archivado, no debe reaparecer en cursos
+          // activos aunque Firestore todavía tenga la copia vieja de antes del archivado.
+          try {
+            Object.values(cursosArchivadosMerged).forEach(reg => {
+              (Array.isArray(reg?.cursos) ? reg.cursos : []).forEach(c => { if (c && c.id) delete cursosMerged[c.id]; });
+            });
+          } catch (e) {}
+
           const merged = {
             ...base,
             cursos: cursosMerged,
