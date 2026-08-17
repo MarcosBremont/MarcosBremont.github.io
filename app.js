@@ -2836,8 +2836,7 @@ function distribuirPuntosAutomatico() {
     a.valor = i === acts.length - 1 ? restante : base;
   });
 
-  renderizarActividades(planificacion.actividades);
-  actualizarResumenPuntos(planificacion.actividades);
+  renderizarActividades(planificacion.actividades); // ya actualiza el resumen de valores internamente (_actualizarResumenValores)
   guardarBorrador();
   mostrarToast(`${valorRA} pts distribuidos entre ${acts.length} actividades (${base} pts c/u)`, 'success');
 }
@@ -20464,8 +20463,14 @@ async function guardarPlanificacionActual(silencioso = false) {
   }
   planificacion._id = registro.id;
 
-  // Guardar localmente primero (síncrono)
-  localStorage.setItem('planificadorRA_biblioteca_v1', JSON.stringify(biblio));
+  // Guardar localmente primero (síncrono). Si el dispositivo no tiene espacio, NO debe
+  // interrumpir el guardado -- _syncBibliotecaFirebase (justo abajo) es lo que de verdad
+  // importa (sube a la nube en chunks, sin el límite de tamaño de localStorage). Antes
+  // esto tiraba un QuotaExceededError sin atrapar que abortaba la función entera, así
+  // que la planificación recién generada nunca llegaba a subirse a Firestore.
+  const bibliotecaJSON = JSON.stringify(biblio);
+  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe('planificadorRA_biblioteca_v1', bibliotecaJSON);
+  else { try { localStorage.setItem('planificadorRA_biblioteca_v1', bibliotecaJSON); } catch (e) { console.warn('No se pudo guardar la biblioteca localmente:', e); } }
 
   // Mostrar indicador de guardado en Firebase
   const btnGuardar = document.querySelector('[onclick*="guardarPlanificacionActual"]');

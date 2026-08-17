@@ -2921,6 +2921,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.69<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix crítico: guardar una planificación podía no llegar nunca a la nube</div>
+              <ul class="about-ver-items">
+                <li>Los logs de diagnóstico revelaron la causa: al guardar, primero se escribe una copia local de toda la Biblioteca de planificaciones -- en dispositivos con poco espacio, esa escritura fallaba por cuota y, al no estar protegida, <strong>detenía por completo la función de guardado antes de llegar a subir la planificación a Firestore</strong>. La planificación recién generada (con sus Elementos de Capacidad y Actividades) nunca salía del dispositivo, así que al cargarla después aparecía vacía. Ahora ese paso local usa el mismo mecanismo a prueba de cuota que ya protege otros guardados, y el guardado en la nube siempre se intenta.</li>
+                <li>De paso se corrige "Distribuir puntos" en Actividades, que fallaba con un error de referencia (llamaba a una función que ya no existía).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#78909C;">v16.68<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5914,9 +5929,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.68"></script>
+  <script src="app.js?v=16.69"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.68"></script>
+  <script src="auth.js?v=16.69"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
