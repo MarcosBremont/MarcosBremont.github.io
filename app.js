@@ -9967,6 +9967,12 @@ async function _portafolioSubirFoto(inputEl) {
     });
     _guardarPortafolioFoto({ fotoBase64: base64, fotoMime: file.type || 'image/jpeg' });
     renderizarPortafolio();
+    // El círculo de saludo del Dashboard también muestra esta foto (o el número del
+    // día si no hay foto) -- pero solo se pinta cuando renderizarDashboard() corre de
+    // nuevo. Si el Dashboard ya está armado en el DOM (ej. detrás de este panel) y el
+    // usuario no vuelve a navegar a él, se quedaría mostrando el estado viejo hasta la
+    // próxima vez que se abra. Se refresca acá mismo para que se vea al instante.
+    if (typeof _renderizarSaludo === 'function' && document.getElementById('dash-greeting')) _renderizarSaludo();
     mostrarToast('Foto actualizada', 'success');
   } catch (e) {
     mostrarToast('No se pudo procesar la imagen: ' + (e.message || e), 'error');
@@ -13363,13 +13369,13 @@ function renderizarTablaCalificaciones() {
     : (sumaDiff > 0 ? '+' + sumaDiff.toFixed(1) + ' excede' : sumaDiff.toFixed(1) + ' faltan');
 
   let h1 = '<tr class="tr-ec-header">'
-    + '<th rowspan="2" style="min-width:32px;width:32px;text-align:center;background:#1565C0;color:#fff;font-size:0.75rem;">#</th>'
+    + '<th rowspan="2" style="min-width:32px;width:32px;text-align:center;background:var(--color-primario);color:#fff;font-size:0.75rem;border-top-left-radius:var(--radio-lg);">#</th>'
     + '<th class="th-nombre" rowspan="2">Estudiante</th>'
-    + '<th colspan="' + actividades.length + '" style="text-align:start;background:#1565C0;color:#fff;padding:6px 8px;">'
+    + '<th colspan="' + actividades.length + '" style="text-align:start;background:var(--color-primario);color:#fff;padding:6px 8px;">'
     + raLabel + '</th>'
-    + '<th rowspan="2" style="background:#0D47A1;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small><br><button onclick="_copiarColumnaTotal(this)" title="Copiar columna Total RA" style="background:none;border:none;cursor:pointer;padding:1px 3px;color:#90CAF9;margin-top:2px;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button></th>'
-    + '<th rowspan="2" style="background:#E65100;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Recuper.<br><small style=\'font-weight:400;opacity:0.85;\'>2da oport.</small></th>'
-    + '<th rowspan="2" style="background:#1B5E20;color:#fff;min-width:80px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total<br><small style=\'font-weight:400;\'>RA + Recup.</small></th></tr>';
+    + '<th rowspan="2" style="background:var(--color-primario-dark);color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small><br><button onclick="_copiarColumnaTotal(this)" title="Copiar columna Total RA" style="background:none;border:none;cursor:pointer;padding:1px 3px;color:#90CAF9;margin-top:2px;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button></th>'
+    + '<th rowspan="2" style="background:#D98A3D;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Recuper.<br><small style=\'font-weight:400;opacity:0.85;\'>2da oport.</small></th>'
+    + '<th rowspan="2" style="background:var(--color-acento);color:#fff;min-width:80px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;border-top-right-radius:var(--radio-lg);">Total<br><small style=\'font-weight:400;\'>RA + Recup.</small></th></tr>';
 
   // ─── Fila 2: actividades con contador correcto por EC ───
   const _cntEC = {};
@@ -13404,9 +13410,9 @@ function renderizarTablaCalificaciones() {
       const numInEC = _idxEC[a.ecCodigo || ''];
       const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
       h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" data-act-nombre="' + escapeHTML(a.enunciado) + '" data-act-id="' + a.id + '" onclick="_mostrarTooltipAct(event,this)" style="min-width:80px;cursor:pointer;">'
-        + '<div style="font-size:0.72rem;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:2px;">'
+        + '<div style="font-size:0.72rem;font-weight:600;position:relative;text-align:center;">'
         + '<span>Act.' + actNum + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></span>'
-        + '<button onclick="event.stopPropagation();_copiarColumnaNotas(\'' + a.id + '\',this)" title="Copiar notas de esta columna" style="background:none;border:none;cursor:pointer;padding:0 1px;color:#90CAF9;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button>'
+        + '<button onclick="event.stopPropagation();_copiarColumnaNotas(\'' + a.id + '\',this)" title="Copiar notas de esta columna" style="position:absolute;top:50%;right:-2px;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 1px;color:#90CAF9;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button>'
         + '</div>'
         + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
@@ -13432,7 +13438,7 @@ function renderizarTablaCalificaciones() {
     const tr = document.createElement('tr');
     const recupMapEst = recupCache[cursoId]?.[est.id] || {};
     const nRecupPendiente = Object.values(recupMapEst).filter(r => r.estado === 'pendiente').length;
-    let cells = '<td style="text-align:center;font-size:0.8rem;color:#90CAF9;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
+    let cells = '<td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
       + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
       + '<span onclick="_toggleNombreMobile(this)" ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Toca para ver opciones · Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
@@ -29467,13 +29473,21 @@ function _renderizarSaludo() {
   const diaIdx = diaHoy === 0 ? -1 : diaHoy - 1; // 0=Lu…4=Vi
   const clasesHoy = diaIdx >= 0 ? horario.filter(e => e.dia === diaIdx && e.materia).length : 0;
 
+  const foto = cargarPortafolioFoto();
+  const avatarHtml = foto?.fotoBase64
+    ? `<img src="data:${escapeHTML(foto.fotoMime)};base64,${foto.fotoBase64}">`
+    : `<span>${ahora.getDate()}</span>`;
+
   const el = document.getElementById('dash-greeting');
   if (!el) return;
   el.innerHTML = `
-    <div class="dash-greeting-left" data-daynum="${ahora.getDate()}">
-      <div class="dash-greeting-date">${fechaStr}</div>
-      <div class="dash-greeting-title">${saludo}${nombre}</div>
-      <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">${buildBadge}</span></div>
+    <div class="dash-greeting-left">
+      <div class="dash-greeting-avatar">${avatarHtml}</div>
+      <div class="dash-greeting-info">
+        <div class="dash-greeting-date">${fechaStr}</div>
+        <div class="dash-greeting-title">${saludo}${nombre}</div>
+        <div class="dash-greeting-sub">Sistema de Planificación Educativa · República Dominicana <span class="dash-version-badge" onclick="abrirAcercaDe()" title="Ver novedades de la versión">${buildBadge}</span></div>
+      </div>
     </div>
     <div class="dash-stats-row">
       <div id="dash-stat-planificaciones" class="dash-stat-pill" title="Planificaciones guardadas" onclick="abrirPlanificaciones()" style="cursor:pointer;">
