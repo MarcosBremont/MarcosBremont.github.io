@@ -8290,6 +8290,8 @@ function generarPlanificacion() {
 
       renderizarActividades(planificacion.actividades);
 
+      console.log('[PlanDebug] generarPlanificacion terminó -> EC=', planificacion.elementosCapacidad?.length, 'actividades=', planificacion.actividades?.length);
+
 
 
 
@@ -20382,7 +20384,7 @@ async function guardarPlanificacionActual(silencioso = false) {
 
   const biblio = cargarBiblioteca();
 
-
+  console.log('[PlanDebug] guardarPlanificacionActual -> _id=', planificacion._id, 'EC=', planificacion.elementosCapacidad?.length, 'actividades=', planificacion.actividades?.length);
 
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -20678,6 +20680,7 @@ function cargarPlanEnPaso1(planId) {
   const biblio = cargarBiblioteca();
   const registro = biblio.items.find(i => i.id === planId);
   if (!registro) { mostrarToast('Planificación no encontrada', 'error'); return; }
+  console.log('[PlanDebug] cargarPlanEnPaso1 -> registro.id=', registro.id, 'nombre=', registro.nombre, 'EC en biblioteca=', registro.planificacion?.elementosCapacidad?.length, 'actividades en biblioteca=', registro.planificacion?.actividades?.length);
   planificacion = JSON.parse(JSON.stringify(registro.planificacion));
   planificacion._id = registro.id;
   if (planificacion.actividades) {
@@ -20691,6 +20694,7 @@ function cargarPlanEnPaso1(planId) {
     });
   }
   poblarFormularioDesdeEstado();
+  console.log('[PlanDebug] cargarPlanEnPaso1 -> tras poblarFormularioDesdeEstado, EC=', planificacion.elementosCapacidad?.length, 'actividades=', planificacion.actividades?.length);
   if (planificacion.elementosCapacidad?.length) {
     renderizarEC(planificacion.elementosCapacidad);
     renderizarActividades(planificacion.actividades);
@@ -20706,6 +20710,7 @@ function cargarPlanEnPaso5(planId) {
   const biblio = cargarBiblioteca();
   const registro = biblio.items.find(i => i.id === planId);
   if (!registro) { mostrarToast('Planificación no encontrada', 'error'); return; }
+  console.log('[PlanDebug] cargarPlanEnPaso5 -> registro.id=', registro.id, 'nombre=', registro.nombre, 'EC en biblioteca=', registro.planificacion?.elementosCapacidad?.length, 'actividades en biblioteca=', registro.planificacion?.actividades?.length);
 
   planificacion = JSON.parse(JSON.stringify(registro.planificacion));
   planificacion._id = registro.id;
@@ -20722,6 +20727,7 @@ function cargarPlanEnPaso5(planId) {
   }
 
   poblarFormularioDesdeEstado();
+  console.log('[PlanDebug] cargarPlanEnPaso5 -> tras poblarFormularioDesdeEstado, EC=', planificacion.elementosCapacidad?.length, 'actividades=', planificacion.actividades?.length);
 
   if (planificacion.elementosCapacidad?.length) {
     renderizarEC(planificacion.elementosCapacidad);
