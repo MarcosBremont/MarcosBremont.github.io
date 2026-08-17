@@ -10018,7 +10018,9 @@ const PERFIL_ROL_LABELS = {
   psicologia: 'Psicología', superadmin: 'Superadministrador'
 };
 
-/** Rellena el panel Mi Perfil con la foto, nombre/usuario/email/rol del usuario y prepara el campo de cambio de correo */
+/** Rellena el panel Mi Perfil con la foto, nombre/usuario/email/rol del usuario y prepara el campo de cambio de correo.
+ *  Cada dato se refleja también en el panel "Vista previa" (perfil-preview-*), que es
+ *  un resumen tipo tarjeta de los mismos campos, no una fuente de datos aparte. */
 async function renderizarPerfil() {
   const user = window.currentUser;
   if (!user) return;
@@ -10029,26 +10031,36 @@ async function renderizarPerfil() {
   const elUsuario = document.getElementById('perfil-usuario');
   const elNombre = document.getElementById('perfil-nombre');
   const elRol = document.getElementById('perfil-rol');
+  const elPreviewEmail = document.getElementById('perfil-preview-email');
+  const elPreviewNombre = document.getElementById('perfil-preview-nombre');
+  const elPreviewRol = document.getElementById('perfil-preview-rol');
   const emailNuevoInput = document.getElementById('cuenta-email-nuevo');
 
   if (elEmail) elEmail.textContent = user.email || '—';
   if (elUsuario) elUsuario.textContent = user.email || '—';
+  if (elPreviewEmail) elPreviewEmail.textContent = user.email || '—';
   if (emailNuevoInput) emailNuevoInput.value = user.email || '';
   if (elNombre) elNombre.textContent = user.displayName || 'Sin nombre';
+  if (elPreviewNombre) elPreviewNombre.textContent = user.displayName || 'Sin nombre';
   if (elRol) elRol.textContent = 'Cargando...';
+  if (elPreviewRol) elPreviewRol.textContent = 'Cargando...';
 
   try {
     const doc = await db.collection('usuarios').doc(user.uid).get();
     const data = doc.exists ? doc.data() : {};
-    if (elNombre && data.nombre) elNombre.textContent = data.nombre;
-    if (elRol) {
-      const roles = data.roles || (data.rol ? [data.rol] : []);
-      const labels = roles.map(r => PERFIL_ROL_LABELS[r] || r).filter(Boolean);
-      elRol.textContent = labels.length ? labels.join(' · ') : 'Docente';
+    if (data.nombre) {
+      if (elNombre) elNombre.textContent = data.nombre;
+      if (elPreviewNombre) elPreviewNombre.textContent = data.nombre;
     }
+    const roles = data.roles || (data.rol ? [data.rol] : []);
+    const labels = roles.map(r => PERFIL_ROL_LABELS[r] || r).filter(Boolean);
+    const rolTexto = labels.length ? labels.join(' · ') : 'Docente';
+    if (elRol) elRol.textContent = rolTexto;
+    if (elPreviewRol) elPreviewRol.textContent = rolTexto;
   } catch (e) {
     console.warn('[Perfil] Error cargando datos de usuario:', e);
     if (elRol) elRol.textContent = '—';
+    if (elPreviewRol) elPreviewRol.textContent = '—';
   }
 }
 

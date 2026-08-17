@@ -1690,42 +1690,54 @@
           <span class="material-icons">person</span> Información Personal
         </div>
         <div class="perfil-card-body">
-          <div class="perfil-avatar-wrap">
-            <div class="perfil-avatar" id="perfil-avatar-preview">
-              <span class="material-icons">person</span>
-            </div>
-            <label class="perfil-btn-foto">
-              <span class="material-icons">image</span> Cambiar Imagen de Perfil
-              <input type="file" accept="image/*" style="display:none" onchange="_perfilSubirFoto(this)">
-            </label>
-          </div>
-          <div class="perfil-info-grid">
-            <div class="perfil-info-item">
-              <div class="perfil-info-icon" style="background:#EDE7F6;color:#6A1B9A;"><span class="material-icons">badge</span></div>
-              <div>
-                <div class="perfil-info-label">Nombre Completo</div>
-                <div class="perfil-info-valor" id="perfil-nombre">—</div>
+          <div class="perfil-personal-layout">
+            <div class="perfil-info-grid">
+              <div class="perfil-info-item">
+                <div class="perfil-info-icon" style="background:#EDE7F6;color:#6A1B9A;"><span class="material-icons">badge</span></div>
+                <div>
+                  <div class="perfil-info-label">Nombre Completo</div>
+                  <div class="perfil-info-valor" id="perfil-nombre">—</div>
+                </div>
+              </div>
+              <div class="perfil-info-item">
+                <div class="perfil-info-icon" style="background:#E3F2FD;color:#1565C0;"><span class="material-icons">person_outline</span></div>
+                <div>
+                  <div class="perfil-info-label">Usuario</div>
+                  <div class="perfil-info-valor" id="perfil-usuario">—</div>
+                </div>
+              </div>
+              <div class="perfil-info-item">
+                <div class="perfil-info-icon" style="background:#E8F5E9;color:#2E7D32;"><span class="material-icons">mail_outline</span></div>
+                <div>
+                  <div class="perfil-info-label">Email</div>
+                  <div class="perfil-info-valor" id="perfil-email">—</div>
+                </div>
+              </div>
+              <div class="perfil-info-item">
+                <div class="perfil-info-icon" style="background:#FFF3E0;color:#E65100;"><span class="material-icons">work_outline</span></div>
+                <div>
+                  <div class="perfil-info-label">Rol</div>
+                  <div class="perfil-info-valor" id="perfil-rol">—</div>
+                </div>
               </div>
             </div>
-            <div class="perfil-info-item">
-              <div class="perfil-info-icon" style="background:#E3F2FD;color:#1565C0;"><span class="material-icons">person_outline</span></div>
-              <div>
-                <div class="perfil-info-label">Usuario</div>
-                <div class="perfil-info-valor" id="perfil-usuario">—</div>
+
+            <div class="perfil-preview-panel">
+              <div class="perfil-preview-label">Vista previa</div>
+              <div class="perfil-preview-avatar-wrap">
+                <div class="perfil-avatar" id="perfil-avatar-preview">
+                  <span class="material-icons">person</span>
+                </div>
+                <label class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
+                  <span class="material-icons">edit</span>
+                  <input type="file" accept="image/*" style="display:none" onchange="_perfilSubirFoto(this)">
+                </label>
               </div>
-            </div>
-            <div class="perfil-info-item">
-              <div class="perfil-info-icon" style="background:#E8F5E9;color:#2E7D32;"><span class="material-icons">mail_outline</span></div>
-              <div>
-                <div class="perfil-info-label">Email</div>
-                <div class="perfil-info-valor" id="perfil-email">—</div>
-              </div>
-            </div>
-            <div class="perfil-info-item">
-              <div class="perfil-info-icon" style="background:#FFF3E0;color:#E65100;"><span class="material-icons">work_outline</span></div>
-              <div>
-                <div class="perfil-info-label">Rol</div>
-                <div class="perfil-info-valor" id="perfil-rol">—</div>
+              <div class="perfil-preview-nombre" id="perfil-preview-nombre">—</div>
+              <div class="perfil-preview-rol" id="perfil-preview-rol">—</div>
+              <div class="perfil-preview-email-pill">
+                <span class="material-icons">mail_outline</span>
+                <span id="perfil-preview-email">—</span>
               </div>
             </div>
           </div>
@@ -2922,6 +2934,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.64<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Rediseño: Mi Perfil con panel de vista previa</div>
+              <ul class="about-ver-items">
+                <li>La sección "Información Personal" pasa a dos columnas: los datos (Nombre, Usuario, Email, Rol) a la izquierda, y a la derecha un panel de "Vista previa" con la foto, el nombre y el rol -- el botón para cambiar la foto ahora es un pequeño lápiz sobre la propia foto en vez de un botón aparte debajo.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5848,9 +5874,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.63"></script>
+  <script src="app.js?v=16.64"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.63"></script>
+  <script src="auth.js?v=16.64"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
