@@ -1287,6 +1287,10 @@
             <span class="material-icons">description</span>
             Exportar a Word
           </button>
+          <button class="btn-export" id="btn-guia-estudio" onclick="generarGuiaEstudioRA()" style="background:linear-gradient(135deg,#00897B,#00695C);">
+            <span class="material-icons">auto_stories</span>
+            <span id="btn-guia-estudio-texto">Generar Guía de Estudio</span>
+          </button>
         </div>
 
         <!-- Vista previa imprimible -->
@@ -2917,6 +2921,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v16.70<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Guía de Estudio generada por IA en Vista Previa</div>
+              <ul class="about-ver-items">
+                <li>En la pantalla de Vista Previa y Exportación, el botón "Generar Guía de Estudio" crea con IA un documento Word listo para imprimir con el tema del RA explicado a fondo: conceptos, definiciones y ejemplos prácticos, organizado por cada Elemento de Capacidad de la planificación -- para que el docente no tenga que investigar el tema por su cuenta.</li>
+                <li>Usa el mismo orden de proveedores de IA (Groq → Gemini → OpenRouter) que ya usa la generación de la planificación.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5929,9 +5948,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.69"></script>
+  <script src="app.js?v=16.70"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.69"></script>
+  <script src="auth.js?v=16.70"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

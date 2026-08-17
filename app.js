@@ -26860,6 +26860,157 @@ generarPlanificacion = async function () {
   }
 };
 
+// ════════════════════════════════════════════════════════════════
+// GUÍA DE ESTUDIO DEL RA — documento Word con el tema explicado
+// ════════════════════════════════════════════════════════════════
+
+/** Arma el prompt para que la IA redacte una guía de estudio completa del RA (conceptos,
+ *  explicaciones y ejemplos de cada subtema), usando los Elementos de Capacidad ya
+ *  generados como el temario a cubrir -- así el contenido queda alineado con lo que el
+ *  docente realmente va a impartir en sus sesiones. */
+function _construirPromptGuiaEstudio(dg, ra, ec) {
+  const temasEC = (ec || []).map((e, i) => `${i + 1}. ${e.enunciado}`).join('\n');
+  return `Eres un experto docente y redactor de contenido educativo técnico profesional en República Dominicana.
+
+Necesito una GUÍA DE ESTUDIO completa y lista para imprimir sobre el siguiente tema, para que el docente la use como material de apoyo o se la entregue a sus estudiantes -- debe explicar el tema a fondo, con TODOS los conceptos, explicaciones y ejemplos necesarios, para que el docente no tenga que investigar nada más por su cuenta.
+
+MÓDULO FORMATIVO: ${dg?.moduloFormativo || 'Sin especificar'}
+RESULTADO DE APRENDIZAJE (RA): ${ra?.descripcion || 'Sin especificar'}
+
+SUBTEMAS A CUBRIR (elementos de capacidad de esta planificación, uno por sección):
+${temasEC || 'Sin elementos de capacidad definidos -- cubre el RA de forma general con sus subtemas más importantes.'}
+
+Para cada subtema, escribe una sección con: una explicación completa y clara (varios párrafos, con las definiciones de los conceptos clave bien desarrolladas) y al menos un ejemplo concreto y práctico que ilustre el concepto en un contexto real.
+
+Responde SOLO con JSON válido (sin markdown, sin texto adicional), con esta estructura exacta:
+{
+  "titulo": "Título de la guía de estudio",
+  "introduccion": "Párrafo breve que introduce el tema y explica por qué es importante",
+  "secciones": [
+    {
+      "subtitulo": "Nombre del concepto o subtema",
+      "contenido": "Explicación completa y detallada en 2-4 párrafos, con las definiciones necesarias",
+      "ejemplo": "Un ejemplo concreto y práctico que ilustre el concepto"
+    }
+  ],
+  "conclusion": "Párrafo final que resuma la importancia práctica de estos conocimientos"
+}
+
+Genera una sección por cada subtema listado arriba. Sé exhaustivo y claro, como si estuvieras escribiendo un capítulo de libro de texto.`;
+}
+
+/** Genera el contenido de la guía de estudio probando Groq → Gemini → OpenRouter, el
+ *  mismo orden de proveedores (y las mismas funciones de bajo nivel, con su propio
+ *  manejo de reintentos/cuota por modelo) que ya usa generarPlanificacion(). */
+async function _generarContenidoGuiaEstudioIA(dg, ra, ec) {
+  const prompt = _construirPromptGuiaEstudio(dg, ra, ec);
+  const groqKey = getGroqKey();
+  const openrouterKey = getOpenRouterKey();
+  let data = null;
+  let proveedor = null;
+
+  if (groqKey) {
+    try {
+      data = await _llamarGroqConFallback(prompt, 'Redactando guía de estudio', 8192);
+      if (data) proveedor = 'Groq';
+    } catch (e) {
+      console.warn('[GuíaEstudio] Groq falló:', e.message);
+    }
+  }
+
+  if (!data && getGeminiKey()) {
+    try {
+      mostrarToast('🟣 Redactando guía de estudio con Gemini...', 'info');
+      data = await _llamarGemini(prompt, 8192);
+      if (data) proveedor = 'Gemini';
+    } catch (e) {
+      console.warn('[GuíaEstudio] Gemini falló:', e.message);
+    }
+  }
+
+  if (!data && openrouterKey) {
+    try {
+      data = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Redactando guía de estudio', 6000, 60000);
+      if (data) proveedor = 'OpenRouter';
+    } catch (e) {
+      console.warn('[GuíaEstudio] OpenRouter falló:', e.message);
+    }
+  }
+
+  if (!data || !Array.isArray(data.secciones) || !data.secciones.length) {
+    throw new Error('Ningún proveedor de IA pudo generar la guía de estudio. Verifica tus claves en ⚙️ Config. IA.');
+  }
+  console.log('[GuíaEstudio] Generada con', proveedor, '—', data.secciones.length, 'secciones');
+  return data;
+}
+
+/** Arma el documento Word (HTML + Blob, Arial 12 -- mismo truco que _imprimirLibretaDia)
+ *  con el contenido de la guía de estudio. */
+function _guiaEstudioHTML(data, dg, ra) {
+  const escNL = (t) => escapeHTML(t || '').replace(/\n/g, '<br>');
+  const seccionesHtml = (data.secciones || []).map((s, i) =>
+    '<h2>' + (i + 1) + '. ' + escapeHTML(s.subtitulo || 'Tema') + '</h2>'
+    + '<p>' + escNL(s.contenido) + '</p>'
+    + (s.ejemplo ? '<p><b>Ejemplo:</b> ' + escNL(s.ejemplo) + '</p>' : '')
+  ).join('');
+
+  return `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"/>
+  <style>
+    body{font-family:Arial;font-size:12pt;line-height:1.5;}
+    h1{font-size:16pt;color:#1F54A8;margin:0 0 6pt;}
+    h2{font-size:13pt;color:#1F54A8;margin:16pt 0 4pt;}
+    p{margin:0 0 10pt;text-align:justify;}
+    .subt{font-size:10pt;color:#546E7A;margin:0 0 16pt;}
+  </style></head>
+  <body>
+    <h1>${escapeHTML(data.titulo || 'Guía de Estudio')}</h1>
+    <p class="subt">${escapeHTML(dg?.moduloFormativo || '')}${ra?.descripcion ? ' — RA: ' + escapeHTML(ra.descripcion) : ''}</p>
+    ${data.introduccion ? '<p>' + escNL(data.introduccion) + '</p>' : ''}
+    ${seccionesHtml}
+    ${data.conclusion ? '<h2>Conclusión</h2><p>' + escNL(data.conclusion) + '</p>' : ''}
+  </body></html>`;
+}
+
+/** Botón "Generar Guía de Estudio" en Vista Previa: genera con IA y descarga como Word. */
+async function generarGuiaEstudioRA() {
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  if (!dg.moduloFormativo && !ra.descripcion) {
+    mostrarToast('Completa al menos el Paso 1 y el RA antes de generar la guía de estudio.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-guia-estudio');
+  const btnTexto = document.getElementById('btn-guia-estudio-texto');
+  const textoOriginal = btnTexto?.textContent;
+  if (btn) btn.disabled = true;
+  if (btnTexto) btnTexto.textContent = 'Generando guía…';
+
+  try {
+    mostrarToast('🟢 Generando guía de estudio con IA...', 'info');
+    const data = await _generarContenidoGuiaEstudioIA(dg, ra, planificacion.elementosCapacidad);
+    const html = _guiaEstudioHTML(data, dg, ra);
+    const blob = new Blob(['﻿', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Guia_Estudio_' + (dg.moduloFormativo || 'RA').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60) + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    mostrarToast('Guía de estudio generada y descargada', 'success');
+  } catch (e) {
+    mostrarToast('Error generando la guía de estudio: ' + (e.message || e).toString().slice(0, 150), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnTexto) btnTexto.textContent = textoOriginal || 'Generar Guía de Estudio';
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // INICIALIZAR ESTADO DEL BOTÓN AL CARGAR
 // ─────────────────────────────────────────────────────────────
