@@ -2925,6 +2925,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.72<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: planificaciones archivadas que se desarchivaban al recargar</div>
+              <ul class="about-ver-items">
+                <li>Al archivar una planificación (o editarla) y recargar la página poco después, la sincronización con Firebase podía descartar ese cambio y traer de vuelta la copia vieja -- pasaba siempre que aún no terminara de subirse el cambio a la nube.</li>
+                <li>Ahora, al fusionar con Firebase, cada planificación conserva su versión local cuando ya existe en ambos lados, y el cambio pendiente se reintenta subir automáticamente.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.71<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -5963,9 +5978,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.71"></script>
+  <script src="app.js?v=16.72"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.71"></script>
+  <script src="auth.js?v=16.72"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -436,23 +436,27 @@ async function _cargarDesdeFirestore(uid) {
           try { firebaseItems = JSON.parse(payload || '{"items":[]}').items || []; } catch(e) {}
           try { localItems = JSON.parse(localRaw || '{"items":[]}').items || []; } catch(e) {}
 
-          // Índice de IDs en Firebase
-          const fbIds = new Set(firebaseItems.map(i => i.id));
-          // Planes que están en local pero NO en Firebase (no llegaron a sincronizarse)
-          const soloEnLocal = localItems.filter(i => i.id && !fbIds.has(i.id));
+          // Fusión por id: un item presente en ambos lados usa la versión LOCAL
+          // (este dispositivo es el que acaba de editar/archivar), y se agregan los
+          // items que solo existen en un lado (nuevos aún no sincronizados, o
+          // sincronizados desde otro dispositivo). Usar el payload de Firebase tal
+          // cual (como se hacía antes cuando no había ningún id "nuevo") descartaba
+          // SIEMPRE cualquier edición local a un item ya existente -- por ejemplo,
+          // archivar una planificación se revertía en cuanto la página volvía a
+          // cargar antes de que terminara de subirse el cambio a Firestore.
+          const porId = new Map();
+          firebaseItems.forEach(i => { if (i && i.id) porId.set(i.id, i); });
+          localItems.forEach(i => { if (i && i.id) porId.set(i.id, i); });
+          const itemsFusionados = Array.from(porId.values());
 
-          if (soloEnLocal.length > 0) {
-            // Hay planes locales que Firebase no tiene → fusionar y subir
-            console.warn(`[Biblioteca] ${soloEnLocal.length} plan(es) encontrado(s) en local pero no en Firebase. Fusionando y subiendo...`);
-            const merged = { items: [...firebaseItems, ...soloEnLocal] };
+          if (itemsFusionados.length) {
+            const merged = { items: itemsFusionados };
+            const huboDiferenciaConFirebase = JSON.stringify(itemsFusionados) !== JSON.stringify(firebaseItems);
             _setItemQuotaSafe(key, JSON.stringify(merged));
-            // Subir fusión a Firebase (sin await para no bloquear la carga)
-            if (typeof _escribirChunksBiblioteca === 'function') {
+            if (huboDiferenciaConFirebase && typeof _escribirChunksBiblioteca === 'function') {
+              // Subir fusión a Firebase (sin await para no bloquear la carga)
               _escribirChunksBiblioteca(base, merged).catch(e => console.warn('Error subiendo fusión:', e));
             }
-          } else if (payload) {
-            // Firebase está al día → usar datos de Firebase
-            _setItemQuotaSafe(key, payload);
           }
           // Si ni Firebase ni local tienen datos, no tocar localStorage
           return;

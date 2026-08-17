@@ -20288,7 +20288,9 @@ function _confirmarCopiarDatosGenerales(idx) {
 
 
 function persistirBiblioteca(biblio) {
-  localStorage.setItem(BIBLIO_KEY, JSON.stringify(biblio));
+  const biblioJSON = JSON.stringify(biblio);
+  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(BIBLIO_KEY, biblioJSON);
+  else { try { localStorage.setItem(BIBLIO_KEY, biblioJSON); } catch (e) { console.warn('No se pudo guardar la biblioteca localmente:', e); } }
   return _syncBibliotecaFirebase(biblio);
 }
 
