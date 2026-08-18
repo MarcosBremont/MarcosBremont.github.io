@@ -36497,6 +36497,20 @@ async function _renderPromptsIA() {
       Modifica los prompts que usa la IA para generar contenido. Usa las variables entre <code>{{llaves}}</code> para insertar datos dinámicos.
       Si dejas un prompt vacío o lo restauras, se usará el valor por defecto del sistema.
     </p>
+  </div>
+
+  <div style="margin-bottom:24px;border:1px solid #E0E0E0;border-radius:12px;padding:16px;background:#FAFAFA;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="material-icons" style="color:#00897B;">bolt</span>
+      <h3 style="margin:0;font-size:1rem;color:#424242;">Probar Proveedores de IA</h3>
+    </div>
+    <p style="font-size:0.8rem;color:#78909C;margin:0 0 12px;">
+      Le pide a cada proveedor configurado (Groq, Gemini, OpenRouter) una respuesta corta de prueba, sin tener que generar una planificación completa. Sirve para confirmar que las claves funcionan y ver cuál responde más rápido.
+    </p>
+    <button id="btn-probar-ia" onclick="_probarIA()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:#00897B;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;">
+      <span class="material-icons" style="font-size:18px;">bolt</span> Probar IA ahora
+    </button>
+    <div id="ia-test-resultados" style="margin-top:12px;"></div>
   </div>`;
 
   PROMPTS_IA_DEFS.forEach(p => {
@@ -36573,44 +36587,75 @@ function _bugFechaStr(e) {
   return fecha.toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function _renderBugsLista(filtroSeveridad) {
+/** Filtra window._bugsCache por severidad + texto (mensaje/módulo/tipo/acción). */
+function _filtrarBugsCache(filtroSeveridad, filtroTexto) {
+  const errores = window._bugsCache || [];
+  let filtrados = filtroSeveridad === 'todas' ? errores : errores.filter(e => e.severity === filtroSeveridad);
+  const texto = (filtroTexto || '').trim().toLowerCase();
+  if (texto) {
+    filtrados = filtrados.filter(e => (
+      (e.message || '') + ' ' + (e.module || '') + ' ' + (e.type || '') + ' ' + (e.action || '')
+    ).toLowerCase().includes(texto));
+  }
+  return filtrados;
+}
+
+/** Arma solo el HTML de las tarjetas de error (sin la barra de filtros). */
+function _bugsResultadosHTML(filtrados) {
+  if (!filtrados.length) {
+    return '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">check_circle</span>No hay errores registrados con este filtro</div>';
+  }
+  let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  filtrados.forEach(e => {
+    const sev = _bugSeveridadInfo(e.severity);
+    const donde = (e.filename || '') + (e.lineno ? ':' + e.lineno : '');
+    html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<span style="background:' + sev.bg + ';color:' + sev.color + ';padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;margin-right:6px;">' + sev.texto + '</span>'
+      + '<span style="font-size:0.78rem;color:#78909C;">' + escapeHTML(e.module || e.type || 'general') + ' · ' + escapeHTML(_bugFechaStr(e)) + '</span>'
+      + '</div>'
+      + '<button onclick="_copiarBug(\'' + e.id + '\', this)" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;white-space:nowrap;font-family:inherit;">'
+      + '<span class="material-icons" style="font-size:14px;">content_copy</span> Copiar</button>'
+      + '</div>'
+      + '<div style="font-size:0.88rem;color:#263238;font-weight:600;margin-bottom:6px;word-break:break-word;">' + escapeHTML(e.message || 'Sin mensaje') + '</div>'
+      + '<div style="font-size:0.76rem;color:#90A4AE;">' + escapeHTML(e.userEmail || 'Usuario desconocido') + (donde ? ' · ' + escapeHTML(donde) : '') + ' · Build ' + escapeHTML(e.appVersion || 'n/a') + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// Re-filtra sin reconstruir la barra de búsqueda/select -- si se reconstruyera todo
+// el contenedor en cada tecla (oninput), el <input> de búsqueda perdería el foco y
+// la posición del cursor en cada letra escrita.
+function _filtrarBugs() {
+  const filtroSeveridad = document.getElementById('sa-bugs-filtro')?.value || 'todas';
+  const filtroTexto = document.getElementById('sa-bugs-buscar')?.value || '';
+  const resultados = document.getElementById('sa-bugs-resultados');
+  if (resultados) resultados.innerHTML = _bugsResultadosHTML(_filtrarBugsCache(filtroSeveridad, filtroTexto));
+}
+
+function _renderBugsLista(filtroSeveridad, filtroTexto) {
   const cont = document.getElementById('sa-contenido');
   if (!cont) return;
   const errores = window._bugsCache || [];
-  const filtrados = filtroSeveridad === 'todas' ? errores : errores.filter(e => e.severity === filtroSeveridad);
+  const filtrados = _filtrarBugsCache(filtroSeveridad, filtroTexto);
 
-  let html = '<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+  const html = '<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
     + '<div style="font-size:0.85rem;color:#546E7A;">' + errores.length + ' error' + (errores.length === 1 ? '' : 'es') + ' registrados (últimos 200)</div>'
-    + '<select id="sa-bugs-filtro" onchange="_renderBugsLista(this.value)" style="padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.85rem;">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<input id="sa-bugs-buscar" type="text" value="' + escapeHTML(filtroTexto || '') + '" placeholder="Buscar (ej. OpenRouter, Groq, Gemini)..." '
+    + 'oninput="_filtrarBugs()" style="padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.85rem;min-width:220px;">'
+    + '<select id="sa-bugs-filtro" onchange="_filtrarBugs()" style="padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.85rem;">'
     + '<option value="todas"' + (filtroSeveridad === 'todas' ? ' selected' : '') + '>Todas las severidades</option>'
     + '<option value="high"' + (filtroSeveridad === 'high' ? ' selected' : '') + '>Alta</option>'
     + '<option value="medium"' + (filtroSeveridad === 'medium' ? ' selected' : '') + '>Media</option>'
     + '<option value="low"' + (filtroSeveridad === 'low' ? ' selected' : '') + '>Baja</option>'
     + '</select>'
-    + '</div>';
-
-  if (!filtrados.length) {
-    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">check_circle</span>No hay errores registrados con este filtro</div>';
-  } else {
-    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-    filtrados.forEach(e => {
-      const sev = _bugSeveridadInfo(e.severity);
-      const donde = (e.filename || '') + (e.lineno ? ':' + e.lineno : '');
-      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;">'
-        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">'
-        + '<div style="flex:1;min-width:200px;">'
-        + '<span style="background:' + sev.bg + ';color:' + sev.color + ';padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;margin-right:6px;">' + sev.texto + '</span>'
-        + '<span style="font-size:0.78rem;color:#78909C;">' + escapeHTML(e.module || e.type || 'general') + ' · ' + escapeHTML(_bugFechaStr(e)) + '</span>'
-        + '</div>'
-        + '<button onclick="_copiarBug(\'' + e.id + '\', this)" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;white-space:nowrap;font-family:inherit;">'
-        + '<span class="material-icons" style="font-size:14px;">content_copy</span> Copiar</button>'
-        + '</div>'
-        + '<div style="font-size:0.88rem;color:#263238;font-weight:600;margin-bottom:6px;word-break:break-word;">' + escapeHTML(e.message || 'Sin mensaje') + '</div>'
-        + '<div style="font-size:0.76rem;color:#90A4AE;">' + escapeHTML(e.userEmail || 'Usuario desconocido') + (donde ? ' · ' + escapeHTML(donde) : '') + ' · Build ' + escapeHTML(e.appVersion || 'n/a') + '</div>'
-        + '</div>';
-    });
-    html += '</div>';
-  }
+    + '</div>'
+    + '</div>'
+    + '<div id="sa-bugs-resultados">' + _bugsResultadosHTML(filtrados) + '</div>';
 
   cont.innerHTML = html;
 }
@@ -36650,6 +36695,76 @@ function _copiarBug(id, btnEl) {
 
 function _escapeHTMLForTextarea(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── PROBAR PROVEEDORES DE IA (superadmin, sin generar una planificación) ──
+// Reusa las mismas funciones de llamada que usa la generación real
+// (_llamarGroqConFallback, _llamarGemini, _llamarOpenRouterConFallback), con
+// un prompt corto -- así la prueba refleja el comportamiento real (mismo
+// fallback entre modelos, mismos reintentos) sin gastar tiempo generando EC
+// y actividades completas.
+async function _probarIA() {
+  const cont = document.getElementById('ia-test-resultados');
+  const btn = document.getElementById('btn-probar-ia');
+  if (!cont) return;
+
+  const groqKey = getGroqKey();
+  const geminiKey = getGeminiKey();
+  const openrouterKey = getOpenRouterKey();
+
+  if (!groqKey && !geminiKey && !openrouterKey) {
+    cont.innerHTML = '<div style="padding:10px 12px;background:#FFF3E0;border:1px solid #FFE0B2;border-radius:8px;color:#E65100;font-size:0.82rem;">No hay ninguna clave de IA configurada. Ve a ⚙️ Config. IA para agregar una.</div>';
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  cont.innerHTML = '';
+
+  const testPrompt = 'Responde SOLO con JSON válido, sin markdown, sin texto adicional, con esta estructura exacta: {"chiste": "un chiste corto y original sobre programadores, en español"}';
+  const proveedores = [
+    { nombre: 'Groq', key: groqKey, llamar: () => _llamarGroqConFallback(testPrompt, 'Prueba IA', 200) },
+    { nombre: 'Gemini', key: geminiKey, llamar: () => _llamarGemini(testPrompt, 200) },
+    { nombre: 'OpenRouter', key: openrouterKey, llamar: () => _llamarOpenRouterConFallback(testPrompt, openrouterKey, 'Prueba IA', 200, 30000) }
+  ];
+
+  for (const prov of proveedores) {
+    if (!prov.key) {
+      cont.innerHTML += _probarIAFilaHTML(prov.nombre, 'sin_clave', null, 'Sin clave configurada');
+      continue;
+    }
+    const filaId = 'ia-test-' + prov.nombre.toLowerCase();
+    cont.innerHTML += _probarIAFilaHTML(prov.nombre, 'probando', null, null, filaId);
+    const t0 = performance.now();
+    try {
+      const data = await prov.llamar();
+      const ms = Math.round(performance.now() - t0);
+      const contenido = (data && typeof data.chiste === 'string') ? data.chiste : JSON.stringify(data);
+      const fila = document.getElementById(filaId);
+      if (fila) fila.outerHTML = _probarIAFilaHTML(prov.nombre, 'ok', ms, contenido);
+    } catch (e) {
+      const ms = Math.round(performance.now() - t0);
+      const fila = document.getElementById(filaId);
+      if (fila) fila.outerHTML = _probarIAFilaHTML(prov.nombre, 'error', ms, e.message || String(e));
+    }
+  }
+
+  if (btn) btn.disabled = false;
+}
+
+function _probarIAFilaHTML(nombre, estado, ms, detalle, id) {
+  const cfg = {
+    probando: { icono: 'hourglass_top', color: '#1565C0', bg: '#E3F2FD', texto: 'Probando…' },
+    ok: { icono: 'check_circle', color: '#2E7D32', bg: '#E8F5E9', texto: 'Respondió en ' + ms + ' ms' },
+    error: { icono: 'error', color: '#C62828', bg: '#FFEBEE', texto: 'Falló (' + ms + ' ms)' },
+    sin_clave: { icono: 'key_off', color: '#78909C', bg: '#ECEFF1', texto: 'Sin clave configurada' }
+  }[estado];
+
+  return '<div' + (id ? ' id="' + id + '"' : '') + ' style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #E0E0E0;border-radius:8px;margin-bottom:8px;background:#fff;">'
+    + '<span class="material-icons" style="font-size:20px;color:' + cfg.color + ';' + (estado === 'probando' ? 'animation:spin 1s linear infinite;' : '') + '">' + cfg.icono + '</span>'
+    + '<div style="flex:1;min-width:0;">'
+    + '<div style="font-weight:700;font-size:0.85rem;color:#263238;">' + escapeHTML(nombre) + '<span style="font-weight:600;font-size:0.76rem;color:' + cfg.color + ';margin-left:8px;background:' + cfg.bg + ';padding:1px 8px;border-radius:10px;">' + cfg.texto + '</span></div>'
+    + (detalle ? '<div style="font-size:0.8rem;color:#546E7A;margin-top:4px;word-break:break-word;">' + escapeHTML(detalle) + '</div>' : '')
+    + '</div></div>';
 }
 
 function _guardarPromptIADesdeEditor(key) {
