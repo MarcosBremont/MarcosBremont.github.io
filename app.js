@@ -1292,7 +1292,39 @@ function calcularFechasClase(diasConfig, fechaInicio, fechaFin, festivosExcluir)
 
 }
 
+/** Resuelve la fecha de inicio/fin de una actividad que ocupa `duracionDias` días
+ *  consecutivos de `fechasValidas` (lista de calcularFechasClase), a partir de la
+ *  posición `fechaIdx`. Devuelve fechaStr como rango ("lun 01 sept – mié 03 sept")
+ *  solo si el fin difiere del inicio. Centraliza la lógica que antes vivía inline
+ *  en aplicarRespuestaIA -- reutilizada también al duplicar planificación a otro
+ *  curso con horario distinto. */
+function _resolverFechaActividad(fechasValidas, fechaIdx, duracionDias) {
+  if (!fechasValidas || !fechasValidas.length) return { fecha: null, fechaFin: null, fechaStr: 'Sin fecha asignada' };
+  const inicioObj = fechasValidas[fechaIdx] || fechasValidas[fechasValidas.length - 1];
+  const finIdx = Math.min(fechaIdx + duracionDias - 1, fechasValidas.length - 1);
+  const finObj = fechasValidas[finIdx] || inicioObj;
+  const fechaStr = (finObj.fechaStr && finObj.fechaStr !== inicioObj.fechaStr)
+    ? `${inicioObj.fechaStr} – ${finObj.fechaStr}`
+    : inicioObj.fechaStr;
+  return { fecha: inicioObj.fecha, fechaFin: finObj.fecha, fechaStr };
+}
 
+/** Normaliza act.fecha/act.fechaFin (Date u string, con o sin hora) a 'YYYY-MM-DD'. */
+function _fechaActISO(valor) {
+  if (!valor) return null;
+  if (valor instanceof Date) return valor.toISOString().split('T')[0];
+  const s = String(valor);
+  return s.includes('T') ? s.split('T')[0] : s.substring(0, 10);
+}
+
+/** true si fechaISO cae dentro de [act.fecha, act.fechaFin || act.fecha] -- reemplaza
+ *  las comparaciones de igualdad exacta que asumían que 1 actividad = 1 día. */
+function _actividadCubreFecha(act, fechaISO) {
+  const inicio = _fechaActISO(act?.fecha);
+  if (!inicio || !fechaISO) return false;
+  const fin = _fechaActISO(act?.fechaFin) || inicio;
+  return fechaISO >= inicio && fechaISO <= fin;
+}
 
 
 
@@ -3094,6 +3126,10 @@ function renderizarActividades(listaActividades) {
         if (!val) return;
         const d = new Date(val + 'T12:00:00');
         act.fecha = val;
+        // Un edit manual no tiene UI para elegir un rango -- colapsa la actividad
+        // a un solo dia, aunque antes durara varios (duracionDias por IA).
+        act.fechaFin = val;
+        act.duracionDias = 1;
         act.fechaStr = d.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
         this.title = act.fechaStr;
         const labelEl = this.closest('div')?.querySelector('.act-fecha-label');
@@ -18303,7 +18339,7 @@ function _generarNotificaciones() {
       const tienePlan = (biblio.items || []).some(reg => {
         const cursosConReg = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
         return cursosConReg.some(c => c.nombre === e.seccion) &&
-          (reg.planificacion?.actividades || []).some(act => act.fecha === hoyISO);
+          (reg.planificacion?.actividades || []).some(act => _actividadCubreFecha(act, hoyISO));
       });
       if (!tienePlan) sinPlanHoy.push(`P${e.periodo}: ${e.materia}${e.seccion ? ' — ' + e.seccion : ''}`);
     });
@@ -21349,13 +21385,19 @@ async function confirmarDuplicarPlan() {
       const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
       const nuevasFechas = calcularFechasClase(diasClaseCurso, nuevaFechaInicio, fechaFin || nuevaFechaInicio, festivosAdmin);
 
-      // Asignar nueva fecha a cada actividad en orden
-      acts.forEach((act, i) => {
-        const fechaObj = nuevasFechas[i] || nuevasFechas[nuevasFechas.length - 1] || null;
-        if (fechaObj) {
-          act.fecha = fechaObj.fecha;
-          act.fechaStr = fechaObj.fechaStr;
+      // Asignar nueva fecha a cada actividad en orden -- las que duran varios
+      // días (duracionDias) consumen varias fechas consecutivas, igual que en
+      // la generación original (ver _resolverFechaActividad).
+      let fechaIdxDup = 0;
+      acts.forEach(act => {
+        const duracionDias = Math.max(1, Math.min(3, parseInt(act.duracionDias, 10) || 1));
+        const resuelto = _resolverFechaActividad(nuevasFechas, fechaIdxDup, duracionDias);
+        if (resuelto.fecha) {
+          act.fecha = resuelto.fecha;
+          act.fechaFin = resuelto.fechaFin;
+          act.fechaStr = resuelto.fechaStr;
         }
+        fechaIdxDup += duracionDias;
       });
 
       mostrarToast('📅 Fechas recalculadas según el horario del curso destino.', 'info');
@@ -21377,6 +21419,23 @@ async function confirmarDuplicarPlan() {
                 if (!isNaN(nuevaFecha.getTime())) {
                   act.fecha = nuevaFecha.toISOString().split('T')[0];
                   act.fechaStr = nuevaFecha.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+                  // Si la actividad dura varios días, desplazar también el fin
+                  // del rango por el mismo diffMs y recomponer fechaStr.
+                  if (act.fechaFin) {
+                    const sFin = String(act.fechaFin);
+                    let fechaFinISO = /^\d{4}-\d{2}-\d{2}$/.test(sFin) ? sFin : sFin.includes('T') ? sFin.split('T')[0] : null;
+                    if (!fechaFinISO) { const dFin = new Date(sFin); fechaFinISO = isNaN(dFin.getTime()) ? null : dFin.toISOString().split('T')[0]; }
+                    if (fechaFinISO) {
+                      const nuevaFechaFin = new Date(new Date(fechaFinISO + 'T12:00:00').getTime() + diffMs);
+                      if (!isNaN(nuevaFechaFin.getTime())) {
+                        act.fechaFin = nuevaFechaFin.toISOString().split('T')[0];
+                        if (act.fechaFin !== act.fecha) {
+                          act.fechaStr = act.fechaStr + ' – ' + nuevaFechaFin.toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+                        }
+                      }
+                    }
+                  }
                 }
               }
             } catch (e) { /* conservar fecha original */ }
@@ -26163,7 +26222,7 @@ async function construirPromptBase(dg, ra) {
 
   const ecCodigosLista = ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n');
   const ecCodigosJSON = ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"VERBO + OBJETO + MODO DE HACER","contraste":["CE.1"]}`).join(',\n');
-  const actEsperadasJSON = actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}","contenidos":"Contenidos/temas breves de esta actividad"}`).join(',\n');
+  const actEsperadasJSON = actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}","contenidos":"Contenidos/temas breves de esta actividad","duracionDias":1}`).join(',\n');
 
   const ceLista = _parsearCriteriosEvaluacion(ra.criterios);
   const raCriteriosNumerados = ceLista.length
@@ -26673,11 +26732,11 @@ function aplicarRespuestaIA(aiData, fechasClase) {
     const ecObj = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo)
       || (planificacion.elementosCapacidad || [])[0] || {};
 
-    // Proteger contra fechasClase vacio o undefined
-    const fechaObj = fechasValidas
-      ? (fechasValidas[fechaIdx] || fechasValidas[fechasValidas.length - 1])
-      : null;
-    fechaIdx++;
+    // Actividades que necesitan más de una sesión de clase (ej. un proyecto)
+    // consumen varios días consecutivos de fechasValidas en vez de siempre 1.
+    const duracionDias = Math.max(1, Math.min(3, parseInt(act.duracionDias, 10) || 1));
+    const { fecha: fechaAct, fechaFin: fechaFinAct, fechaStr: fechaStrAct } = _resolverFechaActividad(fechasValidas, fechaIdx, duracionDias);
+    fechaIdx += duracionDias;
 
     // Usar instrumento personalizado de la IA si viene, si no generar local
     let instrumento;
@@ -26736,15 +26795,17 @@ function aplicarRespuestaIA(aiData, fechasClase) {
       id: `act_${i}`,
       ecCodigo: act.ecCodigo || ecObj.codigo,
       enunciado: act.enunciado,
-      fecha: fechaObj ? fechaObj.fecha : null,
-      fechaStr: fechaObj ? fechaObj.fechaStr : 'Sin fecha asignada',
+      fecha: fechaAct,
+      fechaFin: fechaFinAct,
+      fechaStr: fechaStrAct,
+      duracionDias,
       instrumento,
       sesionIA: act.sesionDiaria || null,
       contenidos: act.contenidos || ''
     };
   });
 
-  // 4. Calcular horas por EC según cantidad de actividades × horas por sesión
+  // 4. Calcular horas por EC según la suma de días que ocupan sus actividades
   // Horas promedio por sesión de clase (de los días activos configurados)
   const diasActivos = Object.values(dg.diasClase || {}).filter(d => d.activo);
   const horasPorSesion = diasActivos.length > 0
@@ -26752,8 +26813,10 @@ function aplicarRespuestaIA(aiData, fechasClase) {
     : 2;
 
   planificacion.elementosCapacidad.forEach(ec => {
-    const numActs = planificacion.actividades.filter(a => a.ecCodigo === ec.codigo).length;
-    ec.horasAsignadas = Math.round(numActs * horasPorSesion);
+    const diasOcupados = planificacion.actividades
+      .filter(a => a.ecCodigo === ec.codigo)
+      .reduce((s, a) => s + (a.duracionDias || 1), 0);
+    ec.horasAsignadas = Math.round(diasOcupados * horasPorSesion);
   });
 
   // Recalcular horasTotal como suma real de horas de todos los EC
@@ -30272,22 +30335,17 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
 
   // Buscar actividades de planificaciones para esa fecha
   const _normStr = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  // target ya esta en horario LOCAL (construido con setDate/setHours, no UTC) --
+  // se extraen sus componentes locales para no desfasar por huso horario.
+  const targetISO = target.getFullYear() + '-' + String(target.getMonth() + 1).padStart(2, '0') + '-' + String(target.getDate()).padStart(2, '0');
   const planPorSeccion = {};
   const biblio = cargarBiblioteca();
   (biblio.items || []).forEach(reg => {
     (reg.planificacion?.actividades || []).forEach(act => {
       if (!act.fecha || act.esComplementario) return;
-      // Normalizar act.fecha a ISO string YYYY-MM-DD
-      let _fechaISO;
-      if (act.fecha instanceof Date) {
-        _fechaISO = act.fecha.toISOString().split('T')[0];
-      } else {
-        const s = String(act.fecha);
-        _fechaISO = s.includes('T') ? s.split('T')[0] : s.substring(0, 10);
-      }
-      // Parsear como fecha LOCAL (no UTC) agregando T12:00:00
-      const fa = new Date(_fechaISO + 'T12:00:00'); fa.setHours(0, 0, 0, 0);
-      if (fa.getTime() === target.getTime()) {
+      // Actividades de varios dias (duracionDias): _actividadCubreFecha revisa
+      // si targetISO cae dentro de [act.fecha, act.fechaFin || act.fecha].
+      if (_actividadCubreFecha(act, targetISO)) {
         const cursosConPlan = Object.values(calState.cursos).filter(c => (c.planIds || []).includes(reg.id));
         cursosConPlan.forEach(c => {
           const modulo = _normStr(reg.planificacion?.datosGenerales?.moduloFormativo || '');
@@ -32827,15 +32885,21 @@ function _presCargarCurso(cursoId, periodoId, slotForzado) {
   const actWrap = document.getElementById('pres-actividades-wrap');
   if (actWrap) {
     const acts = (plan && plan.actividades) || [];
-    const hoyStr = new Date().toDateString();
-    const actHoy = acts.filter(a => a.fecha && new Date(a.fecha).toDateString() === hoyStr);
+    const hoyDate = new Date();
+    const hoyStr = hoyDate.toDateString();
+    // Actividades de varios dias (duracionDias): usar rango [fecha, fechaFin] en
+    // vez de igualdad exacta contra hoy, igual que en el widget "Mi dia".
+    const hoyISOHoy = hoyDate.getFullYear() + '-' + String(hoyDate.getMonth() + 1).padStart(2, '0') + '-' + String(hoyDate.getDate()).padStart(2, '0');
+    const actHoy = acts.filter(a => _actividadCubreFecha(a, hoyISOHoy));
     const actMostrar = actHoy.length > 0 ? acts : acts; // muestra todas, destaca las de hoy
 
     if (acts.length) {
       let html = '<div class="pres-section-label">Actividades del plan</div>';
       acts.forEach(a => {
-        const esHoy = a.fecha && new Date(a.fecha).toDateString() === hoyStr;
-        const fechaStr = a.fecha ? new Date(a.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : '';
+        const esHoy = _actividadCubreFecha(a, hoyISOHoy);
+        const fechaCortaInicio = a.fecha ? new Date(a.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '';
+        const fechaCortaFin = (a.fechaFin && _fechaActISO(a.fechaFin) !== _fechaActISO(a.fecha)) ? new Date(a.fechaFin).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '';
+        const fechaStr = fechaCortaFin ? `${fechaCortaInicio} – ${fechaCortaFin}` : fechaCortaInicio;
         html += '<div class="pres-act-item' + (esHoy ? ' hoy' : '') + '">' +
           '<div class="pres-act-dot"></div>' +
           '<div>' +
@@ -36620,6 +36684,7 @@ REGLAS PARA LAS ACTIVIDADES:
 - Cada actividad del mismo EC debe ser DIFERENTE entre sí. Varía el tipo de actividad.
 - Tipos de actividad válidos: Investigación, Práctica guiada, Exposición, Debate, Taller, Estudio de caso, Proyecto, Ejercicio práctico, Análisis comparativo, Presentación, Cuestionario, Mapa conceptual, Role-playing
 - Para cada actividad, además del enunciado, redacta en el campo "contenidos" un texto breve (1-2 líneas) con los contenidos/temas mediadores que esa actividad trabaja específicamente -- distinto en cada actividad, no repitas el mismo texto en todas.
+- Indica en el campo "duracionDias" cuántos días de clase necesita esa actividad para completarse: usa 1 para la MAYORÍA de las actividades (lo normal). Usa 2 o 3 SOLO si la actividad es claramente compleja o extensa (ej. un proyecto, un informe elaborado, una investigación profunda) y realmente no se puede completar en una sola sesión de clase. No abuses de valores mayores a 1.
 
 JSON requerido (respetar esta estructura exacta):
 {
