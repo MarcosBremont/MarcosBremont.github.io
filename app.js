@@ -8819,7 +8819,12 @@ function _bloquearPantalla() {
   const nombre  = user.displayName || user.email?.split('@')[0] || '';
 
   const avatar = document.getElementById('lock-avatar');
-  if (avatar) avatar.textContent = inicial;
+  if (avatar) {
+    const foto = cargarPortafolioFoto();
+    avatar.innerHTML = foto?.fotoBase64
+      ? `<img src="data:${escapeHTML(foto.fotoMime)};base64,${foto.fotoBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : escapeHTML(inicial);
+  }
   const username = document.getElementById('lock-username');
   if (username) username.textContent = nombre + ' · ' + (user.email || '');
   const lockTime = document.getElementById('lock-time');
