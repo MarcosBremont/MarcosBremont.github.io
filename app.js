@@ -29655,6 +29655,7 @@ function renderizarDashboard() {
   _actualizarPlanActivaPorFechas();
   _renderizarSaludo();
   _renderizarBannerCalendarioDashboard();
+  _renderizarBannerSuscripcion();
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
@@ -29930,6 +29931,28 @@ function _renderizarBannerCalendarioDashboard() {
         `).join('')}
       </div>
     </div>`;
+}
+
+// Banner de aviso (no bloqueante) cuando el centro está en período de gracia
+// por falta de pago -- solo visible para admin_centro/director, que son
+// quienes pueden gestionar el pago (ver window._suscripcionCentroInfo,
+// fijado en auth.js durante el login).
+function _renderizarBannerSuscripcion() {
+  const el = document.getElementById('dash-suscripcion-banner');
+  if (!el) return;
+
+  const info = window._suscripcionCentroInfo;
+  if (!info || !info.enGracia || !info.puedeVerBanner) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+
+  el.style.display = 'block';
+  el.innerHTML = '<div style="background:linear-gradient(135deg,#FFF3E0 0%,#FFE0B2 100%);border:1.5px solid #FFB74D;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    + '<span class="material-icons" style="font-size:20px;color:#E65100;">warning</span>'
+    + '<span style="flex:1;min-width:200px;font-size:0.83rem;color:#E65100;font-weight:600;">Este centro tiene un pago pendiente. Quedan ' + info.diasRestantes + ' día' + (info.diasRestantes === 1 ? '' : 's') + ' antes de que se suspenda el acceso.</span>'
+    + '</div>';
 }
 
 // ── Alertas inteligentes ─────────────────────────────────────────
@@ -35924,6 +35947,43 @@ const CENTROS_COLLECTION = 'centros';
 /** Emails de superadmin por defecto — se complementan con los de Firestore */
 const SUPERADMIN_DEFAULT = ['soymarcosbremont@gmail.com'];
 
+// ── Suscripción mensual por centro (cobro manual, ver Panel Superadmin) ──
+const SUSCRIPCION_DIAS_GRACIA_DEFAULT = 7;
+
+/** Calcula el estado de la suscripción de un centro a partir de sus campos
+ * livianos (fechaPagadoHasta / suscripcionSuspendidaManual / diasGraciaSuscripcion).
+ * Función pura, sin I/O, reutilizable tanto por el gating de login como por el
+ * listado de centros en Superadmin (que ya tiene los datos en memoria). */
+function _calcularEstadoSuscripcion(centroData) {
+  if (!centroData || !centroData.fechaPagadoHasta) return { activa: false, bloqueado: false, enGracia: false };
+  if (centroData.suscripcionSuspendidaManual) return { activa: true, bloqueado: true, enGracia: false, motivo: 'suspendido' };
+  const hoy = new Date();
+  const vencimiento = new Date(centroData.fechaPagadoHasta + 'T00:00:00');
+  const dias = centroData.diasGraciaSuscripcion || SUSCRIPCION_DIAS_GRACIA_DEFAULT;
+  const finGracia = new Date(vencimiento);
+  finGracia.setDate(finGracia.getDate() + dias);
+  if (hoy <= vencimiento) return { activa: true, bloqueado: false, enGracia: false };
+  if (hoy <= finGracia) {
+    const diasRestantes = Math.ceil((finGracia - hoy) / 86400000);
+    return { activa: true, bloqueado: false, enGracia: true, diasRestantes };
+  }
+  return { activa: true, bloqueado: true, enGracia: false, motivo: 'vencido' };
+}
+
+/** Lee el centro desde Firestore y calcula su estado de suscripción. Falla
+ * "abierto" (no bloquea) ante cualquier error de red, para que un problema
+ * transitorio de Firestore no tumbe el acceso de todo un centro. */
+async function _evaluarSuscripcionCentro(centroId) {
+  try {
+    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (!doc.exists) return { activa: false, bloqueado: false, enGracia: false };
+    return _calcularEstadoSuscripcion(doc.data());
+  } catch (e) {
+    console.warn('No se pudo evaluar la suscripción del centro:', e);
+    return { activa: false, bloqueado: false, enGracia: false };
+  }
+}
+
 /** Verifica si el usuario actual es superadmin */
 function _esSuperadmin() {
   const email = window.currentUser?.email?.toLowerCase();
@@ -36468,6 +36528,14 @@ async function _renderCentrosEducativos() {
     html += '<div style="display:flex;flex-direction:column;gap:12px;">';
     centros.forEach(c => {
       const admins = (c.admins || []).join(', ') || 'Sin admins';
+      const estadoSusc = _calcularEstadoSuscripcion(c);
+      const chipSusc = !estadoSusc.activa
+        ? { texto: 'Suscripción no activada', bg: '#ECEFF1', color: '#607D8B' }
+        : estadoSusc.bloqueado
+          ? { texto: 'Bloqueado (' + (estadoSusc.motivo === 'suspendido' ? 'suspendido' : 'vencido') + ')', bg: '#FFEBEE', color: '#C62828' }
+          : estadoSusc.enGracia
+            ? { texto: 'En gracia (' + estadoSusc.diasRestantes + 'd)', bg: '#FFF3E0', color: '#E65100' }
+            : { texto: 'Al día', bg: '#E8F5E9', color: '#2E7D32' };
       html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">'
         + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">';
       if (c.logoUrl) {
@@ -36483,11 +36551,13 @@ async function _renderCentrosEducativos() {
         + '<span style="background:#E8EAF6;color:#3949AB;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">Regional: ' + (c.regional || '-') + '</span>'
         + '<span style="background:#E0F2F1;color:#00695C;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">Distrito: ' + (c.distrito || '-') + '</span>'
         + '<span style="background:#FFF3E0;color:#E65100;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">Código: ' + (c.codigo || '-') + '</span>'
+        + '<span style="background:' + chipSusc.bg + ';color:' + chipSusc.color + ';padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;"><span class="material-icons" style="font-size:12px;vertical-align:middle;">payments</span> ' + chipSusc.texto + '</span>'
         + '</div>'
         + '<div style="font-size:0.8rem;color:#546E7A;margin-bottom:10px;"><span class="material-icons" style="font-size:14px;vertical-align:middle;">shield</span> Admins: ' + admins + '</div>'
         + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
         + '<button onclick="_mostrarFormCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">edit</span> Editar</button>'
         + '<button onclick="_gestionarAdminsCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#00695C;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">person_add</span> Admins</button>'
+        + '<button onclick="_gestionarSuscripcionCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#6A1B9A;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">payments</span> Suscripción</button>'
         + '<button onclick="_eliminarCentro(\'' + c.id + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#C62828;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;"><span class="material-icons" style="font-size:15px;">delete</span> Eliminar</button>'
         + '</div></div>';
     });
@@ -37162,6 +37232,158 @@ async function _quitarAdminCentro(centroId, index) {
     await db.collection(CENTROS_COLLECTION).doc(centroId).update({ admins });
     mostrarToast('Administrador removido', 'success');
     _gestionarAdminsCentro(centroId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── GESTIÓN DE SUSCRIPCIÓN POR CENTRO (superadmin) ──────────────────
+// Los campos livianos (fechaPagadoHasta, suscripcionSuspendidaManual,
+// diasGraciaSuscripcion) viven en el doc raíz de centros/{id} -- de lectura
+// pública, necesarios para que el gating de login (auth.js) pueda calcular el
+// bloqueo sin exponer datos sensibles. Monto e historial de pagos viven en la
+// subcolección centros/{id}/suscripcion/estado, de lectura/escritura
+// exclusiva de superadmin (ver firestore.rules).
+async function _gestionarSuscripcionCentro(centroId) {
+  const cont = document.getElementById('sa-contenido');
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  try {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (!centroDoc.exists) { mostrarToast('Centro no encontrado', 'error'); _renderCentrosEducativos(); return; }
+    const centro = centroDoc.data();
+    const subDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).collection('suscripcion').doc('estado').get();
+    const susc = subDoc.exists ? subDoc.data() : {};
+    const estado = _calcularEstadoSuscripcion(centro);
+
+    const chip = !estado.activa
+      ? { texto: 'No activada', bg: '#ECEFF1', color: '#607D8B' }
+      : estado.bloqueado
+        ? { texto: 'Bloqueado (' + (estado.motivo === 'suspendido' ? 'suspendido manualmente' : 'vencido') + ')', bg: '#FFEBEE', color: '#C62828' }
+        : estado.enGracia
+          ? { texto: 'En gracia (' + estado.diasRestantes + ' día' + (estado.diasRestantes === 1 ? '' : 's') + ' restantes)', bg: '#FFF3E0', color: '#E65100' }
+          : { texto: 'Al día', bg: '#E8F5E9', color: '#2E7D32' };
+
+    let html = '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:20px;">'
+      + '<h3 style="margin:0 0 6px;color:#1A237E;">Suscripción de: ' + escapeHTML(centro.nombre || '') + '</h3>'
+      + '<div style="display:inline-block;background:' + chip.bg + ';color:' + chip.color + ';padding:4px 12px;border-radius:12px;font-size:0.8rem;font-weight:700;margin-bottom:16px;">' + chip.texto + '</div>';
+
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">'
+      + '<div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Monto mensual (RD$)</label>'
+      + '<input type="number" id="sa-susc-monto" value="' + (susc.montoMensual != null ? susc.montoMensual : '') + '" min="0" step="0.01" style="width:100%;padding:9px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+      + '<div><label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Días de gracia</label>'
+      + '<input type="number" id="sa-susc-gracia" value="' + (centro.diasGraciaSuscripcion != null ? centro.diasGraciaSuscripcion : SUSCRIPCION_DIAS_GRACIA_DEFAULT) + '" min="0" step="1" style="width:100%;padding:9px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+      + '</div>';
+
+    html += '<div style="margin-bottom:14px;">'
+      + '<label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Pagado hasta</label>'
+      + '<input type="date" id="sa-susc-fecha" value="' + (centro.fechaPagadoHasta || '') + '" style="width:100%;padding:9px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>';
+
+    html += '<div style="margin-bottom:14px;">'
+      + '<label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Notas (contacto, forma de pago, etc.)</label>'
+      + '<textarea id="sa-susc-notas" rows="2" style="width:100%;padding:9px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;font-family:inherit;">' + escapeHTML(susc.notas || '') + '</textarea></div>';
+
+    html += '<label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:0.85rem;color:#424242;cursor:pointer;">'
+      + '<input type="checkbox" id="sa-susc-suspendido" ' + (centro.suscripcionSuspendidaManual ? 'checked' : '') + ' style="width:16px;height:16px;">'
+      + 'Suspender manualmente (bloquea de inmediato, sin importar la fecha)</label>';
+
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">'
+      + '<button onclick="_guardarConfigSuscripcionCentro(\'' + centroId + '\')" style="padding:10px 18px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;">Guardar configuración</button>'
+      + '<button onclick="_registrarPagoSuscripcionCentro(\'' + centroId + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;"><span class="material-icons" style="font-size:16px;">add_card</span> Registrar pago</button>'
+      + '</div>';
+
+    const historial = Array.isArray(susc.historialPagos) ? [...susc.historialPagos].reverse() : [];
+    html += '<h4 style="margin:0 0 8px;color:#37474F;font-size:0.9rem;">Historial de pagos</h4>';
+    if (!historial.length) {
+      html += '<p style="color:#999;text-align:center;font-size:0.85rem;">Sin pagos registrados</p>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;">';
+      historial.forEach(p => {
+        html += '<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 12px;background:#F5F5F5;border-radius:8px;font-size:0.82rem;">'
+          + '<span>' + escapeHTML(p.fecha || '-') + '</span>'
+          + '<span style="flex:1;color:#78909C;">' + escapeHTML(p.referencia || '') + '</span>'
+          + '<span style="font-weight:700;color:#2E7D32;">RD$ ' + Number(p.monto || 0).toLocaleString('es-DO') + '</span>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div style="margin-top:16px;">'
+      + '<button onclick="_renderCentrosEducativos()" style="padding:10px 24px;background:#F5F5F5;color:#616161;border:1.5px solid #E0E0E0;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;"><span class="material-icons" style="font-size:16px;vertical-align:middle;">arrow_back</span> Volver a centros</button>'
+      + '</div></div>';
+
+    cont.innerHTML = html;
+  } catch (e) {
+    mostrarToast('Error: ' + e.message, 'error');
+    _renderCentrosEducativos();
+  }
+}
+
+async function _guardarConfigSuscripcionCentro(centroId) {
+  const monto = parseFloat(document.getElementById('sa-susc-monto')?.value);
+  const gracia = parseInt(document.getElementById('sa-susc-gracia')?.value, 10);
+  const fecha = document.getElementById('sa-susc-fecha')?.value || null;
+  const notas = document.getElementById('sa-susc-notas')?.value || '';
+  const suspendido = !!document.getElementById('sa-susc-suspendido')?.checked;
+
+  try {
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
+      fechaPagadoHasta: fecha,
+      suscripcionSuspendidaManual: suspendido,
+      diasGraciaSuscripcion: Number.isFinite(gracia) ? gracia : SUSCRIPCION_DIAS_GRACIA_DEFAULT
+    });
+    await db.collection(CENTROS_COLLECTION).doc(centroId).collection('suscripcion').doc('estado').set({
+      montoMensual: Number.isFinite(monto) ? monto : 0,
+      notas,
+      updatedAt: new Date().toISOString(),
+      updatedBy: window.currentUser?.email || ''
+    }, { merge: true });
+    mostrarToast('Configuración de suscripción guardada', 'success');
+    _gestionarSuscripcionCentro(centroId);
+  } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+async function _registrarPagoSuscripcionCentro(centroId) {
+  try {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    const centro = centroDoc.exists ? centroDoc.data() : {};
+    const subRef = db.collection(CENTROS_COLLECTION).doc(centroId).collection('suscripcion').doc('estado');
+    const subDoc = await subRef.get();
+    const susc = subDoc.exists ? subDoc.data() : {};
+    const montoDefault = susc.montoMensual || 0;
+
+    const montoStr = prompt('Monto del pago (RD$):', montoDefault ? String(montoDefault) : '');
+    if (montoStr === null) return;
+    const monto = parseFloat(montoStr);
+    if (!Number.isFinite(monto) || monto <= 0) { mostrarToast('Monto inválido', 'error'); return; }
+    const referencia = prompt('Referencia del pago (opcional, ej. # de transferencia):', '') || '';
+
+    // Extiende desde la fecha vigente si aún no venció, o desde hoy si ya venció / no había fecha
+    const hoy = new Date();
+    let base = hoy;
+    if (centro.fechaPagadoHasta) {
+      const vigente = new Date(centro.fechaPagadoHasta + 'T00:00:00');
+      if (vigente > hoy) base = vigente;
+    }
+    const nuevaFecha = new Date(base);
+    nuevaFecha.setMonth(nuevaFecha.getMonth() + 1);
+    const nuevaFechaISO = nuevaFecha.toISOString().slice(0, 10);
+
+    const entrada = {
+      fecha: hoy.toISOString().slice(0, 10),
+      monto,
+      referencia,
+      registradoPor: window.currentUser?.email || '',
+      registradoEn: hoy.toISOString()
+    };
+
+    await db.collection(CENTROS_COLLECTION).doc(centroId).update({ fechaPagadoHasta: nuevaFechaISO });
+    await subRef.set({
+      historialPagos: firebase.firestore.FieldValue.arrayUnion(entrada),
+      updatedAt: hoy.toISOString(),
+      updatedBy: window.currentUser?.email || ''
+    }, { merge: true });
+
+    mostrarToast('Pago registrado. Nueva fecha de vencimiento: ' + nuevaFechaISO, 'success');
+    _gestionarSuscripcionCentro(centroId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
 }
 

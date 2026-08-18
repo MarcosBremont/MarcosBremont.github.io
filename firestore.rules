@@ -128,6 +128,18 @@ service cloud.firestore {
         allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || miCentroId() == centroId);
       }
 
+      // Suscripcion mensual del centro (monto e historial de pagos): datos sensibles
+      // que SOLO el superadmin puede ver, a diferencia de pagos_config (que el propio
+      // centro tambien puede leer/escribir para cobrarle a SUS estudiantes). Aqui ni
+      // admin_centro ni director del propio centro tienen acceso -- requisito de
+      // negocio: nadie mas que el dueno de la plataforma ve montos/historial. Los
+      // campos livianos que SI necesita ver cualquier cliente para calcular el
+      // bloqueo (fechaPagadoHasta, suscripcionSuspendidaManual, diasGraciaSuscripcion)
+      // viven en el documento raiz de centros/{centroId} de arriba, no aqui.
+      match /suscripcion/{doc} {
+        allow read, write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
+      }
+
       match /calendario/{doc} {
         allow read: if signedIn();
         allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');

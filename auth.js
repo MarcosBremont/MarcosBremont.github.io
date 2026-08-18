@@ -59,10 +59,34 @@ auth.onAuthStateChanged(async (user) => {
     // Verificar perfil y estado de aprobación
     const perfil = await _obtenerPerfilUsuario(user.uid);
 
-    // Superadmins, admins de centro y directores NUNCA se bloquean
-    const esSA = _esSuperadminAuth(user.email);
+    // esSA también revisa perfil.rol además de _esSuperadminAuth: un superadmin
+    // agregado solo en Firestore (config/superadmin) y que inicia sesión por
+    // primera vez en un dispositivo sin la caché de localStorage, de otro modo
+    // quedaría atrapado por el gate de suscripción de abajo.
+    const esSA = _esSuperadminAuth(user.email) || perfil?.rol === 'superadmin';
+
+    // Suscripción del centro (pago mensual, ver Panel Superadmin > Suscripción):
+    // si el centro no pagó y ya pasó el período de gracia, se bloquea el acceso
+    // a TODOS los usuarios de ese centro (incluyendo admin_centro/director,
+    // que son quienes deben gestionar el pago) -- el superadmin nunca se
+    // bloquea, es el dueño de la plataforma.
+    if (!esSA) {
+      const centroIdSusc = await _obtenerCentroIdDeUsuarioActual();
+      const estadoSusc = centroIdSusc
+        ? await _evaluarSuscripcionCentro(centroIdSusc)
+        : { activa: false, bloqueado: false, enGracia: false };
+      window._suscripcionCentroInfo = estadoSusc;
+      if (estadoSusc.bloqueado) {
+        _mostrarPantallaCentroBloqueado();
+        return;
+      }
+    }
+
+    // Admins de centro y directores NUNCA se bloquean por estado de cuenta
+    // (pendiente/rechazado) -- solo aplica a docentes rasos en aprobación.
     const esAdmin = !esSA && await _esAdminCentro(user.email);
     const esDirector = !esSA && !esAdmin && perfil && perfil.rol === 'director';
+    if (window._suscripcionCentroInfo) window._suscripcionCentroInfo.puedeVerBanner = !!(esAdmin || esDirector);
     if (esSA || esAdmin || esDirector) {
       // Si tienen perfil pendiente/rechazado, auto-aprobar
       if (perfil && (perfil.estado === 'pendiente' || perfil.estado === 'rechazado')) {
@@ -208,6 +232,22 @@ function _mostrarPantallaRechazado(perfil) {
   }
 }
 
+/** Muestra pantalla de bloqueo por suscripción vencida del centro. Usa un
+ * panel propio (no reutiliza #auth-pending-panel) porque _mostrarPantallaRechazado
+ * muta ese DOM in-place sin restaurarlo, y el mensaje aquí debe ser genérico
+ * -- nunca montos ni fechas -- para que solo el superadmin vea esos datos. */
+function _mostrarPantallaCentroBloqueado() {
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  document.querySelector('.auth-tabs')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-login')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-registro')?.style.setProperty('display', 'none');
+  document.getElementById('auth-verificacion-panel')?.style.setProperty('display', 'none');
+  document.getElementById('auth-pending-panel')?.style.setProperty('display', 'none');
+  const panel = document.getElementById('auth-blocked-panel');
+  if (panel) panel.style.display = 'block';
+}
+
 /** Cierre de sesión desde pantalla de pendiente */
 async function authCerrarSesionPendiente() {
   await auth.signOut();
@@ -225,6 +265,7 @@ async function authIniciarSesionPendiente() {
   if (overlay) overlay.classList.remove('hidden');
   const panel = document.getElementById('auth-pending-panel');
   if (panel) panel.style.display = 'none';
+  document.getElementById('auth-blocked-panel')?.style.setProperty('display', 'none');
   document.getElementById('auth-verificacion-panel')?.style.setProperty('display', 'none');
   document.querySelector('.auth-tabs')?.style.removeProperty('display');
   authCambiarTab('login');

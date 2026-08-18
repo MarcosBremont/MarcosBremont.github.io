@@ -352,6 +352,25 @@
         </button>
       </div>
 
+      <!-- Pantalla de bloqueo: centro con suscripción vencida (mensaje genérico, sin montos ni fechas) -->
+      <div id="auth-blocked-panel" style="display:none;text-align:center;padding:16px 0;">
+        <span class="material-icons"
+          style="font-size:64px;color:#C62828;display:block;margin-bottom:12px;">block</span>
+        <div style="font-weight:800;font-size:1.1rem;color:#212121;margin-bottom:8px;">Acceso suspendido</div>
+        <p style="font-size:0.88rem;color:#546E7A;margin:0 0 16px;line-height:1.5;">
+          El acceso a este centro educativo está temporalmente suspendido.<br>
+          Contacta al administrador del sistema para más información.
+        </p>
+        <button onclick="authCerrarSesionPendiente()"
+          style="width:100%;background:none;border:1.5px solid #E0E0E0;color:#616161;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">logout</span> Cerrar sesión
+        </button>
+        <button onclick="authIniciarSesionPendiente()"
+          style="width:100%;margin-top:10px;background:#1565C0;border:1.5px solid #1565C0;color:#fff;border-radius:8px;padding:10px;font-size:0.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">login</span> Reintentar inicio de sesión
+        </button>
+      </div>
+
       <!-- Créditos y contacto -->
       <div style="margin-top:18px;padding-top:14px;border-top:1px solid #ECEFF1;text-align:center;">
         <div style="font-size:0.75rem;color:#90A4AE;margin-bottom:8px;">Desarrollado por Marcos Bremont</div>
@@ -423,6 +442,9 @@
 
       <!-- ── Avisos de calendario escolar ── -->
       <div id="dash-calendario-banner" style="display:none;margin-top:8px;"></div>
+
+      <!-- ── Aviso de suscripción del centro en período de gracia ── -->
+      <div id="dash-suscripcion-banner" style="display:none;margin-top:8px;"></div>
 
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
@@ -2921,6 +2943,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v16.73<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Suscripción mensual por centro (Superadmin)</div>
+              <ul class="about-ver-items">
+                <li>Superadmin &gt; Centros Educativos tiene un nuevo botón "Suscripción" por centro: permite definir el monto mensual, registrar pagos y ver el historial -- montos y fechas solo los ve el superadmin.</li>
+                <li>Si un centro no paga y pasa el período de gracia, el acceso al sistema se bloquea para todos sus usuarios (con un aviso genérico) hasta que se registre un nuevo pago; durante la gracia, admin_centro y director ven un aviso en el Dashboard.</li>
+                <li>Los centros existentes no se ven afectados: el cobro solo aplica cuando el superadmin lo activa explícitamente para un centro.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -5978,9 +6016,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.72"></script>
+  <script src="app.js?v=16.73"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.72"></script>
+  <script src="auth.js?v=16.73"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
