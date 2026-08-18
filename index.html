@@ -796,6 +796,12 @@
             <input type="text" id="codigo-fp" placeholder="Ej: IFC-001" required />
           </div>
 
+          <!-- Ordenanza -->
+          <div class="form-group">
+            <label for="ordenanza">Ordenanza</label>
+            <input type="text" id="ordenanza" placeholder="Ej: Ordenanza 1'2017" />
+          </div>
+
           <!-- Nombre del Bachillerato Técnico -->
           <div class="form-group form-group--full">
             <label for="nombre-bachillerato">Nombre del Bachillerato Técnico *</label>
@@ -2944,6 +2950,36 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v16.79<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo campo: Ordenanza</div>
+              <ul class="about-ver-items">
+                <li>Datos Generales del Módulo (Paso 1) tiene un campo nuevo "Ordenanza", visible también en la Vista Previa y en "Copiar de otra planificación".</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v16.78<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Matriz EC vs Criterios de Evaluación + Contenidos por actividad</div>
+              <ul class="about-ver-items">
+                <li>Cada Elemento de Capacidad (EC) ahora se genera con "Contraste EC vs CE": la IA lo relaciona con 1 o 2 de los Criterios de Evaluación de referencia (numerados automáticamente CE.1, CE.2... a partir del cuadro de texto que ya llenabas).</li>
+                <li>La Vista Previa y la exportación a Word (con o sin plantilla del centro) muestran una nueva tabla "Matriz EC vs Criterios de Evaluación" con esa relación.</li>
+                <li>Cada actividad ahora también trae su propio texto de "Contenidos" (temas que esa actividad trabaja), visible en la tabla de Actividades y en la exportación a Word.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6075,9 +6111,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.77"></script>
+  <script src="app.js?v=16.79"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.77"></script>
+  <script src="auth.js?v=16.79"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

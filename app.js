@@ -1,6 +1,35 @@
 function escapeHTML(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 window.__TINCLASS_APP_READY__ = true;
 
+// ─── Matriz EC vs Criterios de Evaluación (Planificación por RA) ──────────
+/** Convierte el texto libre de "Criterios de referencia" en una lista numerada
+ *  CE.1, CE.2... -- una línea no vacía = un criterio. Si la línea ya trae un
+ *  prefijo tipo "CE.1 -" (por si el usuario ya numeraba a mano), se limpia para
+ *  no duplicarlo. */
+function _parsearCriteriosEvaluacion(texto) {
+  const lineas = String(texto || '').split('\n').map(l => l.trim()).filter(Boolean);
+  return lineas.map((l, i) => ({ codigo: 'CE.' + (i + 1), descripcion: l.replace(/^CE\.?\s*\d+\s*[-:.]?\s*/i, '') }));
+}
+
+/** Arma, por cada EC, a cuáles criterios se refiere (según ec.contraste, un
+ *  array de códigos "CE.n" asignado por la IA) y el texto resuelto de esos
+ *  criterios. Función pura, reutilizada por Vista Previa, la exportación con
+ *  plantilla de centro y el fallback standalone -- una sola fuente de verdad. */
+function _construirMatrizEcCriterios(elementosCapacidad, ra) {
+  const ceLista = _parsearCriteriosEvaluacion(ra?.criterios);
+  const ceByCodigo = new Map(ceLista.map(c => [c.codigo, c.descripcion]));
+  return (elementosCapacidad || []).map((ec, i) => {
+    const codigos = (Array.isArray(ec.contraste) ? ec.contraste : []).filter(c => ceByCodigo.has(c));
+    return {
+      numero: i + 1,
+      ecCodigo: ec.codigo || '',
+      ecEnunciado: ec.enunciado || '',
+      contrasteTexto: codigos.length ? codigos.join(' – ') : '—',
+      criteriosTexto: codigos.length ? codigos.map(c => c + ': ' + ceByCodigo.get(c)).join('\n') : ''
+    };
+  });
+}
+
 // ─── Funciones de gestión de cursos ───────────────────────────────
 const CAL_CURSOS_ELIMINADOS_KEY = 'planificadorRA_cal_cursos_eliminados_v1';
 const CAL_CURSOS_ELIMINADOS_DIAS = 30;
@@ -1100,7 +1129,8 @@ function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
       verbo,
       enunciado: `${verbo} ${base.prefijo}${objetoRA}, ${base.condicion}.`,
       horasAsignadas: 0,
-      secuencia: plantillasSecuencia[base.nivel]
+      secuencia: plantillasSecuencia[base.nivel],
+      contraste: []
     });
   }
 
@@ -2096,7 +2126,8 @@ function _confirmarNuevoEC() {
       anticipacion: { pct: 20, descripcion: 'Activación de conocimientos previos mediante preguntas detonantes.' },
       construccion: { pct: 60, descripcion: 'Desarrollo del contenido con actividades prácticas.' },
       consolidacion: { pct: 20, descripcion: 'Síntesis, evaluación formativa y retroalimentación.' },
-    }
+    },
+    contraste: []
   };
 
   if (!planificacion.elementosCapacidad) planificacion.elementosCapacidad = [];
@@ -4457,7 +4488,24 @@ function renderizarVistaPrevia() {
 
   tablaEC += `</tbody></table>`;
 
-
+  // Tabla Matriz EC vs Criterios de Evaluación (Contraste)
+  let tablaMatrizEC = `<table class="vp-table">
+    <thead><tr>
+      <th>#EC</th>
+      <th>Elemento de Capacidad</th>
+      <th>Contraste EC vs CE</th>
+      <th>Criterios de Evaluación</th>
+    </tr></thead>
+    <tbody>`;
+  _construirMatrizEcCriterios(ec, ra).forEach(fila => {
+    tablaMatrizEC += `<tr>
+      <td>${escapeHTML(fila.ecCodigo || String(fila.numero))}</td>
+      <td>${escapeHTML(fila.ecEnunciado)}</td>
+      <td>${escapeHTML(fila.contrasteTexto)}</td>
+      <td style="white-space:pre-wrap;">${escapeHTML(fila.criteriosTexto)}</td>
+    </tr>`;
+  });
+  tablaMatrizEC += `</tbody></table>`;
 
 
 
@@ -4488,6 +4536,7 @@ function renderizarVistaPrevia() {
       <th>Enunciado de las Actividades de Enseñanza/Aprendizaje</th>
       <th>Fecha de Realización (Actividades)</th>
       <th>Instrumento de evaluación</th>
+      <th>Contenidos</th>
     </tr></thead>
     <tbody>`;
 
@@ -4506,6 +4555,7 @@ function renderizarVistaPrevia() {
       tablaActs += `<td>${escapeHTML(a.numLabel + ': ' + (a.enunciado || ''))}</td>`;
       tablaActs += `<td style="white-space:nowrap;">${escapeHTML(a.fechaStr || '')}</td>`;
       tablaActs += `<td>${escapeHTML(a.instrumento?.tipoLabel || '')}</td>`;
+      tablaActs += `<td>${escapeHTML(a.contenidos || '')}</td>`;
       tablaActs += `</tr>`;
     });
   });
@@ -4518,6 +4568,7 @@ function renderizarVistaPrevia() {
       <td>${escapeHTML(a.enunciado || '')}</td>
       <td style="white-space:nowrap;">${escapeHTML(a.fechaStr || '')}</td>
       <td>${escapeHTML(a.instrumento?.tipoLabel || '')}</td>
+      <td>${escapeHTML(a.contenidos || '')}</td>
     </tr>`;
   });
 
@@ -4668,6 +4719,10 @@ function renderizarVistaPrevia() {
 
 
 
+      <div class="vp-dato"><strong>Ordenanza</strong><span>${escapeHTML(dg.ordenanza || '-')}</span></div>
+
+
+
       <div class="vp-dato"><strong>Período</strong><span>${dg.fechaInicio || '-'} ? ${dg.fechaTermino || '-'}</span></div>
 
 
@@ -4722,7 +4777,11 @@ function renderizarVistaPrevia() {
 
     ${tablaEC}
 
+    <!-- Matriz EC vs Criterios de Evaluación -->
 
+    <div class="vp-section-title">Matriz EC vs Criterios de Evaluación</div>
+
+    ${tablaMatrizEC}
 
 
 
@@ -5039,7 +5098,8 @@ async function _exportarConPlantillaCentro() {
         act_numero: _getActNumero(ec.codigo, i),
         act_enunciado: `${_getActNumero(ec.codigo, i)}: ${a.enunciado || ''}`,
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
-        act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || ''
+        act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || '',
+        contenidos_asociados: a.contenidos || ''
       });
     });
   });
@@ -5074,7 +5134,15 @@ async function _exportarConPlantillaCentro() {
     fecha_exportacion: ahora.toLocaleDateString('es-DO'),
     hora_exportacion: ahora.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }),
     // Array para loop en tabla: {#actividades}...{/actividades}
-    actividades: actividades
+    actividades: actividades,
+    // Array para loop en tabla: {#matriz_ec}...{/matriz_ec} -- una fila por EC
+    // con el contraste hacia los Criterios de Evaluación (ver _construirMatrizEcCriterios)
+    matriz_ec: _construirMatrizEcCriterios(ecs, ra).map(fila => ({
+      ec: fila.ecCodigo,
+      contenidos_procedimentales: fila.ecEnunciado,
+      contraste: fila.contrasteTexto,
+      criterios_evaluacion: fila.criteriosTexto
+    }))
   };
 
   // Agregar placeholders de priorización RA1-RA10
@@ -7019,6 +7087,10 @@ function poblarFormularioDesdeEstado() {
 
 
 
+  setVal('ordenanza', dg.ordenanza);
+
+
+
   setVal('nombre-bachillerato', dg.nombreBachillerato);
 
 
@@ -7807,6 +7879,10 @@ function guardarDatosFormulario() {
 
 
     codigoFP: getVal('codigo-fp'),
+
+
+
+    ordenanza: getVal('ordenanza'),
 
 
 
@@ -20247,7 +20323,7 @@ function abrirModalCopiarDatosGenerales() {
   document.getElementById('modal-title').textContent = 'Copiar datos generales de otra planificación';
   document.getElementById('modal-body').innerHTML = `
     <p style="font-size:0.85rem;color:#555;margin-bottom:12px;">
-      Selecciona una planificación guardada. Se copiarán: Familia Profesional, Código FP,
+      Selecciona una planificación guardada. Se copiarán: Familia Profesional, Código FP, Ordenanza,
       Nombre del Bachillerato Técnico, Código del Título, Módulo Formativo, Código del Módulo,
       Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana y Días de Clase por Semana.
     </p>
@@ -20272,6 +20348,7 @@ function _confirmarCopiarDatosGenerales(idx) {
 
   setVal('familia-profesional', dg.familiaProfesional);
   setVal('codigo-fp', dg.codigoFP);
+  setVal('ordenanza', dg.ordenanza);
   setVal('nombre-bachillerato', dg.nombreBachillerato);
   setVal('codigo-titulo', dg.codigoTitulo);
   setVal('modulo-formativo', dg.moduloFormativo);
@@ -20855,6 +20932,14 @@ function _exportarWordHTML() {
   });
   tablaEC += '</table>';
 
+  // Tabla Matriz EC vs Criterios de Evaluación (Contraste)
+  let tablaMatrizEC = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
+  tablaMatrizEC += '<tr style="background:#1565C0;color:#fff;"><th>#EC</th><th>Elemento de Capacidad</th><th>Contraste EC vs CE</th><th>Criterios de Evaluación</th></tr>';
+  _construirMatrizEcCriterios(ec, ra).forEach(fila => {
+    tablaMatrizEC += '<tr><td>' + (fila.ecCodigo || fila.numero) + '</td><td>' + (fila.ecEnunciado || '') + '</td><td>' + fila.contrasteTexto + '</td><td>' + fila.criteriosTexto.replace(/\n/g, '<br>') + '</td></tr>';
+  });
+  tablaMatrizEC += '</table>';
+
   // Tabla Actividades agrupada por EC
   const _seq = {};
   const groups = [];
@@ -20867,7 +20952,7 @@ function _exportarWordHTML() {
     _seq[c]++;
   });
   let tablaActs = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
-  tablaActs += '<tr style="background:#1565C0;color:#fff;"><th>Elemento de Capacidad (EC)</th><th>Nivel de Dominio</th><th>Enunciado de Actividad</th><th>Fecha</th><th>Instrumento</th></tr>';
+  tablaActs += '<tr style="background:#1565C0;color:#fff;"><th>Elemento de Capacidad (EC)</th><th>Nivel de Dominio</th><th>Enunciado de Actividad</th><th>Fecha</th><th>Instrumento</th><th>Contenidos</th></tr>';
   groups.forEach(g => {
     const ecInfo = ec.find(e => e.codigo === g.code);
     g.acts.forEach((a, i) => {
@@ -20879,6 +20964,7 @@ function _exportarWordHTML() {
       tablaActs += '<td>' + a.num + ': ' + (a.enunciado || '') + '</td>';
       tablaActs += '<td>' + (a.fechaStr || '') + '</td>';
       tablaActs += '<td>' + (a.instrumento?.tipoLabel || '') + '</td>';
+      tablaActs += '<td>' + (a.contenidos || '') + '</td>';
       tablaActs += '</tr>';
     });
   });
@@ -20889,6 +20975,7 @@ function _exportarWordHTML() {
     + '<p><b>Docente:</b> ' + (dg.nombreDocente || '') + '</p>'
     + '<p><b>RA:</b> ' + (ra.descripcion || '') + '</p>'
     + '<h3>Elementos de Capacidad</h3>' + tablaEC
+    + '<h3>Matriz EC vs Criterios de Evaluación</h3>' + tablaMatrizEC
     + '<h3>Actividades de Enseñanza/Aprendizaje</h3>' + tablaActs;
 
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"/><style>body{font-family:Calibri,Arial;font-size:11pt;margin:2cm;}table{width:100%;border-collapse:collapse;}th,td{border:1pt solid #999;padding:6pt;font-size:10pt;}th{background:#1565C0;color:#fff;}</style></head><body>' + contenido + '</body></html>';
@@ -26075,15 +26162,20 @@ async function construirPromptBase(dg, ra) {
   }
 
   const ecCodigosLista = ecCodigos.map(e => `   - ${e.codigo} → nivel: ${e.nivel}`).join('\n');
-  const ecCodigosJSON = ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"VERBO + OBJETO + MODO DE HACER"}`).join(',\n');
-  const actEsperadasJSON = actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}"}`).join(',\n');
+  const ecCodigosJSON = ecCodigos.map(e => `    {"codigo":"${e.codigo}","nivel":"${e.nivel}","nivelBloom":"${e.nivel}","enunciado":"VERBO + OBJETO + MODO DE HACER","contraste":["CE.1"]}`).join(',\n');
+  const actEsperadasJSON = actEsperadas.map(a => `    {"ecCodigo":"${a.ecCodigo}","enunciado":"Tipo: actividad concreta y específica","instrumento":"${a.inst}","contenidos":"Contenidos/temas breves de esta actividad"}`).join(',\n');
+
+  const ceLista = _parsearCriteriosEvaluacion(ra.criterios);
+  const raCriteriosNumerados = ceLista.length
+    ? ceLista.map(c => `${c.codigo}: ${c.descripcion}`).join('\n')
+    : 'No especificados';
 
   return _getPromptResuelto('prompt_base', {
     moduloFormativo: dg.moduloFormativo || '',
     familiaProfesional: dg.familiaProfesional || '',
     diasStr,
     raDescripcion: ra.descripcion || '',
-    raCriterios: ra.criterios || 'No especificados',
+    raCriterios: raCriteriosNumerados,
     raRecursos: ra.recursosDid || 'Pizarrón, guías',
     contenidosBloque: _buildContenidosBloque(ra),
     cantEC, actsPorEC, totalActs,
@@ -26568,7 +26660,8 @@ function aplicarRespuestaIA(aiData, fechasClase) {
     horasAsignadas: 0,
     descripcion: ec.enunciado,
     secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion,
-    instrumento: undefined
+    instrumento: undefined,
+    contraste: Array.isArray(ec.contraste) ? ec.contraste : []
   }));
 
   // 3. Actividades — combinar las generadas por IA con fechas reales
@@ -26646,7 +26739,8 @@ function aplicarRespuestaIA(aiData, fechasClase) {
       fecha: fechaObj ? fechaObj.fecha : null,
       fechaStr: fechaObj ? fechaObj.fechaStr : 'Sin fecha asignada',
       instrumento,
-      sesionIA: act.sesionDiaria || null
+      sesionIA: act.sesionDiaria || null,
+      contenidos: act.contenidos || ''
     };
   });
 
@@ -27884,7 +27978,8 @@ function imp_guardar() {
     descripcion: ec.enunciado,
     horasAsignadas: ec.horasAsignadas,
     secuencia: plantillasSecuencia[ec.nivel] || plantillasSecuencia.aplicacion,
-    instrumento: undefined
+    instrumento: undefined,
+    contraste: []
   }));
 
   // Construir actividades
@@ -36487,7 +36582,7 @@ Estoy elaborando una planificación por RA para el módulo "{{moduloFormativo}}"
 
 RESULTADO DE APRENDIZAJE (RA): {{raDescripcion}}
 
-CRITERIOS DE EVALUACIÓN (solo para guiarte temáticamente, NO los copies como EC):
+CRITERIOS DE EVALUACIÓN, numerados (usa estos códigos EXACTOS en el campo "contraste" de cada EC, NO los copies como enunciado de EC):
 {{raCriterios}}
 
 RECURSOS: {{raRecursos}}
@@ -36501,6 +36596,7 @@ REGLAS PARA LOS EC:
 - Los EC NO son los criterios de evaluación. Los criterios son solo referencia temática.
 - NUNCA copies ni parafrasees los criterios de evaluación como EC.
 - NUNCA menciones "CE1", "CE2", "criterios de evaluación", "en correspondencia con" en los enunciados.
+- Además del enunciado, cada EC debe declarar en el campo "contraste" con cuáles criterios de evaluación se relaciona temáticamente, citando 1 o 2 de los códigos "CE.n" listados arriba (ej. ["CE.1"] o ["CE.1","CE.3"]). Citar el código en "contraste" NO es lo mismo que copiar su texto en el enunciado -- eso sigue prohibido. Todo EC debe tener al menos un código en "contraste" si hay criterios definidos; si la lista de criterios está vacía, deja "contraste" como [].
 - El VERBO debe corresponder al nivel de Bloom asignado:
   * Conocimiento: Identificar, Reconocer, Clasificar, Enumerar, Definir
   * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
@@ -36523,6 +36619,7 @@ REGLAS PARA LAS ACTIVIDADES:
 - PROHIBIDO: poner "Práctica de laboratorio: [copiar el EC]". Eso está MAL.
 - Cada actividad del mismo EC debe ser DIFERENTE entre sí. Varía el tipo de actividad.
 - Tipos de actividad válidos: Investigación, Práctica guiada, Exposición, Debate, Taller, Estudio de caso, Proyecto, Ejercicio práctico, Análisis comparativo, Presentación, Cuestionario, Mapa conceptual, Role-playing
+- Para cada actividad, además del enunciado, redacta en el campo "contenidos" un texto breve (1-2 líneas) con los contenidos/temas mediadores que esa actividad trabaja específicamente -- distinto en cada actividad, no repitas el mismo texto en todas.
 
 JSON requerido (respetar esta estructura exacta):
 {
