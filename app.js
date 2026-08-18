@@ -29660,7 +29660,6 @@ function renderizarDashboard() {
   _actualizarPlanActivaPorFechas();
   _renderizarSaludo();
   _renderizarBannerCalendarioDashboard();
-  _renderizarBannerSuscripcion();
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
@@ -29908,7 +29907,23 @@ function _renderizarBannerCalendarioDashboard() {
   _dashAsegurarCalendarioAdminBanner();
 
   const datos = _dashObtenerDatosCalendario();
-  const avisos = _dashConstruirAvisosCalendario(datos).slice(0, 8);
+  let avisos = _dashConstruirAvisosCalendario(datos);
+
+  // Aviso de suscripción del centro en período de gracia: se antepone a los
+  // avisos de calendario (siempre visible, es el más urgente) en vez de tener
+  // su propio banner aparte -- solo lo ve admin_centro/director (ver
+  // window._suscripcionCentroInfo, fijado en auth.js durante el login).
+  const susc = window._suscripcionCentroInfo;
+  if (susc && susc.enGracia && susc.puedeVerBanner) {
+    avisos = [{
+      tipo: 'Suscripción',
+      titulo: 'Pago pendiente: quedan ' + susc.diasRestantes + ' día' + (susc.diasRestantes === 1 ? '' : 's') + ' de gracia',
+      icono: 'warning',
+      esSuscripcion: true
+    }, ...avisos];
+  }
+
+  avisos = avisos.slice(0, 8);
 
   if (!avisos.length) {
     el.style.display = 'none';
@@ -29928,36 +29943,14 @@ function _renderizarBannerCalendarioDashboard() {
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${avisos.map(a => `
-          <div class="dash-cal-pill" style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #FFE0B2;border-radius:18px;padding:5px 9px;max-width:100%;">
-            <span class="material-icons" style="font-size:13px;color:${a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
-            <span class="dash-cal-pill-meta" style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff, a.enCurso)} · ${_dashFechaCorta(a.fecha)}</span>
-            <span class="dash-cal-pill-titulo" style="font-size:0.78rem;color:#263238;">${escapeHTML(a.titulo)}</span>
+          <div class="dash-cal-pill" style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid ${a.esSuscripcion ? '#EF9A9A' : '#FFE0B2'};border-radius:18px;padding:5px 9px;max-width:100%;">
+            <span class="material-icons" style="font-size:13px;color:${a.esSuscripcion ? '#C62828' : a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
+            ${a.esSuscripcion ? '' : `<span class="dash-cal-pill-meta" style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff, a.enCurso)} · ${_dashFechaCorta(a.fecha)}</span>`}
+            <span class="dash-cal-pill-titulo" style="font-size:0.78rem;color:${a.esSuscripcion ? '#C62828' : '#263238'};font-weight:${a.esSuscripcion ? '700' : '400'};">${escapeHTML(a.titulo)}</span>
           </div>
         `).join('')}
       </div>
     </div>`;
-}
-
-// Banner de aviso (no bloqueante) cuando el centro está en período de gracia
-// por falta de pago -- solo visible para admin_centro/director, que son
-// quienes pueden gestionar el pago (ver window._suscripcionCentroInfo,
-// fijado en auth.js durante el login).
-function _renderizarBannerSuscripcion() {
-  const el = document.getElementById('dash-suscripcion-banner');
-  if (!el) return;
-
-  const info = window._suscripcionCentroInfo;
-  if (!info || !info.enGracia || !info.puedeVerBanner) {
-    el.style.display = 'none';
-    el.innerHTML = '';
-    return;
-  }
-
-  el.style.display = 'block';
-  el.innerHTML = '<div style="background:linear-gradient(135deg,#FFF3E0 0%,#FFE0B2 100%);border:1.5px solid #FFB74D;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-    + '<span class="material-icons" style="font-size:20px;color:#E65100;">warning</span>'
-    + '<span style="flex:1;min-width:200px;font-size:0.83rem;color:#E65100;font-weight:600;">Este centro tiene un pago pendiente. Quedan ' + info.diasRestantes + ' día' + (info.diasRestantes === 1 ? '' : 's') + ' antes de que se suspenda el acceso.</span>'
-    + '</div>';
 }
 
 // ── Alertas inteligentes ─────────────────────────────────────────

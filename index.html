@@ -440,11 +440,8 @@
       <!-- ── Saludo + stats ── -->
       <div class="dash-greeting" id="dash-greeting"></div>
 
-      <!-- ── Avisos de calendario escolar ── -->
+      <!-- ── Avisos de calendario escolar (incluye el aviso de suscripción en gracia) ── -->
       <div id="dash-calendario-banner" style="display:none;margin-top:8px;"></div>
-
-      <!-- ── Aviso de suscripción del centro en período de gracia ── -->
-      <div id="dash-suscripcion-banner" style="display:none;margin-top:8px;"></div>
 
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
@@ -2943,6 +2940,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.75<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">El aviso de pago pendiente ahora aparece junto a los avisos de calendario</div>
+              <ul class="about-ver-items">
+                <li>El aviso de "pago pendiente" (período de gracia de la suscripción del centro) ya no tiene su propio banner: ahora aparece como el primer aviso dentro de "Próximos avisos del calendario escolar" en el Dashboard.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6030,9 +6041,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.74"></script>
+  <script src="app.js?v=16.75"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.74"></script>
+  <script src="auth.js?v=16.75"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
