@@ -4596,6 +4596,17 @@ function renderizarVistaPrevia() {
     });
   });
 
+  // EC sin actividades propias (el EC actitudinal permea a todos los demás EC
+  // y actividades, así que nunca tiene actividades asignadas -- ver
+  // construirPromptBase, que ya no le genera ninguna).
+  ec.filter(e => !ecGroupMap[e.codigo] && e.nivel === 'actitudinal').forEach(e => {
+    tablaActs += `<tr>
+      <td style="vertical-align:top;font-weight:600;"><code>${escapeHTML(e.codigo)}</code><br>${escapeHTML(e.enunciado || '')}</td>
+      <td style="vertical-align:middle;text-align:center;">${escapeHTML(nivelLabelAct[e.nivel] || e.nivel || '')}</td>
+      <td colspan="4" style="font-style:italic;color:#616161;">Permea todos los EC y Actividades, no necesita Actividades asociadas directamente, ni Contenidos sugeridos.</td>
+    </tr>`;
+  });
+
   // Complementarios al final sin agrupación EC
   acts.filter(a => a.esComplementario).forEach(a => {
     tablaActs += `<tr>
@@ -4734,6 +4745,12 @@ function renderizarVistaPrevia() {
     <div class="vp-datos-grid">
 
 
+
+      <div class="vp-dato"><strong>Nombre de la Institución</strong><span>${escapeHTML(dg.nombreInstitucion || '-')}</span></div>
+
+      <div class="vp-dato"><strong>Regional/Distrito</strong><span>${escapeHTML(dg.regional || '-')}</span></div>
+
+      <div class="vp-dato"><strong>Politécnico</strong><span>${escapeHTML(dg.politecnico || '-')}</span></div>
 
       <div class="vp-dato"><strong>Familia Profesional</strong><span>${dg.familiaProfesional || '-'} (${dg.codigoFP || '-'})</span></div>
 
@@ -5180,6 +5197,20 @@ async function _exportarConPlantillaCentro() {
       criterios_evaluacion: fila.criteriosTexto
     }))
   };
+
+  // EC actitudinal sin actividades propias (permea a todos los demás EC) --
+  // placeholders para una fila aparte de la tabla de Actividades, FUERA del
+  // loop {#actividades}, ya que esa fila necesita celdas fusionadas manualmente
+  // en la plantilla (un docxtemplater no puede fusionar celdas condicionalmente
+  // dentro de un mismo loop). Envolver esa fila en la plantilla con
+  // {#permea_actitudinal}...{/permea_actitudinal} para que solo aparezca cuando
+  // aplica (queda vacío/''  -> falsy -> docxtemplater oculta la sección).
+  const ecsActitudinalesSinActs = ecs.filter(e => e.nivel === 'actitudinal' && !acts.some(a => a.ecCodigo === e.codigo && !a.esComplementario));
+  data.permea_actitudinal = ecsActitudinalesSinActs.length
+    ? 'Permea todos los EC y Actividades, no necesita Actividades asociadas directamente, ni Contenidos sugeridos.'
+    : '';
+  data.permea_ec_codigo = ecsActitudinalesSinActs.map(e => e.codigo).join(', ');
+  data.permea_ec_enunciado = ecsActitudinalesSinActs.map(e => e.enunciado).join('\n');
 
   // Agregar placeholders de priorización RA1-RA10
   const prio = dg.priorizacion || [];
@@ -7115,6 +7146,10 @@ function poblarFormularioDesdeEstado() {
 
 
 
+  setVal('nombre-institucion', dg.nombreInstitucion);
+  setVal('regional-distrito', dg.regional);
+  setVal('politecnico', dg.politecnico);
+
   setVal('familia-profesional', dg.familiaProfesional);
 
 
@@ -7907,6 +7942,12 @@ function guardarDatosFormulario() {
 
 
   planificacion.datosGenerales = {
+
+
+
+    nombreInstitucion: getVal('nombre-institucion'),
+    regional: getVal('regional-distrito'),
+    politecnico: getVal('politecnico'),
 
 
 
@@ -20359,7 +20400,8 @@ function abrirModalCopiarDatosGenerales() {
   document.getElementById('modal-title').textContent = 'Copiar datos generales de otra planificación';
   document.getElementById('modal-body').innerHTML = `
     <p style="font-size:0.85rem;color:#555;margin-bottom:12px;">
-      Selecciona una planificación guardada. Se copiarán: Familia Profesional, Código FP, Ordenanza,
+      Selecciona una planificación guardada. Se copiarán: Nombre de la Institución, Regional/Distrito, Politécnico,
+      Familia Profesional, Código FP, Ordenanza,
       Nombre del Bachillerato Técnico, Código del Título, Módulo Formativo, Código del Módulo,
       Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana y Días de Clase por Semana.
     </p>
@@ -20382,6 +20424,9 @@ function _confirmarCopiarDatosGenerales(idx) {
     if (el && val !== undefined && val !== null) el.value = val;
   };
 
+  setVal('nombre-institucion', dg.nombreInstitucion);
+  setVal('regional-distrito', dg.regional);
+  setVal('politecnico', dg.politecnico);
   setVal('familia-profesional', dg.familiaProfesional);
   setVal('codigo-fp', dg.codigoFP);
   setVal('ordenanza', dg.ordenanza);
@@ -21003,6 +21048,11 @@ function _exportarWordHTML() {
       tablaActs += '<td>' + (a.contenidos || '') + '</td>';
       tablaActs += '</tr>';
     });
+  });
+  ec.filter(e => !gmap[e.codigo] && e.nivel === 'actitudinal').forEach(e => {
+    tablaActs += '<tr><td style="vertical-align:top;font-weight:bold;">' + (e.codigo || '') + '<br>' + (e.enunciado || '') + '</td>'
+      + '<td style="vertical-align:middle;text-align:center;">' + (nivelLabel[e.nivel] || '') + '</td>'
+      + '<td colspan="4" style="font-style:italic;color:#616161;">Permea todos los EC y Actividades, no necesita Actividades asociadas directamente, ni Contenidos sugeridos.</td></tr>';
   });
   tablaActs += '</table>';
 
@@ -26209,11 +26259,13 @@ async function construirPromptBase(dg, ra) {
     ecCodigos.push({ codigo: `E.C.${i + 1}.1.1`, nivel });
   }
 
-  // Generar lista de actividades esperadas
+  // Generar lista de actividades esperadas -- el EC actitudinal no lleva
+  // actividades propias (permea a todos los demás EC, ver _DEFAULT_PROMPT_BASE).
   const instrumentos = ['cotejo', 'rubrica', 'valoracion', 'estimativa', 'rango', 'diario'];
   const actEsperadas = [];
   let actIdx = 0;
   for (let i = 0; i < cantEC; i++) {
+    if (ecCodigos[i].nivel === 'actitudinal') continue;
     for (let j = 0; j < actsPorEC; j++) {
       actEsperadas.push({ ecCodigo: `E.C.${i + 1}.1.1`, inst: instrumentos[actIdx % instrumentos.length] });
       actIdx++;
@@ -36677,7 +36729,7 @@ Códigos y niveles de los {{cantEC}} EC:
 {{ecCodigosLista}}
 
 REGLAS PARA LAS ACTIVIDADES:
-- Genera {{actsPorEC}} actividad(es) por cada EC = {{totalActs}} actividades en total.
+- Genera {{actsPorEC}} actividad(es) por cada EC = {{totalActs}} actividades en total, EXCEPTO el EC de nivel actitudinal: ese EC NO lleva actividades propias -- permea (atraviesa) a todos los demás EC y actividades, así que no le generes ninguna actividad ni fuerces una equivalente ("valorar", "reflexionar", etc.). Respeta exactamente los ecCodigo listados abajo -- si un código no aparece en la lista de actividades esperadas, es porque es el EC actitudinal y no debe recibir ninguna.
 - Cada actividad es una TAREA CONCRETA que el estudiante realiza, NO es lo mismo que el EC.
 - Las actividades NO deben repetir el enunciado del EC. Son tareas prácticas distintas.
 - PROHIBIDO: poner "Práctica de laboratorio: [copiar el EC]". Eso está MAL.

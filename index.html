@@ -784,6 +784,24 @@
         </div>
 
         <div class="form-grid">
+          <!-- Nombre de la Institución -->
+          <div class="form-group form-group--full">
+            <label for="nombre-institucion">Nombre de la Institución</label>
+            <input type="text" id="nombre-institucion" placeholder="Ej: Politécnico Luis Ernesto Gómez Uribe" />
+          </div>
+
+          <!-- Regional/Distrito -->
+          <div class="form-group">
+            <label for="regional-distrito">Regional/Distrito</label>
+            <input type="text" id="regional-distrito" placeholder="Ej: 08-06" />
+          </div>
+
+          <!-- Politécnico -->
+          <div class="form-group">
+            <label for="politecnico">Politécnico</label>
+            <input type="text" id="politecnico" placeholder="Ej: Politécnico Luis Ernesto Gómez Uribe" />
+          </div>
+
           <!-- Familia Profesional -->
           <div class="form-group">
             <label for="familia-profesional">Familia Profesional *</label>
@@ -2950,6 +2968,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#455A64;">v16.81<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevos campos de institución + el EC actitudinal ya no lleva actividades</div>
+              <ul class="about-ver-items">
+                <li>Datos Generales del Módulo tiene 3 campos nuevos: Nombre de la Institución, Regional/Distrito y Politécnico -- visibles también en Vista Previa y "Copiar de otra planificación".</li>
+                <li>El Elemento de Capacidad de nivel Actitudinal ya no recibe actividades propias (permea a todos los demás EC) -- en la tabla de Actividades aparece con una fila especial indicándolo, en vez de actividades forzadas.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6127,9 +6160,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.80"></script>
+  <script src="app.js?v=16.81"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.80"></script>
+  <script src="auth.js?v=16.81"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
