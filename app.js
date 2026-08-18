@@ -20140,6 +20140,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 const BIBLIO_KEY = 'planificadorRA_biblioteca_v1';
+const BIBLIO_PLANES_ELIMINADOS_KEY = 'planificadorRA_biblio_planes_eliminados_v1';
+const BIBLIO_PLANES_ELIMINADOS_DIAS = 30;
+
+/** Registra que una planificación se eliminó. Mismo motivo que _registrarCursoEliminado
+ *  (ver arriba, cursos de calificaciones): el merge de biblioteca con Firestore
+ *  (_cargarDesdeFirestore en auth.js) es un union por id que no puede representar un
+ *  borrado -- si Firestore todavía tiene la copia vieja del plan (porque se recargó
+ *  antes de que la sincronización del borrado terminara), el plan eliminado resucitaba
+ *  con su curso ya desvinculado (se veía como "Sin curso asignado"). Esta lista de
+ *  "tumbas" le dice a la fusión que excluya esos ids sin importar qué traiga Firestore. */
+function _registrarPlanEliminado(id) {
+  try {
+    const hoy = Date.now();
+    let lista = JSON.parse(localStorage.getItem(BIBLIO_PLANES_ELIMINADOS_KEY) || '[]');
+    lista = lista.filter(e => hoy - e.ts < BIBLIO_PLANES_ELIMINADOS_DIAS * 86400000);
+    lista.push({ id, ts: hoy });
+    localStorage.setItem(BIBLIO_PLANES_ELIMINADOS_KEY, JSON.stringify(lista));
+  } catch (e) { console.warn('No se pudo registrar el plan eliminado:', e); }
+}
 
 
 
@@ -21337,6 +21356,7 @@ function eliminarPlanificacionGuardada(id) {
 
 
   biblio.items = biblio.items.filter(i => i.id !== id);
+  _registrarPlanEliminado(id);
 
   // Limpiar el ID eliminado de todos los cursos en calificaciones
   Object.values(calState.cursos).forEach(curso => {
@@ -36073,7 +36093,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts' };
+  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', bugs: 'tab-sa-bugs' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -36087,6 +36107,7 @@ function switchTabSuperadmin(tab) {
   else if (tab === 'opciones_coord') _renderOpcionesCoordinadora();
   else if (tab === 'opciones_psico') _renderOpcionesPsicologia();
   else if (tab === 'prompts') _renderPromptsIA();
+  else if (tab === 'bugs') _renderBugsSuperadmin();
 }
 
 /**
@@ -36303,6 +36324,117 @@ async function _renderPromptsIA() {
   });
 
   cont.innerHTML = html;
+}
+
+// ── GESTIÓN DE BUGS/ERRORES (superadmin) ─────────────────────────────
+// error-reporter.js ya guarda cada error del sistema (de cualquier usuario)
+// en la colección error_logs de Firestore, en paralelo al correo de alerta
+// que ya existía -- este panel solo lee ese historial (sin escribir nada
+// nuevo) y agrega un botón "Copiar" para no tener que copiar el error desde
+// el correo. La regla de error_logs (firestore.rules) ya restringe la
+// lectura a superadmin (y admin_centro/director solo de su propio centro,
+// para otros usos futuros); este panel además solo se abre desde Superadmin,
+// que ya está gateado por _esSuperadmin() en abrirSuperadmin().
+async function _renderBugsSuperadmin() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando errores...</div>';
+
+  try {
+    const snap = await db.collection('error_logs').orderBy('createdAt', 'desc').limit(200).get();
+    const errores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    window._bugsCache = errores;
+    _renderBugsLista('todas');
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:30px;color:#C62828;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">error_outline</span>Error cargando el historial de errores: ' + escapeHTML(e.message || String(e)) + '</div>';
+  }
+}
+
+function _bugSeveridadInfo(severity) {
+  if (severity === 'high') return { bg: '#FFEBEE', color: '#C62828', texto: 'Alta' };
+  if (severity === 'medium') return { bg: '#FFF3E0', color: '#E65100', texto: 'Media' };
+  return { bg: '#F1F8E9', color: '#558B2F', texto: 'Baja' };
+}
+
+function _bugFechaStr(e) {
+  const fecha = e.createdAt && typeof e.createdAt.toDate === 'function' ? e.createdAt.toDate() : (e.ts ? new Date(e.ts) : null);
+  if (!fecha || Number.isNaN(fecha.getTime())) return 'Fecha desconocida';
+  return fecha.toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function _renderBugsLista(filtroSeveridad) {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  const errores = window._bugsCache || [];
+  const filtrados = filtroSeveridad === 'todas' ? errores : errores.filter(e => e.severity === filtroSeveridad);
+
+  let html = '<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+    + '<div style="font-size:0.85rem;color:#546E7A;">' + errores.length + ' error' + (errores.length === 1 ? '' : 'es') + ' registrados (últimos 200)</div>'
+    + '<select id="sa-bugs-filtro" onchange="_renderBugsLista(this.value)" style="padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.85rem;">'
+    + '<option value="todas"' + (filtroSeveridad === 'todas' ? ' selected' : '') + '>Todas las severidades</option>'
+    + '<option value="high"' + (filtroSeveridad === 'high' ? ' selected' : '') + '>Alta</option>'
+    + '<option value="medium"' + (filtroSeveridad === 'medium' ? ' selected' : '') + '>Media</option>'
+    + '<option value="low"' + (filtroSeveridad === 'low' ? ' selected' : '') + '>Baja</option>'
+    + '</select>'
+    + '</div>';
+
+  if (!filtrados.length) {
+    html += '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">check_circle</span>No hay errores registrados con este filtro</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    filtrados.forEach(e => {
+      const sev = _bugSeveridadInfo(e.severity);
+      const donde = (e.filename || '') + (e.lineno ? ':' + e.lineno : '');
+      html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:14px;">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">'
+        + '<div style="flex:1;min-width:200px;">'
+        + '<span style="background:' + sev.bg + ';color:' + sev.color + ';padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;margin-right:6px;">' + sev.texto + '</span>'
+        + '<span style="font-size:0.78rem;color:#78909C;">' + escapeHTML(e.module || e.type || 'general') + ' · ' + escapeHTML(_bugFechaStr(e)) + '</span>'
+        + '</div>'
+        + '<button onclick="_copiarBug(\'' + e.id + '\', this)" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;white-space:nowrap;font-family:inherit;">'
+        + '<span class="material-icons" style="font-size:14px;">content_copy</span> Copiar</button>'
+        + '</div>'
+        + '<div style="font-size:0.88rem;color:#263238;font-weight:600;margin-bottom:6px;word-break:break-word;">' + escapeHTML(e.message || 'Sin mensaje') + '</div>'
+        + '<div style="font-size:0.76rem;color:#90A4AE;">' + escapeHTML(e.userEmail || 'Usuario desconocido') + (donde ? ' · ' + escapeHTML(donde) : '') + ' · Build ' + escapeHTML(e.appVersion || 'n/a') + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+
+  cont.innerHTML = html;
+}
+
+function _formatoBugTexto(e) {
+  const donde = (e.filename || 'n/a') + (e.lineno ? ':' + e.lineno + ':' + (e.colno || 0) : '');
+  const lineas = [
+    'Error: ' + (e.message || 'Sin mensaje'),
+    'Severidad: ' + (e.severity || 'n/a'),
+    'Tipo: ' + (e.type || 'n/a'),
+    'Módulo: ' + (e.module || 'n/a'),
+    'Acción: ' + (e.action || 'n/a'),
+    'Archivo: ' + donde,
+    'Fecha: ' + _bugFechaStr(e),
+    'Usuario: ' + (e.userEmail || 'n/a') + ' (UID: ' + (e.uid || 'n/a') + ')',
+    'Build: ' + (e.appVersion || 'n/a') + ' / SW: ' + (e.swVersion || 'n/a'),
+    'URL: ' + (e.url || 'n/a')
+  ];
+  if (e.stack) lineas.push('Stack:', e.stack);
+  return lineas.join('\n');
+}
+
+function _copiarBug(id, btnEl) {
+  const errores = window._bugsCache || [];
+  const e = errores.find(x => x.id === id);
+  if (!e) { mostrarToast('Error no encontrado', 'error'); return; }
+  const texto = _formatoBugTexto(e);
+  navigator.clipboard.writeText(texto).then(() => {
+    mostrarToast('Error copiado al portapapeles', 'success');
+    if (btnEl) {
+      const original = btnEl.innerHTML;
+      btnEl.innerHTML = '<span class="material-icons" style="font-size:14px;">check</span> Copiado';
+      setTimeout(() => { if (btnEl) btnEl.innerHTML = original; }, 1500);
+    }
+  }).catch(() => mostrarToast('No se pudo copiar (revisa los permisos del navegador)', 'error'));
 }
 
 function _escapeHTMLForTextarea(str) {

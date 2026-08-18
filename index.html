@@ -2477,6 +2477,10 @@
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">psychology</span> Prompts IA
         </button>
+        <button class="ra-tab" id="tab-sa-bugs" onclick="switchTabSuperadmin('bugs')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">bug_report</span> Bugs
+        </button>
       </div>
 
       <!-- Contenido dinámico -->
@@ -2940,6 +2944,36 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#5E35B1;">v16.77<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Panel de Bugs para Superadmin</div>
+              <ul class="about-ver-items">
+                <li>Superadmin tiene una nueva pestaña "Bugs" con el historial de errores del sistema (de cualquier usuario) que ya se venían guardando en Firestore -- lo mismo que hasta ahora solo llegaba por correo, pero ahora también con historial navegable, filtro por severidad y un botón "Copiar" en cada error.</li>
+                <li>Solo lo ve el superadmin.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.76<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: planificaciones eliminadas que reaparecían "sin curso asignado"</div>
+              <ul class="about-ver-items">
+                <li>Al eliminar una planificación y recargar poco después, a veces reaparecía huérfana en "Sin curso asignado" -- pasaba cuando la sincronización del borrado con Firebase aún no había terminado y la copia vieja volvía a traerse.</li>
+                <li>Ahora, al fusionar con Firebase, una planificación eliminada nunca vuelve a aparecer, sin importar qué copia tenga Firebase.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6041,9 +6075,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.75"></script>
+  <script src="app.js?v=16.77"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.75"></script>
+  <script src="auth.js?v=16.77"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -488,6 +488,16 @@ async function _cargarDesdeFirestore(uid) {
           const porId = new Map();
           firebaseItems.forEach(i => { if (i && i.id) porId.set(i.id, i); });
           localItems.forEach(i => { if (i && i.id) porId.set(i.id, i); });
+
+          // Planes eliminados en este dispositivo (ver _registrarPlanEliminado en
+          // app.js): la unión de arriba no puede distinguir "eliminado" de "todavía
+          // no sincronizado" -- se excluyen explícitamente sin importar qué traiga
+          // Firestore. Mismo patrón que planificadorRA_cal_cursos_eliminados_v1.
+          try {
+            const planesEliminados = JSON.parse(localStorage.getItem('planificadorRA_biblio_planes_eliminados_v1') || '[]');
+            planesEliminados.forEach(e => porId.delete(e.id));
+          } catch (e) {}
+
           const itemsFusionados = Array.from(porId.values());
 
           if (itemsFusionados.length) {
