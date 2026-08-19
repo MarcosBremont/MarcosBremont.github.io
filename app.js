@@ -5152,6 +5152,7 @@ async function _exportarConPlantillaCentro() {
         act_enunciado: `${_getActNumero(ec.codigo, i)}: ${a.enunciado || ''}`,
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
         act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || '',
+        act_metodologia: estadoDiarias.sesiones[a.id]?.estrategiaCorta || '',
         contenidos_asociados: a.contenidos || ''
       });
     });
@@ -5638,6 +5639,40 @@ async function _exportarDiariaConPlantillaCentro() {
       return txt;
     }
 
+    const idxGlobal = actividades.indexOf(act);
+    const numeroActividad = act.ecCodigo ? _getActNumero(act.ecCodigo, _actIndexInEC(actividades, idxGlobal)) : '';
+
+    const pasosTxt = desarrollo.pasos || desarrollo.procedimental || '';
+    const momentosPedagogicos = [
+      `INICIO (${ti} min)`,
+      [
+        inicio.apertura ? `Apertura: ${inicio.apertura}` : '',
+        inicio.encuadre ? `Encuadre: ${inicio.encuadre}` : '',
+        inicio.organizacion ? `Organización: ${inicio.organizacion}` : ''
+      ].filter(Boolean).join('\n'),
+      '',
+      `DESARROLLO (${td} min)`,
+      [
+        pasosTxt,
+        desarrollo.conceptual ? `Conceptual/Actitudinal: ${desarrollo.conceptual}` : ''
+      ].filter(Boolean).join('\n'),
+      '',
+      `CIERRE (${tc} min)`,
+      [
+        cierre.sintesis ? `Síntesis: ${cierre.sintesis}` : '',
+        cierre.conexion ? `Conexión con el mundo real: ${cierre.conexion}` : '',
+        cierre.proximopaso ? `Próximo paso: ${cierre.proximopaso}` : ''
+      ].filter(Boolean).join('\n')
+    ].join('\n');
+
+    const div = s.diversidad || {};
+    const atencionDiversidad = [
+      div.apoyos ? `Apoyos posibles: ${div.apoyos}` : '',
+      div.adaptaciones ? `Adaptaciones: ${div.adaptaciones}` : '',
+      div.estrategiasInclusivas ? `Estrategias inclusivas: ${div.estrategiasInclusivas}` : '',
+      div.adaptacionesEspecificas ? `Adaptaciones específicas: ${div.adaptacionesEspecificas}` : ''
+    ].filter(Boolean).join('\n');
+
     const data = {
       modulo_formativo: dg.moduloFormativo || '',
       nombre_docente: dg.nombreDocente || '',
@@ -5665,7 +5700,27 @@ async function _exportarDiariaConPlantillaCentro() {
       recursos: s.recursos || '',
       instrumento_evaluacion: 'XREPL',
       instrumento_tipo: '',
-      instrumento_criterios: []
+      instrumento_criterios: [],
+      // Alias para los placeholders ya colocados en la plantilla del usuario
+      institucion: dg.nombreInstitucion || info.centroNombre || '',
+      bachillerato_tecnico: dg.nombreBachillerato || '',
+      // Campos nuevos de la matriz de planificación diaria ampliada
+      actividad_numero: numeroActividad,
+      valor: String(act.valor != null ? act.valor : ''),
+      tipo: s.tipo || '',
+      estrategia_corta: s.estrategiaCorta || '',
+      pasos: pasosTxt,
+      intencion_educativa: s.intencionEducativa || '',
+      apoyos_posibles: div.apoyos || '',
+      adaptaciones: div.adaptaciones || '',
+      estrategias_inclusivas: div.estrategiasInclusivas || '',
+      adaptaciones_especificas: div.adaptacionesEspecificas || '',
+      contenido_conceptual: (s.contenidos && s.contenidos.conceptual) || '',
+      contenido_procedimental: (s.contenidos && s.contenidos.procedimental) || '',
+      contenido_actitudinal: (s.contenidos && s.contenidos.actitudinal) || '',
+      // Campos combinados para plantillas con una sola celda por bloque
+      momentos_pedagogicos: momentosPedagogicos,
+      atencion_diversidad: atencionDiversidad
     };
 
     const zip = new PizZip(templateBuffer.slice(0));
@@ -22470,7 +22525,9 @@ function guardarTodasDiarias() {
 
 
 
-        conceptual: read('desarrollo', 'conceptual')
+        conceptual: read('desarrollo', 'conceptual'),
+
+        pasos: read('desarrollo', 'pasos')
 
 
 
@@ -22506,7 +22563,35 @@ function guardarTodasDiarias() {
 
       recursoUrl: readSec(`pd-recurso-url-${act.id}`, s.recursoUrl),
 
-      tiempos: { ini: readT('ini'), des: readT('des'), cie: readT('cie') }
+      tiempos: { ini: readT('ini'), des: readT('des'), cie: readT('cie') },
+
+      tipo: readSec(`pd-tipo-${act.id}`, s.tipo),
+
+      estrategiaCorta: readSec(`pd-estrategiaCorta-${act.id}`, s.estrategiaCorta),
+
+      intencionEducativa: readSec(`pd-intencionEducativa-${act.id}`, s.intencionEducativa),
+
+      diversidad: {
+
+        apoyos: read('diversidad', 'apoyos'),
+
+        adaptaciones: read('diversidad', 'adaptaciones'),
+
+        estrategiasInclusivas: read('diversidad', 'estrategiasInclusivas'),
+
+        adaptacionesEspecificas: read('diversidad', 'adaptacionesEspecificas')
+
+      },
+
+      contenidos: {
+
+        conceptual: read('contenidos', 'conceptual'),
+
+        procedimental: read('contenidos', 'procedimental'),
+
+        actitudinal: read('contenidos', 'actitudinal')
+
+      }
 
 
 
@@ -22816,47 +22901,48 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
   const p = plantillas[nivel] || plantillas.aplicacion;
 
+  // Convierte el texto numerado "1. ... 2. ..." de "procedimental" al formato "Paso N – ..."
+  const pasosDesdeProcedimental = (p.procedimental || '').split(/\n(?=\d+\.\s)/).map((linea, i) => {
+    const texto = linea.replace(/^\d+\.\s*/, '').trim();
+    return texto ? `Paso ${i + 1} – ${texto}` : '';
+  }).filter(Boolean).join('\n\n');
 
+  const tipoDefault = { conocimiento: 'Individual', comprension: 'Por Equipos (en pares)', aplicacion: 'Por Equipo', actitudinal: 'Individual' }[nivel] || 'Individual';
 
   return {
 
-
-
     inicio: { apertura: p.apertura, encuadre: p.encuadre, organizacion: p.organizacion },
 
-
-
-    desarrollo: { procedimental: p.procedimental, conceptual: p.conceptual },
-
-
+    desarrollo: { procedimental: p.procedimental, conceptual: p.conceptual, pasos: pasosDesdeProcedimental },
 
     cierre: { sintesis: p.sintesis, conexion: p.conexion, proximopaso: p.proximopaso },
 
-
-
     estrategias: p.estrategias,
-
-
 
     recursos: (planificacion.ra?.recursosDid || '') ?
 
-
-
       p.recursos + '\n• ' + (planificacion.ra?.recursosDid || '').replace(/\n/g, '\n• ') :
-
-
 
       p.recursos,
 
+    tiempos: { ini: tIni, des: tDes, cie: tCie },
 
-
-    tiempos: { ini: tIni, des: tDes, cie: tCie }
-
-
+    tipo: tipoDefault,
+    estrategiaCorta: (p.estrategias || '').replace(/^•\s*/, '').split(/[:\n]/)[0].trim() || 'Estrategia activa',
+    intencionEducativa: `Que el estudiante fortalezca sus competencias en ${campo} mediante "${temaCorto}", conectando la teoría con la práctica profesional real.`,
+    diversidad: {
+      apoyos: 'Ofrecer material de refuerzo visual/escrito y permitir consultas adicionales al docente durante la actividad.',
+      adaptaciones: 'Ajustar los tiempos de trabajo según el ritmo de cada estudiante y permitir formatos alternativos de entrega.',
+      estrategiasInclusivas: 'Formar equipos heterogéneos y ofrecer retroalimentación individualizada y oportuna.',
+      adaptacionesEspecificas: 'De requerirse, ajustar instrucciones, tiempos o formato de evaluación según las necesidades particulares del estudiante.'
+    },
+    contenidos: {
+      conceptual: (planificacion.ra?.contenidosConceptuales || '').split('\n')[0] || `Conceptos clave de ${temaCorto}.`,
+      procedimental: (planificacion.ra?.contenidosProcedimentales || '').split('\n')[0] || `Procedimientos aplicados en ${temaCorto}.`,
+      actitudinal: (planificacion.ra?.contenidosActitudinales || '').split('\n')[0] || `Actitudes profesionales asociadas a ${temaCorto}.`
+    }
 
   };
-
-
 
 }
 
@@ -22895,6 +22981,16 @@ function _regenerarInstrumentoEnCard(act, ec) {
 // ════════════════════════════════════════════════════════════════════
 // GENERAR SESIÓN DIARIA CON GROQ — PROMPT PERSONALIZADO
 // ════════════════════════════════════════════════════════════════════
+// Normaliza la respuesta libre de la IA para "tipo" a uno de los 3 valores válidos del <select>
+function _normalizarTipoSesion(valor) {
+  const v = (valor || '').toLowerCase();
+  if (!v) return '';
+  if (v.includes('par')) return 'Por Equipos (en pares)';
+  if (v.includes('equipo') || v.includes('grupo')) return 'Por Equipo';
+  if (v.includes('individual')) return 'Individual';
+  return '';
+}
+
 async function _generarSesionConIA(actId, act, ec) {
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
@@ -22919,7 +23015,10 @@ async function _generarSesionConIA(actId, act, ec) {
     actividad: act.enunciado,
     ecEnunciado: ec?.enunciado || '',
     nivelBloom: ec?.nivel || 'aplicación',
-    minTotal, minInicio, minDesarrollo: minDesarr, minCierre
+    minTotal, minInicio, minDesarrollo: minDesarr, minCierre,
+    contenidosConceptualesRA: ra.contenidosConceptuales || '',
+    contenidosProcedimentalesRA: ra.contenidosProcedimentales || '',
+    contenidosActitudinalesRA: ra.contenidosActitudinales || ''
   });
 
   try {
@@ -23030,8 +23129,9 @@ async function _generarSesionConIA(actId, act, ec) {
         organizacion:  toStr(d.organizacion)  || local.inicio.organizacion
       },
       desarrollo: {
-        procedimental: toStr(d.procedimental) || local.desarrollo.procedimental,
-        conceptual:    toStr(d.conceptual)    || local.desarrollo.conceptual
+        procedimental: (estadoDiarias.sesiones[actId]?.desarrollo?.procedimental) || '',
+        conceptual:    toStr(d.conceptual)    || local.desarrollo.conceptual,
+        pasos:         toStr(d.pasos)         || local.desarrollo.pasos
       },
       cierre: {
         sintesis:      toStr(d.sintesis)      || local.cierre.sintesis,
@@ -23040,7 +23140,21 @@ async function _generarSesionConIA(actId, act, ec) {
       },
       estrategias: toStr(d.estrategias) || local.estrategias,
       recursos: ra.recursosDid || local.recursos,
-      tiempos: { ini: tIni, des: tDes, cie: tCie }
+      tiempos: { ini: tIni, des: tDes, cie: tCie },
+      tipo: _normalizarTipoSesion(d.tipo) || local.tipo,
+      estrategiaCorta: toStr(d.estrategiaCorta) || local.estrategiaCorta,
+      intencionEducativa: toStr(d.intencionEducativa) || local.intencionEducativa,
+      diversidad: {
+        apoyos: toStr(d.apoyosPosibles) || local.diversidad.apoyos,
+        adaptaciones: toStr(d.adaptaciones) || local.diversidad.adaptaciones,
+        estrategiasInclusivas: toStr(d.estrategiasInclusivas) || local.diversidad.estrategiasInclusivas,
+        adaptacionesEspecificas: toStr(d.adaptacionesEspecificas) || local.diversidad.adaptacionesEspecificas
+      },
+      contenidos: {
+        conceptual: toStr(d.contenidoConceptual) || local.contenidos.conceptual,
+        procedimental: toStr(d.contenidoProcedimental) || local.contenidos.procedimental,
+        actitudinal: toStr(d.contenidoActitudinal) || local.contenidos.actitudinal
+      }
     };
 
     // Guardar datos normalizados en sesionIA y en estadoDiarias
@@ -23053,13 +23167,23 @@ async function _generarSesionConIA(actId, act, ec) {
     set(`pd-inicio-apertura-${actId}`, gen.inicio.apertura);
     set(`pd-inicio-encuadre-${actId}`, gen.inicio.encuadre);
     set(`pd-inicio-organizacion-${actId}`, gen.inicio.organizacion);
-    set(`pd-desarrollo-procedimental-${actId}`, gen.desarrollo.procedimental);
+    set(`pd-desarrollo-pasos-${actId}`, gen.desarrollo.pasos);
     set(`pd-desarrollo-conceptual-${actId}`, gen.desarrollo.conceptual);
     set(`pd-cierre-sintesis-${actId}`, gen.cierre.sintesis);
     set(`pd-cierre-conexion-${actId}`, gen.cierre.conexion);
     set(`pd-cierre-proximopaso-${actId}`, gen.cierre.proximopaso);
     set(`pd-estrategias-${actId}`, gen.estrategias);
     set(`pd-recursos-${actId}`, gen.recursos);
+    set(`pd-tipo-${actId}`, gen.tipo);
+    set(`pd-estrategiaCorta-${actId}`, gen.estrategiaCorta);
+    set(`pd-intencionEducativa-${actId}`, gen.intencionEducativa);
+    set(`pd-diversidad-apoyos-${actId}`, gen.diversidad.apoyos);
+    set(`pd-diversidad-adaptaciones-${actId}`, gen.diversidad.adaptaciones);
+    set(`pd-diversidad-estrategiasInclusivas-${actId}`, gen.diversidad.estrategiasInclusivas);
+    set(`pd-diversidad-adaptacionesEspecificas-${actId}`, gen.diversidad.adaptacionesEspecificas);
+    set(`pd-contenidos-conceptual-${actId}`, gen.contenidos.conceptual);
+    set(`pd-contenidos-procedimental-${actId}`, gen.contenidos.procedimental);
+    set(`pd-contenidos-actitudinal-${actId}`, gen.contenidos.actitudinal);
     _regenerarInstrumentoEnCard(act, ec);
 
     guardarTodasDiarias();
@@ -23080,13 +23204,23 @@ async function _generarSesionConIA(actId, act, ec) {
     set(`pd-inicio-apertura-${actId}`, s.inicio.apertura);
     set(`pd-inicio-encuadre-${actId}`, s.inicio.encuadre);
     set(`pd-inicio-organizacion-${actId}`, s.inicio.organizacion);
-    set(`pd-desarrollo-procedimental-${actId}`, s.desarrollo.procedimental);
+    set(`pd-desarrollo-pasos-${actId}`, s.desarrollo.pasos);
     set(`pd-desarrollo-conceptual-${actId}`, s.desarrollo.conceptual);
     set(`pd-cierre-sintesis-${actId}`, s.cierre.sintesis);
     set(`pd-cierre-conexion-${actId}`, s.cierre.conexion);
     set(`pd-cierre-proximopaso-${actId}`, s.cierre.proximopaso);
     set(`pd-estrategias-${actId}`, s.estrategias);
     set(`pd-recursos-${actId}`, s.recursos);
+    set(`pd-tipo-${actId}`, s.tipo);
+    set(`pd-estrategiaCorta-${actId}`, s.estrategiaCorta);
+    set(`pd-intencionEducativa-${actId}`, s.intencionEducativa);
+    set(`pd-diversidad-apoyos-${actId}`, s.diversidad.apoyos);
+    set(`pd-diversidad-adaptaciones-${actId}`, s.diversidad.adaptaciones);
+    set(`pd-diversidad-estrategiasInclusivas-${actId}`, s.diversidad.estrategiasInclusivas);
+    set(`pd-diversidad-adaptacionesEspecificas-${actId}`, s.diversidad.adaptacionesEspecificas);
+    set(`pd-contenidos-conceptual-${actId}`, s.contenidos.conceptual);
+    set(`pd-contenidos-procedimental-${actId}`, s.contenidos.procedimental);
+    set(`pd-contenidos-actitudinal-${actId}`, s.contenidos.actitudinal);
     _regenerarInstrumentoEnCard(act, ec2);
     mostrarToast('Sesión generada (modo local)', 'info');
   } finally {
@@ -23151,8 +23285,9 @@ function generarSesion(actId) {
         organizacion: s.organizacion || 'Trabajo individual y grupal según la dinámica de la actividad.'
       },
       desarrollo: {
-        procedimental: s.procedimental || '',
-        conceptual: s.conceptual || ''
+        procedimental: (estadoDiarias.sesiones[actId]?.desarrollo?.procedimental) || s.procedimental || '',
+        conceptual: s.conceptual || '',
+        pasos: s.pasos || s.procedimental || ''
       },
       cierre: {
         sintesis: s.sintesis || '',
@@ -23161,7 +23296,21 @@ function generarSesion(actId) {
       },
       estrategias: s.estrategias || '',
       recursos: planificacion.ra?.recursosDid || 'Material del módulo, pizarrón, guías de trabajo.',
-      tiempos: { ini: tIni, des: tDes, cie: tCie }
+      tiempos: { ini: tIni, des: tDes, cie: tCie },
+      tipo: _normalizarTipoSesion(s.tipo) || 'Individual',
+      estrategiaCorta: s.estrategiaCorta || '',
+      intencionEducativa: s.intencionEducativa || '',
+      diversidad: {
+        apoyos: s.apoyosPosibles || '',
+        adaptaciones: s.adaptaciones || '',
+        estrategiasInclusivas: s.estrategiasInclusivas || '',
+        adaptacionesEspecificas: s.adaptacionesEspecificas || ''
+      },
+      contenidos: {
+        conceptual: s.contenidoConceptual || '',
+        procedimental: s.contenidoProcedimental || '',
+        actitudinal: s.contenidoActitudinal || ''
+      }
     };
   } else {
     gen = generarContenidoSesion(act, ec, horasAct);
@@ -23205,7 +23354,7 @@ function generarSesion(actId) {
 
 
 
-  set(`pd-desarrollo-procedimental-${actId}`, s.desarrollo.procedimental);
+  set(`pd-desarrollo-pasos-${actId}`, s.desarrollo.pasos);
 
 
 
@@ -23230,6 +23379,16 @@ function generarSesion(actId) {
 
 
   set(`pd-recursos-${actId}`, s.recursos);
+  set(`pd-tipo-${actId}`, s.tipo);
+  set(`pd-estrategiaCorta-${actId}`, s.estrategiaCorta);
+  set(`pd-intencionEducativa-${actId}`, s.intencionEducativa);
+  set(`pd-diversidad-apoyos-${actId}`, s.diversidad.apoyos);
+  set(`pd-diversidad-adaptaciones-${actId}`, s.diversidad.adaptaciones);
+  set(`pd-diversidad-estrategiasInclusivas-${actId}`, s.diversidad.estrategiasInclusivas);
+  set(`pd-diversidad-adaptacionesEspecificas-${actId}`, s.diversidad.adaptacionesEspecificas);
+  set(`pd-contenidos-conceptual-${actId}`, s.contenidos.conceptual);
+  set(`pd-contenidos-procedimental-${actId}`, s.contenidos.procedimental);
+  set(`pd-contenidos-actitudinal-${actId}`, s.contenidos.actitudinal);
   _regenerarInstrumentoEnCard(act, ec);
 
 
@@ -24602,6 +24761,28 @@ function renderizarDiarias() {
 
 
 
+          <div class="pd-tiempo-item">
+
+            <label>👥 Tipo:</label>
+
+            <select id="pd-tipo-${act.id}" style="font:inherit;">
+              <option value="Individual" ${s.tipo === 'Individual' ? 'selected' : ''}>Individual</option>
+              <option value="Por Equipo" ${s.tipo === 'Por Equipo' ? 'selected' : ''}>Por Equipo</option>
+              <option value="Por Equipos (en pares)" ${s.tipo === 'Por Equipos (en pares)' ? 'selected' : ''}>Por Equipos (en pares)</option>
+            </select>
+
+          </div>
+
+          <div class="pd-tiempo-item">
+
+            <label>🏷️ Estrategia:</label>
+
+            <input type="text" id="pd-estrategiaCorta-${act.id}" value="${escapeHTML(s.estrategiaCorta || '')}" placeholder="Ej. ABP" style="font:inherit;width:130px;">
+
+          </div>
+
+
+
         </div>
 
 
@@ -24738,11 +24919,11 @@ function renderizarDiarias() {
 
 
 
-              <div class="pd-sub-label"><span class="material-icons">engineering</span>Procedimental / Actividad principal</div>
+              <div class="pd-sub-label"><span class="material-icons">engineering</span>Pasos de la actividad</div>
 
 
 
-              <textarea id="pd-desarrollo-procedimental-${act.id}" rows="12" placeholder="Paso a paso de lo que harán los estudiantes...">${s.desarrollo?.procedimental || ''}</textarea>
+              <textarea id="pd-desarrollo-pasos-${act.id}" rows="12" placeholder="Paso 1 – Título: descripción...&#10;&#10;Paso 2 – Título: descripción...">${s.desarrollo?.pasos || ''}</textarea>
 
 
 
@@ -24864,8 +25045,62 @@ function renderizarDiarias() {
 
         </div>
 
+        <!-- INTENCIÓN EDUCATIVA -->
+        <div class="pd-intencion-sect">
+          <div class="pd-sec-header">
+            <span class="material-icons">flag</span> INTENCIÓN EDUCATIVA
+          </div>
+          <div class="pd-sec-body">
+            <textarea id="pd-intencionEducativa-${act.id}" rows="3"
+              placeholder="Propósito formativo de esta actividad dentro del EC...">${s.intencionEducativa || ''}</textarea>
+          </div>
+        </div>
 
+        <!-- ATENCIÓN A LA DIVERSIDAD -->
+        <div class="pd-diversidad-sect">
+          <div class="pd-sec-header">
+            <span class="material-icons">diversity_3</span> ATENCIÓN A LA DIVERSIDAD
+          </div>
+          <div class="pd-sec-body" style="display:grid;gap:10px;">
+            <div class="pd-sub">
+              <div class="pd-sub-label">Apoyos posibles</div>
+              <textarea id="pd-diversidad-apoyos-${act.id}" rows="2" placeholder="Apoyos genéricos que se pueden ofrecer...">${s.diversidad?.apoyos || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label">Adaptaciones</div>
+              <textarea id="pd-diversidad-adaptaciones-${act.id}" rows="2" placeholder="Adaptaciones metodológicas genéricas...">${s.diversidad?.adaptaciones || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label">Estrategias inclusivas</div>
+              <textarea id="pd-diversidad-estrategiasInclusivas-${act.id}" rows="2" placeholder="Estrategias de inclusión recomendadas...">${s.diversidad?.estrategiasInclusivas || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label">Adaptaciones específicas</div>
+              <textarea id="pd-diversidad-adaptacionesEspecificas-${act.id}" rows="2" placeholder="Ejemplos de ajustes razonables si se necesitaran...">${s.diversidad?.adaptacionesEspecificas || ''}</textarea>
+            </div>
+          </div>
+        </div>
 
+        <!-- CONTENIDOS DE ESTA ACTIVIDAD -->
+        <div class="pd-contenidos-sect">
+          <div class="pd-sec-header">
+            <span class="material-icons">menu_book</span> CONTENIDOS DE ESTA ACTIVIDAD
+          </div>
+          <div class="pd-sec-body" style="display:grid;gap:10px;">
+            <div class="pd-sub">
+              <div class="pd-sub-label">Conceptual</div>
+              <textarea id="pd-contenidos-conceptual-${act.id}" rows="2" placeholder="Recorte conceptual específico de esta actividad...">${s.contenidos?.conceptual || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label">Procedimental</div>
+              <textarea id="pd-contenidos-procedimental-${act.id}" rows="2" placeholder="Recorte procedimental específico de esta actividad...">${s.contenidos?.procedimental || ''}</textarea>
+            </div>
+            <div class="pd-sub">
+              <div class="pd-sub-label">Actitudinal</div>
+              <textarea id="pd-contenidos-actitudinal-${act.id}" rows="2" placeholder="Recorte actitudinal específico de esta actividad...">${s.contenidos?.actitudinal || ''}</textarea>
+            </div>
+          </div>
+        </div>
 
 
 
@@ -36820,23 +37055,38 @@ Módulo: {{moduloFormativo}} | {{familiaProfesional}}
 Actividad: {{actividad}}
 EC: {{ecEnunciado}} (Bloom: {{nivelBloom}})
 Duración total: {{minTotal}} minutos (Inicio: {{minInicio}}min, Desarrollo: {{minDesarrollo}}min, Cierre: {{minCierre}}min)
+Contenidos generales del Resultado de Aprendizaje (para contextualizar, NO copiar tal cual):
+- Conceptuales: {{contenidosConceptualesRA}}
+- Procedimentales: {{contenidosProcedimentalesRA}}
+- Actitudinales: {{contenidosActitudinalesRA}}
 
 INSTRUCCIONES IMPORTANTES:
-- Cada campo debe tener contenido EXTENSO y DETALLADO (mínimo 3-5 oraciones por campo).
-- No escribas respuestas cortas de una línea. Desarrolla cada sección con profundidad.
+- Cada campo de texto largo debe tener contenido EXTENSO y DETALLADO (mínimo 3-5 oraciones).
+- No escribas respuestas cortas de una línea en los campos largos. Desarrolla cada sección con profundidad.
 - Incluye instrucciones específicas, ejemplos concretos, preguntas guía y actividades paso a paso.
 - Adapta todo al contexto técnico profesional del módulo indicado.
+- NO asumas ni inventes estudiantes con condiciones específicas (discapacidad, TDAH, etc.) para "atención a la diversidad": da recomendaciones GENÉRICAS de buenas prácticas de inclusión aplicables a cualquier grupo.
 
-RESPONDE SOLO JSON válido, sin markdown, sin texto extra. USA EXACTAMENTE estas 7 claves:
+RESPONDE SOLO JSON válido, sin markdown, sin texto extra. USA EXACTAMENTE estas 17 claves:
 
 {
   "apertura": "Escribe una pregunta motivadora abierta que active los conocimientos previos de los estudiantes, seguida de una dinámica de inicio (lluvia de ideas, video corto, caso real, demostración). Describe paso a paso cómo iniciar la clase durante {{minInicio}} minutos. Incluye al menos 2-3 preguntas generadoras y una actividad de enganche.",
   "encuadre": "Redacta el objetivo claro de la sesión vinculado al EC. Explica los criterios de evaluación que se usarán. Describe qué competencias se desarrollarán y cómo se conecta con sesiones anteriores y posteriores. Incluye los indicadores de logro esperados.",
   "organizacion": "Describe detalladamente cómo se organizarán los estudiantes (individual, parejas, equipos), qué materiales y recursos necesitarán, cómo se distribuirá el espacio del aula/taller/laboratorio, y qué roles tendrá cada participante si es trabajo grupal.",
-  "procedimental": "Desarrolla el contenido paso a paso del momento de desarrollo ({{minDesarrollo}} min). Incluye: 1) Explicación del docente con ejemplos concretos, 2) Actividad práctica guiada, 3) Actividad práctica autónoma, 4) Momentos de retroalimentación. Detalla cada paso con tiempos estimados, instrucciones claras para el docente y preguntas de verificación.",
+  "pasos": "Los pasos numerados del momento de desarrollo ({{minDesarrollo}} min), en formato 'Paso 1 – Título breve: descripción detallada.' separados por doble salto de línea. Incluye entre 3 y 5 pasos: explicación del docente con ejemplos concretos, actividad práctica guiada, actividad práctica autónoma, y momentos de retroalimentación, cada uno con tiempo estimado e instrucciones claras.",
   "conceptual": "Incluye una reflexión profunda sobre la importancia del tema en el campo profesional. Presenta un caso real o situación laboral donde se aplique lo aprendido. Conecta la teoría con la práctica profesional y explica por qué estas competencias son esenciales en el mundo laboral.",
   "sintesis": "Describe el cierre de la sesión ({{minCierre}} min): recapitulación de los puntos clave, evaluación formativa (preguntas de verificación, ticket de salida, rúbrica rápida), autoevaluación del estudiante, asignación de tarea o preparación para la próxima sesión. Incluye preguntas de metacognición.",
-  "estrategias": "Enumera y describe 3-4 estrategias didácticas utilizadas en la sesión. Para cada una, explica: qué es, cómo se aplica en esta sesión específica, y por qué es efectiva para el nivel de Bloom '{{nivelBloom}}'. Ejemplos: ABP, aprendizaje cooperativo, modelamiento, aula invertida, gamificación, think-pair-share."
+  "estrategias": "Enumera y describe 3-4 estrategias didácticas utilizadas en la sesión. Para cada una, explica: qué es, cómo se aplica en esta sesión específica, y por qué es efectiva para el nivel de Bloom '{{nivelBloom}}'. Ejemplos: ABP, aprendizaje cooperativo, modelamiento, aula invertida, gamificación, think-pair-share.",
+  "tipo": "Modalidad de trabajo de la actividad: responde EXACTAMENTE una de estas 3 opciones: 'Individual', 'Por Equipo', 'Por Equipos (en pares)'.",
+  "estrategiaCorta": "Una etiqueta muy corta (2 a 5 palabras) que resuma la estrategia principal de la sesión, ej. 'Aprendizaje Basado en Proyectos'.",
+  "intencionEducativa": "Un párrafo breve (2-3 oraciones) que explique el propósito formativo de esta actividad dentro del EC.",
+  "apoyosPosibles": "1-2 oraciones con apoyos genéricos de buena práctica que el docente puede ofrecer durante esta actividad (ej. materiales de refuerzo, tutoría entre pares).",
+  "adaptaciones": "1-2 oraciones con adaptaciones metodológicas genéricas aplicables a esta actividad (ej. tiempos flexibles, instrucciones en varios formatos).",
+  "estrategiasInclusivas": "1-2 oraciones con estrategias de inclusión genéricas recomendadas para esta actividad (ej. agrupamientos heterogéneos, retroalimentación individualizada).",
+  "adaptacionesEspecificas": "1-2 oraciones con ejemplos genéricos de ajustes razonables que se podrían aplicar si algún estudiante lo necesitara, sin asumir un caso real.",
+  "contenidoConceptual": "1-2 oraciones: el recorte específico de contenido CONCEPTUAL que esta actividad en particular trabaja, basado en los contenidos generales del RA arriba.",
+  "contenidoProcedimental": "1-2 oraciones: el recorte específico de contenido PROCEDIMENTAL que esta actividad en particular trabaja, basado en los contenidos generales del RA arriba.",
+  "contenidoActitudinal": "1-2 oraciones: el recorte específico de contenido ACTITUDINAL que esta actividad en particular trabaja, basado en los contenidos generales del RA arriba."
 }`;
 
 const _DEFAULT_PROMPT_BASE = `Asume el rol de docente experto en educación técnico profesional de República Dominicana.
@@ -37454,9 +37704,11 @@ function _mostrarGuiaPlaceholdersDiarias() {
     ['{modulo_formativo}', 'Nombre del módulo formativo'],
     ['{nombre_docente}', 'Nombre completo del docente'],
     ['{centro_educativo}', 'Nombre del centro educativo'],
+    ['{institucion}', 'Alias de {centro_educativo} (mismo dato)'],
     ['{resultado_aprendizaje}', 'Descripción del RA'],
     ['{familia_profesional}', 'Nombre de la familia profesional'],
     ['{bachillerato}', 'Bachillerato técnico en...'],
+    ['{bachillerato_tecnico}', 'Alias de {bachillerato} (mismo dato)'],
     ['{codigo_mf}', 'Código del módulo formativo'],
     ['{horas_semana}', 'Horas por semana del MF'],
   ];
@@ -37464,19 +37716,17 @@ function _mostrarGuiaPlaceholdersDiarias() {
   const placeholdersSesion = [
     ['{fecha}', 'Fecha de la actividad/sesión'],
     ['{actividad}', 'Enunciado de la actividad'],
-    ['{tiempo_total}', 'Tiempo total en minutos'],
-    ['{tiempo_inicio}', 'Minutos del momento de inicio'],
-    ['{tiempo_desarrollo}', 'Minutos del momento de desarrollo'],
-    ['{tiempo_cierre}', 'Minutos del momento de cierre'],
-    ['{apertura}', 'Contenido de apertura (1er momento)'],
-    ['{encuadre}', 'Contenido de encuadre (1er momento)'],
-    ['{organizacion}', 'Contenido de organización (1er momento)'],
-    ['{procedimental}', 'Actividad principal / procedimental (2do momento)'],
-    ['{conceptual}', 'Conceptual / actitudinal (2do momento)'],
-    ['{sintesis}', 'Síntesis (3er momento)'],
-    ['{conexion}', 'Conexión con el mundo real (3er momento)'],
-    ['{proximopaso}', 'Próximo paso (3er momento)'],
-    ['{estrategias}', 'Estrategias utilizadas'],
+    ['{actividad_numero}', 'Número de actividad dentro del EC (ej. "Act 1.1")'],
+    ['{valor}', 'Puntos/valor de la actividad'],
+    ['{tipo}', 'Modalidad: Individual / Por Equipo / Por Equipos (en pares)'],
+    ['{tiempo_total}', 'Tiempo total en minutos (usar como "Tiempo Estimado")'],
+    ['{momentos_pedagogicos}', 'RECOMENDADO: Inicio + Desarrollo + Cierre ya combinados en un solo bloque de texto, listo para una única celda "Momentos Pedagógicos"'],
+    ['{intencion_educativa}', 'Intención educativa de la actividad'],
+    ['{estrategia_corta}', 'Etiqueta corta de la estrategia/metodología principal (usar como "Estrategia")'],
+    ['{atencion_diversidad}', 'RECOMENDADO: apoyos + adaptaciones + estrategias inclusivas + adaptaciones específicas ya combinados en un solo bloque, listo para una única celda "Atención a la diversidad"'],
+    ['{contenido_conceptual}', 'Recorte de contenido conceptual de esta actividad'],
+    ['{contenido_procedimental}', 'Recorte de contenido procedimental de esta actividad'],
+    ['{contenido_actitudinal}', 'Recorte de contenido actitudinal de esta actividad'],
     ['{recursos}', 'Recursos didácticos'],
     ['{instrumento_evaluacion}', 'Instrumento de evaluación'],
   ];
@@ -37487,9 +37737,9 @@ function _mostrarGuiaPlaceholdersDiarias() {
   ).join('');
 
   const loopInfo = `<div style="margin-top:14px;padding:12px;background:#E0F2F1;border-radius:8px;border:1px solid #B2DFDB;">
-    <strong style="color:#00695C;font-size:0.82rem;">Loop de sesiones/actividades:</strong>
-    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">La plantilla genera <strong>una página por cada sesión/actividad</strong>. Los placeholders de sesión se reemplazan con los datos de cada actividad.</p>
-    <p style="font-size:0.75rem;color:#9E9E9E;margin:4px 0 0;">Tip: Los placeholders generales (módulo, docente, centro) se repiten en todas las páginas. Los de sesión cambian por actividad.</p>
+    <strong style="color:#00695C;font-size:0.82rem;">Un documento por actividad:</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">El sistema genera <strong>un archivo .docx independiente por cada actividad/sesión</strong> (no un loop dentro de un mismo documento). Si hay más de una actividad, se descargan todas juntas en un .zip.</p>
+    <p style="font-size:0.75rem;color:#9E9E9E;margin:4px 0 0;">Tip: No uses {#actividades}...{/actividades} en esta plantilla -- todos los placeholders (generales y de sesión) se usan directo, sin loop, porque cada documento ya corresponde a una sola actividad.</p>
   </div>`;
 
   document.getElementById('modal-title').textContent = 'Placeholders para Plantilla Diaria';
@@ -37505,6 +37755,7 @@ function _mostrarGuiaPlaceholdersDiarias() {
     + '<thead><tr><th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Placeholder</th>'
     + '<th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Dato que inserta</th></tr></thead>'
     + '<tbody>' + makeRows(placeholdersSesion) + '</tbody></table></div>'
+    + '<p style="font-size:0.72rem;color:#9E9E9E;margin:8px 0 0;">¿Necesitas los momentos o la atención a la diversidad en celdas separadas en vez de un solo bloque? También existen por separado: {apertura} {encuadre} {organizacion} {pasos} {conceptual} {sintesis} {conexion} {proximopaso} {tiempo_inicio} {tiempo_desarrollo} {tiempo_cierre} {estrategias} (larga) {apoyos_posibles} {adaptaciones} {estrategias_inclusivas} {adaptaciones_especificas}.</p>'
     + loopInfo;
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
