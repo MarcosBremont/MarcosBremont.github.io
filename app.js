@@ -27598,6 +27598,12 @@ const TOUR_PASOS = [
     target: '#btn-dash-planificaciones',
   },
   {
+    titulo: '¡Configura la IA! (muy importante)',
+    desc: 'Antes de generar planificaciones, sesiones diarias, guías de estudio o exámenes con un clic, configura aquí tu clave de IA (Groq, Gemini u OpenRouter -- todas tienen un nivel gratuito). Sin esto, la app igual funciona, pero tendrás que llenar todo manualmente.',
+    icono: 'auto_awesome',
+    target: '#btn-dash-ia',
+  },
+  {
     titulo: 'Diarias',
     desc: 'Registra tu diario de clases: qué enseñaste, logros, dificultades y asistencia por sesión.',
     icono: 'today',
