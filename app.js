@@ -19049,7 +19049,9 @@ async function _procesarOcrAsistencia() {
     // Intenta con el modelo indicado; devuelve { resp, errJson } si falla con 429
     const _llamarModelo = async modelo => {
       const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const r = await fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyOcr(modelo)) });
+      // Sin timeout, si la conexion se colgaba el boton "Analizando..." quedaba
+      // deshabilitado para siempre (mismo bug ya corregido en las llamadas a Groq).
+      const r = await _fetchConTimeout(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyOcr(modelo)) }, 30000);
       if (r.ok) return { resp: r, errJson: null };
       const errJson = await r.json().catch(() => ({}));
       return { resp: r, errJson };

@@ -2972,6 +2972,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v16.95<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Auditoría de seguridad previa a expansión a más centros</div>
+              <ul class="about-ver-items">
+                <li>Corrección: el botón "Analizar imagen" (OCR de asistencia con Gemini Vision) podía quedarse "Analizando..." para siempre igual que el bug de Groq corregido antes -- ya tiene el mismo límite de tiempo.</li>
+                <li>firestore.rules: se cerró un hueco crítico que permitía que cualquier usuario logueado se auto-asignara el rol de superadmin o sobrescribiera el perfil de cualquier otro usuario, además de una fuga donde cualquier docente podía leer las respuestas de exámenes ajenos. Ver detalle completo en la conversación con el desarrollador -- este archivo requiere publicarse por separado en Firebase (no se sube solo con git push).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00838F;">v16.94<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6352,9 +6367,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.94"></script>
+  <script src="app.js?v=16.95"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.94"></script>
+  <script src="auth.js?v=16.95"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

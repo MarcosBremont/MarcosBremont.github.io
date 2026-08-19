@@ -85,7 +85,13 @@ service cloud.firestore {
 
     match /config/{doc} {
       allow read: if signedIn();
-      allow write: if signedIn();
+      // Antes cualquier usuario logueado podia escribir aqui, incluyendo
+      // config/superadmin (la lista de emails con acceso Superadmin) -- eso
+      // permitia que cualquier docente se auto-agregara como superadmin con una
+      // sola llamada a Firestore desde la consola del navegador. isOwnerSuperadminEmail()
+      // no depende de este documento (es un email fijo), asi que el dueno de la
+      // plataforma siempre puede escribir aqui incluso si config/superadmin no existe.
+      allow write: if isSuperadminByEmail();
     }
 
     // Contador público de usuarios registrados, para mostrar "N personas registradas"
@@ -182,17 +188,54 @@ service cloud.firestore {
 
     match /perfiles/{userId} {
       allow read: if signedIn();
-      allow write: if signedIn();
+      // El cliente (app.js) nunca escribe en esta coleccion, solo lee -- se deja
+      // en superadmin-only por seguridad en vez de abierta a cualquier signedIn().
+      allow write: if isSuperadminByEmail() || currentRole() == 'superadmin';
     }
 
+    // Coleccion legado (distinta de centros/{id}/avisos, que es la que usa la app
+    // hoy) -- no tiene ninguna referencia viva en app.js. Se deja superadmin-only
+    // en vez de abierta a cualquier signedIn() por seguridad.
     match /avisos/{avisoId} {
       allow read: if signedIn();
-      allow write: if signedIn();
+      allow write: if isSuperadminByEmail() || currentRole() == 'superadmin';
     }
 
     match /usuarios/{uid} {
       allow read: if signedIn();
-      allow write: if signedIn();
+
+      // Antes cualquier usuario logueado podia sobreescribir el documento de
+      // CUALQUIER OTRO usuario, incluyendo su propio campo "rol" a "superadmin"
+      // (el cliente incluso tiene un flujo -- auth.js linea ~93-94 -- que intenta
+      // auto-escribir rol:'superadmin'/'admin_centro' en el propio perfil, gateado
+      // SOLO por un email guardado en localStorage/config -- editable por cualquiera
+      // desde la consola del navegador). Ahora:
+      // - el propio dueno solo puede CREAR su perfil como 'docente' pendiente
+      //   (nunca auto-crearse ya aprobado como admin/superadmin), y solo puede
+      //   ACTUALIZAR su propio documento si NO toca los campos rol/roles (nombre,
+      //   pin, centroId, estado, etc. si se mantienen editables por el propio dueno);
+      // - superadmin y admin_centro/director de SU MISMO centro (gestionando un
+      //   docente de ese centro: _aprobarDocente, _rechazarDocente, _toggleRolDocente)
+      //   pueden escribir cualquier campo, incluyendo rol/roles.
+      // Efecto secundario aceptado: la auto-promocion de admin_centro/director "por
+      // email conocido" al iniciar sesion por primera vez YA NO se guarda en Firestore
+      // (ese chequeo es client-only y no puede replicarse en una regla sin escanear
+      // todos los centros) -- esos roles ahora deben asignarse manualmente una vez
+      // desde Superadmin > Centros > Docentes, igual que cualquier otro cambio de rol.
+      // Se valida tambien "roles" (no solo "rol"): misRoles()/hasRole() prefieren el
+      // arreglo "roles" sobre el campo singular "rol" cuando esta presente, asi que
+      // dejar pasar rol:'docente' con roles:['admin_centro'] hubiera sido otra forma
+      // de auto-promoverse.
+      allow create: if signedIn() && request.auth.uid == uid &&
+                       request.resource.data.get('rol', 'docente') == 'docente' &&
+                       request.resource.data.get('roles', ['docente']).hasOnly(['docente']);
+
+      allow update: if (
+                          signedIn() && request.auth.uid == uid &&
+                          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'roles'])
+                        )
+                        || (signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin'))
+                        || (signedIn() && hasRole(['admin_centro', 'director']) && mismoCentro(uid));
     }
 
     match /users/{userId}/data/cuentas_estudiantes {
@@ -282,7 +325,11 @@ service cloud.firestore {
     }
 
     match /error_logs/{logId} {
-      allow create: if signedIn();
+      // uid del reporte debe ser el del propio usuario logueado -- antes se podia
+      // crear un reporte con cualquier uid ajeno (bajo impacto ya que la lectura
+      // sigue acotada por centro, pero permitia "falsificar" a quien pertenece
+      // un error en el Panel de Bugs).
+      allow create: if signedIn() && request.resource.data.get('uid', null) == request.auth.uid;
       allow read: if signedIn() && (
         isSuperadminByEmail() || currentRole() == 'superadmin' ||
         (hasRole(['admin_centro', 'director']) && mismoCentro(resource.data.get('uid', null)))
@@ -345,8 +392,15 @@ service cloud.firestore {
       allow read: if resource.data.activo == true;
 
       match /respuestas/{respId} {
+        // create queda abierto porque el estudiante responde SIN cuenta (examen.html
+        // publico). read antes era "cualquier docente logueado" -- cualquier profesor,
+        // de cualquier centro, podia leer las respuestas de examenes ajenos. Ahora
+        // solo el docente dueno del examen (o superadmin) puede leerlas.
         allow create: if true;
-        allow read: if signedIn();
+        allow read: if signedIn() && (
+          isSuperadminByEmail() || currentRole() == 'superadmin' ||
+          get(/databases/$(database)/documents/examenes/$(examenId)).data.docenteUid == request.auth.uid
+        );
       }
     }
 
