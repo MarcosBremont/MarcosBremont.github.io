@@ -9555,6 +9555,13 @@ body.dark-mode .rend-barra-ra-track {
   .rend-rank-row { grid-template-columns: 30px 1fr 44px 60px; }
   .rend-rank-barra-wrap { display: none; }
   .rend-contenido { padding: 12px 14px; }
+  /* Fila de KPIs (Promedio/Aprobados/En riesgo/Reprobados/Sin calificaciones):
+     con flex:1 + min-width:140px, 3+ tarjetas en pantallas angostas podian
+     quedar mas anchas que el contenedor. Grid de 2 columnas fijas garantiza
+     que nunca se salga hacia los lados, sin importar cuantas tarjetas haya. */
+  .rend-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rend-kpi { min-width: 0; padding: 12px 10px; }
+  .rend-kpi-num { font-size: 1.6rem; }
 }
 
 /* Card de riesgo */
