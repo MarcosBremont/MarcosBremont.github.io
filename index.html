@@ -2974,6 +2974,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#F57F17;">v16.99<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: no dejaba guardar claves de Gemini con el formato nuevo</div>
+              <ul class="about-ver-items">
+                <li>Google está migrando las claves de Gemini a un formato nuevo que empieza con "AQ." en vez de "AIza" (algunas cuentas ya solo generan el formato nuevo) -- Configurar IA exigía que empezara con "AIza" y rechazaba claves nuevas, válidas, sin dejar guardarlas. Ya no se valida el prefijo, solo que la clave no esté vacía o claramente incompleta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#2E7D32;">v16.98<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6412,9 +6426,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.98"></script>
+  <script src="app.js?v=16.99"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.98"></script>
+  <script src="auth.js?v=16.99"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

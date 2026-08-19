@@ -16122,7 +16122,7 @@ function abrirTutorial() {
           <div class="tut-step-card">
             <div class="tut-step-badge" style="background:#FFFDE7;color:#F57F17;">2\u00ba \u2014 1M tokens/min gratis</div>
             <h4 class="tut-step-title">\ud83d\udfe1 Google Gemini</h4>
-            <p class="tut-step-desc">Obt\u00e9n tu clave gratuita en <strong>aistudio.google.com/apikey</strong> (no pide tarjeta). La clave comienza con <code>AIza</code>.</p>
+            <p class="tut-step-desc">Obt\u00e9n tu clave gratuita en <strong>aistudio.google.com/apikey</strong> (no pide tarjeta). La clave suele empezar con <code>AIza</code> o <code>AQ.</code> seg\u00fan tu cuenta.</p>
           </div>
 
           <div class="tut-step-card">
@@ -26447,7 +26447,7 @@ function abrirConfigIA() {
       <div style="background:#FFFDE7;border-radius:8px;padding:12px;margin:8px 0;">
         <label for="input-gemini-key" style="margin:0;font-weight:600;">🟡 Google Gemini (2º — 1M tokens/min gratis)</label>
         <input type="password" id="input-gemini-key"
-               placeholder="AIza..."
+               placeholder="AIza... o AQ...."
                value="${geminiKeyActual || ''}"
                autocomplete="off" style="margin-top:6px;" />
         <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
@@ -26495,7 +26495,11 @@ function guardarApiKey() {
 
   if (!groqKey && !geminiKey && !openrouterKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
   if (groqKey && !groqKey.startsWith('gsk_')) { mostrarToast('La clave de Groq debe comenzar con "gsk_..."', 'error'); return; }
-  if (geminiKey && !geminiKey.startsWith('AIza')) { mostrarToast('La clave de Gemini debe comenzar con "AIza..."', 'error'); return; }
+  // Gemini: NO se valida el prefijo. Google esta en medio de migrar el formato de
+  // sus claves durante 2026 -- las nuevas empiezan con "AQ." en vez de "AIza", y
+  // algunas cuentas ya solo pueden generar el formato nuevo. Bloquear el guardado
+  // por prefijo dejaba a esos usuarios sin poder guardar una clave real y valida.
+  if (geminiKey && geminiKey.length < 10) { mostrarToast('La clave de Gemini parece incompleta', 'error'); return; }
   if (openrouterKey && !openrouterKey.startsWith('sk-or-')) { mostrarToast('La clave de OpenRouter debe comenzar con "sk-or-..."', 'error'); return; }
 
   if (groqKey) localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
