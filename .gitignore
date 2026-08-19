@@ -1,3 +1,5 @@
 .claude/
 LogoMetabot.af~lock~
 7440
+node_modules/
+tests/screenshot_failure.png

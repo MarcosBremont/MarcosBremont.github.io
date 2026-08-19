@@ -1,0 +1,14 @@
+{
+  "name": "tinclass",
+  "private": true,
+  "description": "TinClass - Planificador Educativo por RA (sitio estatico, sin build step)",
+  "scripts": {
+    "test:syntax": "node --check app.js && node --check auth.js && node --check error-reporter.js && node --check firebase-config.js && node --check sw.js",
+    "test:smoke": "node tests/smoke-check.js",
+    "serve": "http-server -p 8791 -s"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "playwright": "^1.48.0"
+  }
+}
