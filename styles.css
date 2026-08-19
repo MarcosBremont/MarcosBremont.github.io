@@ -9239,13 +9239,28 @@ body.dark-mode .ec-nivel-opt.activo {
    ═══════════════════════════════════════════════════════════════════ */
 
 .rend-panel-header {
+  background: var(--color-superficie);
+  border-bottom: 1.5px solid var(--color-borde);
+}
+
+/* El fondo/borde de arriba se queda a todo el ancho del panel (como una barra
+   de herramientas), pero el CONTENIDO (flecha, titulo, selector de curso) se
+   alinea pixel a pixel con las tarjetas de .rend-kpi-row de abajo -- antes, en
+   pantallas anchas, el titulo empezaba mas a la izquierda y el selector de
+   curso terminaba mas a la derecha que la tarjeta "100.0%".
+   .rend-panel-header y .rend-contenido son HERMANOS (mismo padre .cal-panel),
+   asi que para que el contenido de ambos quede alineado basta con darle a
+   este wrapper el MISMO padding horizontal y max-width que .rend-contenido
+   (24px y 1100px) -- lo que aporte el padre de ambos se cancela igual en los
+   dos casos. */
+.rend-panel-header-inner {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 24px;
-  background: var(--color-superficie);
-  border-bottom: 1.5px solid var(--color-borde);
   flex-wrap: wrap;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 24px;
 }
 
 .rend-header-left {
@@ -9555,6 +9570,10 @@ body.dark-mode .rend-barra-ra-track {
   .rend-rank-row { grid-template-columns: 30px 1fr 44px 60px; }
   .rend-rank-barra-wrap { display: none; }
   .rend-contenido { padding: 12px 14px; }
+  /* Mismo padding horizontal que .rend-contenido arriba, para que el encabezado
+     (flecha/titulo/selector) se mantenga alineado con las tarjetas tambien en
+     movil. */
+  .rend-panel-header-inner { padding: 14px 14px; }
   /* Fila de KPIs (Promedio/Aprobados/En riesgo/Reprobados/Sin calificaciones):
      con flex:1 + min-width:140px, 3+ tarjetas en pantallas angostas podian
      quedar mas anchas que el contenedor. Grid de 2 columnas fijas garantiza

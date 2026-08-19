@@ -33937,10 +33937,9 @@ async function _obtenerCentroIdDeUsuarioActual() {
     if (doc.exists && doc.data().centroId) return doc.data().centroId;
   } catch {}
   try {
-    const email = window.currentUser.email?.toLowerCase();
+    const email = window.currentUser.email;
     if (email) {
-      const snap = await db.collection('centros').get();
-      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      const [centro] = await _buscarCentrosPorEmailAdmin(email);
       if (centro) {
         // Se resolvio por coincidencia en centros.admins[], no por el campo propio.
         // Lo respaldamos en el perfil porque varias reglas de Firestore (miCentroId())
@@ -36070,13 +36069,10 @@ function _copiarEnlaceDenuncias() {
 
 /** Verifica si el usuario actual es admin de algún centro */
 async function _esAdminDeCentro() {
-  const email = window.currentUser?.email?.toLowerCase();
+  const email = window.currentUser?.email;
   if (!email) return [];
   try {
-    const snap = await db.collection('centros').get();
-    const centros = snap.docs
-      .filter(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email))
-      .map(d => ({ id: d.id, ...d.data() }));
+    const centros = await _buscarCentrosPorEmailAdmin(email);
 
     // Director y Coordinadora también aprueban/rechazan docentes de su propio
     // centro, aunque su email no esté en centros.admins[] (ese arreglo es solo
@@ -36086,8 +36082,8 @@ async function _esAdminDeCentro() {
       const rol = perfil.exists ? perfil.data().rol : null;
       const centroId = perfil.exists ? perfil.data().centroId : null;
       if (centroId && ['director', 'coordinadora'].includes(rol) && !centros.some(c => c.id === centroId)) {
-        const centroDoc = snap.docs.find(d => d.id === centroId);
-        if (centroDoc) centros.push({ id: centroDoc.id, ...centroDoc.data() });
+        const centroDoc = await db.collection('centros').doc(centroId).get();
+        if (centroDoc.exists) centros.push({ id: centroDoc.id, ...centroDoc.data() });
       }
     } catch {}
 
@@ -37327,9 +37323,44 @@ async function _getPromptResuelto(key, vars) {
 async function _cargarCentros() {
   try {
     const snap = await db.collection(CENTROS_COLLECTION).orderBy('nombre').get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const centros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Migración perezosa: normaliza a minúsculas los emails de centros.admins[]
+    // que hayan quedado con mayúsculas de antes de que _agregarAdminCentro
+    // los guardara siempre en minúsculas. Es necesario porque las búsquedas de
+    // "¿mi email está en algún centro?" ahora usan una consulta array-contains
+    // (mucho más barata que traer TODA la colección, con las plantillas Word de
+    // cada centro incluidas) -- y array-contains exige coincidencia exacta.
+    centros.forEach(c => {
+      const admins = c.admins || [];
+      const normalizados = admins.map(e => (e || '').toLowerCase().trim());
+      const cambio = admins.some((e, i) => e !== normalizados[i]);
+      if (cambio) {
+        c.admins = normalizados;
+        db.collection(CENTROS_COLLECTION).doc(c.id).update({ admins: normalizados }).catch(() => {});
+      }
+    });
+    return centros;
   } catch (e) {
     console.error('Error cargando centros:', e);
+    return [];
+  }
+}
+
+/** Busca el/los centro(s) donde el email dado esta en admins[], usando una
+ *  consulta array-contains en vez de traer TODA la coleccion centros (que
+ *  incluye las plantillas Word de cada centro, potencialmente pesadas) --
+ *  se ejecuta en cada login/chequeo de rol, asi que el ahorro escala con la
+ *  cantidad de centros registrados. Requiere que centros.admins[] este en
+ *  minusculas (ver migracion perezosa en _cargarCentros); el email de entrada
+ *  tambien se normaliza por si acaso. */
+async function _buscarCentrosPorEmailAdmin(email) {
+  const emailNorm = (email || '').toLowerCase().trim();
+  if (!emailNorm) return [];
+  try {
+    const snap = await db.collection(CENTROS_COLLECTION).where('admins', 'array-contains', emailNorm).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('_buscarCentrosPorEmailAdmin:', e.message);
     return [];
   }
 }
@@ -38811,15 +38842,19 @@ async function _coordGetCentroId() {
   } catch {}
   // Admin centro: buscar en centros.admins
   try {
-    const email = window.currentUser.email?.toLowerCase();
+    const email = window.currentUser.email;
     if (email) {
-      const snap = await db.collection('centros').get();
-      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      const [centro] = await _buscarCentrosPorEmailAdmin(email);
       if (centro) return centro.id;
       // Superadmin sin centroId asignado: si solo hay un centro en todo el
       // sistema, usarlo directamente en vez de forzar a elegir entre 1 opción.
+      // Caso raro (solo superadmins), asi que aqui si se justifica traer la
+      // coleccion completa en vez de agregar una consulta de conteo nueva.
       const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-      if (esSA && snap.size === 1) return snap.docs[0].id;
+      if (esSA) {
+        const snap = await db.collection('centros').get();
+        if (snap.size === 1) return snap.docs[0].id;
+      }
     }
   } catch {}
   // Superadmin con varios centros / Director sin centro: mostrar selector
@@ -40427,13 +40462,17 @@ async function _vincGetCentroId() {
     if (doc.exists && doc.data().centroId) return doc.data().centroId;
   } catch {}
   try {
-    const email = window.currentUser.email?.toLowerCase();
+    const email = window.currentUser.email;
     if (email) {
-      const snap = await db.collection('centros').get();
-      const centro = snap.docs.find(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email));
+      const [centro] = await _buscarCentrosPorEmailAdmin(email);
       if (centro) return centro.id;
+      // Caso raro (solo superadmins): aqui si se justifica traer la coleccion
+      // completa en vez de agregar una consulta de conteo nueva.
       const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
-      if (esSA && snap.size === 1) return snap.docs[0].id;
+      if (esSA) {
+        const snap = await db.collection('centros').get();
+        if (snap.size === 1) return snap.docs[0].id;
+      }
     }
   } catch {}
   return null;

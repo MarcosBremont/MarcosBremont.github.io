@@ -1555,16 +1555,18 @@
   <!-- ===== PANEL RENDIMIENTO ===== -->
   <div id="panel-rendimiento" class="cal-panel hidden">
     <div class="rend-panel-header">
-      <div class="rend-header-left">
-        <button class="btn-back-rend" onclick="cerrarRendimiento()">
-          <span class="material-icons">arrow_back</span>
-        </button>
-        <span class="material-icons" style="color:#9C27B0;font-size:26px;">insights</span>
-        <h2 class="rend-titulo">Gráficas de Rendimiento</h2>
+      <div class="rend-panel-header-inner">
+        <div class="rend-header-left">
+          <button class="btn-back-rend" onclick="cerrarRendimiento()">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <span class="material-icons" style="color:#9C27B0;font-size:26px;">insights</span>
+          <h2 class="rend-titulo">Gráficas de Rendimiento</h2>
+        </div>
+        <select id="rend-selector-curso" class="rend-selector" onchange="_rendCambiarCurso()">
+          <option value="">Selecciona un curso</option>
+        </select>
       </div>
-      <select id="rend-selector-curso" class="rend-selector" onchange="_rendCambiarCurso()">
-        <option value="">Selecciona un curso</option>
-      </select>
     </div>
     <div id="rend-contenido" class="rend-contenido"></div>
   </div>
@@ -2968,6 +2970,35 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v16.98<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Menos lecturas de Firestore al iniciar sesión y verificar roles de centro</div>
+              <ul class="about-ver-items">
+                <li>Verificar si eres administrador/director/coordinadora de algún centro (algo que corre en cada inicio de sesión) traía antes TODA la colección de centros, incluyendo las plantillas Word de cada uno. Ahora usa una consulta dirigida que solo trae el centro que coincide con tu email -- el costo ya no crece con la cantidad de centros registrados.</li>
+                <li>Los emails de administradores de centro se normalizan a minúsculas automáticamente para que esta búsqueda funcione siempre, sin importar cómo se hayan escrito originalmente.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00838F;">v16.97<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: el encabezado de Gráficas de Rendimiento no se alineaba con las tarjetas</div>
+              <ul class="about-ver-items">
+                <li>En pantallas anchas, la flecha/título de "Gráficas de Rendimiento" y el selector de curso se salían del ancho de las tarjetas (Promedio/Aprobados/etc.) de abajo. Ahora quedan alineados exactamente en todos los tamaños de pantalla.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6381,9 +6412,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.95"></script>
+  <script src="app.js?v=16.98"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.95"></script>
+  <script src="auth.js?v=16.98"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

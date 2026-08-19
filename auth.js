@@ -288,11 +288,15 @@ function _esSuperadminAuth(email) {
   } catch { return false; }
 }
 
-/** Verifica si el usuario es admin de algún centro */
+/** Verifica si el usuario es admin de algún centro. Corre en CADA login, así
+ *  que usa una consulta array-contains (_buscarCentrosPorEmailAdmin, en
+ *  app.js) en vez de traer toda la colección centros -- que incluye las
+ *  plantillas Word de cada centro -- para que el costo no crezca con la
+ *  cantidad de centros registrados. */
 async function _esAdminCentro(email) {
   try {
-    const snap = await db.collection('centros').get();
-    return snap.docs.some(d => (d.data().admins || []).map(e => e.toLowerCase()).includes(email.toLowerCase()));
+    const centros = await _buscarCentrosPorEmailAdmin(email);
+    return centros.length > 0;
   } catch { return false; }
 }
 
