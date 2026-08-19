@@ -5610,7 +5610,48 @@ async function _exportarDiariaConPlantillaCentro() {
   const allBlobs = [];
 
   for (const act of actividades) {
-    const s = estadoDiarias.sesiones[act.id] || {};
+    // Respaldo local: si el docente nunca generó/guardó esta sesión en el Paso 5,
+    // usamos la generación local (sin IA) como relleno campo por campo para que la
+    // exportación NUNCA salga en blanco.
+    const ecAct = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+    const horasActAct = ecAct ? (ecAct.horasAsignadas / Math.max(1, actividades.filter(a => a.ecCodigo === ecAct.codigo && !a.esComplementario).length)) : 1.5;
+    const localAct = generarContenidoSesion(act, ecAct, horasActAct);
+    const sRaw = estadoDiarias.sesiones[act.id] || {};
+    const s = {
+      inicio: {
+        apertura: sRaw.inicio?.apertura || localAct.inicio.apertura,
+        encuadre: sRaw.inicio?.encuadre || localAct.inicio.encuadre,
+        organizacion: sRaw.inicio?.organizacion || localAct.inicio.organizacion
+      },
+      desarrollo: {
+        procedimental: sRaw.desarrollo?.procedimental || '',
+        conceptual: sRaw.desarrollo?.conceptual || localAct.desarrollo.conceptual,
+        pasos: sRaw.desarrollo?.pasos || localAct.desarrollo.pasos
+      },
+      cierre: {
+        sintesis: sRaw.cierre?.sintesis || localAct.cierre.sintesis,
+        conexion: sRaw.cierre?.conexion || localAct.cierre.conexion,
+        proximopaso: sRaw.cierre?.proximopaso || localAct.cierre.proximopaso
+      },
+      estrategias: sRaw.estrategias || localAct.estrategias,
+      recursos: sRaw.recursos || localAct.recursos,
+      recursoUrl: sRaw.recursoUrl || '',
+      tiempos: sRaw.tiempos || localAct.tiempos,
+      tipo: sRaw.tipo || localAct.tipo,
+      estrategiaCorta: sRaw.estrategiaCorta || localAct.estrategiaCorta,
+      intencionEducativa: sRaw.intencionEducativa || localAct.intencionEducativa,
+      diversidad: {
+        apoyos: sRaw.diversidad?.apoyos || localAct.diversidad.apoyos,
+        adaptaciones: sRaw.diversidad?.adaptaciones || localAct.diversidad.adaptaciones,
+        estrategiasInclusivas: sRaw.diversidad?.estrategiasInclusivas || localAct.diversidad.estrategiasInclusivas,
+        adaptacionesEspecificas: sRaw.diversidad?.adaptacionesEspecificas || localAct.diversidad.adaptacionesEspecificas
+      },
+      contenidos: {
+        conceptual: sRaw.contenidos?.conceptual || localAct.contenidos.conceptual,
+        procedimental: sRaw.contenidos?.procedimental || localAct.contenidos.procedimental,
+        actitudinal: sRaw.contenidos?.actitudinal || localAct.contenidos.actitudinal
+      }
+    };
     const ti = (s.tiempos && s.tiempos.ini) || 20;
     const td = (s.tiempos && s.tiempos.des) || 55;
     const tc = (s.tiempos && s.tiempos.cie) || 15;
@@ -22639,6 +22680,17 @@ function guardarTodasDiarias() {
 
 
 
+// Elige 1-2 ítems TAL CUAL (sin generar texto nuevo) de una lista de contenidos del RA
+// (Paso 2), rotando el punto de partida por índice para variar entre actividades del mismo EC.
+function _seleccionarContenidosRA(textoRA, indice, cantidad) {
+  const lineas = (textoRA || '').split('\n').map(l => l.replace(/^[-•*\s]+/, '').trim()).filter(Boolean);
+  if (!lineas.length) return '';
+  const idx = Math.max(0, indice || 0);
+  const elegidas = [];
+  for (let i = 0; i < cantidad; i++) elegidas.push(lineas[(idx + i) % lineas.length]);
+  return [...new Set(elegidas)].join('\n');
+}
+
 function generarContenidoSesion(act, ec, horasSesion) {
 
 
@@ -22656,6 +22708,12 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
   const temaCorto = tema.split(':')[1]?.trim() || tema.substring(0, 60);
+
+
+
+  const idxGlobalAct = (planificacion.actividades || []).indexOf(act);
+
+  const idxEnEC = idxGlobalAct >= 0 ? _actIndexInEC(planificacion.actividades || [], idxGlobalAct) : 0;
 
 
 
@@ -22937,9 +22995,9 @@ function generarContenidoSesion(act, ec, horasSesion) {
       adaptacionesEspecificas: 'De requerirse, ajustar instrucciones, tiempos o formato de evaluación según las necesidades particulares del estudiante.'
     },
     contenidos: {
-      conceptual: (planificacion.ra?.contenidosConceptuales || '').split('\n')[0] || `Conceptos clave de ${temaCorto}.`,
-      procedimental: (planificacion.ra?.contenidosProcedimentales || '').split('\n')[0] || `Procedimientos aplicados en ${temaCorto}.`,
-      actitudinal: (planificacion.ra?.contenidosActitudinales || '').split('\n')[0] || `Actitudes profesionales asociadas a ${temaCorto}.`
+      conceptual: _seleccionarContenidosRA(planificacion.ra?.contenidosConceptuales, idxEnEC, 1) || `Conceptos clave de ${temaCorto}.`,
+      procedimental: _seleccionarContenidosRA(planificacion.ra?.contenidosProcedimentales, idxEnEC, 1) || `Procedimientos aplicados en ${temaCorto}.`,
+      actitudinal: _seleccionarContenidosRA(planificacion.ra?.contenidosActitudinales, idxEnEC, 1) || `Actitudes profesionales asociadas a ${temaCorto}.`
     }
 
   };
@@ -37049,44 +37107,45 @@ function _guardarPromptIADesdeEditor(key) {
 
 // ── PROMPTS POR DEFECTO (templates con {{variables}}) ────────────
 
-const _DEFAULT_PROMPT_SESION = `Eres un planificador educativo experto en educación técnico profesional de República Dominicana. Genera una sesión de clase DETALLADA y COMPLETA para:
+const _DEFAULT_PROMPT_SESION = `Eres un docente experto en educación técnico profesional de República Dominicana. Escribe el GUION REAL de una sesión de clase, lista para impartir tal cual (no una descripción abstracta), para:
 
 Módulo: {{moduloFormativo}} | {{familiaProfesional}}
 Actividad: {{actividad}}
 EC: {{ecEnunciado}} (Bloom: {{nivelBloom}})
 Duración total: {{minTotal}} minutos (Inicio: {{minInicio}}min, Desarrollo: {{minDesarrollo}}min, Cierre: {{minCierre}}min)
-Contenidos generales del Resultado de Aprendizaje (para contextualizar, NO copiar tal cual):
+Listas de Contenidos del Resultado de Aprendizaje (Paso 2 -- para los campos contenidoConceptual/contenidoProcedimental/contenidoActitudinal, NO inventes contenido nuevo: elige textualmente 1 o 2 ítems de estas mismas listas):
 - Conceptuales: {{contenidosConceptualesRA}}
 - Procedimentales: {{contenidosProcedimentalesRA}}
 - Actitudinales: {{contenidosActitudinalesRA}}
 
 INSTRUCCIONES IMPORTANTES:
-- Cada campo de texto largo debe tener contenido EXTENSO y DETALLADO (mínimo 3-5 oraciones).
-- No escribas respuestas cortas de una línea en los campos largos. Desarrolla cada sección con profundidad.
-- Incluye instrucciones específicas, ejemplos concretos, preguntas guía y actividades paso a paso.
+- Escribe como el guion real de la clase: incluye frases textuales que el docente puede decir (entre comillas), preguntas concretas para los estudiantes, y acciones específicas -- no descripciones abstractas ni genéricas.
+- Cada campo largo debe tener contenido EXTENSO (mínimo 4-6 líneas o varios puntos con viñetas •).
 - Adapta todo al contexto técnico profesional del módulo indicado.
-- NO asumas ni inventes estudiantes con condiciones específicas (discapacidad, TDAH, etc.) para "atención a la diversidad": da recomendaciones GENÉRICAS de buenas prácticas de inclusión aplicables a cualquier grupo.
+- NO asumas ni inventes estudiantes reales con condiciones específicas: en "adaptacionesEspecificas" describe 1-2 escenarios HIPOTÉTICOS y genéricos (ej. "Los estudiantes que presenten dificultad visual, se les facilitará...") sin nombrar a nadie ni asumir que existen en este grupo real.
+- Para contenidoConceptual, contenidoProcedimental y contenidoActitudinal: NUNCA generes texto nuevo. Copia TEXTUALMENTE 1 o 2 ítems (no más) de las listas de arriba que apliquen más a esta actividad específica.
 
 RESPONDE SOLO JSON válido, sin markdown, sin texto extra. USA EXACTAMENTE estas 17 claves:
 
 {
-  "apertura": "Escribe una pregunta motivadora abierta que active los conocimientos previos de los estudiantes, seguida de una dinámica de inicio (lluvia de ideas, video corto, caso real, demostración). Describe paso a paso cómo iniciar la clase durante {{minInicio}} minutos. Incluye al menos 2-3 preguntas generadoras y una actividad de enganche.",
-  "encuadre": "Redacta el objetivo claro de la sesión vinculado al EC. Explica los criterios de evaluación que se usarán. Describe qué competencias se desarrollarán y cómo se conecta con sesiones anteriores y posteriores. Incluye los indicadores de logro esperados.",
-  "organizacion": "Describe detalladamente cómo se organizarán los estudiantes (individual, parejas, equipos), qué materiales y recursos necesitarán, cómo se distribuirá el espacio del aula/taller/laboratorio, y qué roles tendrá cada participante si es trabajo grupal.",
-  "pasos": "Los pasos numerados del momento de desarrollo ({{minDesarrollo}} min), en formato 'Paso 1 – Título breve: descripción detallada.' separados por doble salto de línea. Incluye entre 3 y 5 pasos: explicación del docente con ejemplos concretos, actividad práctica guiada, actividad práctica autónoma, y momentos de retroalimentación, cada uno con tiempo estimado e instrucciones claras.",
-  "conceptual": "Incluye una reflexión profunda sobre la importancia del tema en el campo profesional. Presenta un caso real o situación laboral donde se aplique lo aprendido. Conecta la teoría con la práctica profesional y explica por qué estas competencias son esenciales en el mundo laboral.",
-  "sintesis": "Describe el cierre de la sesión ({{minCierre}} min): recapitulación de los puntos clave, evaluación formativa (preguntas de verificación, ticket de salida, rúbrica rápida), autoevaluación del estudiante, asignación de tarea o preparación para la próxima sesión. Incluye preguntas de metacognición.",
+  "apertura": "Guion de apertura ({{minInicio}} min en total junto con encuadre y organización): un saludo o frase motivadora textual entre comillas, seguido de una 'frase del día' o dato curioso relacionado al tema con una breve pregunta de reflexión para los estudiantes, y una dinámica de enganche breve (pase de lista, retroalimentación de la clase anterior, etc.).",
+  "encuadre": "El propósito de la sesión en 1-2 oraciones que el docente puede decir textualmente a los estudiantes, vinculado al EC y a cómo se conecta con la clase anterior y la siguiente.",
+  "organizacion": "Instrucciones concretas: cómo se forman los equipos/parejas o si es individual, qué roles se asignan (ej. investigador, redactor, expositor) para favorecer la inclusión, y qué materiales debe tener listos cada quien antes de empezar.",
+  "pasos": "Entre 4 y 6 pasos numerados del desarrollo ({{minDesarrollo}} min repartidos entre los pasos), en formato 'Paso N – Título breve (X min): descripción detallada de qué instrucción da el docente, qué produce el estudiante y cómo se apoya la inclusión cuando aplique.' separados por doble salto de línea.",
+  "conceptual": "Un breve momento de análisis o comparación técnica dentro del desarrollo (ej. comparar casos, aplicar un concepto a una situación real) que conecte la actividad con su relevancia profesional.",
+  "sintesis": "El cierre de la sesión ({{minCierre}} min): una pregunta reflexiva textual entre comillas para los estudiantes, y cómo el docente sintetiza los aprendizajes clave.",
+  "conexion": "Cómo se conecta lo aprendido con la práctica profesional real o con la siguiente sesión (ej. 'Se presenta el tema del día siguiente: ...') y la despedida.",
   "estrategias": "Enumera y describe 3-4 estrategias didácticas utilizadas en la sesión. Para cada una, explica: qué es, cómo se aplica en esta sesión específica, y por qué es efectiva para el nivel de Bloom '{{nivelBloom}}'. Ejemplos: ABP, aprendizaje cooperativo, modelamiento, aula invertida, gamificación, think-pair-share.",
   "tipo": "Modalidad de trabajo de la actividad: responde EXACTAMENTE una de estas 3 opciones: 'Individual', 'Por Equipo', 'Por Equipos (en pares)'.",
-  "estrategiaCorta": "Una etiqueta muy corta (2 a 5 palabras) que resuma la estrategia principal de la sesión, ej. 'Aprendizaje Basado en Proyectos'.",
-  "intencionEducativa": "Un párrafo breve (2-3 oraciones) que explique el propósito formativo de esta actividad dentro del EC.",
-  "apoyosPosibles": "1-2 oraciones con apoyos genéricos de buena práctica que el docente puede ofrecer durante esta actividad (ej. materiales de refuerzo, tutoría entre pares).",
-  "adaptaciones": "1-2 oraciones con adaptaciones metodológicas genéricas aplicables a esta actividad (ej. tiempos flexibles, instrucciones en varios formatos).",
-  "estrategiasInclusivas": "1-2 oraciones con estrategias de inclusión genéricas recomendadas para esta actividad (ej. agrupamientos heterogéneos, retroalimentación individualizada).",
-  "adaptacionesEspecificas": "1-2 oraciones con ejemplos genéricos de ajustes razonables que se podrían aplicar si algún estudiante lo necesitara, sin asumir un caso real.",
-  "contenidoConceptual": "1-2 oraciones: el recorte específico de contenido CONCEPTUAL que esta actividad en particular trabaja, basado en los contenidos generales del RA arriba.",
-  "contenidoProcedimental": "1-2 oraciones: el recorte específico de contenido PROCEDIMENTAL que esta actividad en particular trabaja, basado en los contenidos generales del RA arriba.",
-  "contenidoActitudinal": "1-2 oraciones: el recorte específico de contenido ACTITUDINAL que esta actividad en particular trabaja, basado en los contenidos generales del RA arriba."
+  "estrategiaCorta": "Una etiqueta muy corta (2 a 5 palabras) que resuma la estrategia principal de la sesión, ej. 'Investigación/socialización'.",
+  "intencionEducativa": "Un párrafo de 3-5 oraciones que explique el propósito formativo de la actividad, incluyendo explícitamente cómo se garantiza la participación inclusiva y equitativa de todos los estudiantes.",
+  "apoyosPosibles": "2-3 apoyos genéricos concretos (con viñetas •) que el docente puede ofrecer durante esta actividad.",
+  "adaptaciones": "2-3 adaptaciones metodológicas genéricas concretas (con viñetas •) aplicables a esta actividad.",
+  "estrategiasInclusivas": "2-3 estrategias de inclusión genéricas concretas (con viñetas •) recomendadas para esta actividad.",
+  "adaptacionesEspecificas": "1-2 escenarios HIPOTÉTICOS de ajustes razonables (ej. 'Los estudiantes que presenten dificultad visual, se les facilitará uso de un lector de pantalla y se les asignará el rol de...'), sin asumir estudiantes reales de este grupo.",
+  "contenidoConceptual": "Copia TEXTUALMENTE 1 o 2 ítems (no más) de la lista de Contenidos Conceptuales de arriba que apliquen más a esta actividad. NO inventes contenido nuevo.",
+  "contenidoProcedimental": "Copia TEXTUALMENTE 1 o 2 ítems (no más) de la lista de Contenidos Procedimentales de arriba que apliquen más a esta actividad. NO inventes contenido nuevo.",
+  "contenidoActitudinal": "Copia TEXTUALMENTE 1 o 2 ítems (no más) de la lista de Contenidos Actitudinales de arriba que apliquen más a esta actividad. NO inventes contenido nuevo."
 }`;
 
 const _DEFAULT_PROMPT_BASE = `Asume el rol de docente experto en educación técnico profesional de República Dominicana.
