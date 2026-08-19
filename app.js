@@ -5141,9 +5141,14 @@ async function _exportarConPlantillaCentro() {
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
     const needsMerge = actsEC.length > 1;
+    const horasActEC = ec.horasAsignadas ? (ec.horasAsignadas / Math.max(1, actsEC.length)) : 1.5;
     actsEC.forEach((a, i) => {
       const ecText = `${ec.codigo}\n${ec.enunciado || ''}`;
       const ecNivel = nivelLabelTpl[ec.nivel] || ec.nivel || ec.nivelBloom || '';
+      // Si la actividad nunca se generó manualmente en el Paso 5 (Planificación Diaria),
+      // la metodología activa se rellena con la generación local para que nunca quede
+      // en blanco en la exportación (mismo criterio que _exportarDiariaConPlantillaCentro).
+      const metodologia = estadoDiarias.sesiones[a.id]?.estrategiaCorta || generarContenidoSesion(a, ec, horasActEC).estrategiaCorta || '';
       actividades.push({
         ec_codigo: ec.codigo || '',
         ec_enunciado: i === 0 ? (needsMerge ? '__VSTART__' + ecText : ecText) : '__VMERGE__',
@@ -5152,7 +5157,8 @@ async function _exportarConPlantillaCentro() {
         act_enunciado: `${_getActNumero(ec.codigo, i)}: ${a.enunciado || ''}`,
         act_fecha: a.fechaStr || (a.fecha ? String(a.fecha).split('T')[0] : '') || '',
         act_instrumento: a.instrumento?.tipoLabel || _getInstrLabel(a.instrumento?.tipo) || '',
-        act_metodologia: estadoDiarias.sesiones[a.id]?.estrategiaCorta || '',
+        act_metodologia: metodologia,
+        metodologia_activa: metodologia,
         contenidos_asociados: a.contenidos || ''
       });
     });
