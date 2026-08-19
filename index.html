@@ -2972,6 +2972,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.88<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: un dispositivo nuevo podía no descargar tus datos reales</div>
+              <ul class="about-ver-items">
+                <li>Al iniciar sesión por primera vez en un dispositivo (ej. el celular después de la PC), si ese dispositivo tenía algún dato local suelto, el sistema asumía por error que era una cuenta nueva y nunca descargaba tus datos reales de la nube -- mostrando, por ejemplo, 0 planificaciones en vez de las que sí tienes guardadas.</li>
+                <li>Ahora, antes de decidir, se confirma si la cuenta ya tiene datos guardados en la nube; si los tiene, siempre se descargan desde ahí sin importar qué haya localmente en ese dispositivo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#455A64;">v16.87<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6247,9 +6262,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.87"></script>
+  <script src="app.js?v=16.88"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.87"></script>
+  <script src="auth.js?v=16.88"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

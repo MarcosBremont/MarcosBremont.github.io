@@ -296,6 +296,22 @@ async function _esAdminCentro(email) {
   } catch { return false; }
 }
 
+/** true si la cuenta ya tiene AL MENOS un doc guardado en users/{uid}/data --
+ *  o sea, si ya sincronizó datos reales a la nube alguna vez, sin importar
+ *  desde qué dispositivo. Se usa para decidir si un dispositivo "nuevo" (sin
+ *  el flag de migración local) debe DESCARGAR los datos reales en vez de
+ *  asumir que es una cuenta nueva y subir lo que tenga en local (que puede
+ *  ser solo un estado vacío sembrado antes de iniciar sesión). */
+async function _cuentaTieneDatosEnNube(uid) {
+  try {
+    const snap = await db.collection('users').doc(uid).collection('data').limit(1).get();
+    return !snap.empty;
+  } catch (e) {
+    console.warn('No se pudo verificar si la cuenta ya tiene datos en la nube:', e);
+    return false;
+  }
+}
+
 // ── Al iniciar sesión: carga datos de Firestore ──────────────────
 async function _onLogin(user) {
   _actualizarHeaderUsuario(user);
@@ -342,8 +358,16 @@ async function _onLogin(user) {
   const yaMigrado = localStorage.getItem(MIGRATION_FLAG);
   const tieneDatosLocales = FIREBASE_STORES.some(({ key }) => localStorage.getItem(key) !== null);
 
-  if (!yaMigrado && tieneDatosLocales) {
+  // OJO: "tieneDatosLocales" solo mira ESTE dispositivo -- en un dispositivo
+  // nuevo (o con localStorage limpio) para una cuenta que YA tiene datos
+  // reales en la nube, antes se asumía erróneamente "cuenta nueva, sube lo
+  // local" y nunca se descargaban los datos reales (el dispositivo se quedaba
+  // con lo que tuviera localmente, aunque estuviera vacío). Ahora se confirma
+  // primero si la cuenta ya tiene algo guardado en la nube -- si lo tiene,
+  // siempre se descarga desde ahí, sin importar qué haya en este dispositivo.
+  if (!yaMigrado && tieneDatosLocales && !(await _cuentaTieneDatosEnNube(user.uid))) {
     await _migrarDatosLocales(user.uid);
+    localStorage.setItem(MIGRATION_FLAG, '1');
   } else {
     // Cargar datos desde Firestore → localStorage
     await _cargarDesdeFirestore(user.uid);
