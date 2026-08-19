@@ -26345,17 +26345,19 @@ function _esperarConCountdown(ms, mensajeBase) {
   });
 }
 
-// Modelos de OpenRouter a intentar en orden (modelos gratuitos). "openrouter/free"
-// es un auto-router que OpenRouter mantiene apuntando a modelos gratis vigentes --
-// va primero para no depender de una lista fija que se desactualiza cada vez que
-// un proveedor retira/renombra un modelo (confirmado con "Probar IA": google/gemma-3-4b-it:free
-// dejó de ser gratis). El resto son modelos gratis confirmados vigentes (ago. 2026)
-// como respaldo si el auto-router falla.
+// Modelos de OpenRouter a intentar en orden (modelos gratuitos). Los modelos
+// concretos van primero porque dan resultados más predecibles -- "openrouter/free"
+// (el auto-router que OpenRouter mantiene apuntando a un modelo gratis vigente)
+// puede responder JSON válido pero de baja calidad si le toca un modelo débil
+// (confirmado con "Probar IA": devolvió el texto de ejemplo del prompt en vez de
+// generar un chiste real). Va último, como red de seguridad si los modelos
+// concretos de abajo llegaran a desactualizarse todos a la vez.
 const MODELOS_OPENROUTER = [
-  'openrouter/free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
   'openai/gpt-oss-20b:free',
-  'google/gemma-4-26b-a4b-it:free'
+  'google/gemma-4-26b-a4b-it:free',
+  'openrouter/free'
 ];
 
 /** Modelos de Groq a intentar en orden */
