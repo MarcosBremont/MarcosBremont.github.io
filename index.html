@@ -2972,6 +2972,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.84<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: Gemini fallaba siempre (modelo retirado por Google)</div>
+              <ul class="about-ver-items">
+                <li>"Probar IA" reveló que Gemini usaba <code>gemini-2.0-flash</code>, un modelo que Google ya retiró -- se actualizó a <code>gemini-3.6-flash</code> en los tres lugares del sistema que lo usaban.</li>
+                <li>Groq: el mensaje de error ya no dice siempre "agotaron su cuota" -- ahora solo lo dice cuando de verdad fue por límite de uso; si falla por otra razón (ej. clave inválida), muestra el motivo real.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00897B;">v16.83<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6188,9 +6203,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.83"></script>
+  <script src="app.js?v=16.84"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.83"></script>
+  <script src="auth.js?v=16.84"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

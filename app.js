@@ -18948,9 +18948,12 @@ async function _procesarOcrAsistencia() {
       return { resp: r, errJson };
     };
 
-    // Probar primero gemini-2.0-flash, luego gemini-1.5-flash como fallback
-    let { resp, errJson } = await _llamarModelo('gemini-2.0-flash');
-    if (!resp.ok && resp.status === 429) {
+    // Probar primero gemini-3.6-flash, luego gemini-1.5-flash como fallback.
+    // También reintenta con el alterno si el modelo fue retirado (404), no solo
+    // si está sin cuota (429) -- Google retira modelos ocasionalmente y antes
+    // eso rompía esta función sin caer al modelo alterno.
+    let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
+    if (!resp.ok && (resp.status === 429 || resp.status === 404)) {
       if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Intentando con modelo alternativo...</div>';
       const fallback = await _llamarModelo('gemini-1.5-flash');
       resp = fallback.resp;
@@ -23635,7 +23638,7 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
     try {
       mostrarToast('Generando con Gemini...', 'info');
       var gemPrompt = sysMsg + '\n\n' + prompt + (prefill ? '\n\nRESPUESTA (empieza exactamente con "' + prefill + '"):\n' + prefill : '');
-      var gemR = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + getGeminiKey(), {
+      var gemR = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + getGeminiKey(), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: gemPrompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens } })
       });
@@ -26009,7 +26012,10 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   const apiKey = getGeminiKey();
   if (!apiKey) throw new Error('Sin clave de Gemini');
 
-  const modelo = 'gemini-2.0-flash';
+  // gemini-2.0-flash fue retirado por Google (confirmado con "Probar IA": error
+  // 404 "This model ... is no longer available. Please update your code to use
+  // models/gemini-3.6-flash").
+  const modelo = 'gemini-3.6-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
   const instruccion = 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.\n\n';
@@ -26396,6 +26402,7 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
   const groqKey = getGroqKey();
   let ultimoError = '';
   let algunoDisponible = false;
+  let huboRateLimitReal = false;
   let maxRetryDelay = 0;
 
   for (let m = 0; m < MODELOS_GROQ.length; m++) {
@@ -26409,6 +26416,7 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
       continue;
     }
     if (resultado.esRateLimit) {
+      huboRateLimitReal = true;
       if ((resultado.error || '').includes('TPD') || (resultado.error || '').includes('tokens per day')) {
         throw new Error('rate_limit: Cuota diaria de Groq agotada (100k tokens/día). Se reestablece mañana.');
       }
@@ -26430,7 +26438,14 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
   if (!algunoDisponible) {
     throw new Error('Groq: todos los modelos no están disponibles. Verifica tu cuenta en console.groq.com');
   }
-  throw new Error('rate_limit: Todos los modelos de Groq agotaron su cuota. Usando generación local.');
+  // Antes este mensaje SIEMPRE decía "agotaron su cuota" sin importar la causa
+  // real -- si el fallo no fue por rate limit (ej. clave inválida, error del
+  // servidor), mostraba un diagnóstico falso. Ahora solo dice "cuota" cuando
+  // de verdad hubo un 429/413 confirmado; si no, muestra el error real.
+  if (huboRateLimitReal) {
+    throw new Error('rate_limit: Todos los modelos de Groq agotaron su cuota. Usando generación local.');
+  }
+  throw new Error('Groq: error al conectar -- ' + ultimoError);
 }
 
 /** Genera detalle (instrumento + sesión) para UNA sola actividad */
@@ -26991,6 +27006,10 @@ generarPlanificacion = async function () {
           }
         } else if (!openrouterKey) {
           throw errGroq;
+        } else {
+          // Falló por algo que NO es cuota (clave inválida, error del servidor, etc.)
+          // -- avisar con el motivo real en vez de quedarse en silencio.
+          mostrarToast('⚠️ Groq falló (no fue por cuota). Cambiando a otro proveedor...', 'warning');
         }
       }
     }
