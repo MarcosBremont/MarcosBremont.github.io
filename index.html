@@ -2972,6 +2972,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v16.85<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: los 3 proveedores de IA fallaban (modelos desactualizados)</div>
+              <ul class="about-ver-items">
+                <li>Groq: <code>llama-3.3-70b-versatile</code> y <code>llama-3.1-8b-instant</code> fueron descontinuados por Groq -- reemplazados por <code>openai/gpt-oss-120b</code> y <code>openai/gpt-oss-20b</code>.</li>
+                <li>OpenRouter: la lista de modelos gratis estaba desactualizada (ej. <code>google/gemma-3-4b-it:free</code> dejó de ser gratis) -- ahora usa primero <code>openrouter/free</code>, el enrutador automático que OpenRouter mantiene siempre apuntando a modelos gratis vigentes.</li>
+                <li>Gemini: <code>gemini-3.6-flash</code> "piensa" antes de responder por defecto, gastando el límite de tokens de salida en razonamiento invisible y dejando el JSON vacío/incompleto -- se desactivó ese "thinking" para esta tarea.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v16.84<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6203,9 +6219,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.84"></script>
+  <script src="app.js?v=16.85"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.84"></script>
+  <script src="auth.js?v=16.85"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

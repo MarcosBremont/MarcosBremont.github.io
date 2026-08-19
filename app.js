@@ -18936,7 +18936,12 @@ async function _procesarOcrAsistencia() {
     const PROMPT_OCR = 'En esta imagen hay una hoja de un libro de asistencia físico. Hay una columna con el símbolo "%" o el encabezado "%". Extrae ÚNICAMENTE los valores numéricos que aparecen en esa columna, en el orden exacto de arriba hacia abajo, uno por línea. Responde SOLO con los números, uno por línea. Sin texto, sin encabezados, sin guiones, sin espacios extras. Si una celda está vacía o ilegible escribe 0.';
     const bodyOcr = modelo => ({
       contents: [{ parts: [{ text: PROMPT_OCR }, { inline_data: { mime_type: file.type, data: base64 } }] }],
-      generationConfig: { temperature: 0.05, maxOutputTokens: 512 }
+      // thinkingConfig solo para gemini-3.x+ -- el "thinking" por defecto consume
+      // maxOutputTokens antes de la respuesta visible, dejando salidas vacías con
+      // presupuestos de tokens chicos como este. gemini-1.5-flash no lo soporta.
+      generationConfig: modelo.startsWith('gemini-3')
+        ? { temperature: 0.05, maxOutputTokens: 512, thinkingConfig: { thinkingLevel: 'minimal' } }
+        : { temperature: 0.05, maxOutputTokens: 512 }
     });
 
     // Intenta con el modelo indicado; devuelve { resp, errJson } si falla con 429
@@ -23640,7 +23645,7 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
       var gemPrompt = sysMsg + '\n\n' + prompt + (prefill ? '\n\nRESPUESTA (empieza exactamente con "' + prefill + '"):\n' + prefill : '');
       var gemR = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + getGeminiKey(), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: gemPrompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens } })
+        body: JSON.stringify({ contents: [{ parts: [{ text: gemPrompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens, thinkingConfig: { thinkingLevel: 'minimal' } } })
       });
       if (gemR.ok) {
         var gemD = await gemR.json();
@@ -26025,7 +26030,13 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
     ],
     generationConfig: {
       temperature: 0.40,
-      maxOutputTokens: maxTokens
+      maxOutputTokens: maxTokens,
+      // gemini-3.x "piensa" antes de responder por defecto, gastando parte de
+      // maxOutputTokens en tokens de razonamiento invisibles -- eso dejaba el
+      // JSON de salida vacío/incompleto (confirmado con "Probar IA": "JSON
+      // inválido en respuesta"). 'minimal' evita ese gasto para esta tarea,
+      // que no necesita razonamiento profundo.
+      thinkingConfig: { thinkingLevel: 'minimal' }
     }
   };
 
@@ -26334,25 +26345,26 @@ function _esperarConCountdown(ms, mensajeBase) {
   });
 }
 
-/** Modelos de OpenRouter a intentar en orden (modelos gratuitos) */
+// Modelos de OpenRouter a intentar en orden (modelos gratuitos). "openrouter/free"
+// es un auto-router que OpenRouter mantiene apuntando a modelos gratis vigentes --
+// va primero para no depender de una lista fija que se desactualiza cada vez que
+// un proveedor retira/renombra un modelo (confirmado con "Probar IA": google/gemma-3-4b-it:free
+// dejó de ser gratis). El resto son modelos gratis confirmados vigentes (ago. 2026)
+// como respaldo si el auto-router falla.
 const MODELOS_OPENROUTER = [
-  'meta-llama/llama-3.3-70b-instruct:free',   // Llama 70B — mejor calidad JSON
-  'openai/gpt-oss-20b:free',                   // OpenAI OSS 20B
-  'openai/gpt-oss-120b:free',                  // OpenAI OSS 120B
-  'qwen/qwen3-coder:free',                     // Qwen3 coder
-  'nousresearch/hermes-3-llama-3.1-405b:free', // Hermes 405B
-  'meta-llama/llama-3.2-3b-instruct:free',     // Llama 3B — rápido
-  'nvidia/nemotron-nano-9b-v2:free',           // Nemotron 9B
-  'stepfun/step-3.5-flash:free',               // Step Flash
-  'z-ai/glm-4.5-air:free',
-  'google/gemma-3-27b-it:free',
-  'google/gemma-3-4b-it:free'
+  'openrouter/free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'openai/gpt-oss-20b:free',
+  'google/gemma-4-26b-a4b-it:free'
 ];
 
 /** Modelos de Groq a intentar en orden */
+// llama-3.3-70b-versatile y llama-3.1-8b-instant fueron descontinuados por Groq
+// (confirmado con "Probar IA": error 404 "The model does not exist"). Reemplazados
+// por los modelos de propósito general que Groq recomienda actualmente.
 const MODELOS_GROQ = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant'
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b'
 ];
 
 /** Llama a la API de Groq con un modelo especifico */
