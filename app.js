@@ -5193,7 +5193,7 @@ async function _exportarConPlantillaCentro() {
     // con el contraste hacia los Criterios de Evaluación (ver _construirMatrizEcCriterios)
     matriz_ec: _construirMatrizEcCriterios(ecs, ra).map(fila => ({
       ec: fila.ecCodigo,
-      contenidos_procedimentales: fila.ecEnunciado,
+      ec_enunciado: fila.ecEnunciado,
       contraste: fila.contrasteTexto,
       criterios_evaluacion: fila.criteriosTexto
     }))
@@ -23829,11 +23829,11 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
         mostrarToast('Generando con Groq (' + gModelo + ')...', 'info');
         var gMsgs = [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }];
         if (prefill) gMsgs.push({ role: 'assistant', content: prefill });
-        var gR = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        var gR = await _fetchConTimeout('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getGroqKey() },
           body: JSON.stringify({ model: gModelo, messages: gMsgs, temperature: 0.65, max_tokens: maxTokens })
-        });
+        }, 60000);
         if (gR.ok) {
           var gD = await gR.json();
           var gTxt = gD && gD.choices && gD.choices[0] && gD.choices[0].message && gD.choices[0].message.content;
@@ -23841,11 +23841,11 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
           if (gH) return gH;
         } else if (gR.status === 413 && prefill) {
           /* 413 puede ser que el modelo no acepta prefill — reintentar sin el */
-          var gR2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          var gR2 = await _fetchConTimeout('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getGroqKey() },
             body: JSON.stringify({ model: gModelo, messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }], temperature: 0.65, max_tokens: maxTokens })
-          });
+          }, 60000);
           if (gR2.ok) {
             var gD2 = await gR2.json();
             var gTxt2 = gD2 && gD2.choices && gD2.choices[0] && gD2.choices[0].message && gD2.choices[0].message.content;
@@ -23860,10 +23860,10 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
     try {
       mostrarToast('Generando con Gemini...', 'info');
       var gemPrompt = sysMsg + '\n\n' + prompt + (prefill ? '\n\nRESPUESTA (empieza exactamente con "' + prefill + '"):\n' + prefill : '');
-      var gemR = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + getGeminiKey(), {
+      var gemR = await _fetchConTimeout('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + getGeminiKey(), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: gemPrompt }] }], generationConfig: { temperature: 0.65, maxOutputTokens: maxTokens, thinkingConfig: { thinkingLevel: 'minimal' } } })
-      });
+      }, 30000);
       if (gemR.ok) {
         var gemD = await gemR.json();
         var gemTxt = gemD && gemD.candidates && gemD.candidates[0] && gemD.candidates[0].content && gemD.candidates[0].content.parts && gemD.candidates[0].content.parts[0] && gemD.candidates[0].content.parts[0].text;
@@ -23879,10 +23879,10 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
         mostrarToast('Generando con OpenRouter (' + orMs[oi] + ')...', 'info');
         var orMsgs = [{ role: 'system', content: sysMsg }, { role: 'user', content: prompt }];
         if (prefill) orMsgs.push({ role: 'assistant', content: prefill });
-        var orR = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        var orR = await _fetchConTimeout('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getOpenRouterKey() },
           body: JSON.stringify({ model: orMs[oi], messages: orMsgs, temperature: 0.65, max_tokens: maxTokens })
-        });
+        }, 60000);
         if (orR.ok) {
           var orD = await orR.json();
           var orTxt = orD && orD.choices && orD.choices[0] && orD.choices[0].message && orD.choices[0].message.content;
@@ -26663,7 +26663,7 @@ const MODELOS_GROQ = [
 ];
 
 /** Llama a la API de Groq con un modelo especifico */
-async function _llamarModeloGroq(modelo, groqKey, prompt, maxTokens = 8192) {
+async function _llamarModeloGroq(modelo, groqKey, prompt, maxTokens = 8192, timeoutMs = 60000) {
   const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   const body = {
     model: modelo,
@@ -26675,14 +26675,29 @@ async function _llamarModeloGroq(modelo, groqKey, prompt, maxTokens = 8192) {
     max_tokens: maxTokens
   };
 
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${groqKey}`
-    },
-    body: JSON.stringify(body)
-  });
+  // Sin esto, si Groq se quedaba colgado (o la red fallaba a medias) el fetch nunca
+  // resolvía ni rechazaba -- el boton que llama a esta funcion quedaba deshabilitado
+  // ("Generando...") para siempre, sin toast de error ni forma de reintentar.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let resp;
+  try {
+    resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') return { ok: false, esRateLimit: false, error: `Groq (${modelo}) timeout (${Math.round(timeoutMs / 1000)}s)` };
+    return { ok: false, esRateLimit: false, error: `Groq (${modelo}) error de red: ${e.message}` };
+  }
+  clearTimeout(timeoutId);
 
   if (resp.ok) {
     const data = await resp.json();

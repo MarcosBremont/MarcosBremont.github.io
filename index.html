@@ -2972,6 +2972,35 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#455A64;">v16.93<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: placeholder mal nombrado en la Matriz EC vs Criterios de Evaluación</div>
+              <ul class="about-ver-items">
+                <li>En la tabla {#matriz_ec}...{/matriz_ec} de la plantilla por RA, el dato del Elemento de Capacidad se exponía con el nombre {contenidos_procedimentales} -- que en realidad es el placeholder de otro dato completamente distinto (los Contenidos Procedimentales generales del RA, Paso 2). Ahora tiene su propio nombre correcto: {ec_enunciado}.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v16.92<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: botones de IA que se quedaban "Generando..." para siempre</div>
+              <ul class="about-ver-items">
+                <li>Las llamadas a Groq no tenían límite de tiempo: si la conexión se quedaba colgada, el botón (ej. "Generar Guía de Estudio") se quedaba deshabilitado y mostrando "Generando..." para siempre, sin ningún mensaje de error ni forma de reintentar.</li>
+                <li>Ahora todas las llamadas a IA (Groq, Gemini, OpenRouter) tienen un límite de tiempo de conexión: si una se cuelga, se cancela sola, se muestra un error claro y el botón vuelve a la normalidad.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v16.91<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6309,9 +6338,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=16.91"></script>
+  <script src="app.js?v=16.93"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=16.91"></script>
+  <script src="auth.js?v=16.93"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
