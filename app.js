@@ -4968,6 +4968,130 @@ function imprimirPDF() {
 
 
 
+// ── Plantillas Word de centros: almacenamiento en chunks ────────────────
+// Un .docx de varias paginas en base64 facilmente supera 1 MiB, el limite
+// por documento de Firestore -- guardar plantillaXBase64 directo en el
+// documento del centro (como se hacia antes) fallaba al guardar centros con
+// plantillas grandes ("The value of property... is longer than 1048487
+// bytes"). Mismo patron ya usado para el CV del Portafolio Docente
+// (_guardarPortafolioCV/cargarPortafolioCV): se parte el base64 en
+// documentos de ~900 KB dentro de una subcoleccion, con un doc de metadatos
+// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto'.
+const PLANTILLA_CENTRO_CHUNK_CHARS = 900000;
+const PLANTILLA_CENTRO_CAMPOS = {
+  planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
+  diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
+  psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' },
+  impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' }
+};
+
+function _plantillasCentroChunksRef(centroId) {
+  return db.collection(CENTROS_COLLECTION).doc(centroId).collection('plantillas_chunks');
+}
+
+/** Guarda una plantilla partida en chunks, y limpia el campo viejo (blob
+ *  unico en el documento del centro) si existia -- para que ese documento
+ *  vuelva a estar bajo el limite de 1 MiB. Tambien deja un flag liviano
+ *  (tienePlantilla_<tipo>) en el documento del centro para poder seguir
+ *  encontrando "algun centro con esta plantilla" sin traer el base64 completo
+ *  (usado por el fallback de superadmin sin centro asignado). */
+async function _guardarPlantillaCentroChunked(centroId, tipo, base64, nombre) {
+  const base = _plantillasCentroChunksRef(centroId);
+  const totalChunks = Math.max(1, Math.ceil(base64.length / PLANTILLA_CENTRO_CHUNK_CHARS));
+
+  let prevChunks = 0;
+  try {
+    const metaOld = await base.doc(tipo + '_meta').get();
+    if (metaOld.exists) prevChunks = metaOld.data().totalChunks || 0;
+  } catch {}
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = base64.slice(i * PLANTILLA_CENTRO_CHUNK_CHARS, (i + 1) * PLANTILLA_CENTRO_CHUNK_CHARS);
+    await base.doc(`${tipo}_chunk_${i}`).set({ payload: chunk });
+  }
+  for (let i = totalChunks; i < prevChunks; i++) {
+    await base.doc(`${tipo}_chunk_${i}`).delete().catch(() => {});
+  }
+  await base.doc(tipo + '_meta').set({ nombre: nombre || '', totalChunks, actualizadoEn: new Date().toISOString() });
+
+  const cfg = PLANTILLA_CENTRO_CAMPOS[tipo];
+  const flagUpdate = { [`tienePlantilla_${tipo}`]: true };
+  if (cfg) {
+    flagUpdate[cfg.base64] = firebase.firestore.FieldValue.delete();
+    flagUpdate[cfg.nombre] = nombre || '';
+  }
+  await db.collection(CENTROS_COLLECTION).doc(centroId).update(flagUpdate).catch(() => {});
+}
+
+/** Carga una plantilla guardada en chunks; si el centro nunca re-subio su
+ *  plantilla desde antes de este cambio, cae al campo viejo plantillaXBase64
+ *  del documento del centro (formato legado, sin migracion forzada). */
+async function _cargarPlantillaCentroChunked(centroId, tipo) {
+  try {
+    const metaDoc = await _plantillasCentroChunksRef(centroId).doc(tipo + '_meta').get();
+    if (metaDoc.exists) {
+      const meta = metaDoc.data();
+      let base64 = '';
+      for (let i = 0; i < (meta.totalChunks || 0); i++) {
+        const chunkDoc = await _plantillasCentroChunksRef(centroId).doc(`${tipo}_chunk_${i}`).get();
+        base64 += (chunkDoc.exists && chunkDoc.data().payload) || '';
+      }
+      if (base64) return { base64, nombre: meta.nombre || '' };
+    }
+  } catch (e) {
+    console.warn('_cargarPlantillaCentroChunked:', tipo, e.message);
+  }
+  const cfg = PLANTILLA_CENTRO_CAMPOS[tipo];
+  if (!cfg) return null;
+  try {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (centroDoc.exists) {
+      const c = centroDoc.data();
+      if (c[cfg.base64]) return { base64: c[cfg.base64], nombre: c[cfg.nombre] || '' };
+    }
+  } catch {}
+  return null;
+}
+
+/** true/nombre si el centro tiene esta plantilla (chunked o legado), sin
+ *  traer el base64 completo -- para el indicador "Plantilla cargada" en el
+ *  formulario de Superadmin. centroYaCargado (opcional) evita releer el
+ *  documento del centro si ya se tiene a mano. */
+async function _tienePlantillaCentroChunked(centroId, tipo, centroYaCargado) {
+  try {
+    const metaDoc = await _plantillasCentroChunksRef(centroId).doc(tipo + '_meta').get();
+    if (metaDoc.exists) return { existe: true, nombre: metaDoc.data().nombre || '' };
+  } catch {}
+  const cfg = PLANTILLA_CENTRO_CAMPOS[tipo];
+  if (cfg && centroYaCargado && centroYaCargado[cfg.base64]) {
+    return { existe: true, nombre: centroYaCargado[cfg.nombre] || '' };
+  }
+  return { existe: false, nombre: '' };
+}
+
+/** Elimina una plantilla guardada en chunks (y el campo viejo/flag, por si
+ *  quedaba alguno). */
+async function _eliminarPlantillaCentroChunked(centroId, tipo) {
+  try {
+    const base = _plantillasCentroChunksRef(centroId);
+    const metaDoc = await base.doc(tipo + '_meta').get();
+    const totalChunks = metaDoc.exists ? (metaDoc.data().totalChunks || 0) : 0;
+    for (let i = 0; i < totalChunks; i++) {
+      await base.doc(`${tipo}_chunk_${i}`).delete().catch(() => {});
+    }
+    await base.doc(tipo + '_meta').delete().catch(() => {});
+  } catch (e) {
+    console.warn('_eliminarPlantillaCentroChunked:', tipo, e.message);
+  }
+  const cfg = PLANTILLA_CENTRO_CAMPOS[tipo];
+  const flagUpdate = { [`tienePlantilla_${tipo}`]: firebase.firestore.FieldValue.delete() };
+  if (cfg) {
+    flagUpdate[cfg.base64] = firebase.firestore.FieldValue.delete();
+    flagUpdate[cfg.nombre] = firebase.firestore.FieldValue.delete();
+  }
+  await db.collection(CENTROS_COLLECTION).doc(centroId).update(flagUpdate).catch(() => {});
+}
+
 /** Obtiene la URL de plantilla del centro del usuario actual */
 async function _getPlantillaUrlCentro() {
   if (!window.currentUser) return null;
@@ -4990,10 +5114,11 @@ async function _getPlantillaUrlCentro() {
     }
 
     // 4. Superadmin/sin centro: buscar cualquier centro que tenga plantilla
-    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaBase64', '!=', '').limit(1).get();
+    const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_planificacion', '==', true).limit(1).get();
     if (!snap.empty) {
       const centro = snap.docs[0].data();
-      return { base64: centro.plantillaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+      const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'planificacion');
+      if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
     }
 
     return null;
@@ -5007,8 +5132,9 @@ async function _getPlantillaFromCentro(centroId) {
   const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
   if (!centroDoc.exists) return null;
   const centro = centroDoc.data();
-  if (!centro.plantillaBase64) return null;
-  return { base64: centro.plantillaBase64, centroId, centroNombre: centro.nombre || '' };
+  const result = await _cargarPlantillaCentroChunked(centroId, 'planificacion');
+  if (!result) return null;
+  return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
 }
 
 /**
@@ -5326,16 +5452,18 @@ async function _getPlantillaDiariaCentro() {
     }
     if (centroId) {
       const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-      if (centroDoc.exists && centroDoc.data().plantillaDiariaBase64) {
+      if (centroDoc.exists) {
         const centro = centroDoc.data();
-        return { base64: centro.plantillaDiariaBase64, centroId, centroNombre: centro.nombre || '' };
+        const result = await _cargarPlantillaCentroChunked(centroId, 'diaria');
+        if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
       }
     }
     // Superadmin fallback
-    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaDiariaBase64', '!=', '').limit(1).get();
+    const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_diaria', '==', true).limit(1).get();
     if (!snap.empty) {
       const centro = snap.docs[0].data();
-      return { base64: centro.plantillaDiariaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+      const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'diaria');
+      if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
     }
     return null;
   } catch (e) {
@@ -5357,15 +5485,17 @@ async function _getPlantillaReportePsicologiaCentro() {
     }
     if (centroId) {
       const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-      if (centroDoc.exists && centroDoc.data().plantillaReportePsicologiaBase64) {
+      if (centroDoc.exists) {
         const centro = centroDoc.data();
-        return { base64: centro.plantillaReportePsicologiaBase64, centroId, centroNombre: centro.nombre || '' };
+        const result = await _cargarPlantillaCentroChunked(centroId, 'psicologia');
+        if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
       }
     }
-    const snap = await db.collection(CENTROS_COLLECTION).where('plantillaReportePsicologiaBase64', '!=', '').limit(1).get();
+    const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_psicologia', '==', true).limit(1).get();
     if (!snap.empty) {
       const centro = snap.docs[0].data();
-      return { base64: centro.plantillaReportePsicologiaBase64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+      const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'psicologia');
+      if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
     }
     return null;
   } catch (e) {
@@ -37435,11 +37565,24 @@ async function _renderCentrosEducativos() {
 async function _mostrarFormCentro(centroId) {
   let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
 
+  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false } };
+
   if (centroId) {
     try {
       const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
       if (doc.exists) centro = { id: centroId, ...doc.data() };
     } catch (e) { mostrarToast('Error cargando centro', 'error'); return; }
+
+    // El base64 de cada plantilla ya no vive en este documento (se guarda en
+    // chunks aparte, ver PLANTILLA_CENTRO_CAMPOS) -- se consulta si existe sin
+    // traer el archivo completo, solo para mostrar el indicador "Plantilla cargada".
+    const [pPlan, pDiaria, pPsico, pImpacto] = await Promise.all([
+      _tienePlantillaCentroChunked(centroId, 'planificacion', centro),
+      _tienePlantillaCentroChunked(centroId, 'diaria', centro),
+      _tienePlantillaCentroChunked(centroId, 'psicologia', centro),
+      _tienePlantillaCentroChunked(centroId, 'impacto', centro)
+    ]);
+    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto };
   }
 
   const cont = document.getElementById('sa-contenido');
@@ -37480,10 +37623,10 @@ async function _mostrarFormCentro(centroId) {
     + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Planificación (.docx)</label>'
     + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx del centro con placeholders como <code>{familia_profesional}</code>, <code>{modulo_formativo}</code>, etc. '
     + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholders();" style="color:#7C4DFF;font-weight:600;">Ver lista de placeholders</a></p>'
-    + (centro.plantillaBase64
+    + (plantillasInfo.planificacion.existe
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
-        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaNombre || 'plantilla.docx') + '</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.planificacion.nombre || 'plantilla.docx') + '</span>'
         + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'planificacion\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
@@ -37495,10 +37638,10 @@ async function _mostrarFormCentro(centroId) {
     + '<span class="material-icons" style="font-size:18px;">event_note</span> Plantilla Word para Planificación Diaria (.docx)</label>'
     + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para las planificaciones diarias/por actividad. '
     + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersDiarias();" style="color:#00897B;font-weight:600;">Ver lista de placeholders</a></p>'
-    + (centro.plantillaDiariaBase64
+    + (plantillasInfo.diaria.existe
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
-        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaDiariaNombre || 'plantilla_diaria.docx') + '</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.diaria.nombre || 'plantilla_diaria.docx') + '</span>'
         + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'diaria\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaDiariaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
@@ -37510,10 +37653,10 @@ async function _mostrarFormCentro(centroId) {
     + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Reportes de Psicología (.docx)</label>'
     + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para los reportes académicos y disciplinarios que imprime Psicología. '
     + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersPsicologia();" style="color:#6A1B9A;font-weight:600;">Ver lista de placeholders</a></p>'
-    + (centro.plantillaReportePsicologiaBase64
+    + (plantillasInfo.psicologia.existe
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
-        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaReportePsicologiaNombre || 'plantilla_reportes_psicologia.docx') + '</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.psicologia.nombre || 'plantilla_reportes_psicologia.docx') + '</span>'
         + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'psicologia\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaReportePsicologiaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
@@ -37525,10 +37668,10 @@ async function _mostrarFormCentro(centroId) {
     + '<span class="material-icons" style="font-size:18px;">summarize</span> Plantilla Word para Reporte de Impacto de Vinculación (.docx)</label>'
     + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx para el Reporte de Impacto del módulo de Vinculación Sectorial. Placeholders disponibles: '
     + '<code>{centro}</code>, <code>{fecha_generacion}</code>, <code>{periodo}</code>, <code>{total_pasantias_estudiantes}</code>, <code>{total_pasantias_docentes}</code>, <code>{total_ofertas_empleo}</code>, <code>{total_talleres}</code>, <code>{total_diagnosticos}</code>, <code>{total_convenios_vigentes}</code>, <code>{total_eventos}</code>, <code>{lista_empresas_vinculadas}</code>.</p>'
-    + (centro.plantillaImpactoVinculacionBase64
+    + (plantillasInfo.impacto.existe
       ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
         + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
-        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (centro.plantillaImpactoVinculacionNombre || 'plantilla_reporte_impacto.docx') + '</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.impacto.nombre || 'plantilla_reporte_impacto.docx') + '</span>'
         + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'impacto\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
         + '<button onclick="_eliminarPlantillaImpactoCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
         + '</div>'
@@ -37657,10 +37800,7 @@ async function _guardarCentro(centroId) {
         reader.onerror = () => reject(new Error('Error leyendo archivo'));
         reader.readAsDataURL(file);
       });
-      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
-        plantillaBase64: base64,
-        plantillaNombre: file.name
-      });
+      await _guardarPlantillaCentroChunked(finalId, 'planificacion', base64, file.name);
     }
 
     // Guardar plantilla diaria como base64
@@ -37672,10 +37812,7 @@ async function _guardarCentro(centroId) {
         readerD.onerror = () => reject(new Error('Error leyendo archivo'));
         readerD.readAsDataURL(fileDiaria);
       });
-      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
-        plantillaDiariaBase64: base64D,
-        plantillaDiariaNombre: fileDiaria.name
-      });
+      await _guardarPlantillaCentroChunked(finalId, 'diaria', base64D, fileDiaria.name);
     }
 
     if (fileReportesPsicologia && finalId) {
@@ -37686,10 +37823,7 @@ async function _guardarCentro(centroId) {
         readerP.onerror = () => reject(new Error('Error leyendo archivo'));
         readerP.readAsDataURL(fileReportesPsicologia);
       });
-      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
-        plantillaReportePsicologiaBase64: base64P,
-        plantillaReportePsicologiaNombre: fileReportesPsicologia.name
-      });
+      await _guardarPlantillaCentroChunked(finalId, 'psicologia', base64P, fileReportesPsicologia.name);
     }
 
     if (fileImpacto && finalId) {
@@ -37700,10 +37834,7 @@ async function _guardarCentro(centroId) {
         readerI.onerror = () => reject(new Error('Error leyendo archivo'));
         readerI.readAsDataURL(fileImpacto);
       });
-      await db.collection(CENTROS_COLLECTION).doc(finalId).update({
-        plantillaImpactoVinculacionBase64: base64I,
-        plantillaImpactoVinculacionNombre: fileImpacto.name
-      });
+      await _guardarPlantillaCentroChunked(finalId, 'impacto', base64I, fileImpacto.name);
     }
 
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
@@ -37718,10 +37849,7 @@ async function _guardarCentro(centroId) {
 async function _eliminarPlantillaCentro(centroId) {
   if (!confirm('¿Eliminar la plantilla Word de este centro?')) return;
   try {
-    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
-      plantillaBase64: firebase.firestore.FieldValue.delete(),
-      plantillaNombre: firebase.firestore.FieldValue.delete()
-    });
+    await _eliminarPlantillaCentroChunked(centroId, 'planificacion');
     mostrarToast('Plantilla eliminada', 'success');
     _mostrarFormCentro(centroId);
   } catch (e) {
@@ -37733,10 +37861,7 @@ async function _eliminarPlantillaCentro(centroId) {
 async function _eliminarPlantillaDiariaCentro(centroId) {
   if (!confirm('¿Eliminar la plantilla Word de planificación diaria de este centro?')) return;
   try {
-    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
-      plantillaDiariaBase64: firebase.firestore.FieldValue.delete(),
-      plantillaDiariaNombre: firebase.firestore.FieldValue.delete()
-    });
+    await _eliminarPlantillaCentroChunked(centroId, 'diaria');
     mostrarToast('Plantilla diaria eliminada', 'success');
     _mostrarFormCentro(centroId);
   } catch (e) {
@@ -37748,10 +37873,7 @@ async function _eliminarPlantillaDiariaCentro(centroId) {
 async function _eliminarPlantillaReportePsicologiaCentro(centroId) {
   if (!confirm('¿Eliminar la plantilla Word de reportes de Psicología de este centro?')) return;
   try {
-    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
-      plantillaReportePsicologiaBase64: firebase.firestore.FieldValue.delete(),
-      plantillaReportePsicologiaNombre: firebase.firestore.FieldValue.delete()
-    });
+    await _eliminarPlantillaCentroChunked(centroId, 'psicologia');
     mostrarToast('Plantilla de Psicología eliminada', 'success');
     _mostrarFormCentro(centroId);
   } catch (e) {
@@ -37763,10 +37885,7 @@ async function _eliminarPlantillaReportePsicologiaCentro(centroId) {
 async function _eliminarPlantillaImpactoCentro(centroId) {
   if (!confirm('¿Eliminar la plantilla Word de Reporte de Impacto de este centro?')) return;
   try {
-    await db.collection(CENTROS_COLLECTION).doc(centroId).update({
-      plantillaImpactoVinculacionBase64: firebase.firestore.FieldValue.delete(),
-      plantillaImpactoVinculacionNombre: firebase.firestore.FieldValue.delete()
-    });
+    await _eliminarPlantillaCentroChunked(centroId, 'impacto');
     mostrarToast('Plantilla de Reporte de Impacto eliminada', 'success');
     _mostrarFormCentro(centroId);
   } catch (e) {
@@ -37781,30 +37900,17 @@ async function _descargarPlantillaCentro(centroId, tipo) {
     return;
   }
 
-  const campos = {
-    planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
-    diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
-    psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' },
-    impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' }
-  };
-
-  const cfg = campos[tipo] || campos.planificacion;
+  const cfg = PLANTILLA_CENTRO_CAMPOS[tipo] || PLANTILLA_CENTRO_CAMPOS.planificacion;
 
   try {
-    const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-    if (!doc.exists) {
-      mostrarToast('No se encontró el centro', 'error');
-      return;
-    }
-
-    const centro = doc.data() || {};
-    const base64 = centro[cfg.base64];
-    if (!base64) {
+    const result = await _cargarPlantillaCentroChunked(centroId, tipo);
+    if (!result || !result.base64) {
       mostrarToast('No hay plantilla para descargar', 'error');
       return;
     }
 
-    const nombre = (centro[cfg.nombre] || cfg.fallback || 'plantilla.docx').trim();
+    const base64 = result.base64;
+    const nombre = (result.nombre || cfg.fallback || 'plantilla.docx').trim();
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     const url = URL.createObjectURL(blob);
@@ -40985,9 +41091,10 @@ async function _vincGetPlantillaImpactoCentro() {
     if (!centroId && window._vincCentroSeleccionado) centroId = window._vincCentroSeleccionado;
     if (centroId) {
       const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-      if (centroDoc.exists && centroDoc.data().plantillaImpactoVinculacionBase64) {
+      if (centroDoc.exists) {
         const centro = centroDoc.data();
-        return { base64: centro.plantillaImpactoVinculacionBase64, centroId, centroNombre: centro.nombre || '' };
+        const result = await _cargarPlantillaCentroChunked(centroId, 'impacto');
+        if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
       }
     }
     return null;

@@ -115,6 +115,17 @@ service cloud.firestore {
       // campos de CUALQUIER OTRO centro (incluyendo sus credenciales de EmailJS).
       allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
 
+      // Plantillas Word del centro partidas en chunks (ver PLANTILLA_CENTRO_CAMPOS
+      // en app.js) -- un .docx en base64 facilmente supera 1 MiB, el limite por
+      // documento de Firestore, asi que ya no se guarda en el documento del centro
+      // directamente. Mismo nivel de acceso que el documento padre: lectura publica
+      // (cualquier docente exportando un documento la necesita, sin importar su
+      // centro), escritura solo Superadmin.
+      match /plantillas_chunks/{chunkDocId} {
+        allow read: if true;
+        allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
+      }
+
       // Subcolecciones aisladas por centro: antes solo pedian signedIn(), sin comparar
       // el centroId del usuario contra el centroId de la ruta -- cualquier docente
       // logueado de OTRO centro que supiera/adivinara este centroId podia leer o
