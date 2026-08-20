@@ -932,6 +932,64 @@ async function authIniciarSesionEmail() {
   }
 }
 
+// ── Olvidé mi contraseña ─────────────────────────────────────────
+function authMostrarOlvidoPass() {
+  document.querySelector('.auth-tabs')?.style.setProperty('display', 'none');
+  document.getElementById('auth-form-login').style.display = 'none';
+  document.getElementById('auth-form-registro').style.display = 'none';
+  const panel = document.getElementById('auth-forgot-panel');
+  if (panel) panel.style.display = 'block';
+
+  const exito = document.getElementById('auth-forgot-exito');
+  if (exito) exito.style.display = 'none';
+  _authForgotError('');
+
+  const emailLogin = document.getElementById('auth-email')?.value.trim();
+  const emailForgot = document.getElementById('auth-forgot-email');
+  if (emailForgot) {
+    emailForgot.value = emailLogin || '';
+    setTimeout(() => emailForgot.focus(), 120);
+  }
+}
+
+function authVolverDesdeOlvido() {
+  const panel = document.getElementById('auth-forgot-panel');
+  if (panel) panel.style.display = 'none';
+  document.querySelector('.auth-tabs')?.style.removeProperty('display');
+  authCambiarTab('login');
+}
+
+async function authEnviarResetPassword() {
+  const email = document.getElementById('auth-forgot-email')?.value.trim();
+  if (!email) return _authForgotError('Ingresa tu correo electrónico.');
+
+  const btn = document.getElementById('auth-btn-forgot');
+  const spin = document.getElementById('auth-spin-forgot');
+  if (btn) btn.disabled = true;
+  if (spin) spin.classList.add('visible');
+  _authForgotError('');
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    const exito = document.getElementById('auth-forgot-exito');
+    if (exito) exito.style.display = 'block';
+  } catch (e) {
+    // auth/user-not-found se traduce igual que en el login (mismo criterio ya
+    // establecido ahi: la app ya revela si un email esta registrado o no).
+    _authForgotError(_tradError(e.code) === 'Error al iniciar sesión. Intenta de nuevo.' ? 'No se pudo enviar el enlace. Intenta de nuevo.' : _tradError(e.code));
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spin) spin.classList.remove('visible');
+  }
+}
+
+function _authForgotError(msg) {
+  const el = document.getElementById('auth-forgot-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('visible', !!msg);
+}
+
 // ── Código de invitación ─────────────────────────────────────────
 function _getCodigoInvitacion() {
   const custom = localStorage.getItem('tinclass_invite_code');

@@ -5422,6 +5422,24 @@ async function _exportarConPlantillaCentro() {
     console.warn('[Plantilla] Error post-procesando vMerge:', e);
   }
 
+  // Respaldo oculto: la planificación completa se guarda como JSON dentro del
+  // propio .docx, en un archivo que Word ignora (no aparece al abrir el
+  // documento, no depende de como cada centro personalizo su plantilla). Si el
+  // docente borra esta planificación del sistema pero conserva el .docx
+  // exportado, puede recuperarla completa e idéntica con
+  // Biblioteca > Importar Planificación > Subir archivo Word.
+  try {
+    const backupPayload = {
+      __tinclass_backup__: true,
+      version: 1,
+      exportadoEn: ahora.toISOString(),
+      planificacion: planificacion
+    };
+    doc.getZip().file('customXml/tinclass_backup.json', JSON.stringify(backupPayload));
+  } catch (e) {
+    console.warn('[Plantilla] No se pudo incluir el respaldo oculto:', e);
+  }
+
   const out = doc.getZip().generate({
     type: 'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -28047,6 +28065,69 @@ function abrirImportarPlanificacion() {
   impState.datos = { dg: {}, ra: {}, ecs: [], actividades: [] };
   document.getElementById('imp-overlay').classList.remove('hidden');
   imp_renderizarPaso();
+  const wordInput = document.getElementById('imp-word-file');
+  const wordMsg = document.getElementById('imp-word-msg');
+  if (wordInput) wordInput.value = '';
+  if (wordMsg) wordMsg.textContent = '';
+}
+
+/** Lee un .docx exportado por este sistema y, si trae el respaldo oculto
+ *  (ver _exportarConPlantillaCentro), recupera la planificación completa e
+ *  idéntica y la guarda directo en Biblioteca -- sin pasar por el asistente
+ *  manual. Si el archivo no tiene el respaldo (exportado antes de esta
+ *  función, o no es un .docx de TinClass), avisa y deja el asistente manual
+ *  disponible como alternativa. */
+async function _importarDesdeWordFile(inputEl) {
+  const file = inputEl.files?.[0];
+  if (!file) return;
+
+  const msgEl = document.getElementById('imp-word-msg');
+  const setMsg = (texto, esError) => { if (msgEl) { msgEl.style.color = esError ? '#C62828' : '#546E7A'; msgEl.textContent = texto; } };
+  setMsg('Leyendo archivo...', false);
+
+  try {
+    if (typeof PizZip === 'undefined') throw new Error('PizZip no disponible');
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = new PizZip(arrayBuffer);
+    const backupFile = zip.file('customXml/tinclass_backup.json');
+    if (!backupFile) {
+      setMsg('Este archivo no tiene los datos de respaldo (se exportó antes de esta función, o no es un documento de TinClass). Completa el formulario manual de abajo.', true);
+      return;
+    }
+
+    const backup = JSON.parse(backupFile.asText());
+    if (!backup || !backup.__tinclass_backup__ || !backup.planificacion) {
+      setMsg('El archivo no tiene un respaldo válido. Completa el formulario manual de abajo.', true);
+      return;
+    }
+
+    const planImportada = backup.planificacion;
+    planImportada._recuperadaDesdeWord = true;
+    const dg = planImportada.datosGenerales || {};
+
+    const ahora = new Date();
+    const id = 'WORD-' + ahora.getTime();
+    const registro = {
+      id,
+      fechaGuardado: ahora.toISOString(),
+      fechaGuardadoLabel: ahora.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      nombre: (dg.moduloFormativo || 'Sin módulo') + ' — ' + (dg.nombreDocente || 'Sin docente'),
+      planificacion: planImportada
+    };
+
+    const biblio = cargarBiblioteca();
+    biblio.items.unshift(registro);
+    persistirBiblioteca(biblio);
+
+    mostrarToast('Planificación recuperada desde el Word e importada correctamente', 'success');
+    imp_cerrar();
+    renderizarBiblioteca();
+  } catch (e) {
+    console.warn('[ImportarDesdeWord]', e);
+    setMsg('No se pudo leer el archivo. Verifica que sea un .docx válido exportado por el sistema.', true);
+  } finally {
+    inputEl.value = '';
+  }
 }
 
 function imp_cerrar() {

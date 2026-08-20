@@ -212,6 +212,9 @@
             </button>
           </div>
         </div>
+        <div style="text-align:right;margin:-8px 0 4px;">
+          <a href="#" onclick="event.preventDefault();authMostrarOlvidoPass();" style="font-size:0.8rem;color:#1565C0;font-weight:600;text-decoration:none;">¿Olvidaste tu contraseña?</a>
+        </div>
         <div class="auth-error" id="auth-error-login"></div>
         <button class="auth-btn-primary" id="auth-btn-login" onclick="authIniciarSesionEmail()">
           <div class="auth-spinner" id="auth-spin-login"></div>
@@ -264,6 +267,31 @@
           <span class="material-icons" style="font-size:16px;">arrow_back</span> Volver al inicio
         </button>
         <div id="auth-otp-timer" style="font-size:0.75rem;color:#90A4AE;margin-top:10px;min-height:16px;"></div>
+      </div>
+
+      <!-- Panel Olvidé mi contraseña -->
+      <div id="auth-forgot-panel" style="display:none;text-align:center;padding:8px 0 4px;">
+        <span class="material-icons" style="font-size:52px;color:#1565C0;display:block;margin-bottom:8px;">lock_reset</span>
+        <div style="font-weight:800;font-size:1.05rem;color:#212121;margin-bottom:6px;">¿Olvidaste tu contraseña?</div>
+        <p style="font-size:0.83rem;color:#546E7A;margin:0 0 14px;line-height:1.4;">Escribe tu correo y te enviaremos un enlace para crear una contraseña nueva.</p>
+        <div class="auth-field" style="text-align:left;">
+          <label for="auth-forgot-email">Correo electrónico</label>
+          <input type="email" id="auth-forgot-email" placeholder="docente@ejemplo.com" autocomplete="email" onkeydown="if(event.key==='Enter') authEnviarResetPassword()" />
+        </div>
+        <div class="auth-error" id="auth-forgot-error"></div>
+        <div id="auth-forgot-exito" style="display:none;background:#E8F5E9;border:1.5px solid #A5D6A7;color:#1B5E20;border-radius:10px;padding:12px;margin:8px 0;font-size:0.83rem;line-height:1.4;text-align:left;">
+          <span class="material-icons" style="font-size:16px;vertical-align:middle;">check_circle</span>
+          Si ese correo tiene una cuenta, te enviamos un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.
+        </div>
+        <button class="auth-btn-primary" id="auth-btn-forgot" onclick="authEnviarResetPassword()" style="margin-top:6px;">
+          <div class="auth-spinner" id="auth-spin-forgot"></div>
+          <span class="material-icons">send</span> Enviar enlace
+        </button>
+        <button onclick="authVolverDesdeOlvido()" style="width:100%;margin-top:10px;background:none;border:1.5px solid #E0E0E0;color:#616161;
+                 border-radius:8px;padding:10px;font-size:0.84rem;font-weight:600;cursor:pointer;
+                 display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">arrow_back</span> Volver al inicio
+        </button>
       </div>
 
       <!-- Formulario Registro -->
@@ -2968,6 +2996,34 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v17.03<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: recuperar una planificación desde el propio archivo Word exportado</div>
+              <ul class="about-ver-items">
+                <li>Cada vez que exportas una planificación con la plantilla del centro, el .docx ahora lleva un respaldo completo guardado por dentro (invisible al abrir el documento). Si borras la planificación del sistema pero conservas ese Word, en Biblioteca > Importar Planificación puedes subir el archivo y se recupera automáticamente, igual y completa, sin tener que volver a escribir nada. Solo aplica a documentos exportados a partir de esta versión.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v17.02<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión</div>
+              <ul class="about-ver-items">
+                <li>Ya se puede recuperar el acceso sin depender de un administrador: en la pantalla de login, "¿Olvidaste tu contraseña?" pide el correo y envía un enlace para crear una contraseña nueva, usando el sistema de recuperación propio de Firebase.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6316,6 +6372,15 @@
         <h3 id="imp-titulo">Importar Planificación desde Word</h3>
         <button class="modal-close" onclick="imp_cerrar()"><span class="material-icons">close</span></button>
       </div>
+      <div style="padding:14px 24px;background:#E3F2FD;border-bottom:1.5px solid #90CAF9;flex-shrink:0;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:700;color:#0D47A1;margin-bottom:4px;">
+          <span class="material-icons" style="font-size:18px;">upload_file</span>
+          Subir el archivo Word exportado (recomendado)
+        </label>
+        <p style="font-size:0.78rem;color:#546E7A;margin:0 0 8px;">Si es un .docx que exportaste desde este sistema, se recupera la planificación completa automáticamente. Si no funciona (por ejemplo, se exportó antes de que existiera esta función), completa el formulario manual de abajo.</p>
+        <input type="file" id="imp-word-file" accept=".docx" onchange="_importarDesdeWordFile(this)" style="font-size:0.85rem;">
+        <div id="imp-word-msg" style="font-size:0.8rem;margin-top:8px;min-height:18px;"></div>
+      </div>
       <div id="imp-steps-bar" style="display:flex;gap:0;border-bottom:1px solid #E0E0E0;flex-shrink:0;overflow-x:auto;">
       </div>
       <div id="imp-body" class="modal-body" style="flex:1;overflow-y:auto;padding:20px 24px;"></div>
@@ -6452,9 +6517,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.01"></script>
+  <script src="app.js?v=17.03"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.01"></script>
+  <script src="auth.js?v=17.03"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
