@@ -476,6 +476,11 @@
         <span class="material-icons">apps</span>Accesos rápidos
       </div>
       <div class="dash-nav-grid">
+        <button class="dash-nav-btn" id="btn-dash-actualizar" onclick="forzarActualizacionApp()"
+          style="--accent:#546E7A;" title="Descarga la última versión sin tener que presionar Ctrl+Shift+R">
+          <span class="material-icons">system_update</span>
+          <span>Actualizar App</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-nueva-planif" onclick="irAlHomeBase()" style="--accent:#1565C0;">
           <span class="material-icons">add_circle_outline</span>
           <span>Nueva Planificación</span>
@@ -3004,7 +3009,63 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#B71C1C;">v17.04<span class="about-ver-fecha">Ago
+              <div class="about-ver-badge" style="background:#B71C1C;">v17.09<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: video-tutoriales en el apartado de Tutorial</div>
+              <ul class="about-ver-items">
+                <li>El Tutorial de TinClass ahora incluye una sección con 8 video-tutoriales cortos (Primeros Pasos, Mi Horario, Tareas, Mi Libreta, Blog, Exámenes, Calculadora de Asistencia y Herramienta de Planificación), cada uno con su link directo a YouTube y una descripción de qué cubre exactamente ese módulo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0288D1;">v17.08<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: video de bienvenida al terminar el tour introductorio</div>
+              <ul class="about-ver-items">
+                <li>La primera vez que un usuario nuevo termina (o salta) el tour de bienvenida, se le muestra un video corto con los primeros pasos: configurar la IA, hacer una planificación, crear un curso, agregar estudiantes y calificar. Solo aparece esa primera vez.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#455A64;">v17.07<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: botón "Actualizar App" en el Dashboard</div>
+              <ul class="about-ver-items">
+                <li>Ya no hace falta usar Ctrl+Shift+R para bajar la última versión -- el primer acceso rápido del Dashboard ahora es "Actualizar App", disponible para todos los usuarios, que limpia la caché del PWA y recarga con la versión más reciente.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v17.06<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: exportar a Word podía usar la plantilla de un centro equivocado</div>
+              <ul class="about-ver-items">
+                <li>Cuando tu centro no tenía todavía una plantilla de Word propia subida, el sistema podía usar por error la plantilla de OTRO centro educativo en su lugar, sin avisar. Ahora, si tu centro no tiene plantilla, se exporta con el diseño estándar y se te avisa claramente para que puedas pedirle al superadmin que suba la de tu centro.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v17.05<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
             </div>
@@ -3013,6 +3074,7 @@
               <ul class="about-ver-items">
                 <li>Nueva pestaña "Monitoreo IA" en el Panel Superadmin: busca a cualquier docente por nombre (sin necesitar su correo) y ve de un vistazo si tiene Groq, Gemini y/o OpenRouter configurados, sin exponer el valor de ninguna clave ya guardada.</li>
                 <li>Permite escribirle una clave nueva a cualquiera directamente desde tu cuenta -- se sincroniza sola en su próximo inicio de sesión, sin tener que entrar a la cuenta del docente.</li>
+                <li>Cada campo lleva el link para obtener la clave de ese proveedor (console.groq.com, aistudio.google.com, openrouter.ai), igual que en el modal "Configurar IA" del docente.</li>
               </ul>
             </div>
           </div>
@@ -6536,9 +6598,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.04"></script>
+  <script src="app.js?v=17.09"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.04"></script>
+  <script src="auth.js?v=17.09"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
@@ -6780,6 +6842,27 @@
           <button id="tour-btn-ant" class="tour-btn-sec" onclick="_tourAnterior()">← Anterior</button>
           <button id="tour-btn-sig" class="tour-btn-prim" onclick="_tourSiguiente()">Siguiente →</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIDEO DE BIENVENIDA (se muestra una vez, justo después del tour introductorio) ===== -->
+  <div id="video-bienvenida-overlay" class="modal-overlay hidden" onclick="this.id==='video-bienvenida-overlay'&&cerrarVideoBienvenida()">
+    <div class="modal-box" style="max-width:720px;width:95%;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">play_circle</span>Antes de empezar...</h3>
+        <button class="modal-close" onclick="cerrarVideoBienvenida()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:16px 20px 20px;">
+        <p style="font-size:0.85rem;color:#546E7A;margin:0 0 12px;">Este video corto te muestra los primeros pasos: configurar la IA, hacer una planificación, crear un curso, agregar estudiantes y calificar.</p>
+        <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:10px;overflow:hidden;background:#000;">
+          <iframe id="video-bienvenida-frame" src="" title="Video de bienvenida TinClass" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn-secundario" onclick="cerrarVideoBienvenida()">Cerrar</button>
       </div>
     </div>
   </div>

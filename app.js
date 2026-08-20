@@ -5092,7 +5092,11 @@ async function _eliminarPlantillaCentroChunked(centroId, tipo) {
   await db.collection(CENTROS_COLLECTION).doc(centroId).update(flagUpdate).catch(() => {});
 }
 
-/** Obtiene la URL de plantilla del centro del usuario actual */
+/** Obtiene la URL de plantilla del centro del usuario actual.
+ *
+ * Deja un motivo en window._motivoSinPlantillaCentro cuando devuelve null,
+ * para que quien exporta pueda avisarle al docente por qué no salió con el
+ * diseño de su centro (antes fallaba en silencio, sin ninguna pista). */
 async function _getPlantillaUrlCentro() {
   if (!window.currentUser) return null;
   try {
@@ -5107,13 +5111,21 @@ async function _getPlantillaUrlCentro() {
       if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
     }
 
-    // 3. Si tiene centroId, buscar plantilla de ese centro
+    // 3. Si tiene centroId, la plantilla SIEMPRE debe ser la de ESE centro (o
+    // ninguna) -- nunca la de otro centro, aunque el suyo no tenga una subida
+    // todavía. Antes, si este paso fallaba, el código caía al paso 4 igual
+    // (pensado solo para "sin centro") y el docente terminaba recibiendo,
+    // sin saberlo, la plantilla de un centro educativo ajeno.
     if (centroId) {
       const result = await _getPlantillaFromCentro(centroId);
       if (result) return result;
+      window._motivoSinPlantillaCentro = 'sin_plantilla';
+      return null;
     }
 
-    // 4. Superadmin/sin centro: buscar cualquier centro que tenga plantilla
+    // 4. Solo cuando el usuario NO tiene ningún centro asignado (ej. superadmin
+    // sin centro propio): usar cualquier centro que sí tenga plantilla, como
+    // referencia genérica para poder probar la exportación.
     const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_planificacion', '==', true).limit(1).get();
     if (!snap.empty) {
       const centro = snap.docs[0].data();
@@ -5121,10 +5133,27 @@ async function _getPlantillaUrlCentro() {
       if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
     }
 
+    window._motivoSinPlantillaCentro = 'sin_centro';
     return null;
   } catch (e) {
     console.warn('[Plantilla] Error obteniendo centro:', e);
+    window._motivoSinPlantillaCentro = 'error';
     return null;
+  }
+}
+
+/** Avisa al docente, con un toast claro, por qué la exportación no usó la
+ * plantilla de su centro -- en vez de dejarlo adivinar por qué el Word no
+ * coincide con el diseño esperado. Solo avisa en los casos accionables
+ * (falta subir la plantilla, o hubo un error de red); si el usuario
+ * simplemente no tiene centro asignado (ej. superadmin de prueba), no aplica. */
+function _avisarExportSinPlantilla() {
+  const motivo = window._motivoSinPlantillaCentro;
+  window._motivoSinPlantillaCentro = null;
+  if (motivo === 'sin_plantilla') {
+    mostrarToast('Tu centro todavía no tiene una plantilla de Word configurada -- se exportó con el diseño estándar. Pide al superadmin que la suba en Superadmin > Centros Educativos.', 'info');
+  } else if (motivo === 'error') {
+    mostrarToast('No se pudo cargar la plantilla de tu centro (revisa tu conexión) -- se exportó con el diseño estándar.', 'info');
   }
 }
 
@@ -6017,6 +6046,7 @@ async function exportarWord() {
     const exported = await _exportarConPlantillaCentro();
     if (exported) return; // plantilla usada exitosamente
     console.log('[Exportar] Sin plantilla, usando método HTML-Word');
+    _avisarExportSinPlantilla();
   } catch (e) {
     console.warn('[Plantilla] No se pudo usar plantilla del centro:', e.message, e);
   }
@@ -15637,6 +15667,30 @@ function abrirTutorial() {
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- TUTORIALES EN VIDEO -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div class="section-card" style="margin:0 16px 20px;border-left:4px solid #C62828;">
+        <h3 style="margin:0 0 4px;color:#C62828;display:flex;align-items:center;gap:8px;">
+          <span class="material-icons">smart_display</span> Tutorial de TinClass
+        </h3>
+        <p style="margin:0 0 14px;color:#78909C;font-size:0.85rem;">Video-tutoriales cortos, uno por cada herramienta del sistema. Haz clic en cualquiera para verlo en YouTube.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
+          ${[
+            { titulo: 'TinClass - Primeros Pasos Parte 1', desc: 'La introducción completa: configurar tu clave de IA, crear tu primera planificación por RA, armar un curso, agregarle estudiantes y calificar una actividad.', url: 'https://youtu.be/BuWazCpmgFc' },
+            { titulo: 'TinClass - Mi horario de Clases', desc: 'Arma tu horario semanal (materia, sección, aula) celda por celda. El sistema le asigna un color a cada materia y lo usa para mostrarte tus clases de hoy y mañana en el Dashboard.', url: 'https://youtu.be/syoUkJ1L-Cg?si=4u1RIinqAwDITT3E' },
+            { titulo: 'TinClass - Modulo Tareas', desc: 'Crea tareas con título, descripción, fecha límite y sección. Dales seguimiento por estado (pendiente, entregada, vencida, no entregada) y filtra por curso.', url: 'https://youtu.be/NDyj0BAP9V0' },
+            { titulo: 'TinClass - Mi Libreta', desc: 'Tu agenda digital organizada por fecha, con panel de fechas a la izquierda y contenido del día a la derecha — ideal para bitácora docente, a diferencia de "Mis Notas" que es texto libre.', url: 'https://youtu.be/r6AP0JX4anA' },
+            { titulo: 'TinClass - Blog', desc: 'Publica tareas de PC, tareas de cuaderno o avisos generales, y comparte el enlace con tus estudiantes por WhatsApp o correo — no necesitan cuenta para verlo.', url: 'https://youtu.be/DzvtaqG7fLo' },
+            { titulo: 'TinClass - Exámenes y pruebas', desc: 'Crea exámenes con preguntas de selección múltiple, verdadero/falso o respuesta abierta. Comparte el enlace, actívalo o ciérralo cuando quieras, y revisa las respuestas de cada estudiante (no se corrigen automáticamente).', url: 'https://youtu.be/NvAp6akuzY0' },
+            { titulo: 'TinClass - Calculadora de Asistencia', desc: 'Ingresa el total de días de clase y los días asistidos: el sistema calcula el porcentaje al instante y lo marca en verde (90%+), amarillo (80-89%) o rojo (menos de 80%).', url: 'https://youtu.be/UlhB0qONSiA' },
+            { titulo: 'TinClass - Herramienta Planificación Pt. 1', desc: 'Recorrido a fondo de los 6 pasos para construir una planificación por RA: Datos Generales, Resultado de Aprendizaje, Elementos de Capacidad, Actividades, Planificación Diaria y Vista Previa/Exportación.', url: 'https://youtu.be/-oHep6-Q5kE' },
+          ].map(v => '<a href="' + v.url + '" target="_blank" rel="noopener" style="display:flex;flex-direction:column;gap:4px;padding:12px 14px;background:#FFEBEE;border-radius:10px;text-decoration:none;">'
+            + '<span style="display:flex;align-items:center;gap:8px;color:#B71C1C;font-weight:700;font-size:0.88rem;"><span class="material-icons" style="font-size:20px;flex-shrink:0;">play_circle</span>' + escapeHTML(v.titulo) + '</span>'
+            + '<span style="color:#6D4C41;font-size:0.78rem;line-height:1.4;">' + escapeHTML(v.desc) + '</span></a>').join('')}
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
       <!-- SECCIÓN 1: NUEVA PLANIFICACIÓN -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div id="tut-nueva" style="scroll-margin-top:20px;">
@@ -21214,7 +21268,8 @@ async function exportarPlanDesdeListado(id) {
   try {
     planificacion = JSON.parse(JSON.stringify(reg.planificacion));
     mostrarToast('Exportando a Word...', 'info');
-    await _exportarConPlantillaCentro() || _exportarWordHTML();
+    const usoPlantilla = await _exportarConPlantillaCentro();
+    if (!usoPlantilla) { _avisarExportSinPlantilla(); _exportarWordHTML(); }
   } catch (e) {
     console.warn('[ExportListado] Error:', e);
     mostrarToast('Error al exportar: ' + e.message, 'error');
@@ -27758,6 +27813,11 @@ const TOUR_KEY = 'tinclass_tour_done';
 let _tourPaso = 0;
 let _tourOriginalOverflow = '';
 let _tourPasosActivos = [];
+// true solo cuando el tour arranca automáticamente la primera vez (ver
+// _tourVerificarAutoInicio) -- distingue ese caso de cuando el propio
+// usuario lo reabre a mano desde Configuración, para mostrar el video de
+// bienvenida una única vez y no cada vez que alguien repasa el tour.
+let _tourEsAutoInicio = false;
 
 const TOUR_PASOS = [
   {
@@ -27876,7 +27936,7 @@ function iniciarTour() {
 
 function _tourVerificarAutoInicio() {
   if (!localStorage.getItem(TOUR_KEY)) {
-    setTimeout(iniciarTour, 900);
+    setTimeout(() => { _tourEsAutoInicio = true; iniciarTour(); }, 900);
   }
 }
 
@@ -27983,6 +28043,30 @@ function _tourFin() {
   localStorage.setItem(TOUR_KEY, '1');
   const overlay = document.getElementById('tour-overlay');
   if (overlay) overlay.classList.add('hidden');
+  document.body.style.overflow = _tourOriginalOverflow;
+
+  if (_tourEsAutoInicio) {
+    _tourEsAutoInicio = false;
+    setTimeout(_mostrarVideoBienvenida, 400);
+  }
+}
+
+/** Video de bienvenida en YouTube, mostrado una sola vez justo después de que
+ * un usuario nuevo termina (o salta) el tour introductorio automático. */
+function _mostrarVideoBienvenida() {
+  const overlay = document.getElementById('video-bienvenida-overlay');
+  const frame = document.getElementById('video-bienvenida-frame');
+  if (!overlay || !frame) return;
+  frame.src = 'https://www.youtube.com/embed/BuWazCpmgFc?autoplay=1&rel=0';
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarVideoBienvenida() {
+  const overlay = document.getElementById('video-bienvenida-overlay');
+  const frame = document.getElementById('video-bienvenida-frame');
+  if (overlay) overlay.classList.add('hidden');
+  if (frame) frame.src = ''; // detiene la reproducción al cerrar
   document.body.style.overflow = _tourOriginalOverflow;
 }
 
@@ -36978,9 +37062,9 @@ async function _saAsignarCentro(uid) {
 /** Providers de IA soportados, mismo orden que el modal "Configurar IA" del
  * docente (ver guardarApiKey/GROQ_KEY_STORAGE en la sección de IA). */
 const _MONITOREO_IA_PROVIDERS = [
-  { store: 'groqKey', label: 'Groq' },
-  { store: 'geminiKey', label: 'Gemini' },
-  { store: 'openrouterKey', label: 'OpenRouter' }
+  { store: 'groqKey', label: 'Groq', url: 'https://console.groq.com/keys', urlLabel: 'console.groq.com', color: '#2E7D32' },
+  { store: 'geminiKey', label: 'Gemini', url: 'https://aistudio.google.com/apikey', urlLabel: 'aistudio.google.com', color: '#F57F17' },
+  { store: 'openrouterKey', label: 'OpenRouter', url: 'https://openrouter.ai/keys', urlLabel: 'openrouter.ai', color: '#1565C0' }
 ];
 
 /** Vista de Superadmin: busca docentes por nombre (sin necesitar su email)
@@ -37089,6 +37173,7 @@ async function _saCargarEstadoIA(uid) {
         + 'style="flex:1;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;">'
         + '<button onclick="_saGuardarClaveIA(\'' + uid + '\',\'' + p.store + '\')" style="padding:7px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;">Guardar</button>'
         + '</div>'
+        + '<p style="margin:4px 0 0;font-size:0.78rem;color:#555;">Obtén su clave en <a href="' + p.url + '" target="_blank" style="color:' + p.color + ';font-weight:600;">' + p.urlLabel + '</a></p>'
         + '<div id="sa-ia-msg-' + p.store + '-' + uid + '" style="font-size:0.72rem;margin-top:3px;min-height:14px;"></div>'
         + '</div>';
     });
@@ -40097,7 +40182,8 @@ async function _coordDescargarPlanWord(idx, planId) {
   try {
     planificacion = JSON.parse(JSON.stringify(item.planificacion));
     mostrarToast('Exportando a Word...', 'info');
-    await _exportarConPlantillaCentro() || _exportarWordHTML();
+    const usoPlantilla = await _exportarConPlantillaCentro();
+    if (!usoPlantilla) { _avisarExportSinPlantilla(); _exportarWordHTML(); }
   } catch (e) {
     console.warn('[CoordExport] Error:', e);
     mostrarToast('Error al exportar: ' + e.message, 'error');
@@ -42219,12 +42305,7 @@ async function _actualizarDetectorVersion() {
 }
 
 async function forzarActualizacionApp() {
-  const allowed = await _esSuperadminPorPerfil();
-  if (!allowed) {
-    mostrarToast('Solo superadmin puede forzar actualización.', 'error');
-    return;
-  }
-  if (!confirm('Se limpiará la caché de la app y se recargará la página. ¿Continuar?')) return;
+  if (!confirm('Se limpiará la caché de la app y se recargará la página con la última versión. ¿Continuar?')) return;
 
   try {
     if ('serviceWorker' in navigator) {
