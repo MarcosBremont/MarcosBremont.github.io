@@ -36870,7 +36870,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', bugs: 'tab-sa-bugs' };
+  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', bugs: 'tab-sa-bugs' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -36884,6 +36884,7 @@ function switchTabSuperadmin(tab) {
   else if (tab === 'opciones_coord') _renderOpcionesCoordinadora();
   else if (tab === 'opciones_psico') _renderOpcionesPsicologia();
   else if (tab === 'prompts') _renderPromptsIA();
+  else if (tab === 'monitoreo_ia') _renderMonitoreoIA();
   else if (tab === 'bugs') _renderBugsSuperadmin();
 }
 
@@ -36971,6 +36972,151 @@ async function _saAsignarCentro(uid) {
     mostrarToast('Centro asignado correctamente', 'success');
     _renderSolicitudesPendientes();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ── MONITOREO Y EDICIÓN DE IA (Panel Superadmin) ──────────────────
+/** Providers de IA soportados, mismo orden que el modal "Configurar IA" del
+ * docente (ver guardarApiKey/GROQ_KEY_STORAGE en la sección de IA). */
+const _MONITOREO_IA_PROVIDERS = [
+  { store: 'groqKey', label: 'Groq' },
+  { store: 'geminiKey', label: 'Gemini' },
+  { store: 'openrouterKey', label: 'OpenRouter' }
+];
+
+/** Vista de Superadmin: busca docentes por nombre (sin necesitar su email)
+ * y muestra si tienen las claves de IA configuradas, sin exponer el valor
+ * real de ninguna clave -- solo permite ESCRIBIR una clave nueva para
+ * reemplazarla, directamente desde la cuenta del superadmin. */
+async function _renderMonitoreoIA() {
+  const cont = document.getElementById('sa-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando docentes...</div>';
+
+  try {
+    const snap = await db.collection('usuarios').where('estado', '==', 'aprobado').get();
+    const docentes = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
+      .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+    window._saMonitoreoIACache = docentes;
+
+    let html = '<div style="font-size:0.78rem;color:#78909C;margin-bottom:14px;">Busca a alguien por nombre para ver si tiene las claves de IA (Groq/Gemini/OpenRouter) configuradas, y escribirle una clave nueva directamente -- sin necesidad de pedirle su clave ni su correo.</div>';
+    html += '<div style="position:relative;margin-bottom:14px;">'
+      + '<span class="material-icons" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#B0BEC5;font-size:20px;">search</span>'
+      + '<input type="text" id="sa-ia-buscar" oninput="_saFiltrarMonitoreoIA()" placeholder="Buscar por nombre..." '
+      + 'style="width:100%;padding:10px 12px 10px 38px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">'
+      + '</div>';
+    html += '<div id="sa-ia-lista"></div>';
+    cont.innerHTML = html;
+    _saFiltrarMonitoreoIA();
+  } catch (e) {
+    console.error('Error cargando docentes para monitoreo IA:', e);
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
+}
+
+/** Filtra en memoria la lista ya cacheada según lo escrito en el buscador --
+ * Firestore no tiene substring search nativo, y esto es una herramienta de
+ * uso puntual/baja frecuencia (solo el superadmin, a demanda), igual que
+ * _cargarCentros para el listado de centros. */
+function _saFiltrarMonitoreoIA() {
+  const lista = document.getElementById('sa-ia-lista');
+  if (!lista) return;
+  const termino = (document.getElementById('sa-ia-buscar')?.value || '').trim().toLowerCase();
+  const todos = window._saMonitoreoIACache || [];
+  const filtrados = termino ? todos.filter(d => (d.nombre || '').toLowerCase().includes(termino)) : todos;
+
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px;">person_search</span>' + (termino ? 'Nadie coincide con "' + escapeHTML(termino) + '"' : 'No hay docentes aprobados') + '</div>';
+    return;
+  }
+
+  const maxMostrar = termino ? filtrados.length : Math.min(filtrados.length, 30);
+  let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+  filtrados.slice(0, maxMostrar).forEach(d => {
+    const inicial = (d.nombre || d.email || 'U')[0].toUpperCase();
+    html += '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:12px 14px;">'
+      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;" onclick="_saVerEstadoIA(\'' + d.uid + '\')">'
+      + '<div style="width:38px;height:38px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1565C0;font-size:1rem;flex-shrink:0;">' + escapeHTML(inicial) + '</div>'
+      + '<div style="flex:1;min-width:150px;">'
+      + '<div style="font-weight:700;font-size:0.92rem;color:#212121;">' + escapeHTML(d.nombre || 'Sin nombre') + '</div>'
+      + '<div style="font-size:0.76rem;color:#90A4AE;">' + escapeHTML(d.centroNombre || 'Sin centro') + '</div>'
+      + '</div>'
+      + '<span class="material-icons" style="color:#B0BEC5;">expand_more</span>'
+      + '</div>'
+      + '<div id="sa-ia-detalle-' + d.uid + '"></div>'
+      + '</div>';
+  });
+  html += '</div>';
+  if (!termino && filtrados.length > maxMostrar) {
+    html += '<div style="text-align:center;padding:10px;color:#90A4AE;font-size:0.8rem;">Mostrando ' + maxMostrar + ' de ' + filtrados.length + ' -- usa el buscador para encontrar a alguien más</div>';
+  }
+  lista.innerHTML = html;
+}
+
+/** Muestra/oculta el detalle de un docente; al abrir, dispara la carga. */
+async function _saVerEstadoIA(uid) {
+  const det = document.getElementById('sa-ia-detalle-' + uid);
+  if (!det) return;
+  if (det.dataset.abierto === '1') { det.dataset.abierto = '0'; det.innerHTML = ''; return; }
+  det.dataset.abierto = '1';
+  await _saCargarEstadoIA(uid);
+}
+
+/** Trae el estado (configurada / no configurada, sin exponer el valor) de
+ * las 3 IAs de un docente puntual, y arma el formulario para escribirle una
+ * clave nueva. Carga bajo demanda (solo al abrir a esa persona), para no
+ * multiplicar por 3 las lecturas de todos los docentes listados. */
+async function _saCargarEstadoIA(uid) {
+  const det = document.getElementById('sa-ia-detalle-' + uid);
+  if (!det) return;
+  det.innerHTML = '<div style="text-align:center;padding:14px;color:#90A4AE;"><span class="material-icons" style="animation:spin 1s linear infinite;font-size:18px;vertical-align:middle;">sync</span> Consultando estado...</div>';
+
+  try {
+    const docs = await Promise.all(_MONITOREO_IA_PROVIDERS.map(p =>
+      db.collection('users').doc(uid).collection('data').doc(p.store).get().catch(() => null)
+    ));
+
+    let html = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #F0F0F0;display:flex;flex-direction:column;gap:10px;">';
+    _MONITOREO_IA_PROVIDERS.forEach((p, i) => {
+      const doc = docs[i];
+      const configurada = !!(doc && doc.exists && doc.data().payload);
+      const chip = configurada
+        ? '<span style="background:#E8F5E9;color:#2E7D32;padding:2px 9px;border-radius:10px;font-size:0.7rem;font-weight:700;">Configurada</span>'
+        : '<span style="background:#FFEBEE;color:#C62828;padding:2px 9px;border-radius:10px;font-size:0.7rem;font-weight:700;">No configurada</span>';
+      html += '<div>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="font-weight:700;font-size:0.85rem;color:#37474F;">' + p.label + '</span>' + chip + '</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<input type="password" id="sa-ia-input-' + p.store + '-' + uid + '" placeholder="Escribir una clave nueva de ' + p.label + '..." '
+        + 'style="flex:1;padding:7px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:0.82rem;">'
+        + '<button onclick="_saGuardarClaveIA(\'' + uid + '\',\'' + p.store + '\')" style="padding:7px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;">Guardar</button>'
+        + '</div>'
+        + '<div id="sa-ia-msg-' + p.store + '-' + uid + '" style="font-size:0.72rem;margin-top:3px;min-height:14px;"></div>'
+        + '</div>';
+    });
+    html += '<div style="font-size:0.72rem;color:#B0BEC5;">Por seguridad no se muestra el valor de las claves ya guardadas, solo si están configuradas. Escribe una clave nueva para reemplazarla.</div>';
+    html += '</div>';
+    det.innerHTML = html;
+  } catch (e) {
+    det.innerHTML = '<div style="padding:10px;color:#C62828;font-size:0.8rem;">Error: ' + e.message + '</div>';
+  }
+}
+
+/** Escribe directamente en Firestore la clave de IA de un docente, con el
+ * mismo formato que usa window._syncFirebase (payload string), para que en
+ * su próximo inicio de sesión _cargarDesdeFirestore la baje sola a su
+ * localStorage -- no hace falta ningún cambio del lado del docente. */
+async function _saGuardarClaveIA(uid, store) {
+  const input = document.getElementById('sa-ia-input-' + store + '-' + uid);
+  const msgEl = document.getElementById('sa-ia-msg-' + store + '-' + uid);
+  const valor = (input?.value || '').trim();
+  if (!valor) { if (msgEl) { msgEl.style.color = '#C62828'; msgEl.textContent = 'Escribe una clave antes de guardar.'; } return; }
+
+  try {
+    await db.collection('users').doc(uid).collection('data').doc(store).set({ payload: valor });
+    mostrarToast('Clave de ' + (_MONITOREO_IA_PROVIDERS.find(p => p.store === store)?.label || store) + ' guardada', 'success');
+    await _saCargarEstadoIA(uid);
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#C62828'; msgEl.textContent = 'Error: ' + e.message; }
+  }
 }
 
 // ── EDITOR DE PROMPTS IA ─────────────────────────────────────────

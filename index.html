@@ -2529,6 +2529,10 @@
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">psychology</span> Prompts IA
         </button>
+        <button class="ra-tab" id="tab-sa-monitoreo-ia" onclick="switchTabSuperadmin('monitoreo_ia')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">smart_toy</span> Monitoreo IA
+        </button>
         <button class="ra-tab" id="tab-sa-bugs" onclick="switchTabSuperadmin('bugs')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">bug_report</span> Bugs
@@ -2996,6 +3000,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v17.04<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: monitoreo y edición de IA de docentes (Panel Superadmin)</div>
+              <ul class="about-ver-items">
+                <li>Nueva pestaña "Monitoreo IA" en el Panel Superadmin: busca a cualquier docente por nombre (sin necesitar su correo) y ve de un vistazo si tiene Groq, Gemini y/o OpenRouter configurados, sin exponer el valor de ninguna clave ya guardada.</li>
+                <li>Permite escribirle una clave nueva a cualquiera directamente desde tu cuenta -- se sincroniza sola en su próximo inicio de sesión, sin tener que entrar a la cuenta del docente.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6517,9 +6536,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.03"></script>
+  <script src="app.js?v=17.04"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.03"></script>
+  <script src="auth.js?v=17.04"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

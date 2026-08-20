@@ -258,6 +258,12 @@ service cloud.firestore {
       allow read, write: if signedIn() && request.auth.uid == userId;
       allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
                      (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+      // Monitoreo/edición de IA (Panel Superadmin): el superadmin puede escribir
+      // directamente las claves de IA de cualquier docente sin pedirle la clave
+      // ni el correo -- acotado a estos 3 documentos puntuales, no al store
+      // completo, para no ampliar el acceso de escritura a datos académicos.
+      allow write: if (isSuperadminByEmail() || currentRole() == 'superadmin') &&
+                      doc in ['groqKey', 'geminiKey', 'openrouterKey'];
     }
 
     match /users/{userId}/sessions/{sessionId} {
