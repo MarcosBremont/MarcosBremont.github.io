@@ -2997,6 +2997,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v17.15<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección urgente: diálogo de "nueva planificación" en bucle</div>
+              <ul class="about-ver-items">
+                <li>El autoguardado nuevo (v17.14) podía dejar a algunos usuarios atrapados en un bucle del diálogo "¿Deseas iniciar una nueva planificación?" -- cada vez que confirmaban, el borrador sincronizado en la nube volvía a bajarse y el diálogo reaparecía. Corregido: al confirmar, ahora también se limpia la copia en la nube, y no se restaura el borrador justo después de un descarte explícito.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#4A148C;">v17.14<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -6648,9 +6662,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.14"></script>
+  <script src="app.js?v=17.15"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.14"></script>
+  <script src="auth.js?v=17.15"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -7654,6 +7654,10 @@ function poblarFormularioDesdeEstado() {
 function nuevaPlanificacion() {
   if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
   localStorage.removeItem(STORAGE_KEY);
+  // Limpiar también el borrador sincronizado en Firestore -- si no, el próximo
+  // login/recarga lo vuelve a bajar y resucita el mismo diálogo de descarte
+  // en bucle (el guardado local se borra, pero el de la nube seguía intacto).
+  if (window._syncFirebase) window._syncFirebase('planificacion', '');
   sessionStorage.setItem('planificador_goto', 'step1');
   location.reload();
 }
@@ -22576,6 +22580,10 @@ function irAlHomeBase() {
   if (hayDatos) {
     if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
     localStorage.removeItem(STORAGE_KEY);
+    // Limpiar también el borrador sincronizado en Firestore -- si no, el próximo
+    // login/recarga lo vuelve a bajar y resucita el mismo diálogo de descarte
+    // en bucle (el guardado local se borra, pero el de la nube seguía intacto).
+    if (window._syncFirebase) window._syncFirebase('planificacion', '');
     sessionStorage.setItem('planificador_goto', 'step1');
     location.reload();
   } else {
@@ -28116,13 +28124,17 @@ function _arrancarApp() {
     }
   });
   if (hayCambios) guardarCalificaciones();
-  // Recuperar en memoria cualquier planificación en progreso que no se
-  // hubiera llegado a guardar en Biblioteca (ver guardarBorrador/restaurarBorrador).
-  restaurarBorrador();
   if (sessionStorage.getItem('planificador_goto') === 'step1') {
+    // Venimos de un reload explícito tras confirmar "iniciar una nueva
+    // planificación, descartar la actual" (ver irAlHomeBase/nuevaPlanificacion)
+    // -- NO restaurar el borrador aquí, o el mismo diálogo de descarte
+    // volvería a aparecer en bucle con los datos que se acaba de decidir botar.
     sessionStorage.removeItem('planificador_goto');
     irAlHomeBase();
   } else {
+    // Recuperar en memoria cualquier planificación en progreso que no se
+    // hubiera llegado a guardar en Biblioteca (ver guardarBorrador/restaurarBorrador).
+    restaurarBorrador();
     abrirDashboard();
   }
   actualizarBadgeNotificaciones();
