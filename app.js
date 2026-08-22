@@ -6844,11 +6844,16 @@ function _renderRecuperacionesCicloHTML(yearId) {
   Object.entries(data || {}).forEach(([cursoId, porEst]) => {
     Object.entries(porEst || {}).forEach(([estId, porRec]) => {
       Object.entries(porRec || {}).forEach(([recKey, r]) => {
-        if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(r.fechaLimite, yearId)) return;
-        const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
-        filas.push({
-          nombre: _resolverNombreEstudiante(estId, yearId), cursoNombre,
-          fechaLimite: r.fechaLimite || '', estado: r.estado, nota: r.notaRecuperacion
+        const reg = _normalizarRegRecup(r);
+        (reg?.intentos || []).forEach((intento, idx) => {
+          if (!intento) return;
+          if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(intento.fechaLimite, yearId)) return;
+          const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
+          filas.push({
+            nombre: _resolverNombreEstudiante(estId, yearId), cursoNombre,
+            fechaLimite: intento.fechaLimite || '', estado: intento.estado, nota: intento.notaRecuperacion,
+            etiqueta: (reg.intentos.length > 1 && CAL_RECUP_LABELS[idx]) ? CAL_RECUP_LABELS[idx] : ''
+          });
         });
       });
     });
@@ -6857,7 +6862,7 @@ function _renderRecuperacionesCicloHTML(yearId) {
   filas.sort((a, b) => String(b.fechaLimite).localeCompare(String(a.fechaLimite)));
   return _cicloScroll(filas.map(f =>
     '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid #ECE3F8;border-radius:8px;background:#FCFAFF;font-size:0.75rem;">'
-    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + '<span style="font-weight:400;color:#9E9E9E;"> · ' + escapeHTML(f.cursoNombre) + '</span></span>'
+    + '<span style="color:#4527A0;font-weight:700;">' + escapeHTML(f.nombre) + '<span style="font-weight:400;color:#9E9E9E;"> · ' + escapeHTML(f.cursoNombre) + (f.etiqueta ? ' · ' + escapeHTML(f.etiqueta) : '') + '</span></span>'
     + '<span style="color:' + (f.estado === 'completada' ? '#2E7D32' : '#E65100') + ';font-weight:700;">' + (f.nota != null ? f.nota : (f.estado || '—')) + '</span>'
     + '</div>'
   ).join(''));
@@ -14046,7 +14051,9 @@ function renderizarTablaCalificaciones() {
     + '<th colspan="' + actividades.length + '" style="text-align:start;background:var(--color-primario);color:#fff;padding:6px 8px;">'
     + raLabel + '</th>'
     + '<th rowspan="2" style="background:var(--color-primario-dark);color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small><br><button onclick="_copiarColumnaTotal(this)" title="Copiar columna Total RA" style="background:none;border:none;cursor:pointer;padding:1px 3px;color:#90CAF9;margin-top:2px;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button></th>'
-    + '<th rowspan="2" style="background:#D98A3D;color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Recuper.<br><small style=\'font-weight:400;opacity:0.85;\'>2da oport.</small></th>'
+    + ['#D98A3D', '#C77A2D', '#B56A1D'].map((color, i) =>
+        '<th rowspan="2" style="background:' + color + ';color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Recuper.<br><small style=\'font-weight:400;opacity:0.85;\'>' + CAL_RECUP_LABELS[i] + '</small></th>'
+      ).join('')
     + '<th rowspan="2" style="background:var(--color-acento);color:#fff;min-width:80px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;border-top-right-radius:var(--radio-lg);">Total<br><small style=\'font-weight:400;\'>RA + Recup.</small></th></tr>';
 
   // ─── Fila 2: actividades con contador correcto por EC ───
@@ -14109,7 +14116,10 @@ function renderizarTablaCalificaciones() {
   curso.estudiantes.forEach((est, estIdx) => {
     const tr = document.createElement('tr');
     const recupMapEst = recupCache[cursoId]?.[est.id] || {};
-    const nRecupPendiente = Object.values(recupMapEst).filter(r => r.estado === 'pendiente').length;
+    const nRecupPendiente = Object.values(recupMapEst).reduce((count, r) => {
+      const reg = _normalizarRegRecup(r);
+      return count + (reg?.intentos || []).filter(i => i?.estado === 'pendiente').length;
+    }, 0);
     let cells = '<td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
       + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
@@ -14166,16 +14176,19 @@ function renderizarTablaCalificaciones() {
       const cls = nota !== undefined ? _clsNota(nota, max) : '';
       const esCompCol = a.esComplementario === true;
       const recKey = raKey + '__' + a.id;
-      const recup = recupMapEst[recKey];
+      const regAct = _normalizarRegRecup(recupMapEst[recKey]);
+      const intentosAct = (regAct?.intentos || []).filter(i => i);
+      const recup = intentosAct.length > 0;
+      const tienePendienteAct = intentosAct.some(i => i.estado === 'pendiente');
       const tdStyle = recup
-        ? (recup.estado === 'pendiente'
+        ? (tienePendienteAct
             ? ' style="position:relative;background:rgba(255,143,0,0.08);"'
             : ' style="position:relative;background:rgba(46,125,50,0.06);"')
         : (esCompCol ? ' style="position:relative;background:rgba(230,81,0,0.04);"' : '');
       const recupDot = recup
         ? '<span style="position:absolute;bottom:2px;right:2px;width:6px;height:6px;border-radius:50%;background:'
-          + (recup.estado === 'pendiente' ? '#FF8F00' : '#2E7D32')
-          + ';pointer-events:none;" title="' + (recup.estado === 'pendiente' ? 'Recuperación pendiente' : 'Recuperación completada') + '"></span>'
+          + (tienePendienteAct ? '#FF8F00' : '#2E7D32')
+          + ';pointer-events:none;" title="' + (tienePendienteAct ? 'Recuperación pendiente' : 'Recuperación completada') + (intentosAct.length > 1 ? ' (' + intentosAct.length + ' intentos)' : '') + '"></span>'
         : '';
       const isTouchMode = document.body.classList.contains('touch-mode');
       cells += '<td' + tdStyle + '><input type="number" class="input-nota ' + cls + '"'
@@ -14196,16 +14209,23 @@ function renderizarTablaCalificaciones() {
     cells += '<td class="td-total-ra ' + _clsNota(notaRA, raInfo.valorTotal) + '" id="total-ra-' + est.id + '-' + raKey + '">'
       + (notaRA !== null ? notaRA.toFixed(1) : '—') + '</td>';
 
-    // Columna Recuperación: suma de notas de recuperación del RA activo
-    const notaRecupSum = actividades.reduce((sum, a) => {
-      const r = recupMapEst[raKey + '__' + a.id];
-      return sum + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
-    }, 0);
-    const hasRecup = actividades.some(a => recupMapEst[raKey + '__' + a.id]?.notaRecuperacion != null);
-    cells += '<td class="td-total-ra ' + (hasRecup ? _clsNota(notaRecupSum, raInfo.valorTotal) : '') + '" style="' + (hasRecup ? '' : 'color:#555;') + '">'
-      + (hasRecup ? notaRecupSum.toFixed(1) : '—') + '</td>';
+    // Columnas de Recuperación (2da/3ra/4ta oportunidad): suma por intento del RA activo
+    const recupTotalesPorIntento = [];
+    for (let idxRecup = 0; idxRecup < CAL_RECUP_NUM_INTENTOS; idxRecup++) {
+      let sumIntento = 0, hasIntento = false;
+      actividades.forEach(a => {
+        const reg = _normalizarRegRecup(recupMapEst[raKey + '__' + a.id]);
+        const intento = reg?.intentos?.[idxRecup];
+        if (intento?.notaRecuperacion != null) { sumIntento += intento.notaRecuperacion; hasIntento = true; }
+      });
+      recupTotalesPorIntento.push(hasIntento ? sumIntento : null);
+      cells += '<td class="td-total-ra ' + (hasIntento ? _clsNota(sumIntento, raInfo.valorTotal) : '') + '" style="' + (hasIntento ? '' : 'color:#555;') + '">'
+        + (hasIntento ? sumIntento.toFixed(1) : '—') + '</td>';
+    }
 
-    // Columna Total RA + Recuperación (capped al valorTotal del RA)
+    // Columna Total RA + Recuperación (capped al valorTotal del RA, sumando los 3 intentos)
+    const notaRecupSum = recupTotalesPorIntento.reduce((s, v) => s + (v || 0), 0);
+    const hasRecup = recupTotalesPorIntento.some(v => v !== null);
     const totalConRecupRaw = (notaRA !== null || hasRecup) ? (notaRA || 0) + notaRecupSum : null;
     const totalConRecup = totalConRecupRaw !== null ? Math.min(totalConRecupRaw, raInfo.valorTotal) : null;
     const excedido = totalConRecupRaw !== null && totalConRecupRaw > raInfo.valorTotal;
@@ -14227,28 +14247,33 @@ function renderizarTablaCalificaciones() {
   const avgRA = _promedioColRA(curso, raKey);
   footCells += '<td class="td-total-ra ' + (avgRA !== null ? _clsNota(avgRA, raInfo.valorTotal) : '') + '">'
     + (avgRA !== null ? avgRA.toFixed(1) : '—') + '</td>';
-  // Footer Recuperación: promedio de sumas de recuperación
-  const recupSumsFoot = curso.estudiantes.map(e => {
+  // Footer Recuperación: promedio de sumas de recuperación, por cada intento (2da/3ra/4ta oport.)
+  const totalesPorEstYIntento = curso.estudiantes.map(e => {
     const rm = recupCache[cursoId]?.[e.id] || {};
-    const s = actividades.reduce((acc, a) => {
-      const r = rm[raKey + '__' + a.id];
-      return acc + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
-    }, 0);
-    const has = actividades.some(a => rm[raKey + '__' + a.id]?.notaRecuperacion != null);
-    return has ? s : null;
-  }).filter(v => v !== null);
-  const avgRecup = recupSumsFoot.length ? recupSumsFoot.reduce((s, v) => s + v, 0) / recupSumsFoot.length : null;
-  footCells += '<td class="td-total-ra ' + (avgRecup !== null ? _clsNota(avgRecup, raInfo.valorTotal) : '') + '">'
-    + (avgRecup !== null ? avgRecup.toFixed(1) : '—') + '</td>';
-  // Footer Total+Recup: promedio de (Total RA + Recuperación) por estudiante
-  const totalesConRecup = curso.estudiantes.map(e => {
+    const porIntento = [];
+    for (let idxRecup = 0; idxRecup < CAL_RECUP_NUM_INTENTOS; idxRecup++) {
+      let sumIntento = 0, hasIntento = false;
+      actividades.forEach(a => {
+        const reg = _normalizarRegRecup(rm[raKey + '__' + a.id]);
+        const intento = reg?.intentos?.[idxRecup];
+        if (intento?.notaRecuperacion != null) { sumIntento += intento.notaRecuperacion; hasIntento = true; }
+      });
+      porIntento.push(hasIntento ? sumIntento : null);
+    }
+    return porIntento;
+  });
+  for (let idxRecup = 0; idxRecup < CAL_RECUP_NUM_INTENTOS; idxRecup++) {
+    const valoresIntento = totalesPorEstYIntento.map(p => p[idxRecup]).filter(v => v !== null);
+    const avgIntento = valoresIntento.length ? valoresIntento.reduce((s, v) => s + v, 0) / valoresIntento.length : null;
+    footCells += '<td class="td-total-ra ' + (avgIntento !== null ? _clsNota(avgIntento, raInfo.valorTotal) : '') + '">'
+      + (avgIntento !== null ? avgIntento.toFixed(1) : '—') + '</td>';
+  }
+  // Footer Total+Recup: promedio de (Total RA + suma de los 3 intentos) por estudiante
+  const totalesConRecup = curso.estudiantes.map((e, i) => {
     const notaRa2 = _calcNotaRA(curso, e.id, raKey);
-    const rm = recupCache[cursoId]?.[e.id] || {};
-    const s = actividades.reduce((acc, a) => {
-      const r = rm[raKey + '__' + a.id];
-      return acc + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
-    }, 0);
-    const has = actividades.some(a => rm[raKey + '__' + a.id]?.notaRecuperacion != null);
+    const porIntento = totalesPorEstYIntento[i];
+    const has = porIntento.some(v => v !== null);
+    const s = porIntento.reduce((acc, v) => acc + (v || 0), 0);
     const raw = (notaRa2 !== null || has) ? (notaRa2 || 0) + s : null;
     return raw !== null ? Math.min(raw, raInfo.valorTotal) : null;
   }).filter(v => v !== null);
@@ -15268,11 +15293,13 @@ function abrirVistaEstudiante(estId) {
   const recupMap = _getRecuperacionesEst(cursoId, estId);
 
   const notaRA = _calcNotaRA(curso, estId, raKey);
-  const notaRecupSum = actividades.reduce((sum, a) => {
-    const r = recupMap[raKey + '__' + a.id];
-    return sum + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
-  }, 0);
-  const hasRecup = actividades.some(a => recupMap[raKey + '__' + a.id]?.notaRecuperacion != null);
+  let notaRecupSum = 0, hasRecup = false;
+  actividades.forEach(a => {
+    const reg = _normalizarRegRecup(recupMap[raKey + '__' + a.id]);
+    (reg?.intentos || []).forEach(intento => {
+      if (intento?.notaRecuperacion != null) { notaRecupSum += intento.notaRecuperacion; hasRecup = true; }
+    });
+  });
   const tTotal = (notaRA !== null || hasRecup)
     ? Math.min((notaRA || 0) + notaRecupSum, raInfo?.valorTotal || 0)
     : null;
@@ -15285,13 +15312,17 @@ function abrirVistaEstudiante(estId) {
     vt: raInfo?.valorTotal || 0,
     f: new Date().toISOString().slice(0, 10),
     acts: actividades.map(a => {
-      const r = recupMap[raKey + '__' + a.id];
+      const reg = _normalizarRegRecup(recupMap[raKey + '__' + a.id]);
+      const intentos = (reg?.intentos || []).filter(i => i);
+      const rSum = intentos.reduce((s, i) => s + (i.notaRecuperacion != null ? i.notaRecuperacion : 0), 0);
+      const rHas = intentos.some(i => i.notaRecuperacion != null);
+      const rPend = intentos.some(i => i.estado === 'pendiente');
       return {
         l: (a.enunciado || a.ecCodigo || '').substring(0, 50),
         v: raInfo?.valores?.[a.id] || 0,
         n: curso.notas?.[estId]?.[raKey]?.[a.id] ?? null,
-        r: r?.notaRecuperacion ?? null,
-        rs: r?.estado ?? null
+        r: rHas ? rSum : null,
+        rs: rHas ? (rPend ? 'pendiente' : 'completada') : null
       };
     }),
     tRA: notaRA,
@@ -15339,6 +15370,24 @@ function _copiarFallback(inp) {
 // MÓDULO: MODO RECUPERACIÓN / SEGUNDA OPORTUNIDAD
 // ════════════════════════════════════════════════════════════════════
 const RECUP_KEY = 'planificadorRA_recuperaciones_v1';
+// Cuántas oportunidades de recuperación se le dan a un estudiante por
+// actividad (además de la nota original) y cómo se etiqueta cada una.
+const CAL_RECUP_NUM_INTENTOS = 3;
+const CAL_RECUP_LABELS = ['2da oport.', '3ra oport.', '4ta oport.'];
+
+/** Normaliza un registro de recuperación al formato con varios intentos
+ * (arreglo `intentos`). Migra automáticamente el formato viejo -- un solo
+ * intento guardado directo en la raíz del registro, de antes de que
+ * existieran varias oportunidades -- sin perder ninguna nota ya guardada. */
+function _normalizarRegRecup(reg) {
+  if (!reg) return null;
+  if (Array.isArray(reg.intentos)) return reg;
+  if (reg.notaRecuperacion !== undefined || reg.fechaLimite !== undefined || reg.estado !== undefined) {
+    return { ...reg, intentos: [{ notaRecuperacion: reg.notaRecuperacion, fechaLimite: reg.fechaLimite, estado: reg.estado }] };
+  }
+  return { ...reg, intentos: [] };
+}
+
 function cargarRecuperaciones() {
   try { return JSON.parse(localStorage.getItem(RECUP_KEY) || '{}'); } catch { return {}; }
 }
@@ -15401,38 +15450,46 @@ function renderizarRecuperaciones(estId) {
       const pct = nota !== undefined ? (nota / max) * 100 : null;
       const emoji = pct === null ? '⬜' : (pct >= 70 ? '✅' : (pct >= 50 ? '🟡' : '❌'));
       const recKey = raKey + '__' + a.id;
-      const recup = recupMap[recKey];
+      const reg = _normalizarRegRecup(recupMap[recKey]);
       html += '<div style="border:1px solid #2a2a3a;border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#1a1a2a;">';
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
         + '<span style="font-weight:600;flex:1;font-size:0.88rem;">' + escapeHTML((a.enunciado || ('Act. ' + a.id)).substring(0, 60)) + '</span>'
         + '<span style="font-size:1.1rem;">' + emoji + '</span>'
         + '<span style="color:#B0BEC5;font-size:0.82rem;white-space:nowrap;">Nota: <strong>' + notaStr + '</strong> / ' + max + '</span>'
         + '</div>';
-      if (recup) {
-        const isPendiente = recup.estado === 'pendiente';
-        const colorEstado = isPendiente ? '#FF8F00' : '#2E7D32';
-        const bgEstado = isPendiente ? 'rgba(255,143,0,0.12)' : 'rgba(46,125,50,0.12)';
-        html += '<div style="background:' + bgEstado + ';border-radius:6px;padding:10px 12px;">';
-        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
-          + '<span class="material-icons" style="font-size:15px;color:' + colorEstado + ';">' + (isPendiente ? 'schedule' : 'check_circle') + '</span>'
-          + '<strong style="color:' + colorEstado + ';font-size:0.85rem;">' + (isPendiente ? 'PENDIENTE' : 'COMPLETADA') + '</strong>'
-          + '<span style="color:#9E9E9E;font-size:0.8rem;margin-left:4px;">· Vence: ' + (recup.fechaLimite || '—') + '</span>'
-          + '</div>';
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
-          + '<label style="font-size:0.82rem;color:#CFD8DC;">Nota recuperación (0–' + max + '):</label>'
-          + '<input type="number" id="recup-nota-' + a.id + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
-          + ' value="' + (recup.notaRecuperacion !== null && recup.notaRecuperacion !== undefined ? recup.notaRecuperacion : '') + '"'
-          + ' style="width:80px;padding:4px 6px;border-radius:4px;border:1px solid #444;background:#0e0e1a;color:#fff;font-size:0.9rem;"'
-          + ' onwheel="event.preventDefault()" /></div>';
-        html += '<div style="display:flex;gap:8px;">'
-          + '<button onclick="guardarRecuperacion(\'' + estId + '\',\'' + a.id + '\',\'' + recKey + '\')" style="padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">save</span>Guardar nota</button>'
-          + '<button onclick="quitarRecuperacion(\'' + estId + '\',\'' + recKey + '\')" style="padding:5px 12px;background:none;color:#EF5350;border:1px solid #EF5350;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">close</span>Quitar</button>'
-          + '</div></div>';
-      } else {
-        html += '<div id="recup-form-' + a.id + '">'
-          + '<button onclick="_abrirFormRecup(\'' + a.id + '\')" style="padding:5px 12px;background:none;color:#E65100;border:1px solid #E65100;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;">'
-          + '<span class="material-icons" style="font-size:13px;">replay</span>Marcar para recuperar</button>'
-          + '</div>';
+
+      for (let idx = 0; idx < CAL_RECUP_NUM_INTENTOS; idx++) {
+        const label = CAL_RECUP_LABELS[idx];
+        const intento = reg?.intentos?.[idx];
+        if (idx > 0) html += '<div style="height:8px;"></div>';
+        if (intento) {
+          const isPendiente = intento.estado === 'pendiente';
+          const colorEstado = isPendiente ? '#FF8F00' : '#2E7D32';
+          const bgEstado = isPendiente ? 'rgba(255,143,0,0.12)' : 'rgba(46,125,50,0.12)';
+          const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, a.id, idx);
+          const topeReal = Math.max(maxRecup, intento.notaRecuperacion || 0);
+          html += '<div style="background:' + bgEstado + ';border-radius:6px;padding:10px 12px;">';
+          html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">'
+            + '<span class="material-icons" style="font-size:15px;color:' + colorEstado + ';">' + (isPendiente ? 'schedule' : 'check_circle') + '</span>'
+            + '<strong style="color:' + colorEstado + ';font-size:0.85rem;">' + escapeHTML(label).toUpperCase() + ' · ' + (isPendiente ? 'PENDIENTE' : 'COMPLETADA') + '</strong>'
+            + '<span style="color:#9E9E9E;font-size:0.8rem;margin-left:4px;">· Vence: ' + (intento.fechaLimite || '—') + '</span>'
+            + '</div>';
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+            + '<label style="font-size:0.82rem;color:#CFD8DC;">Nota recuperación <span style="color:#FF8F00;">(máx. ' + topeReal.toFixed(1) + ' pts)</span>:</label>'
+            + '<input type="number" id="recup-nota-' + a.id + '-' + idx + '" min="0" max="' + topeReal + '" step="0.5" placeholder="—"'
+            + ' value="' + (intento.notaRecuperacion !== null && intento.notaRecuperacion !== undefined ? intento.notaRecuperacion : '') + '"'
+            + ' style="width:80px;padding:4px 6px;border-radius:4px;border:1px solid #444;background:#0e0e1a;color:#fff;font-size:0.9rem;"'
+            + ' onwheel="event.preventDefault()" /></div>';
+          html += '<div style="display:flex;gap:8px;">'
+            + '<button onclick="guardarRecuperacion(\'' + estId + '\',\'' + a.id + '\',' + idx + ')" style="padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">save</span>Guardar nota</button>'
+            + '<button onclick="quitarRecuperacion(\'' + estId + '\',\'' + a.id + '\',' + idx + ')" style="padding:5px 12px;background:none;color:#EF5350;border:1px solid #EF5350;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">close</span>Quitar</button>'
+            + '</div></div>';
+        } else {
+          html += '<div id="recup-form-' + a.id + '-' + idx + '">'
+            + '<button onclick="_abrirFormRecup(\'' + a.id + '\',' + idx + ')" style="padding:5px 12px;background:none;color:#E65100;border:1px solid #E65100;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;">'
+            + '<span class="material-icons" style="font-size:13px;">replay</span>Marcar ' + escapeHTML(label) + '</button>'
+            + '</div>';
+        }
       }
       html += '</div>';
     });
@@ -15441,8 +15498,9 @@ function renderizarRecuperaciones(estId) {
   document.getElementById('recup-body').innerHTML = html;
 }
 // Calcula cuántos puntos de recuperación quedan disponibles para un estudiante
-// en el RA activo, excluyendo opcionalmente la actividad que se está editando.
-function _calcMaxRecupPermitida(cursoId, estId, raKey, excludeActId) {
+// en el RA activo, excluyendo el intento (actividad + número de oportunidad)
+// que se está editando en este momento, para no restarse a sí mismo.
+function _calcMaxRecupPermitida(cursoId, estId, raKey, excludeActId, excludeIntentoIdx) {
   const curso = calState.cursos[cursoId];
   const raInfo = curso?.ras?.[raKey];
   if (!raInfo) return 0;
@@ -15451,45 +15509,48 @@ function _calcMaxRecupPermitida(cursoId, estId, raKey, excludeActId) {
   let acts = (planActiva && planActiva.actividades) || [];
   if (acts.length === 0) acts = raInfo._actividadesSnapshot || [];
   const data = cargarRecuperaciones();
-  const otrasRecup = acts.reduce((sum, a) => {
-    if (a.id === excludeActId) return sum;
-    const r = data[cursoId]?.[estId]?.[raKey + '__' + a.id];
-    return sum + (r?.notaRecuperacion != null ? r.notaRecuperacion : 0);
-  }, 0);
+  const recMap = data[cursoId]?.[estId] || {};
+  let otrasRecup = 0;
+  acts.forEach(a => {
+    const reg = _normalizarRegRecup(recMap[raKey + '__' + a.id]);
+    (reg?.intentos || []).forEach((intento, idx) => {
+      if (a.id === excludeActId && idx === excludeIntentoIdx) return;
+      if (intento?.notaRecuperacion != null) otrasRecup += intento.notaRecuperacion;
+    });
+  });
   return Math.max(0, raInfo.valorTotal - notaRA - otrasRecup);
 }
-function _abrirFormRecup(actId) {
+function _abrirFormRecup(actId, intentoIdx) {
   const overlay = document.getElementById('recuperaciones-overlay');
   const estId = overlay._estId;
   const cursoId = calState.cursoActivoId;
   const raKey = calState.raActivaKey || _getRaKey();
-  const raInfo = calState.cursos[cursoId]?.ras?.[raKey];
-  const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId);
+  const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId, intentoIdx);
   const hoy = new Date().toISOString().slice(0, 10);
-  const div = document.getElementById('recup-form-' + actId);
+  const div = document.getElementById('recup-form-' + actId + '-' + intentoIdx);
   if (!div) return;
   div.innerHTML = '<div style="background:rgba(230,81,0,0.08);border:1px solid #E65100;border-radius:6px;padding:10px 12px;">'
     + '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">'
     + '<div><label style="font-size:0.78rem;color:#CFD8DC;display:block;margin-bottom:3px;">Fecha límite</label>'
-    + '<input type="date" id="recup-fecha-' + actId + '" value="' + hoy + '" style="padding:4px 6px;border-radius:4px;border:1px solid #E65100;background:#0e0e1a;color:#fff;font-size:0.88rem;" /></div>'
+    + '<input type="date" id="recup-fecha-' + actId + '-' + intentoIdx + '" value="' + hoy + '" style="padding:4px 6px;border-radius:4px;border:1px solid #E65100;background:#0e0e1a;color:#fff;font-size:0.88rem;" /></div>'
     + '<div><label style="font-size:0.78rem;color:#CFD8DC;display:block;margin-bottom:3px;">Nota <span style="color:#FF8F00;">(máx. ' + maxRecup.toFixed(1) + ' pts)</span></label>'
-    + '<input type="number" id="recup-nota-inline-' + actId + '" min="0" max="' + maxRecup + '" step="0.5" placeholder="—" style="width:80px;padding:4px 6px;border-radius:4px;border:1px solid #444;background:#0e0e1a;color:#fff;font-size:0.88rem;" onwheel="event.preventDefault()" /></div>'
+    + '<input type="number" id="recup-nota-inline-' + actId + '-' + intentoIdx + '" min="0" max="' + maxRecup + '" step="0.5" placeholder="—" style="width:80px;padding:4px 6px;border-radius:4px;border:1px solid #444;background:#0e0e1a;color:#fff;font-size:0.88rem;" onwheel="event.preventDefault()" /></div>'
     + '</div>'
     + (maxRecup <= 0 ? '<p style="color:#EF5350;font-size:0.8rem;margin:0 0 8px;">⚠ El estudiante ya alcanzó el máximo del RA. No hay margen de recuperación.</p>' : '')
     + '<div style="display:flex;gap:8px;">'
-    + '<button onclick="guardarNuevaRecuperacion(\'' + estId + '\',\'' + actId + '\',\'' + (raKey + '__' + actId) + '\')" style="padding:5px 12px;background:#E65100;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">save</span>Guardar</button>'
+    + '<button onclick="guardarNuevaRecuperacion(\'' + estId + '\',\'' + actId + '\',' + intentoIdx + ')" style="padding:5px 12px;background:#E65100;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.82rem;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">save</span>Guardar</button>'
     + '<button onclick="renderizarRecuperaciones(\'' + estId + '\')" style="padding:5px 12px;background:none;color:#9E9E9E;border:1px solid #9E9E9E;border-radius:5px;cursor:pointer;font-size:0.82rem;">Cancelar</button>'
     + '</div></div>';
 }
-function guardarNuevaRecuperacion(estId, actId, recKey) {
+function guardarNuevaRecuperacion(estId, actId, intentoIdx) {
   const cursoId = calState.cursoActivoId;
   const raKey = calState.raActivaKey || _getRaKey();
-  const fecha = (document.getElementById('recup-fecha-' + actId)?.value || '').trim();
-  const notaVal = (document.getElementById('recup-nota-inline-' + actId)?.value || '').trim();
+  const fecha = (document.getElementById('recup-fecha-' + actId + '-' + intentoIdx)?.value || '').trim();
+  const notaVal = (document.getElementById('recup-nota-inline-' + actId + '-' + intentoIdx)?.value || '').trim();
   const nota = notaVal !== '' ? parseFloat(notaVal) : null;
   if (!fecha) { mostrarToast('Indica una fecha límite', 'error'); return; }
   if (nota !== null) {
-    const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId);
+    const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId, intentoIdx);
     if (nota > maxRecup) {
       mostrarToast('La nota excede el límite del RA. Máximo permitido: ' + maxRecup.toFixed(1) + ' pts', 'error');
       return;
@@ -15498,46 +15559,58 @@ function guardarNuevaRecuperacion(estId, actId, recKey) {
   const data = cargarRecuperaciones();
   if (!data[cursoId]) data[cursoId] = {};
   if (!data[cursoId][estId]) data[cursoId][estId] = {};
-  data[cursoId][estId][recKey] = {
-    id: recKey, actividadId: actId, raKey,
+  const recKey = raKey + '__' + actId;
+  const reg = _normalizarRegRecup(data[cursoId][estId][recKey]) || { id: recKey, actividadId: actId, raKey, intentos: [] };
+  reg.intentos[intentoIdx] = {
     notaRecuperacion: nota,
     fechaLimite: fecha,
     estado: nota !== null ? 'completada' : 'pendiente'
   };
+  data[cursoId][estId][recKey] = reg;
   guardarRecuperaciones(data);
   renderizarRecuperaciones(estId);
   renderizarTablaCalificaciones();
   mostrarToast('Recuperación registrada', 'success');
 }
-function guardarRecuperacion(estId, actId, recKey) {
+function guardarRecuperacion(estId, actId, intentoIdx) {
   const cursoId = calState.cursoActivoId;
   const raKey = calState.raActivaKey || _getRaKey();
-  const notaVal = (document.getElementById('recup-nota-' + actId)?.value || '').trim();
+  const notaVal = (document.getElementById('recup-nota-' + actId + '-' + intentoIdx)?.value || '').trim();
   const nota = notaVal !== '' ? parseFloat(notaVal) : null;
   if (nota !== null) {
-    const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId);
+    const maxRecup = _calcMaxRecupPermitida(cursoId, estId, raKey, actId, intentoIdx);
     if (nota > maxRecup) {
       mostrarToast('La nota excede el límite del RA. Máximo permitido: ' + maxRecup.toFixed(1) + ' pts', 'error');
       return;
     }
   }
   const data = cargarRecuperaciones();
-  if (!data[cursoId]?.[estId]?.[recKey]) return;
-  data[cursoId][estId][recKey].notaRecuperacion = nota;
-  data[cursoId][estId][recKey].estado = nota !== null ? 'completada' : 'pendiente';
+  const recKey = raKey + '__' + actId;
+  const reg = _normalizarRegRecup(data[cursoId]?.[estId]?.[recKey]);
+  if (!reg || !reg.intentos[intentoIdx]) return;
+  reg.intentos[intentoIdx].notaRecuperacion = nota;
+  reg.intentos[intentoIdx].estado = nota !== null ? 'completada' : 'pendiente';
+  data[cursoId][estId][recKey] = reg;
   guardarRecuperaciones(data);
   renderizarRecuperaciones(estId);
   renderizarTablaCalificaciones();
   mostrarToast('Nota de recuperación guardada', 'success');
 }
-function quitarRecuperacion(estId, recKey) {
+function quitarRecuperacion(estId, actId, intentoIdx) {
   if (!confirm('¿Quitar esta recuperación?')) return;
   const cursoId = calState.cursoActivoId;
+  const raKey = calState.raActivaKey || _getRaKey();
   const data = cargarRecuperaciones();
-  if (data[cursoId]?.[estId]) {
-    delete data[cursoId][estId][recKey];
-    if (Object.keys(data[cursoId][estId]).length === 0) delete data[cursoId][estId];
-    if (Object.keys(data[cursoId]).length === 0) delete data[cursoId];
+  const recKey = raKey + '__' + actId;
+  const reg = _normalizarRegRecup(data[cursoId]?.[estId]?.[recKey]);
+  if (reg) {
+    reg.intentos[intentoIdx] = null;
+    if (data[cursoId]?.[estId]) {
+      if (!reg.intentos.some(i => i)) delete data[cursoId][estId][recKey];
+      else data[cursoId][estId][recKey] = reg;
+      if (Object.keys(data[cursoId][estId]).length === 0) delete data[cursoId][estId];
+    }
+    if (data[cursoId] && Object.keys(data[cursoId]).length === 0) delete data[cursoId];
   }
   guardarRecuperaciones(data);
   renderizarRecuperaciones(estId);
