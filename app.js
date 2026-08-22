@@ -17732,10 +17732,6 @@ function _renderHistorial(body) {
                 <div>${d.getDate()}/${d.getMonth() + 1}</div>
               </th>`;
   }).join('')}
-            <th class="asist-hist-th-resumen" title="Asistencias">Asist.</th>
-            <th class="asist-hist-th-resumen" title="Tardanzas">Tard.</th>
-            <th class="asist-hist-th-resumen" title="Faltas (ausencias reales, más las tardanzas/excusas que se convierten en falta según la regla del centro — ver Configuración del centro)">Faltas</th>
-            <th class="asist-hist-th-resumen" title="Excusas">Exc.</th>
             <th class="asist-hist-th-pct">%</th>
           </tr>
         </thead>
@@ -17743,9 +17739,6 @@ function _renderHistorial(body) {
           ${curso.estudiantes.map(est => {
     const stats = _statsAsistencia(cursoId, est.id);
     const cls = stats.pct === null ? '' : stats.pct >= 80 ? 'ok' : stats.pct >= 60 ? 'warn' : 'bad';
-    const tituloFaltas = stats.faltasEfectivas !== stats.A
-      ? stats.A + ' falta(s) real(es) + tardanzas/excusas convertidas según la regla del centro'
-      : 'Faltas reales';
     return `<tr>
               <td class="asist-hist-td-nombre">${escapeHTML(est.nombre)}</td>
               ${fechas.map(f => {
@@ -17756,10 +17749,6 @@ function _renderHistorial(body) {
                   ${icono ? `<span class="material-icons" style="font-size:16px;color:${color};">${icono}</span>` : '<span style="color:#CFD8DC;font-size:12px;">·</span>'}
                 </td>`;
     }).join('')}
-              <td class="asist-hist-td-resumen" style="color:#2E7D32;">${stats.P}</td>
-              <td class="asist-hist-td-resumen" style="color:#E65100;">${stats.T}</td>
-              <td class="asist-hist-td-resumen" style="color:#C62828;" title="${escapeHTML(tituloFaltas)}">${stats.faltasEfectivas}</td>
-              <td class="asist-hist-td-resumen" style="color:#1565C0;">${stats.E}</td>
               <td class="asist-hist-td-pct ${cls}">${stats.pct !== null ? stats.pct + '%' : '—'}</td>
             </tr>`;
   }).join('')}
@@ -17827,8 +17816,9 @@ function _renderReporte(body) {
             <th>Estudiante</th>
             <th title="Presentes">✓ P</th>
             <th title="Tardanzas">⏱ T</th>
-            <th title="Ausentes">✗ A</th>
+            <th title="Ausentes (reales)">✗ A</th>
             <th title="Excusas">📋 E</th>
+            <th title="Ausencias reales, más las tardanzas/excusas que se convierten en falta según la regla del centro (Superadmin → Centros Educativos → Reglas de Asistencia)">⚠ Faltas</th>
             <th>Total</th>
             <th>% Asist.</th>
           </tr>
@@ -17838,12 +17828,16 @@ function _renderReporte(body) {
     const cls = r.pct === null ? '' : r.pct >= umbral ? 'ok' : r.pct >= 60 ? 'warn' : 'bad';
     const barW = r.pct !== null ? r.pct : 0;
     const barColor = cls === 'ok' ? '#2E7D32' : cls === 'warn' ? '#E65100' : '#C62828';
+    const tituloFaltas = r.faltasEfectivas !== r.A
+      ? r.A + ' falta(s) real(es) + tardanzas/excusas convertidas según la regla del centro'
+      : 'Faltas reales';
     return `<tr class="asist-rep-row ${r.pct !== null && r.pct < umbral ? 'fila-alerta' : ''}">
               <td class="asist-rep-nombre">${escapeHTML(r.est.nombre)}</td>
               <td class="pres">${r.P}</td>
               <td class="tard">${r.T}</td>
               <td class="ause">${r.A}</td>
               <td class="excu">${r.E || 0}</td>
+              <td class="falta" title="${escapeHTML(tituloFaltas)}">${r.faltasEfectivas}</td>
               <td>${r.total}</td>
               <td>
                 <div class="asist-bar-wrap">

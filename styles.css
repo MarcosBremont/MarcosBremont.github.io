@@ -6397,25 +6397,6 @@ body.dark-mode .asist-card-nombre {
   background: #FFEBEE;
 }
 
-.asist-hist-th-resumen {
-  text-align: center;
-  padding: 8px 8px;
-  background: #37474F;
-  color: #fff;
-  font-weight: 700;
-  min-width: 46px;
-  font-size: 0.72rem;
-}
-
-.asist-hist-td-resumen {
-  text-align: center;
-  padding: 7px 8px;
-  font-weight: 700;
-  border-bottom: 1px solid #E0E0E0;
-  color: #37474F;
-  background: #FAFAFA;
-}
-
 /* Reporte */
 .asist-rep-header {
   display: flex;
@@ -6530,6 +6511,12 @@ body.dark-mode .asist-card-nombre {
 .asist-rep-tabla td.tard {
   color: #E65100;
   font-weight: 700;
+}
+
+.asist-rep-tabla td.falta {
+  color: #B71C1C;
+  font-weight: 800;
+  background: rgba(198,40,40,0.06);
 }
 
 .asist-rep-pct {
