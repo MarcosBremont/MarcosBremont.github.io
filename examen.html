@@ -30,6 +30,30 @@
     }
     .instrucciones-box strong { display: block; color: #F57F17; margin-bottom: 4px; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
 
+    .aviso-monitoreo {
+      display: flex; align-items: center; gap: 8px; background: #FFF3E0; border: 1.5px solid #FFCC80;
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: .78rem; color: #7A4A00; line-height: 1.4;
+    }
+    .aviso-monitoreo .material-icons { font-size: 18px; color: #E65100; flex-shrink: 0; }
+
+    .aviso-salida-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center;
+      padding: 20px; z-index: 2000;
+    }
+    .aviso-salida-box {
+      background: #fff; border-radius: 12px; padding: 24px; max-width: 380px; width: 100%; text-align: center;
+      box-shadow: 0 12px 32px rgba(0,0,0,.25);
+    }
+    .aviso-salida-box .material-icons.ico-warn { font-size: 44px; color: #E65100; margin-bottom: 10px; }
+    .aviso-salida-box h3 { font-size: 1.02rem; font-weight: 700; color: #B71C1C; margin-bottom: 8px; }
+    .aviso-salida-box p { font-size: .84rem; color: #546E7A; line-height: 1.55; margin-bottom: 6px; }
+    .aviso-salida-box .contador { font-weight: 700; color: #E65100; }
+    .btn-entendido {
+      margin-top: 14px; background: #1565C0; color: #fff; border: none; padding: 10px 28px; border-radius: 8px;
+      font-size: .88rem; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+    .btn-entendido:hover { background: #0D47A1; }
+
     .student-form {
       background: #fff; border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,.08);
       padding: 20px; margin-bottom: 24px; border: 2px solid #BBDEFB;
@@ -129,6 +153,10 @@
     </div>
   </div>
   <div class="ex-main">
+    <div class="aviso-monitoreo">
+      <span class="material-icons">visibility</span>
+      <span>Este examen registra si cambias de pestaña, minimizas la ventana o sales de esta pantalla mientras respondes.</span>
+    </div>
     <div id="ex-instruc" class="instrucciones-box hidden">
       <strong>📋 Instrucciones</strong>
       <span id="ex-instruc-txt"></span>
@@ -156,6 +184,17 @@
   </div>
 </div>
 
+<!-- Aviso: el estudiante salió de la pestaña/app y regresó -->
+<div id="aviso-salida" class="aviso-salida-overlay hidden">
+  <div class="aviso-salida-box">
+    <span class="material-icons ico-warn">warning_amber</span>
+    <h3>Saliste de la pantalla del examen</h3>
+    <p>Esto quedó registrado y tu docente podrá verlo al revisar tus respuestas.</p>
+    <p>Van <span class="contador" id="aviso-salida-contador">1</span> salida(s) durante este examen.</p>
+    <button class="btn-entendido" onclick="document.getElementById('aviso-salida').classList.add('hidden')">Entendido</button>
+  </div>
+</div>
+
 <!-- Estado: enviado correctamente -->
 <div id="st-ok" class="state-center hidden">
   <span class="material-icons ico" style="color:#2E7D32;">check_circle</span>
@@ -180,6 +219,25 @@
   var db = firebase.firestore();
   var examenData = null;
   var examId = null;
+
+  // ── Detección de salidas de la pantalla del examen (cambio de pestaña/app,
+  // minimizar, etc.) -- no se puede impedir a nivel de navegador, pero sí
+  // detectarla, avisarle al estudiante y registrarla para que el docente la
+  // vea al revisar las respuestas. Solo se activa una vez el examen ya está
+  // visible, para no contar nada durante la carga inicial de la página.
+  var examenVisible = false;
+  var salidasCount = 0;
+  var salidasLog = [];
+  document.addEventListener('visibilitychange', function () {
+    if (!examenVisible) return;
+    if (document.hidden) {
+      salidasCount++;
+      salidasLog.push(new Date().toISOString());
+    } else if (salidasCount > 0) {
+      document.getElementById('aviso-salida-contador').textContent = salidasCount;
+      document.getElementById('aviso-salida').classList.remove('hidden');
+    }
+  });
 
   (function init() {
     var params = new URLSearchParams(window.location.search);
@@ -218,6 +276,7 @@
 
     document.getElementById('st-loading').classList.add('hidden');
     document.getElementById('st-exam').classList.remove('hidden');
+    examenVisible = true;
   }
 
   function renderPregunta(p, num) {
@@ -303,12 +362,15 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="material-icons spin">hourglass_top</span> Enviando...';
 
+    examenVisible = false; // dejar de contar salidas una vez que ya se está enviando
     try {
       await db.collection('examenes').doc(examId).collection('respuestas').add({
         estudianteNombre: nombre,
         estudianteNumero: numero,
         fechaEnvio: firebase.firestore.FieldValue.serverTimestamp(),
-        respuestas: respuestas
+        respuestas: respuestas,
+        salidasCount: salidasCount,
+        salidasLog: salidasLog
       });
       document.getElementById('st-exam').classList.add('hidden');
       document.getElementById('ok-nombre').textContent = nombre;

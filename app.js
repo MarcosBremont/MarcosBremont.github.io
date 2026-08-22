@@ -24818,6 +24818,12 @@ async function verResultadosExamen(examenId) {
       const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
       const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') + ' · ' + fechaObj.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
       const respondidas = preguntas.filter(p => (r.respuestas || {})[p.id]).length;
+      const nSalidas = r.salidasCount || 0;
+      const avisoSalidas = nSalidas > 0
+        ? `<span title="Salió de la pantalla del examen ${nSalidas} vez${nSalidas > 1 ? 'es' : ''} (cambio de pestaña/app o minimizó)" style="display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:700;color:#B71C1C;background:#FFEBEE;padding:2px 8px;border-radius:20px;margin-top:3px;">
+            <span class="material-icons" style="font-size:13px;">warning_amber</span>${nSalidas} salida${nSalidas > 1 ? 's' : ''}
+          </span>`
+        : '';
 
       const detalleId = 'res-det-' + ri;
       const detalle = preguntas.map((p, pi) => {
@@ -24846,6 +24852,7 @@ async function verResultadosExamen(examenId) {
           <div style="flex:1;min-width:0;">
             <div style="font-size:.9rem;font-weight:700;color:#1A1A2E;">${_eHtml(r.estudianteNombre || '—')}</div>
             <div style="font-size:.74rem;color:#9E9E9E;">Nº ${_eHtml(r.estudianteNumero || '—')} · ${fechaStr}</div>
+            ${avisoSalidas}
           </div>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-size:.75rem;font-weight:600;color:${respondidas === preguntas.length ? '#2E7D32' : '#E65100'};">${respondidas}/${preguntas.length} resp.</div>
