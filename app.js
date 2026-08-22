@@ -9370,11 +9370,17 @@ function _auditIcono(accion) {
   if (accion.includes('Planificación'))    return { icon: 'description',      color: '#E65100' };
   if (accion.includes('Curso creado'))     return { icon: 'add_circle',       color: '#1565C0' };
   if (accion.includes('Curso eliminado'))  return { icon: 'delete',           color: '#C62828' };
+  if (accion.includes('Curso renombrado')) return { icon: 'edit',             color: '#1565C0' };
+  if (accion.includes('Ciclo escolar archivado'))   return { icon: 'archive', color: '#6A1B9A' };
+  if (accion.includes('Ciclo escolar restaurado'))  return { icon: 'restore', color: '#2E7D32' };
   if (accion.includes('Tarea creada'))     return { icon: 'add_task',         color: '#2E7D32' };
   if (accion.includes('Tarea eliminada'))  return { icon: 'delete',           color: '#C62828' };
   if (accion.includes('Tarea entregada'))  return { icon: 'task_alt',         color: '#2E7D32' };
   if (accion.includes('Tarea no entregada')) return { icon: 'cancel',         color: '#C62828' };
   if (accion.includes('Tarea'))            return { icon: 'task',             color: '#1565C0' };
+  if (accion.includes('vinculación'))      return { icon: 'handshake',        color: '#00695C' };
+  if (accion.includes('Examen'))           return { icon: 'quiz',             color: '#1565C0' };
+  if (accion.includes('Recuperación') || accion.includes('recuperación')) return { icon: 'replay', color: '#E65100' };
   if (accion.includes('estudiante'))       return { icon: 'person_add',       color: '#0277BD' };
   if (accion.includes('Estudiante'))       return { icon: 'person_remove',    color: '#C62828' };
   if (accion.includes('calificaci') || accion.includes('Nota registrada')) return { icon: 'grade', color: '#F57F17' };
@@ -9387,6 +9393,15 @@ function _auditIcono(accion) {
   if (accion.includes('config') || accion.includes('Modo'))  return { icon: 'settings', color: '#546E7A' };
   if (accion.includes('export') || accion.includes('descarg')) return { icon: 'download', color: '#1565C0' };
   if (accion.includes('Enlace') || accion.includes('enlace')) return { icon: 'link',      color: '#0277BD' };
+  if (accion.includes('Comentario'))       return { icon: 'comment',          color: '#1565C0' };
+  if (accion.includes('Evento/incidencia')) return { icon: 'event_note',      color: '#00695C' };
+  if (accion.includes('horario') || accion.includes('Clase de horario')) return { icon: 'calendar_view_week', color: '#1565C0' };
+  if (accion.includes('Certificado'))      return { icon: 'workspace_premium', color: '#AD1457' };
+  if (accion.includes('Claves de API'))    return { icon: 'vpn_key',          color: '#546E7A' };
+  if (accion.includes('Centro educativo')) return { icon: 'apartment',        color: '#1565C0' };
+  if (accion.includes('pago') || accion.includes('Pago')) return { icon: 'payments', color: '#2E7D32' };
+  if (accion.includes('Denuncia'))         return { icon: 'report_problem',   color: '#C62828' };
+  if (accion.includes('calendario') || accion.includes('Calendario')) return { icon: 'event', color: '#6A1B9A' };
   return { icon: 'radio_button_checked', color: '#9E9E9E' };
 }
 
@@ -12527,6 +12542,7 @@ function restaurarBackupCalificaciones(idx) {
     if (window._syncFirebase) _syncFirebase('calificaciones', cal);
     cargarCalificaciones();
     cerrarBackup();
+    registrarCambio('Calificaciones restauradas desde backup: ' + backup.label);
     mostrarToast('Calificaciones restauradas correctamente', 'success');
   } catch (e) { mostrarToast('Error al restaurar: ' + e.message, 'error'); }
 }
@@ -12666,6 +12682,7 @@ function crearCurso() {
   guardarCalificaciones();
   cerrarModalBtn();
   renderizarCalificaciones();
+  registrarCambio(`Curso creado: "${nombre}"`);
   mostrarToast(`Curso "${nombre}" creado`, 'success');
 }
 
@@ -12705,6 +12722,7 @@ function guardarRenombreCurso(id) {
   guardarCalificaciones();
   cerrarModalBtn();
   renderizarTabsCursos();
+  registrarCambio(`Curso renombrado: "${nombreAnterior}" → "${nombre}"`);
   mostrarToast(`Curso renombrado a "${nombre}"`, 'success');
 }
 
@@ -15161,6 +15179,7 @@ async function _generarCertificadoImprimir(estId) {
     origen: 'Generador de certificados · ' + (curso.nombre || '')
   });
 
+  registrarCambio(`Certificado generado: "${titulo}" — ${est.nombre}`);
   cerrarGeneradorCertificado();
   mostrarToast('Certificado generado', 'success');
 }
@@ -15262,6 +15281,7 @@ function guardarIncidenciaNueva(estId) {
   guardarIncidencias(data);
   renderizarIncidencias(estId);
   renderizarTablaCalificaciones();
+  registrarCambio('Evento/incidencia registrado: ' + tipo);
   mostrarToast('Evento registrado', 'success');
 
   // Enlazar con el Portafolio Docente como evidencia (automático, best-effort)
@@ -15286,6 +15306,7 @@ function eliminarIncidencia(incId, estId) {
   guardarIncidencias(data);
   renderizarIncidencias(estId);
   renderizarTablaCalificaciones();
+  registrarCambio('Evento/incidencia eliminado');
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -15586,6 +15607,7 @@ function guardarNuevaRecuperacion(estId, actId, intentoIdx) {
   guardarRecuperaciones(data);
   renderizarRecuperaciones(estId);
   renderizarTablaCalificaciones();
+  registrarCambio('Recuperación registrada');
   mostrarToast('Recuperación registrada', 'success');
 }
 function guardarRecuperacion(estId, actId, intentoIdx) {
@@ -15610,6 +15632,7 @@ function guardarRecuperacion(estId, actId, intentoIdx) {
   guardarRecuperaciones(data);
   renderizarRecuperaciones(estId);
   renderizarTablaCalificaciones();
+  registrarCambio('Nota de recuperación guardada');
   mostrarToast('Nota de recuperación guardada', 'success');
 }
 function quitarRecuperacion(estId, actId, intentoIdx) {
@@ -15631,6 +15654,7 @@ function quitarRecuperacion(estId, actId, intentoIdx) {
   guardarRecuperaciones(data);
   renderizarRecuperaciones(estId);
   renderizarTablaCalificaciones();
+  registrarCambio('Recuperación eliminada');
   mostrarToast('Recuperación eliminada', 'success');
 }
 
@@ -18648,6 +18672,7 @@ function guardarComentarioNuevo(estId) {
   renderizarComentariosEnPerfil(estId);
   // También actualizar badge en la lista de resultados
   _actualizarBadgeComentarios(estId);
+  registrarCambio(`Comentario agregado: "${texto.substring(0, 60)}"`);
   mostrarToast('Comentario guardado', 'success');
 
   // Enlazar con el Portafolio Docente como evidencia (automático, best-effort)
@@ -18699,6 +18724,7 @@ function confirmarEditComentario(comentId, estId) {
   if (c) { c.texto = nuevoTexto; c.editado = Date.now(); }
   guardarComentarios(data);
   renderizarComentariosEnPerfil(estId);
+  registrarCambio('Comentario editado');
   mostrarToast('Comentario actualizado', 'success');
 }
 
@@ -18709,6 +18735,7 @@ function eliminarComentario(comentId, estId) {
   guardarComentarios(data);
   renderizarComentariosEnPerfil(estId);
   _actualizarBadgeComentarios(estId);
+  registrarCambio('Comentario eliminado');
   mostrarToast('Comentario eliminado', 'success');
 }
 
@@ -20354,6 +20381,7 @@ function guardarCeldaHorario(diaIdx, periodoId) {
   guardarHorario(data);
   cerrarModalBtn();
   renderizarHorario();
+  registrarCambio(materia ? 'Período de horario guardado' : 'Período de horario borrado');
   mostrarToast(materia ? 'Período guardado' : 'Período borrado', 'success');
 }
 
@@ -20399,6 +20427,7 @@ function duplicarCeldaHorario(diaOrigen, periodoOrigen) {
 
   guardarHorario(limpia);
   renderizarHorario();
+  registrarCambio(`Clase de horario duplicada a ${DIAS[destDia]} · P${destPeriodo}`);
   mostrarToast(`Clase duplicada a ${DIAS[destDia]} · P${destPeriodo}`, 'success');
 }
 
@@ -20407,6 +20436,7 @@ function borrarCeldaHorario(diaIdx, periodoId) {
   guardarHorario(data);
   cerrarModalBtn();
   renderizarHorario();
+  registrarCambio('Período de horario eliminado');
   mostrarToast('Período borrado', 'success');
 }
 
@@ -24733,11 +24763,13 @@ async function guardarExamen() {
     };
     if (ex.id) {
       await db.collection('examenes').doc(ex.id).update(data);
+      registrarCambio('Examen actualizado: "' + ex.titulo + '"');
       mostrarToast('Examen actualizado', 'success');
     } else {
       data.activo = true;
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection('examenes').add(data);
+      registrarCambio('Examen creado: "' + ex.titulo + '"');
       mostrarToast('Examen creado y activado', 'success');
 
       _crearEvidenciaPortafolioAuto({
@@ -24761,6 +24793,7 @@ async function eliminarExamen(examenId) {
   if (!confirm('¿Eliminar este examen? También se borrarán todas las respuestas recibidas. Esta acción no se puede deshacer.')) return;
   try {
     await db.collection('examenes').doc(examenId).delete();
+    registrarCambio('Examen eliminado');
     mostrarToast('Examen eliminado', 'success');
     _cargarExamenes();
   } catch (e) {
@@ -24771,6 +24804,7 @@ async function eliminarExamen(examenId) {
 async function toggleActivarExamen(examenId, nuevoEstado) {
   try {
     await db.collection('examenes').doc(examenId).update({ activo: nuevoEstado });
+    registrarCambio(nuevoEstado ? 'Examen abierto para estudiantes' : 'Examen cerrado');
     mostrarToast(nuevoEstado ? 'Examen abierto — los estudiantes ya pueden acceder' : 'Examen cerrado', 'success');
     _cargarExamenes();
   } catch (e) {
@@ -27051,6 +27085,7 @@ function guardarApiKey() {
   actualizarBtnConfigIA();
   cerrarModalBtn();
   const proveedores = [groqKey && 'Groq', geminiKey && 'Gemini', openrouterKey && 'OpenRouter'].filter(Boolean).join(' + ');
+  registrarCambio(`Claves de API de IA actualizadas (${proveedores})`);
   mostrarToast(`Claves guardadas (${proveedores}). La IA está lista.`, 'success');
 }
 
@@ -27065,6 +27100,7 @@ function borrarApiKey() {
   }
   actualizarBtnConfigIA();
   cerrarModalBtn();
+  registrarCambio('Claves de API de IA eliminadas');
   mostrarToast('Claves eliminadas. Se usará generación local.', 'info');
 }
 
@@ -29332,6 +29368,7 @@ async function archivarCicloActual() {
     } else {
       mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
+    registrarCambio('Ciclo escolar archivado: ' + currentYear);
     abrirBackup();
   } catch (e) {
     mostrarToast('Error archivando ciclo: ' + e.message, 'error');
@@ -29461,6 +29498,7 @@ async function restaurarCicloComoActivo(yearId) {
     // Ya no es un histórico -- vuelve a ser el ciclo activo, se quita de "archivados"
     _saveArchivedYears(_loadArchivedYears().filter(item => item.id !== yearId));
 
+    registrarCambio('Ciclo escolar restaurado como activo: ' + yearId);
     mostrarToast('Ciclo ' + yearId + ' restaurado como año activo. Recargando...', 'success');
     setTimeout(() => location.reload(), 1200);
   } catch (e) {
@@ -30727,6 +30765,7 @@ function exportarDatos() {
   // También descargar la bitácora de cambios (.txt)
   setTimeout(() => { exportarBitacora(); }, 500);
 
+  registrarCambio('Backup completo exportado');
   mostrarToast('Backup descargado correctamente', 'success');
 }
 
@@ -30854,6 +30893,7 @@ function importarDatos() {
   try {
     _aplicarSnapshotBackup(_backupFileData);
 
+    registrarCambio('Backup completo importado/restaurado');
     mostrarToast('¡Datos restaurados correctamente! Recargando...', 'success');
     cerrarBackup();
 
@@ -32849,6 +32889,7 @@ function _guardarPost(id) {
   }
   cerrarModalBtn();
   renderizarBlog();
+  registrarCambio(id ? `Post de blog editado: "${titulo}"` : `Post de blog creado: "${titulo}"`);
   mostrarToast(id ? 'Post actualizado' : 'Post guardado como borrador', 'success');
 }
 
@@ -32913,6 +32954,7 @@ function _ejecutarDuplicarPost(postId) {
   guardarBlog(blog);
   cerrarModalBtn();
   renderizarBlog();
+  registrarCambio(`Post de blog duplicado a ${count} curso${count > 1 ? 's' : ''}`);
   mostrarToast(`Post duplicado a ${count} curso${count > 1 ? 's' : ''} como borrador`, 'success');
 }
 
@@ -32986,6 +33028,7 @@ function publicarPost(id) {
     origen: 'Blog del Docente · ' + (post.cursoNombre || '')
   });
 
+  registrarCambio(`Post de blog publicado: "${post.titulo}"`);
   mostrarToast('Post publicado ✓', 'success');
 }
 
@@ -32997,6 +33040,7 @@ function despublicarPost(id) {
   guardarBlog(blog);
   _blogDespublicarEnFirestore(id);
   renderizarBlog();
+  registrarCambio(`Post de blog despublicado: "${post.titulo}"`);
   mostrarToast('Post despublicado', 'info');
 }
 
@@ -33008,6 +33052,7 @@ function eliminarPost(id) {
   blog.posts = (blog.posts || []).filter(p => p.id !== id);
   guardarBlog(blog);
   renderizarBlog();
+  registrarCambio(`Post de blog eliminado: "${post?.titulo || ''}"`);
   mostrarToast('Post eliminado', 'info');
 }
 
@@ -34641,6 +34686,7 @@ async function _calEscGuardarAdmin() {
   if (!_calEscEsAdmin() || typeof db === 'undefined' || !_calEsc.centroId) return;
   try {
     await db.collection('centros').doc(_calEsc.centroId).collection('calendario').doc('main').set(_calEsc.adminDatos || _calEscDatosVacios());
+    registrarCambio('Calendario escolar publicado para el centro');
     mostrarToast('Calendario publicado para el centro ✓', 'success');
   } catch (e) {
     console.error('[Calendario] Error Firestore:', e.code, e.message);
@@ -35072,6 +35118,7 @@ function _calEscGuardarActividad(mes, idx) {
         texto: lineFechadoLabel + lineDesc
       });
     });
+    registrarCambio(lineas.length > 1 ? `${lineas.length} actividades de calendario agregadas` : 'Actividad de calendario agregada');
     mostrarToast(lineas.length > 1 ? `${lineas.length} actividades agregadas ✓` : 'Actividad agregada ✓', 'success');
   } else {
     // Es edición de una actividad específica (se asume primera línea si pegara varias)
@@ -35100,6 +35147,7 @@ function _calEscGuardarActividad(mes, idx) {
         }
       }
       act.texto = editFechadoLabel + editDesc;
+      registrarCambio('Actividad de calendario editada');
       mostrarToast('Actividad actualizada ✓', 'success');
     }
   }
@@ -35115,6 +35163,7 @@ function _calEscEliminarActividad(mes, idx) {
   _calEscAsegurarMes(datos, mes);
   datos.meses[mes].actividades.splice(idx, 1);
   _calEscSetDatosEditables(datos);
+  registrarCambio('Actividad de calendario eliminada');
   _calEscRenderizarMes();
 }
 
@@ -35134,6 +35183,7 @@ function _calEscEliminarEfemeride(mes, idx) {
   _calEscAsegurarMes(datos, mes);
   datos.meses[mes].efemerides.splice(idx, 1);
   _calEscSetDatosEditables(datos);
+  registrarCambio('Efeméride de calendario eliminada');
   _calEscRenderizarMes();
 }
 
@@ -35220,6 +35270,7 @@ function _calEscGuardarEfemeride(mes, idx) {
         descripcion: rawDesc || ''
       });
     });
+    registrarCambio(lineas.length > 1 ? `${lineas.length} efemérides de calendario agregadas` : 'Efeméride de calendario agregada');
     mostrarToast(lineas.length > 1 ? `${lineas.length} efemérides agregadas ✓` : 'Efeméride agregada ✓', 'success');
   } else {
     // Es edición de una efeméride específica
@@ -35241,6 +35292,7 @@ function _calEscGuardarEfemeride(mes, idx) {
       ef.dia = editDia;
       ef.titulo = editTitulo;
       ef.descripcion = rawDesc || '';
+      registrarCambio('Efeméride de calendario editada');
       mostrarToast('Efeméride actualizada ✓', 'success');
     }
   }
@@ -35523,6 +35575,7 @@ function _calEscGuardarFestivo() {
     const msgPartes = [];
     if (agregados) msgPartes.push(`${agregados} día${agregados !== 1 ? 's' : ''} agregado${agregados !== 1 ? 's' : ''}`);
     if (actualizados) msgPartes.push(`${actualizados} motivo${actualizados !== 1 ? 's' : ''} actualizado${actualizados !== 1 ? 's' : ''}`);
+    registrarCambio(`Días festivos de calendario: ${msgPartes.join(' y ')}`);
     mostrarToast(`${msgPartes.join(' y ')}. Recuerda publicar los cambios.`, 'success');
     return;
   }
@@ -35535,6 +35588,7 @@ function _calEscGuardarFestivo() {
   _calEsc.adminDatos = datos;
   document.getElementById('cal-esc-modal-fest')?.remove();
   _calEscRenderizarFestivos();
+  registrarCambio(`${dias.length} día(s) festivo(s) de calendario agregado(s)`);
   mostrarToast(`${dias.length} día${dias.length !== 1 ? 's' : ''} festivo${dias.length !== 1 ? 's' : ''} agregado${dias.length !== 1 ? 's' : ''}. Recuerda publicar los cambios.`, 'success');
 }
 
@@ -35545,6 +35599,7 @@ function _calEscEliminarFestivo(idx) {
   datos.festivos.splice(idx, 1);
   _calEsc.adminDatos = datos;
   _calEscRenderizarFestivos();
+  registrarCambio('Día festivo de calendario eliminado');
   mostrarToast('Día festivo eliminado. Recuerda publicar los cambios.', 'info');
 }
 
@@ -36155,6 +36210,7 @@ async function _eliminarReporteComp(id) {
   try {
     await db.collection('public_blogs').doc(user.uid)
       .collection('reportes_comportamiento').doc(id).delete();
+    registrarCambio('Reporte de comportamiento eliminado');
     mostrarToast('Reporte eliminado', 'success');
     _renderReportesRecibidos();
   } catch (e) {
@@ -36587,6 +36643,7 @@ async function _eliminarDenuncia(id) {
   try {
     await db.collection('public_blogs').doc(user.uid)
       .collection('denuncias').doc(id).delete();
+    registrarCambio('Denuncia eliminada');
     mostrarToast('Denuncia eliminada', 'success');
     _renderDenunciasRecibidas();
   } catch (e) {
@@ -38507,6 +38564,7 @@ async function _guardarCentro(centroId) {
       await _guardarPlantillaCentroChunked(finalId, 'impacto', base64I, fileImpacto.name);
     }
 
+    registrarCambio(centroId ? `Centro educativo actualizado: "${nombre}"` : `Centro educativo creado: "${nombre}"`);
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
   } catch (e) {
@@ -38794,6 +38852,7 @@ async function _eliminarCentro(centroId) {
   if (!confirm('¿Estás seguro de eliminar este centro educativo? Esta acción no se puede deshacer.')) return;
   try {
     await db.collection(CENTROS_COLLECTION).doc(centroId).delete();
+    registrarCambio('Centro educativo eliminado');
     mostrarToast('Centro eliminado', 'success');
     _renderCentrosEducativos();
   } catch (e) {
@@ -41519,11 +41578,13 @@ async function _vincGuardar(tabKey, centroId) {
       const update = { ...data };
       if (documentoBase64) { update.documentoBase64 = documentoBase64; update.documentoNombre = documentoNombre; }
       await ref.doc(editId).update(update);
+      registrarCambio('Registro de vinculación actualizado (' + cfg.titulo + ')');
       mostrarToast('Registro actualizado', 'success');
     } else {
       const nuevo = { ...data, estado: cfg.estadoInicial, seguimiento: [], creadoPor: window.currentUser?.email || '', creadoEn: firebase.firestore.FieldValue.serverTimestamp() };
       if (documentoBase64) { nuevo.documentoBase64 = documentoBase64; nuevo.documentoNombre = documentoNombre; }
       await ref.add(nuevo);
+      registrarCambio('Registro de vinculación creado (' + cfg.titulo + ')');
       mostrarToast('Registro guardado', 'success');
     }
     window._vincFormAbierto = null;
@@ -41547,6 +41608,7 @@ async function _vincCambiarEstado(tabKey, id, nuevoEstado) {
   try {
     const centroId = await _vincGetCentroId();
     await db.collection('centros').doc(centroId).collection(cfg.coleccion).doc(id).update({ estado: nuevoEstado });
+    registrarCambio('Estado de vinculación (' + cfg.titulo + ') actualizado a: ' + nuevoEstado);
     mostrarToast('Estado actualizado', 'success');
     _vincRender(tabKey, window._vincActiveContId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -41558,6 +41620,7 @@ async function _vincEliminar(tabKey, id) {
   try {
     const centroId = await _vincGetCentroId();
     await db.collection('centros').doc(centroId).collection(cfg.coleccion).doc(id).delete();
+    registrarCambio('Registro de vinculación eliminado (' + cfg.titulo + ')');
     mostrarToast('Registro eliminado', 'success');
     _vincRender(tabKey, window._vincActiveContId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -41574,6 +41637,7 @@ async function _vincAgregarSeguimiento(tabKey, id) {
     await db.collection('centros').doc(centroId).collection(cfg.coleccion).doc(id).update({
       seguimiento: firebase.firestore.FieldValue.arrayUnion(entrada)
     });
+    registrarCambio('Nota de seguimiento agregada (vinculación · ' + cfg.titulo + ')');
     mostrarToast('Nota de seguimiento agregada', 'success');
     _vincRender(tabKey, window._vincActiveContId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -42041,6 +42105,7 @@ async function _pagosGuardarConcepto(idx) {
   try {
     await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').set({ items: conceptos }, { merge: true });
     document.getElementById('modal-pago-concepto')?.remove();
+    registrarCambio(idx >= 0 ? `Concepto de pago actualizado: "${nombre}"` : `Concepto de pago creado: "${nombre}"`);
     mostrarToast(idx >= 0 ? 'Concepto actualizado' : 'Concepto agregado', 'success');
     _pagosRenderConceptos();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -42049,10 +42114,12 @@ async function _pagosGuardarConcepto(idx) {
 async function _pagosEliminarConcepto(idx) {
   const conceptos = window._pagosConceptos || [];
   if (!confirm('¿Eliminar "' + conceptos[idx]?.nombre + '"? Esta acción no se puede deshacer.')) return;
+  const nombreConceptoEliminado = conceptos[idx]?.nombre || '';
   conceptos.splice(idx, 1);
   const centroId = _pagosGetCentroId();
   try {
     await db.collection('centros').doc(centroId).collection('pagos_config').doc('conceptos').set({ items: conceptos }, { merge: true });
+    registrarCambio(`Concepto de pago eliminado: "${nombreConceptoEliminado}"`);
     mostrarToast('Concepto eliminado', 'success');
     _pagosRenderConceptos();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -42210,6 +42277,7 @@ async function _pagosMarcarPagado(estId, conceptoId, monto) {
   try {
     await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').set({ registros: pagos }, { merge: true });
     window._pagosRegistros = pagos;
+    registrarCambio('Pago registrado (RD$ ' + Number(monto).toLocaleString('es-DO') + ')');
     mostrarToast('Pago registrado', 'success');
     _pagosRenderTablaEstado();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -42223,6 +42291,7 @@ async function _pagosAnularPago(estId, conceptoId) {
   try {
     await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').set({ registros: pagos }, { merge: true });
     window._pagosRegistros = pagos;
+    registrarCambio('Pago anulado');
     mostrarToast('Pago anulado', 'success');
     _pagosRenderTablaEstado();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
@@ -42272,6 +42341,7 @@ async function _pagosConfirmarManual(conceptoId, monto) {
     await db.collection('centros').doc(centroId).collection('pagos_config').doc('pagos').set({ registros: pagos }, { merge: true });
     window._pagosRegistros = pagos;
     document.getElementById('modal-pago-manual')?.remove();
+    registrarCambio('Pago registrado manualmente (RD$ ' + Number(monto).toLocaleString('es-DO') + ')');
     mostrarToast('Pago registrado', 'success');
     _pagosRenderTablaEstado();
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
