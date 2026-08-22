@@ -36415,21 +36415,6 @@ async function _esAdminDeCentro() {
   } catch { return []; }
 }
 
-/** Muestra/oculta el rótulo "Gestión y Administración" de Accesos Rápidos
- * según si al menos uno de los botones de ese grupo quedó visible -- se
- * llama al final de cada check de rol de ese grupo, sin importar el orden
- * en que resuelvan sus promesas. */
-function _actualizarVisibilidadGrupoGestion() {
-  const label = document.getElementById('dash-subgrupo-gestion');
-  if (!label) return;
-  const ids = ['btn-dash-psicologia', 'btn-dash-coordinadora', 'btn-dash-director', 'btn-dash-vinculacion', 'btn-dash-admin-centro', 'btn-dash-pagos', 'btn-dash-superadmin'];
-  const algunoVisible = ids.some(id => {
-    const el = document.getElementById(id);
-    return el && el.style.display !== 'none';
-  });
-  label.style.display = algunoVisible ? '' : 'none';
-}
-
 /** Muestra/oculta botón admin centro en dashboard */
 async function _verificarAccesoAdminCentro() {
   const btn = document.getElementById('btn-dash-admin-centro');
@@ -36438,7 +36423,6 @@ async function _verificarAccesoAdminCentro() {
   // Superadmins también ven este botón (gestionan todos los centros)
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
   btn.style.display = (centros.length > 0 || esSA) ? '' : 'none';
-  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Abre el panel de admin centro */
@@ -36723,7 +36707,6 @@ async function _verificarAccesoDirector() {
   const esDir = await _esDirector();
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
   btn.style.display = (esDir || esSA) ? '' : 'none';
-  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Abre panel de director */
@@ -36942,7 +36925,6 @@ function _verificarAccesoSuperadmin() {
   const btn = document.getElementById('btn-dash-superadmin');
   if (btn) btn.style.display = _esSuperadmin() ? '' : 'none';
   if (_esSuperadmin()) _actualizarBadgeSuperadmin();
-  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Badge con el conteo global de docentes pendientes de aprobación (todos los centros) */
@@ -39223,7 +39205,6 @@ async function _verificarAccesoPsicologia() {
     const visible = (perfil && (_tieneRol(perfil, 'psicologia') || _tieneRol(perfil, 'director') || _tieneRol(perfil, 'superadmin'))) || esSA;
     btn.style.display = visible ? '' : 'none';
   } catch { btn.style.display = 'none'; }
-  _actualizarVisibilidadGrupoGestion();
 }
 
 async function _verificarAccesoCoordinadora() {
@@ -39237,7 +39218,6 @@ async function _verificarAccesoCoordinadora() {
   btn.style.display = visible ? '' : 'none';
   if (visible) { _coordActualizarBadgeAlertas(); }
   else { const badge = document.getElementById('coord-alertas-badge'); if (badge) badge.style.display = 'none'; }
-  _actualizarVisibilidadGrupoGestion();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -39259,7 +39239,6 @@ async function _verificarAccesoVinculacion() {
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
   const visible = esVinc || esSA;
   btn.style.display = visible ? '' : 'none';
-  _actualizarVisibilidadGrupoGestion();
 }
 
 function abrirCoordinadora() {
@@ -41553,7 +41532,6 @@ async function _verificarAccesoPagos() {
   const btn = document.getElementById('btn-dash-pagos');
   if (!btn) return;
   btn.style.display = 'none'; // oculto temporalmente
-  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Abre el panel de pagos */

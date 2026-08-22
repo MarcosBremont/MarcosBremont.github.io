@@ -4677,20 +4677,6 @@ body.dark-mode .imp-resumen-row span {
   justify-content: center;
 }
 
-/* ── Subgrupo dentro de "Accesos rápidos" (ej. "Planificación", "Organización") ── */
-.dash-nav-subgrupo-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9E9E9E;
-  margin: 14px 2px 8px;
-}
-
-body.dark-mode .dash-nav-subgrupo-label {
-  color: #78809A;
-}
-
 /* ── Grid de accesos: tarjetas "bento" cuadradas ── */
 .dash-nav-grid {
   display: grid;
