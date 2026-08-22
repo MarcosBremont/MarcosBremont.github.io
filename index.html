@@ -899,12 +899,12 @@
 
           <!-- Curso asignado -->
           <div class="form-group" id="grupo-curso-asignado">
-            <label for="sel-curso-paso1">Curso *</label>
+            <label for="sel-curso-paso1">Curso</label>
             <select id="sel-curso-paso1" style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;" onchange="_actualizarCalendarioDiasClase()">
               <option value="">— Selecciona un curso —</option>
             </select>
             <span id="aviso-curso-paso1" style="display:none;font-size:0.78rem;color:#E65100;margin-top:4px;">
-              Debes seleccionar un curso para guardar la planificación.
+              Esta planificación se guardó sin vincularse a ningún curso. Puedes seleccionar uno para que aparezca en el Libro de Calificaciones.
             </span>
           </div>
 
@@ -1043,9 +1043,6 @@
       <!-- Navegación -->
       <div class="nav-buttons">
         <div></div>
-        <button class="btn-guardar-paso" onclick="guardarPlanificacionActual(true)">
-          <span class="material-icons">save</span> Guardar
-        </button>
         <button class="btn-siguiente" onclick="irAlPaso(2)">
           Siguiente
           <span class="material-icons">arrow_forward</span>
@@ -1180,9 +1177,6 @@
           <span class="material-icons">arrow_back</span>
           Anterior
         </button>
-        <button class="btn-guardar-paso" onclick="guardarPlanificacionActual(true)">
-          <span class="material-icons">save</span> Guardar
-        </button>
         <button class="btn-siguiente" onclick="irAlPaso(3)" id="btn-paso2-siguiente" disabled>
           Siguiente
           <span class="material-icons">arrow_forward</span>
@@ -1259,9 +1253,6 @@
           <span class="material-icons">arrow_back</span>
           Anterior
         </button>
-        <button class="btn-guardar-paso" onclick="guardarPlanificacionActual(true)">
-          <span class="material-icons">save</span> Guardar
-        </button>
         <button class="btn-siguiente" onclick="irAlPaso(4)">
           Siguiente
           <span class="material-icons">arrow_forward</span>
@@ -1335,9 +1326,6 @@
         <button class="btn-anterior" onclick="irAlPaso(3)">
           <span class="material-icons">arrow_back</span>
           Anterior
-        </button>
-        <button class="btn-guardar-paso" onclick="guardarPlanificacionActual(true)">
-          <span class="material-icons">save</span> Guardar
         </button>
         <button class="btn-siguiente" onclick="irAlPaso(5)">
           Plan. Diaria
@@ -3005,6 +2993,37 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4A148C;">v17.14<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección importante: se recupera el autoguardado del asistente de Nueva Planificación</div>
+              <ul class="about-ver-items">
+                <li>El autoguardado del borrador (mientras llenas los Pasos 1-4) estaba completamente desconectado desde hace tiempo -- si cerrabas la pestaña o se recargaba antes de guardar, se perdía todo el trabajo sin ningún aviso. Ahora se guarda automáticamente mientras escribes y se recupera solo al volver a abrir la app.</li>
+                <li>Se quitaron los botones "Guardar" repetidos en cada paso del asistente (1 al 5) -- ya no hacen falta gracias al autoguardado. Queda un único botón "Guardar planificación" al final, en Vista Previa.</li>
+                <li>Se corrigió un error en ese botón final que le pasaba el evento del clic en vez de indicar explícitamente que debía guardar de forma visible.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v17.13<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: Vista Previa y campo Curso en Nueva Planificación</div>
+              <ul class="about-ver-items">
+                <li>El campo "Período" en Vista Previa mostraba un "?" suelto entre las fechas en vez de una flecha (ej. "2026-09-01 ? 2026-12-15"); ahora usa el mismo formato que el resto del sistema.</li>
+                <li>El campo "Curso" del Paso 1 ya no se marca como obligatorio (se quitó el asterisco) -- nunca bloqueaba el avance ni el guardado, así que marcarlo como obligatorio era engañoso. El aviso que aparece si guardas sin curso ahora explica que puedes vincularlo después, en vez de decir que "debes" hacerlo.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6629,9 +6648,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.12"></script>
+  <script src="app.js?v=17.14"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.12"></script>
+  <script src="auth.js?v=17.14"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

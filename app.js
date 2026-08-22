@@ -4776,7 +4776,7 @@ function renderizarVistaPrevia() {
 
 
 
-      <div class="vp-dato"><strong>Período</strong><span>${dg.fechaInicio || '-'} ? ${dg.fechaTermino || '-'}</span></div>
+      <div class="vp-dato"><strong>Período</strong><span>${dg.fechaInicio || '-'} → ${dg.fechaTermino || '-'}</span></div>
 
 
 
@@ -6946,26 +6946,38 @@ function _renderArchiveSections(snapshot, yearId) {
 
 
 
-/** Guarda el estado actual de la planificación en localStorage */
+/** Guarda el estado actual de la planificación (borrador en progreso, antes de
+ * guardarla explícitamente en Biblioteca) en localStorage y lo sincroniza a
+ * Firestore, para poder recuperarlo si se cierra la pestaña o se recarga a
+ * mitad del asistente. Se dispara solo, con debounce, cada vez que el
+ * docente edita algo en los Pasos 1-4 (ver el listener en irAlHomeBase). */
+function guardarBorrador() {
+  try {
+    const json = JSON.stringify(planificacion);
+    if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(STORAGE_KEY, json);
+    else localStorage.setItem(STORAGE_KEY, json);
+    if (window._syncFirebase) window._syncFirebase('planificacion', json);
+  } catch (e) {
+    console.warn('No se pudo guardar el borrador:', e);
+  }
+}
 
 
 
-function guardarBorrador() { /* eliminado */ }
 
 
 
 
-
-
-
-/** Restaura el borrador desde localStorage */
-function restaurarBorrador() { return false; /* eliminado */ }
-
-function _restaurarBorrador_UNUSED() {
+/** Restaura el borrador (planificación en progreso, aún no guardada en
+ * Biblioteca) desde localStorage hacia el objeto `planificacion` en memoria
+ * -- llamada una vez al arrancar la app (ver _arrancarApp), antes de que el
+ * docente haya tocado nada en esta sesión. */
+function restaurarBorrador() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const datos = JSON.parse(raw);
+    if (!datos || (!datos.datosGenerales?.moduloFormativo && !datos.ra?.descripcion)) return false;
     planificacion = datos;
 
 
@@ -7025,6 +7037,15 @@ function _restaurarBorrador_UNUSED() {
 
 
     if (planificacion.datosGenerales) poblarFormularioDesdeEstado();
+
+    // Regenerar vistas de EC y actividades si hay datos (mismo patrón que al
+    // abrir una planificación guardada desde Mis Planificaciones)
+    if (planificacion.elementosCapacidad?.length) {
+      renderizarEC(planificacion.elementosCapacidad);
+      renderizarActividades(planificacion.actividades);
+      const btnSiguiente = document.getElementById('btn-paso2-siguiente');
+      if (btnSiguiente) btnSiguiente.disabled = false;
+    }
 
 
 
@@ -7749,9 +7770,6 @@ function irAlPaso(nuevoPaso, validar = true) {
     if (navBtns) navBtns.innerHTML = `
       <button class="btn-anterior" onclick="cerrarDiariasContextual()">
         <span class="material-icons">arrow_back</span> Anterior
-      </button>
-      <button class="btn-guardar-paso" onclick="guardarPlanificacionActual(true)">
-        <span class="material-icons">save</span> Guardar
       </button>
       <button class="btn-siguiente" onclick="guardarTodasDiarias(); irAlPaso(6, false)">
         Ver Vista Previa <span class="material-icons">preview</span>
@@ -9811,7 +9829,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // (borrador eliminado)
   // --- Botón nueva planificación ---
 
 
@@ -9876,7 +9893,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  localStorage.removeItem("planificadorRA_borrador_v1"); // limpiar borrador antiguo
 
 
 
@@ -22494,7 +22510,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    btnG.onclick = guardarPlanificacionActual;
+    btnG.onclick = () => guardarPlanificacionActual(false);
 
 
 
@@ -28100,6 +28116,9 @@ function _arrancarApp() {
     }
   });
   if (hayCambios) guardarCalificaciones();
+  // Recuperar en memoria cualquier planificación en progreso que no se
+  // hubiera llegado a guardar en Biblioteca (ver guardarBorrador/restaurarBorrador).
+  restaurarBorrador();
   if (sessionStorage.getItem('planificador_goto') === 'step1') {
     sessionStorage.removeItem('planificador_goto');
     irAlHomeBase();
