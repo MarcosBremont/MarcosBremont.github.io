@@ -352,6 +352,22 @@ function exportarAlumnosCSV() {
   URL.revokeObjectURL(url);
 }
 
+function descargarPlantillaEstudiantesCSV() {
+  // Ejemplo m\u00EDnimo del formato que lee "Importar CSV": una columna con el
+  // nombre completo de cada estudiante, un nombre por l\u00EDnea. La primera
+  // fila puede ser un encabezado (Nombre/Alumno/Estudiante/Name/Student) y
+  // se ignora autom\u00E1ticamente al importar; cualquier columna extra tambi\u00E9n
+  // se ignora (solo se lee la primera).
+  const csv = 'Nombre\nMar\u00EDa Garc\u00EDa\nJuan P\u00E9rez\nAna L\u00F3pez';
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'plantilla_estudiantes.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Plantilla descargada', 'success');
+}
+
 function eliminarEstudiante(estudianteId) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;

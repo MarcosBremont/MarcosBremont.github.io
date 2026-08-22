@@ -1617,6 +1617,11 @@
           <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
             <span class="material-icons">description</span> Exportar Word
           </button>
+          <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
+            style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;"
+            title="Exporta las notas del RA activo a Excel (o la lista de alumnos si no hay RA activo)">
+            <span class="material-icons">grid_on</span> Exportar Excel
+          </button>
         </div>
       </div>
 
@@ -1645,7 +1650,7 @@
           <span class="material-icons cal-add-estudiantes-icon">person_add</span>
           <div>
             <div class="cal-add-estudiantes-title">Agregar estudiantes</div>
-            <div class="cal-add-estudiantes-sub">Uno por línea, o importa/exporta un archivo CSV</div>
+            <div class="cal-add-estudiantes-sub">Uno por línea, o importa desde un archivo CSV</div>
           </div>
         </div>
         <textarea id="input-estudiantes" rows="3"
@@ -1661,16 +1666,18 @@
             <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none"
               onchange="importarAlumnosCSV(this)">
           </label>
-          <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
-            style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;"
-            title="Exportar lista de alumnos (o notas del RA activo) a Excel">
-            <span class="material-icons">grid_on</span> Exportar Excel
+          <button class="btn-export btn-sm" onclick="descargarPlantillaEstudiantesCSV()"
+            style="background:#FFF8E1;border:1.5px solid #FFD54F;color:#F57F17;"
+            title="Descarga un archivo CSV de ejemplo con el formato correcto para importar estudiantes">
+            <span class="material-icons">description</span> Descargar plantilla
           </button>
         </div>
         <p class="subsection-hint" style="margin-top:10px;">
           También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
           <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
-          Para importar desde Excel: guarda como <strong>CSV (.csv)</strong> y usa el botón Importar CSV.
+          El archivo CSV debe tener <strong>un nombre completo por línea</strong> (la primera fila puede ser un
+          encabezado como "Nombre", se detecta e ignora sola); si lo abres en Excel, guárdalo como
+          <strong>CSV (.csv)</strong> antes de subirlo. Usa <strong>Descargar plantilla</strong> para ver un ejemplo listo para editar.
         </p>
       </div>
 
@@ -2999,6 +3006,35 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#F57F17;">v17.20<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Libro de Calificaciones: reordena "Exportar Excel" y agrega plantilla CSV</div>
+              <ul class="about-ver-items">
+                <li>"Exportar Excel" (que en realidad exporta las notas del RA activo, no solo la lista de alumnos) estaba junto a "Agregar estudiantes" e "Importar CSV", lo que confundía. Se movió arriba, junto a "Exportar Word".</li>
+                <li>En su lugar, "Agregar estudiantes" ahora tiene un botón "Descargar plantilla" que baja un CSV de ejemplo con el formato exacto que espera "Importar CSV" (un nombre por línea, encabezado opcional), y el texto de ayuda explica el formato con más detalle.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v17.19<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrige el botón "Cerrar" que se salía del modal de Mis Datos</div>
+              <ul class="about-ver-items">
+                <li>Al modal "Mis Datos — Exportar / Importar" le faltaba una etiqueta de cierre en la sección de "Ciclos académicos archivados", lo que empujaba el pie del modal (línea divisoria y botón "Cerrar") fuera del recuadro del modal en vez de quedar contenido dentro de él.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6660,6 +6696,11 @@
           </div>
 
           </div>
+
+        <div class="backup-divider"></div>
+
+        <!-- Importar -->
+        <div class="backup-section">
           <p class="backup-desc">Selecciona un archivo de backup generado anteriormente. <strong>Los datos actuales
               serán reemplazados</strong> por los del archivo.</p>
           <label class="backup-file-label" id="backup-file-label-btn">
@@ -6713,9 +6754,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.18"></script>
+  <script src="app.js?v=17.20"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.18"></script>
+  <script src="auth.js?v=17.20"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
