@@ -26636,6 +26636,11 @@ function abrirConfigIA() {
     <div class="config-ia-content">
       <div>${estado}</div>
 
+      <div style="background:#FAFAFA;border:1px solid #E0E0E0;border-radius:8px;padding:10px 12px;margin:0 0 4px;">
+        <p style="margin:0 0 4px;font-size:0.75rem;font-weight:700;color:#616161;text-transform:uppercase;letter-spacing:0.04em;">Estado de conexión</p>
+        <div id="config-ia-estado-conexion" style="color:#9E9E9E;font-size:0.78rem;">Verificando...</div>
+      </div>
+
       <div style="background:#E8F5E9;border-radius:8px;padding:12px;margin:8px 0;">
         <label for="input-groq-key" style="margin:0;font-weight:600;">🟢 Groq (1º — más rápido)</label>
         <input type="password" id="input-groq-key"
@@ -26689,6 +26694,7 @@ function abrirConfigIA() {
   document.body.style.overflow = 'hidden';
   _logEstadoModales('abrirConfigIA:after');
   setTimeout(() => document.getElementById('input-groq-key')?.focus(), 100);
+  _actualizarEstadoIAModal();
 }
 
 function guardarApiKey() {
@@ -30626,11 +30632,6 @@ function _renderizarSaludo() {
         <div class="dash-stat-icon"><span class="material-icons">history</span></div>
         <div class="dash-stat-num">↗</div>
         <div class="dash-stat-lbl">Historial</div>
-      </div>
-      <div id="btn-dash-force-update" class="dash-stat-pill" title="Forzar actualización de la app" onclick="forzarActualizacionApp()" style="cursor:pointer;display:none;">
-        <div class="dash-stat-icon"><span class="material-icons">system_update_alt</span></div>
-        <div class="dash-stat-num">↻</div>
-        <div class="dash-stat-lbl">Actualizar</div>
       </div>
     </div>`;
 }
@@ -36366,6 +36367,30 @@ function _copiarEnlaceDenuncias() {
 // ── MÓDULO: ADMIN CENTRO — GESTIÓN DE DOCENTES ───────────────────
 // ════════════════════════════════════════════════════════════════════
 
+// ── Caché compartida del perfil (usuarios/{uid}) ─────────────────────
+// Antes, cada check de rol del Dashboard (admin de centro, director,
+// coordinadora, psicología, vinculación) leía por su cuenta el MISMO
+// documento usuarios/{uid} -- hasta 7-9 lecturas repetidas en cada apertura
+// del Dashboard, para cualquier usuario (no solo superadmin). Ahora todos
+// comparten esta única lectura (con un margen de 60s) y la reutilizan.
+let _cachePerfilUsuarioActual = { uid: null, data: null, at: 0 };
+async function _getPerfilUsuarioActualCacheado() {
+  const uid = window.currentUser?.uid;
+  if (!uid) return null;
+  const ahora = Date.now();
+  if (_cachePerfilUsuarioActual.uid === uid && (ahora - _cachePerfilUsuarioActual.at) < 60000) {
+    return _cachePerfilUsuarioActual.data;
+  }
+  try {
+    const doc = await db.collection('usuarios').doc(uid).get();
+    const data = doc.exists ? doc.data() : null;
+    _cachePerfilUsuarioActual = { uid, data, at: ahora };
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 /** Verifica si el usuario actual es admin de algún centro */
 async function _esAdminDeCentro() {
   const email = window.currentUser?.email;
@@ -36377,9 +36402,9 @@ async function _esAdminDeCentro() {
     // centro, aunque su email no esté en centros.admins[] (ese arreglo es solo
     // para administradores designados explícitamente).
     try {
-      const perfil = await db.collection('usuarios').doc(window.currentUser.uid).get();
-      const rol = perfil.exists ? perfil.data().rol : null;
-      const centroId = perfil.exists ? perfil.data().centroId : null;
+      const perfil = await _getPerfilUsuarioActualCacheado();
+      const rol = perfil ? perfil.rol : null;
+      const centroId = perfil ? perfil.centroId : null;
       if (centroId && ['director', 'coordinadora'].includes(rol) && !centros.some(c => c.id === centroId)) {
         const centroDoc = await db.collection('centros').doc(centroId).get();
         if (centroDoc.exists) centros.push({ id: centroDoc.id, ...centroDoc.data() });
@@ -36390,6 +36415,21 @@ async function _esAdminDeCentro() {
   } catch { return []; }
 }
 
+/** Muestra/oculta el rótulo "Gestión y Administración" de Accesos Rápidos
+ * según si al menos uno de los botones de ese grupo quedó visible -- se
+ * llama al final de cada check de rol de ese grupo, sin importar el orden
+ * en que resuelvan sus promesas. */
+function _actualizarVisibilidadGrupoGestion() {
+  const label = document.getElementById('dash-subgrupo-gestion');
+  if (!label) return;
+  const ids = ['btn-dash-psicologia', 'btn-dash-coordinadora', 'btn-dash-director', 'btn-dash-vinculacion', 'btn-dash-admin-centro', 'btn-dash-pagos', 'btn-dash-superadmin'];
+  const algunoVisible = ids.some(id => {
+    const el = document.getElementById(id);
+    return el && el.style.display !== 'none';
+  });
+  label.style.display = algunoVisible ? '' : 'none';
+}
+
 /** Muestra/oculta botón admin centro en dashboard */
 async function _verificarAccesoAdminCentro() {
   const btn = document.getElementById('btn-dash-admin-centro');
@@ -36398,6 +36438,7 @@ async function _verificarAccesoAdminCentro() {
   // Superadmins también ven este botón (gestionan todos los centros)
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
   btn.style.display = (centros.length > 0 || esSA) ? '' : 'none';
+  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Abre el panel de admin centro */
@@ -36670,8 +36711,8 @@ async function _quitarDocente(uid) {
 async function _esDirector() {
   if (!window.currentUser) return false;
   try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && _tieneRol(doc.data(), 'director');
+    const perfil = await _getPerfilUsuarioActualCacheado();
+    return !!perfil && _tieneRol(perfil, 'director');
   } catch { return false; }
 }
 
@@ -36682,6 +36723,7 @@ async function _verificarAccesoDirector() {
   const esDir = await _esDirector();
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
   btn.style.display = (esDir || esSA) ? '' : 'none';
+  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Abre panel de director */
@@ -36900,6 +36942,7 @@ function _verificarAccesoSuperadmin() {
   const btn = document.getElementById('btn-dash-superadmin');
   if (btn) btn.style.display = _esSuperadmin() ? '' : 'none';
   if (_esSuperadmin()) _actualizarBadgeSuperadmin();
+  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Badge con el conteo global de docentes pendientes de aprobación (todos los centros) */
@@ -36935,14 +36978,6 @@ async function _esSuperadminPorPerfil() {
 
   _cacheSuperadminPerfil = { ok, at: now };
   return ok;
-}
-
-async function _verificarAccesoForzarActualizacion() {
-  const btn = document.getElementById('btn-dash-force-update');
-  if (!btn) return;
-  btn.style.display = 'none';
-  const allowed = await _esSuperadminPorPerfil();
-  btn.style.display = allowed ? '' : 'none';
 }
 
 /** Abre el panel de superadmin */
@@ -39149,7 +39184,6 @@ const _origRenderDashboard = renderizarDashboard;
 renderizarDashboard = function() {
   _origRenderDashboard();
   _verificarAccesoSuperadmin();
-  _verificarAccesoForzarActualizacion();
   _verificarAccesoAdminCentro();
   _verificarAccesoDirector();
   _verificarAccesoCoordinadora();
@@ -39174,8 +39208,8 @@ renderizarDashboard = function() {
 async function _esCoordinadora() {
   if (!window.currentUser) return false;
   try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && _tieneRol(doc.data(), 'coordinadora');
+    const perfil = await _getPerfilUsuarioActualCacheado();
+    return !!perfil && _tieneRol(perfil, 'coordinadora');
   } catch { return false; }
 }
 
@@ -39184,12 +39218,12 @@ async function _verificarAccesoPsicologia() {
   if (!btn) return;
   if (!window.currentUser) { btn.style.display = 'none'; return; }
   try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    const perfil = doc.exists ? doc.data() : null;
+    const perfil = await _getPerfilUsuarioActualCacheado();
     const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
     const visible = (perfil && (_tieneRol(perfil, 'psicologia') || _tieneRol(perfil, 'director') || _tieneRol(perfil, 'superadmin'))) || esSA;
     btn.style.display = visible ? '' : 'none';
   } catch { btn.style.display = 'none'; }
+  _actualizarVisibilidadGrupoGestion();
 }
 
 async function _verificarAccesoCoordinadora() {
@@ -39203,6 +39237,7 @@ async function _verificarAccesoCoordinadora() {
   btn.style.display = visible ? '' : 'none';
   if (visible) { _coordActualizarBadgeAlertas(); }
   else { const badge = document.getElementById('coord-alertas-badge'); if (badge) badge.style.display = 'none'; }
+  _actualizarVisibilidadGrupoGestion();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -39212,8 +39247,8 @@ async function _verificarAccesoCoordinadora() {
 async function _esVinculadora() {
   if (!window.currentUser) return false;
   try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    return doc.exists && _tieneRol(doc.data(), 'vinculadora');
+    const perfil = await _getPerfilUsuarioActualCacheado();
+    return !!perfil && _tieneRol(perfil, 'vinculadora');
   } catch { return false; }
 }
 
@@ -39224,6 +39259,7 @@ async function _verificarAccesoVinculacion() {
   const esSA = typeof _esSuperadmin === 'function' && _esSuperadmin();
   const visible = esVinc || esSA;
   btn.style.display = visible ? '' : 'none';
+  _actualizarVisibilidadGrupoGestion();
 }
 
 function abrirCoordinadora() {
@@ -39259,8 +39295,8 @@ async function _coordGetCentroId() {
   if (!window.currentUser) return null;
   // Buscar centroId del usuario
   try {
-    const doc = await db.collection('usuarios').doc(window.currentUser.uid).get();
-    if (doc.exists && doc.data().centroId) return doc.data().centroId;
+    const perfil = await _getPerfilUsuarioActualCacheado();
+    if (perfil && perfil.centroId) return perfil.centroId;
   } catch {}
   // Admin centro: buscar en centros.admins
   try {
@@ -41517,6 +41553,7 @@ async function _verificarAccesoPagos() {
   const btn = document.getElementById('btn-dash-pagos');
   if (!btn) return;
   btn.style.display = 'none'; // oculto temporalmente
+  _actualizarVisibilidadGrupoGestion();
 }
 
 /** Abre el panel de pagos */
@@ -42204,12 +42241,6 @@ renderizarDashboard = function() {
   _verificarAccesoPagos();
 };
 
-function _normalizarVersion(raw) {
-  const txt = String(raw || '').trim();
-  if (!txt) return '';
-  return /^v/i.test(txt) ? txt : ('v' + txt);
-}
-
 const _iaHealthCache = {
   data: null,
   ts: 0,
@@ -42267,41 +42298,24 @@ async function _obtenerEstadoIAs() {
   return estados;
 }
 
-async function _actualizarDetectorVersion() {
-  const chip = document.getElementById('version-detector');
-  if (!chip) return;
-
-  const build = _normalizarVersion(window.TINCLASS_BUILD_VERSION) || 'vdev';
-  let swVer = _normalizarVersion(window.TINCLASS_SW_VERSION) || 'vsw';
-
-  try {
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration('/');
-      const scriptURL = reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL || '';
-      const match = scriptURL.match(/[?&]v=([^&]+)/i);
-      if (match && match[1]) swVer = _normalizarVersion(match[1]) || swVer;
-    }
-  } catch {}
-
-  chip.innerHTML = `
-    <div class="version-detector-title">Version ${build.replace(/^v/i, '')}</div>
-    <div class="version-detector-row">Groq - Verificando...</div>
-    <div class="version-detector-row">Google Gemini - Verificando...</div>
-    <div class="version-detector-row">OpenRouter - Verificando...</div>
-    <div class="version-detector-foot">SW ${swVer}</div>
-  `;
-  chip.title = 'Estado de IA y versión. Clic para abrir Config. IA';
-  chip.onclick = () => abrirConfigIA();
-  chip.classList.remove('hidden');
-
+/** Llena el banner de estado de las IAs dentro del modal "Configurar IA"
+ * (id="config-ia-estado-conexion") -- reemplaza al viejo chip flotante que
+ * quedaba fijo en la esquina de la pantalla tapando otros botones. Solo se
+ * consulta cuando el docente realmente abre este modal, no en cada carga
+ * de página. */
+async function _actualizarEstadoIAModal() {
+  const cont = document.getElementById('config-ia-estado-conexion');
+  if (!cont) return;
   try {
     const estados = await _obtenerEstadoIAs();
-    chip.innerHTML = `
-      <div class="version-detector-title">Version ${build.replace(/^v/i, '')}</div>
-      ${estados.map(e => `<div class="version-detector-row">${e.nombre} - ${e.estado}</div>`).join('')}
-      <div class="version-detector-foot">SW ${swVer}</div>
-    `;
-  } catch (e) {}
+    const colorPorEstado = e => e === 'En linea' ? '#2E7D32' : e === 'Sin clave' ? '#9E9E9E' : '#C62828';
+    cont.innerHTML = estados.map(e =>
+      `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:2px 0;">`
+      + `<span>${e.nombre}</span><span style="color:${colorPorEstado(e.estado)};font-weight:600;">${e.estado}</span></div>`
+    ).join('');
+  } catch (e) {
+    cont.innerHTML = '<div style="font-size:0.78rem;color:#9E9E9E;">No se pudo verificar el estado.</div>';
+  }
 }
 
 async function forzarActualizacionApp() {
@@ -42323,14 +42337,5 @@ async function forzarActualizacionApp() {
   const sep = window.location.href.includes('?') ? '&' : '?';
   window.location.replace(window.location.href + sep + 'force_update=' + Date.now());
 }
-
-window.addEventListener('load', () => {
-  setTimeout(_actualizarDetectorVersion, 250);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      setTimeout(_actualizarDetectorVersion, 150);
-    });
-  }
-});
 
 // ════════════════════════════════════════════════════════════════════

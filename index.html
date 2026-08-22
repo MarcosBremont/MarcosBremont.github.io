@@ -475,6 +475,8 @@
       <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">apps</span>Accesos rápidos
       </div>
+
+      <div class="dash-nav-subgrupo-label" style="margin-top:0;">Planificación</div>
       <div class="dash-nav-grid">
         <button class="dash-nav-btn" id="btn-dash-nueva-planif" onclick="irAlHomeBase()" style="--accent:#1565C0;">
           <span class="material-icons">add_circle_outline</span>
@@ -489,30 +491,19 @@
           <span class="material-icons">today</span>
           <span>Planificaciones Diarias</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-importar" onclick="abrirImportarPlanificacion()"
+          style="--accent:#1B5E20;">
+          <span class="material-icons">upload_file</span>
+          <span>Importar Planificación</span>
+        </button>
+      </div>
+
+      <div class="dash-nav-subgrupo-label">Calificaciones y Seguimiento</div>
+      <div class="dash-nav-grid">
         <button class="dash-nav-btn" id="btn-dash-calificaciones" onclick="abrirCalificaciones()"
           style="--accent:#E65100;">
           <span class="material-icons">grade</span>
           <span>Libro de Calificaciones</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-horario" onclick="abrirHorario()" style="--accent:#0277BD;">
-          <span class="material-icons">calendar_view_week</span>
-          <span>Mi Horario</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-tareas" onclick="abrirTareas()" style="--accent:#E65100;">
-          <span class="material-icons">assignment</span>
-          <span>Tareas</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-notas" onclick="abrirNotas()" style="--accent:#5D4037;display:none;">
-          <span class="material-icons">sticky_note_2</span>
-          <span>Mis Notas</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-libreta" onclick="abrirLibreta()" style="--accent:#00695C;">
-          <span class="material-icons">menu_book</span>
-          <span>Mi Libreta</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-portafolio" onclick="abrirPortafolio()" style="--accent:#37474F;">
-          <span class="material-icons">workspace_premium</span>
-          <span>Portafolio Docente</span>
         </button>
         <button class="dash-nav-btn" id="btn-dash-rendimiento" onclick="abrirRendimiento()" style="--accent:#6A1B9A;">
           <span class="material-icons">insights</span>
@@ -522,37 +513,56 @@
           <span class="material-icons">assignment_return</span>
           <span>RAs Adeudados</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-ia" onclick="abrirConfigIA()" style="--accent:#AD1457;">
-          <span class="material-icons">auto_awesome</span>
-          <span>Configurar IA</span>
+        <button class="dash-nav-btn" id="btn-dash-calc-asistencia" onclick="abrirCalculadoraAsistencia()"
+          style="--accent:#00796B;">
+          <span class="material-icons">calculate</span>
+          <span>Calc. Asistencia</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-importar" onclick="abrirImportarPlanificacion()"
-          style="--accent:#1B5E20;">
-          <span class="material-icons">upload_file</span>
-          <span>Importar Planificación</span>
+        <button class="dash-nav-btn" id="btn-dash-ocr-asistencia" onclick="_abrirOcrAsistencia()"
+          style="--accent:#6A1B9A;display:none;">
+          <span class="material-icons">document_scanner</span>
+          <span>Escanear % libro</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-backup" onclick="abrirBackup()" style="--accent:#BF360C;">
-          <span class="material-icons">backup</span>
-          <span>Mis Datos</span>
+      </div>
+
+      <div class="dash-nav-subgrupo-label">Organización</div>
+      <div class="dash-nav-grid">
+        <button class="dash-nav-btn" id="btn-dash-horario" onclick="abrirHorario()" style="--accent:#0277BD;">
+          <span class="material-icons">calendar_view_week</span>
+          <span>Mi Horario</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-blog" onclick="abrirBlog()" style="--accent:#006064;">
-          <span class="material-icons">article</span>
-          <span>Blog</span>
+        <button class="dash-nav-btn" id="btn-dash-tareas" onclick="abrirTareas()" style="--accent:#E65100;">
+          <span class="material-icons">assignment</span>
+          <span>Tareas</span>
         </button>
         <button class="dash-nav-btn" id="btn-dash-calendario" onclick="abrirCalendarioEscolar()"
           style="--accent:#1565C0;">
           <span class="material-icons">event_note</span>
           <span>Calendario Escolar</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-cumpleanos" onclick="abrirCumpleanos()"
-          style="--accent:#AD1457;">
-          <span class="material-icons">cake</span>
-          <span>Cumpleaños</span>
+        <button class="dash-nav-btn" id="btn-dash-notas" onclick="abrirNotas()" style="--accent:#5D4037;display:none;">
+          <span class="material-icons">sticky_note_2</span>
+          <span>Mis Notas</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-compartir" onclick="abrirCompartidos()"
-          style="--accent:#00838F;">
-          <span class="material-icons">folder_shared</span>
-          <span>Compartir</span>
+        <button class="dash-nav-btn" id="btn-dash-libreta" onclick="abrirLibreta()" style="--accent:#00695C;">
+          <span class="material-icons">menu_book</span>
+          <span>Mi Libreta</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-presentacion" onclick="abrirModoPresent()" style="--accent:#E65100;display:none;">
+          <span class="material-icons">cast_for_education</span>
+          <span>Presentación</span>
+        </button>
+      </div>
+
+      <div class="dash-nav-subgrupo-label">Comunicación y Reportes</div>
+      <div class="dash-nav-grid">
+        <button class="dash-nav-btn" id="btn-dash-blog" onclick="abrirBlog()" style="--accent:#006064;">
+          <span class="material-icons">article</span>
+          <span>Blog</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-examenes" onclick="abrirExamenes()" style="--accent:#1565C0;">
+          <span class="material-icons">quiz</span>
+          <span>Exámenes</span>
         </button>
         <button class="dash-nav-btn" id="btn-dash-reportes" onclick="abrirReportesComportamiento()"
           style="--accent:#C62828;">
@@ -563,18 +573,49 @@
           <span class="material-icons">campaign</span>
           <span>Buzón Denuncias</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-examenes" onclick="abrirExamenes()" style="--accent:#1565C0;">
-          <span class="material-icons">quiz</span>
-          <span>Exámenes</span>
+        <button class="dash-nav-btn" id="btn-dash-compartir" onclick="abrirCompartidos()"
+          style="--accent:#00838F;">
+          <span class="material-icons">folder_shared</span>
+          <span>Compartir</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-cumpleanos" onclick="abrirCumpleanos()"
+          style="--accent:#AD1457;">
+          <span class="material-icons">cake</span>
+          <span>Cumpleaños</span>
+        </button>
+      </div>
+
+      <div class="dash-nav-subgrupo-label">Herramientas y Configuración</div>
+      <div class="dash-nav-grid">
+        <button class="dash-nav-btn" id="btn-dash-ia" onclick="abrirConfigIA()" style="--accent:#AD1457;">
+          <span class="material-icons">auto_awesome</span>
+          <span>Configurar IA</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-portafolio" onclick="abrirPortafolio()" style="--accent:#37474F;">
+          <span class="material-icons">workspace_premium</span>
+          <span>Portafolio Docente</span>
+        </button>
+        <button class="dash-nav-btn" id="btn-dash-backup" onclick="abrirBackup()" style="--accent:#BF360C;">
+          <span class="material-icons">backup</span>
+          <span>Mis Datos</span>
         </button>
         <button class="dash-nav-btn" id="btn-dash-auditoria" onclick="abrirAuditoria()" style="--accent:#4A148C;">
           <span class="material-icons">security</span>
           <span>Auditoría</span>
         </button>
-        <button class="dash-nav-btn" id="btn-dash-presentacion" onclick="abrirModoPresent()" style="--accent:#E65100;display:none;">
-          <span class="material-icons">cast_for_education</span>
-          <span>Presentación</span>
+        <button class="dash-nav-btn" id="btn-dash-tutorial" onclick="abrirTutorial()" style="--accent:#0288D1;">
+          <span class="material-icons">help_outline</span>
+          <span>Tutorial</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-actualizar" onclick="forzarActualizacionApp()"
+          style="--accent:#546E7A;" title="Descarga la última versión sin tener que presionar Ctrl+Shift+R">
+          <span class="material-icons">system_update</span>
+          <span>Actualizar App</span>
+        </button>
+      </div>
+
+      <div class="dash-nav-subgrupo-label" id="dash-subgrupo-gestion" style="display:none;">Gestión y Administración</div>
+      <div class="dash-nav-grid">
         <button class="dash-nav-btn" id="btn-dash-psicologia" onclick="abrirPsicologia()"
           style="--accent:#6A1B9A;display:none;">
           <span class="material-icons">psychology</span>
@@ -614,25 +655,6 @@
           <span id="dash-superadmin-badge" style="display:none;position:absolute;top:6px;right:10px;background:#B71C1C;color:#fff;
             border-radius:50%;min-width:18px;height:18px;padding:0 3px;font-size:0.62rem;font-weight:800;
             display:flex;align-items:center;justify-content:center;"></span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-calc-asistencia" onclick="abrirCalculadoraAsistencia()"
-          style="--accent:#00796B;">
-          <span class="material-icons">calculate</span>
-          <span>Calc. Asistencia</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-ocr-asistencia" onclick="_abrirOcrAsistencia()"
-          style="--accent:#6A1B9A;display:none;">
-          <span class="material-icons">document_scanner</span>
-          <span>Escanear % libro</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-tutorial" onclick="abrirTutorial()" style="--accent:#0288D1;">
-          <span class="material-icons">help_outline</span>
-          <span>Tutorial</span>
-        </button>
-        <button class="dash-nav-btn" id="btn-dash-actualizar" onclick="forzarActualizacionApp()"
-          style="--accent:#546E7A;" title="Descarga la última versión sin tener que presionar Ctrl+Shift+R">
-          <span class="material-icons">system_update</span>
-          <span>Actualizar App</span>
         </button>
       </div>
 
@@ -3005,6 +3027,24 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v17.11<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejoras al Dashboard (revisión de pre-lanzamiento)</div>
+              <ul class="about-ver-items">
+                <li>Se quitó el botón flotante de Ko-fi (quedó solo el banner al final del Dashboard) y el chip flotante de "Versión/Estado de IA", que en teléfonos chicos tapaban los Accesos Rápidos y el propio banner de Ko-fi.</li>
+                <li>El estado de conexión de Groq/Gemini/OpenRouter ahora se ve directamente dentro de "Configurar IA", en vez de un chip flotante permanente.</li>
+                <li>Se eliminó un botón "Actualizar" duplicado (quedaba oculto arriba del saludo, solo para superadmin) -- ahora solo existe el de "Accesos Rápidos", visible para todos.</li>
+                <li>"Accesos Rápidos" ahora está agrupado por categoría (Planificación, Calificaciones y Seguimiento, Organización, Comunicación y Reportes, Herramientas y Configuración, Gestión y Administración) en vez de una sola lista larga de 34 botones sin orden.</li>
+                <li>Cada apertura del Dashboard leía el mismo documento de perfil del usuario hasta 7-9 veces (una por cada rol a verificar: admin de centro, director, coordinadora, psicología, vinculación). Ahora se lee una sola vez y se reutiliza, reduciendo esas lecturas de Firestore en más del 85%.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6612,9 +6652,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.10"></script>
+  <script src="app.js?v=17.11"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.10"></script>
+  <script src="auth.js?v=17.11"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
@@ -6825,18 +6865,11 @@
       </div>
     </div>
 
-    <!-- Botón flotante Ko-fi -->
-    <a href="https://ko-fi.com/marcosbremont" target="_blank" rel="noopener" class="kofi-fab" title="Apoyar en Ko-fi">
-      ☕
-    </a>
-
     <!-- Botón flotante temporizador -->
     <button id="timer-fab" class="timer-fab" onclick="toggleTimerPanel()" title="Temporizador de clase">
       <span class="material-icons" id="timer-fab-icon">timer</span>
       <span id="timer-fab-time" class="hidden"></span>
     </button>
-
-    <div id="version-detector" class="version-detector hidden" aria-live="polite"></div>
   </div>
 
   <!-- ===== TOUR DE BIENVENIDA ===== -->
