@@ -15453,7 +15453,7 @@ function renderizarRecuperaciones(estId) {
       const reg = _normalizarRegRecup(recupMap[recKey]);
       html += '<div style="border:1px solid #2a2a3a;border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#1a1a2a;">';
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
-        + '<span style="font-weight:600;flex:1;font-size:0.88rem;">' + escapeHTML((a.enunciado || ('Act. ' + a.id)).substring(0, 60)) + '</span>'
+        + '<span style="font-weight:600;flex:1;font-size:0.88rem;color:#ECEFF1;">' + escapeHTML((a.enunciado || ('Act. ' + a.id)).substring(0, 60)) + '</span>'
         + '<span style="font-size:1.1rem;">' + emoji + '</span>'
         + '<span style="color:#B0BEC5;font-size:0.82rem;white-space:nowrap;">Nota: <strong>' + notaStr + '</strong> / ' + max + '</span>'
         + '</div>';
