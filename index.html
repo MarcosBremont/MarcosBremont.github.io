@@ -1626,12 +1626,18 @@
           <span class="material-icons">class</span> Curso:
         </div>
         <div id="cal-tabs" class="cal-tabs"></div>
+        <button class="btn-cal-add-curso" id="btn-toggle-papelera" onclick="toggleVistaPapeleraCursos()"
+          style="position:relative;background:#FFEBEE;border-color:#FFCDD2;color:#C62828;">
+          <span class="material-icons">delete_outline</span> Papelera
+          <span id="badge-papelera-cal" style="display:none;position:absolute;top:-6px;right:-6px;background:#C62828;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:0.68rem;font-weight:700;align-items:center;justify-content:center;padding:0 3px;"></span>
+        </button>
         <button class="btn-cal-add-curso" id="btn-add-curso" onclick="abrirModalNuevoCurso()">
           <span class="material-icons">add</span> Nuevo curso
         </button>
       </div>
 
       <div id="cal-archived-courses-panel" class="hidden"></div>
+      <div id="cal-papelera-panel" class="hidden"></div>
 
       <!-- Añadir estudiantes -->
       <div class="cal-add-estudiantes" id="cal-add-estudiantes-area">
@@ -2993,6 +2999,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v17.16<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Libro de Calificaciones: papelera de cursos y aviso de duplicados</div>
+              <ul class="about-ver-items">
+                <li>Al agregar estudiantes (a mano o por CSV), si un nombre ya existe en el curso el sistema ahora te avisa antes de agregarlo, en vez de crear una fila duplicada en silencio.</li>
+                <li>Eliminar un curso ya no lo borra para siempre al instante: ahora pasa a una "Papelera" (nuevo botón junto a "Nuevo curso") desde donde puedes restaurarlo completo -- estudiantes y notas incluidas -- durante 3 días. Pasado ese plazo, se borra solo.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6662,9 +6683,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.15"></script>
+  <script src="app.js?v=17.16"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.15"></script>
+  <script src="auth.js?v=17.16"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

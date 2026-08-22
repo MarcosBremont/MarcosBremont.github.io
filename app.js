@@ -51,10 +51,40 @@ function _registrarCursoEliminado(id) {
   } catch (e) { console.warn('No se pudo registrar el curso eliminado:', e); }
 }
 
+/** Quita un id de la lista de "tumbas" de arriba -- se usa al restaurar un
+ * curso desde la papelera, para que la próxima sincronización con Firestore
+ * no lo vuelva a excluir (lo trataría como "recién eliminado" y lo borraría
+ * otra vez sin que el docente lo pidiera). */
+function _desregistrarCursoEliminado(id) {
+  try {
+    let lista = JSON.parse(localStorage.getItem(CAL_CURSOS_ELIMINADOS_KEY) || '[]');
+    lista = lista.filter(e => e.id !== id);
+    localStorage.setItem(CAL_CURSOS_ELIMINADOS_KEY, JSON.stringify(lista));
+  } catch (e) { console.warn('No se pudo quitar el curso de la lista de eliminados:', e); }
+}
+
+const CAL_PAPELERA_DIAS = 3;
+
+/** Quita de la papelera los cursos que ya pasaron los CAL_PAPELERA_DIAS días
+ * -- se llama cada vez que se abre/renderiza la papelera o el panel de
+ * calificaciones, para que se limpie sola sin necesidad de una tarea aparte. */
+function _purgarPapeleraCursos() {
+  if (!calState.papeleraCursos) return;
+  const ahora = Date.now();
+  Object.entries(calState.papeleraCursos).forEach(([id, reg]) => {
+    const eliminadoEn = reg?.eliminadoEn ? new Date(reg.eliminadoEn).getTime() : 0;
+    if (!eliminadoEn || ahora - eliminadoEn >= CAL_PAPELERA_DIAS * 86400000) {
+      delete calState.papeleraCursos[id];
+    }
+  });
+}
+
 function eliminarCurso(id) {
   const curso = calState.cursos[id];
   if (!curso) return;
-  if (!confirm(`¿Eliminar el curso "${curso.nombre}" y todas sus calificaciones?`)) return;
+  if (!confirm(`¿Eliminar el curso "${curso.nombre}"? Podrás recuperarlo desde la papelera durante ${CAL_PAPELERA_DIAS} días.`)) return;
+  if (!calState.papeleraCursos) calState.papeleraCursos = {};
+  calState.papeleraCursos[id] = { ...curso, eliminadoEn: new Date().toISOString() };
   delete calState.cursos[id];
   if (calState.cursoActivoId === id) {
     const ids = Object.keys(calState.cursos);
@@ -63,11 +93,107 @@ function eliminarCurso(id) {
   _registrarCursoEliminado(id);
   guardarCalificaciones();
   renderizarCalificaciones();
-  registrarCambio(`Curso eliminado: "${curso.nombre}"`);
-  mostrarToast(`Curso eliminado`, 'success');
+  registrarCambio(`Curso eliminado (a papelera): "${curso.nombre}"`);
+  mostrarToast(`Curso eliminado. Puedes recuperarlo desde la papelera por ${CAL_PAPELERA_DIAS} días.`, 'success');
+}
+
+/** Restaura un curso desde la papelera a la lista de cursos activos. */
+function restaurarCursoPapelera(id) {
+  const reg = calState.papeleraCursos?.[id];
+  if (!reg) return;
+  const curso = { ...reg };
+  delete curso.eliminadoEn;
+  calState.cursos[id] = curso;
+  delete calState.papeleraCursos[id];
+  _desregistrarCursoEliminado(id);
+  calState.cursoActivoId = id;
+  guardarCalificaciones();
+  renderizarCalificaciones();
+  registrarCambio(`Curso restaurado desde la papelera: "${curso.nombre}"`);
+  mostrarToast(`Curso "${curso.nombre}" restaurado`, 'success');
+}
+
+/** Elimina un curso de la papelera de forma permanente y definitiva, antes de
+ * que se cumplan los CAL_PAPELERA_DIAS días -- por si el docente quiere
+ * vaciarla a propósito en vez de esperar. */
+function eliminarCursoDefinitivo(id) {
+  const reg = calState.papeleraCursos?.[id];
+  if (!reg) return;
+  if (!confirm(`¿Eliminar "${reg.nombre}" definitivamente? Esta acción ya no se puede deshacer.`)) return;
+  delete calState.papeleraCursos[id];
+  guardarCalificaciones();
+  renderizarPanelPapeleraCursos();
+  mostrarToast('Curso eliminado definitivamente', 'success');
+}
+
+/** Actualiza solo el contador de la papelera (sin abrir/cerrar el panel) --
+ * se llama en cada render del Libro de Calificaciones para que el badge sea
+ * visible aunque la papelera esté colapsada. */
+function _actualizarBadgePapelera() {
+  _purgarPapeleraCursos();
+  const badge = document.getElementById('badge-papelera-cal');
+  if (!badge) return;
+  const n = Object.keys(calState.papeleraCursos || {}).length;
+  if (n > 0) { badge.textContent = n > 9 ? '9+' : n; badge.style.display = 'inline-flex'; }
+  else badge.style.display = 'none';
+}
+
+function renderizarPanelPapeleraCursos() {
+  const panel = document.getElementById('cal-papelera-panel');
+  if (!panel) return;
+  _purgarPapeleraCursos();
+  _actualizarBadgePapelera();
+
+  const items = Object.entries(calState.papeleraCursos || {});
+
+  if (!items.length) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.innerHTML = '<div style="border:1px solid #FFCDD2;background:#FFF5F5;border-radius:12px;padding:12px 13px;margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
+    + '<div style="font-size:0.82rem;font-weight:800;color:#C62828;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;">'
+    + '<span class="material-icons" style="font-size:16px;">delete_outline</span>Papelera de cursos'
+    + '</div>'
+    + '<div style="font-size:0.74rem;color:#E57373;">Se eliminan solos a los ' + CAL_PAPELERA_DIAS + ' días</div>'
+    + '</div>'
+    + items.map(([id, reg]) => {
+      const eliminadoEn = reg.eliminadoEn ? new Date(reg.eliminadoEn) : null;
+      const diasTranscurridos = eliminadoEn ? (Date.now() - eliminadoEn.getTime()) / 86400000 : 0;
+      const diasRestantes = Math.max(0, Math.ceil(CAL_PAPELERA_DIAS - diasTranscurridos));
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #FFCDD2;border-radius:10px;padding:8px 10px;margin-top:8px;flex-wrap:wrap;">'
+        + '<div style="min-width:0;">'
+        + '<div style="font-weight:700;color:#C62828;font-size:0.88rem;">' + escapeHTML(reg.nombre || 'Curso sin nombre') + '</div>'
+        + '<div style="font-size:0.72rem;color:#EF5350;">' + Number((reg.estudiantes || []).length || 0) + ' estudiante(s) · Se borra en ' + diasRestantes + ' día' + (diasRestantes !== 1 ? 's' : '') + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+        + '<button onclick="restaurarCursoPapelera(\'' + id + '\')" style="background:#E8F5E9;color:#2E7D32;border:none;border-radius:999px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:14px;">restore_from_trash</span>Restaurar</button>'
+        + '<button onclick="eliminarCursoDefinitivo(\'' + id + '\')" title="Eliminar definitivamente" style="background:#FFEBEE;color:#C62828;border:none;border-radius:999px;padding:5px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;"><span class="material-icons" style="font-size:14px;">delete_forever</span></button>'
+        + '</div>'
+        + '</div>';
+    }).join('')
+    + '</div>';
+  panel.classList.remove('hidden');
+}
+
+function toggleVistaPapeleraCursos() {
+  const panel = document.getElementById('cal-papelera-panel');
+  if (!panel) return;
+  const estabaOculto = panel.classList.contains('hidden') || !panel.innerHTML;
+  if (estabaOculto) renderizarPanelPapeleraCursos();
+  else { panel.classList.add('hidden'); panel.innerHTML = ''; }
 }
 
 // ─── Funciones de estudiantes ─────────────────────────────────────
+/** Normaliza un nombre para comparar duplicados: sin mayúsculas/minúsculas
+ * ni espacios extra, para que "Ana Pérez" y "ana   pérez " cuenten como el
+ * mismo nombre. */
+function _normalizarNombreEst(nombre) {
+  return String(nombre || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function agregarEstudiantes() {
   const raw = document.getElementById('input-estudiantes')?.value || '';
   const nombres = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
@@ -75,15 +201,42 @@ function agregarEstudiantes() {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) { mostrarToast('Selecciona un curso primero', 'error'); return; }
   if (!curso.estudiantes) curso.estudiantes = [];
+
+  // Detectar duplicados: nombres que ya existen en el curso, o repetidos
+  // dentro del mismo pegado -- antes se agregaban en silencio (ej. si se
+  // pegaba la misma lista dos veces por error), dejando filas idénticas e
+  // indistinguibles en la tabla.
+  const existentes = new Set(curso.estudiantes.map(e => _normalizarNombreEst(e.nombre)));
+  const vistosEnEstePegado = new Set();
+  const duplicados = [];
+  const aAgregar = [];
   nombres.forEach(nombre => {
+    const norm = _normalizarNombreEst(nombre);
+    if (existentes.has(norm) || vistosEnEstePegado.has(norm)) duplicados.push(nombre);
+    else aAgregar.push(nombre);
+    vistosEnEstePegado.add(norm);
+  });
+
+  if (duplicados.length) {
+    const lista = duplicados.slice(0, 5).join(', ') + (duplicados.length > 5 ? '...' : '');
+    const plural = duplicados.length === 1 ? '' : 's';
+    const agregarDeTodasFormas = confirm(
+      `Ya hay un estudiante con este nombre en el curso${plural ? 's' : ''}: ${lista}\n\n¿Agregarlo${plural} de todas formas?`
+    );
+    if (agregarDeTodasFormas) aAgregar.push(...duplicados);
+  }
+
+  if (!aAgregar.length) { mostrarToast('No se agregó ningún estudiante nuevo (ya existían)', 'info'); return; }
+
+  aAgregar.forEach(nombre => {
     curso.estudiantes.push({ id: uid(), nombre });
   });
   guardarCalificaciones();
   if (document.getElementById('input-estudiantes'))
     document.getElementById('input-estudiantes').value = '';
   renderizarTablaCalificaciones();
-  registrarCambio(`${nombres.length} estudiante(s) agregado(s) al curso "${curso.nombre}": ${nombres.slice(0, 3).join(', ')}${nombres.length > 3 ? '...' : ''}`);
-  mostrarToast(`${nombres.length} estudiante(s) agregado(s)`, 'info');
+  registrarCambio(`${aAgregar.length} estudiante(s) agregado(s) al curso "${curso.nombre}": ${aAgregar.slice(0, 3).join(', ')}${aAgregar.length > 3 ? '...' : ''}`);
+  mostrarToast(`${aAgregar.length} estudiante(s) agregado(s)`, 'info');
 }
 
 function importarAlumnosCSV(input) {
@@ -12781,6 +12934,7 @@ function renderizarCalificaciones() {
   if (inputEst) inputEst.value = '';
   renderizarTabsCursos();
   renderizarPanelCursosArchivados();
+  _actualizarBadgePapelera();
   renderizarTabsPlanesDelCurso();
   renderizarTablaCalificaciones();
   _actualizarBadgePendientes();

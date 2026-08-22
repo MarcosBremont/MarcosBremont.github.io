@@ -589,16 +589,19 @@ async function _cargarDesdeFirestore(uid) {
           let fbCal = {}, localCal = {}, fbTs = 0, localTs = 0;
           let fbCursos = {}, localCursos = {};
           let fbArchivados = {}, localArchivados = {};
+          let fbPapelera = {}, localPapelera = {};
           try {
             fbCal = JSON.parse(doc.data().payload || '{}') || {};
             fbCursos = fbCal.cursos || {};
             fbArchivados = fbCal.cursosArchivados || {};
+            fbPapelera = fbCal.papeleraCursos || {};
             fbTs = fbCal._lastModified || 0;
           } catch(e) {}
           try {
             localCal = JSON.parse(localRaw || '{}') || {};
             localCursos = localCal.cursos || {};
             localArchivados = localCal.cursosArchivados || {};
+            localPapelera = localCal.papeleraCursos || {};
             localTs = localCal._lastModified || 0;
           } catch(e) {}
 
@@ -630,10 +633,16 @@ async function _cargarDesdeFirestore(uid) {
             });
           } catch (e) {}
 
+          // Papelera de cursos (ver eliminarCurso/restaurarCursoPapelera en app.js):
+          // unión por id igual que arriba, para no perder un curso que otro
+          // dispositivo acaba de mandar a la papelera todavía sin sincronizar.
+          const papeleraMerged = { ...fbPapelera, ...localPapelera };
+
           const merged = {
             ...base,
             cursos: cursosMerged,
             cursosArchivados: cursosArchivadosMerged,
+            papeleraCursos: papeleraMerged,
             _lastModified: Math.max(localTs, fbTs)
           };
 
