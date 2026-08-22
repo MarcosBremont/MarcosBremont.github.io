@@ -15666,12 +15666,35 @@ function _asistFecha() {
   return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
+// ─── Configuración (del centro) de conversión tardanzas/excusas → falta ───
+// Se cachea localmente porque _statsAsistencia es síncrona y se llama muchas
+// veces por render (una vez por estudiante). Los valores por defecto (3/3)
+// aplican mientras se carga la config real del centro desde Firestore, o si
+// no hay centro/sesión (ej. en pruebas).
+let _asistConfigCentro = { tardanzasPorFalta: 3, excusasPorFalta: 3, cargado: false };
+async function _cargarConfigAsistenciaCentro() {
+  if (_asistConfigCentro.cargado) return;
+  try {
+    const centroId = await _obtenerCentroIdDeUsuarioActual();
+    if (centroId && typeof db !== 'undefined') {
+      const doc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+      if (doc.exists) {
+        const d = doc.data();
+        if (d.asistTardanzasPorFalta !== undefined) _asistConfigCentro.tardanzasPorFalta = parseInt(d.asistTardanzasPorFalta) || 0;
+        if (d.asistExcusasPorFalta !== undefined) _asistConfigCentro.excusasPorFalta = parseInt(d.asistExcusasPorFalta) || 0;
+      }
+    }
+  } catch (e) { console.warn('No se pudo cargar la config de asistencia del centro:', e); }
+  _asistConfigCentro.cargado = true;
+}
+
 // ─── Estadísticas de asistencia por estudiante ───────────────────
 function _statsAsistencia(cursoId, estudianteId) {
   const data = cargarAsistencia();
   const byDate = data[cursoId] || {};
   let P = 0, A = 0, T = 0, E = 0, total = 0;
-  Object.values(byDate).forEach(dia => {
+  const porMes = {}; // 'YYYY-MM' -> { A, T, E } (para la conversión mensual)
+  Object.entries(byDate).forEach(([fecha, dia]) => {
     const v = dia[estudianteId];
     if (!v) return;
     total++;
@@ -15679,10 +15702,28 @@ function _statsAsistencia(cursoId, estudianteId) {
     else if (v === 'A') A++;
     else if (v === 'T') T++;
     else if (v === 'E') E++;
+    if (v === 'A' || v === 'T' || v === 'E') {
+      const mes = fecha.slice(0, 7);
+      if (!porMes[mes]) porMes[mes] = { A: 0, T: 0, E: 0 };
+      porMes[mes][v]++;
+    }
   });
   // Excusa cuenta como presente para el %
   const pct = total > 0 ? Math.round(((P + T * 0.5 + E) / total) * 100) : null;
-  return { P, A, T, E, total, pct };
+
+  // Faltas efectivas: ausencias reales + tardanzas/excusas convertidas dentro
+  // de cada mes según la regla configurable del centro (por defecto, cada 3
+  // tardanzas o 3 excusas EN UN MISMO MES equivalen a 1 falta).
+  const tPorFalta = _asistConfigCentro.tardanzasPorFalta || 0;
+  const ePorFalta = _asistConfigCentro.excusasPorFalta || 0;
+  let faltasEfectivas = 0;
+  Object.values(porMes).forEach(m => {
+    faltasEfectivas += m.A;
+    if (tPorFalta > 0) faltasEfectivas += Math.floor(m.T / tPorFalta);
+    if (ePorFalta > 0) faltasEfectivas += Math.floor(m.E / ePorFalta);
+  });
+
+  return { P, A, T, E, total, pct, faltasEfectivas };
 }
 
 // ─── Calculadora de Asistencia (herramienta independiente) ───────
@@ -17206,6 +17247,7 @@ async function abrirAsistencia() {
   renderizarAsistencia();
   await _asistCargarEvidenciasCache(calState.cursoActivoId);
   _asistRefrescarVistaActual(); // refresca para reflejar qué días ya tienen evidencia adjunta
+  _cargarConfigAsistenciaCentro().then(() => _renderizarVistaAsistencia());
 }
 
 function renderizarAsistencia() {
@@ -17690,6 +17732,10 @@ function _renderHistorial(body) {
                 <div>${d.getDate()}/${d.getMonth() + 1}</div>
               </th>`;
   }).join('')}
+            <th class="asist-hist-th-resumen" title="Asistencias">Asist.</th>
+            <th class="asist-hist-th-resumen" title="Tardanzas">Tard.</th>
+            <th class="asist-hist-th-resumen" title="Faltas (ausencias reales, más las tardanzas/excusas que se convierten en falta según la regla del centro — ver Configuración del centro)">Faltas</th>
+            <th class="asist-hist-th-resumen" title="Excusas">Exc.</th>
             <th class="asist-hist-th-pct">%</th>
           </tr>
         </thead>
@@ -17697,6 +17743,9 @@ function _renderHistorial(body) {
           ${curso.estudiantes.map(est => {
     const stats = _statsAsistencia(cursoId, est.id);
     const cls = stats.pct === null ? '' : stats.pct >= 80 ? 'ok' : stats.pct >= 60 ? 'warn' : 'bad';
+    const tituloFaltas = stats.faltasEfectivas !== stats.A
+      ? stats.A + ' falta(s) real(es) + tardanzas/excusas convertidas según la regla del centro'
+      : 'Faltas reales';
     return `<tr>
               <td class="asist-hist-td-nombre">${escapeHTML(est.nombre)}</td>
               ${fechas.map(f => {
@@ -17707,6 +17756,10 @@ function _renderHistorial(body) {
                   ${icono ? `<span class="material-icons" style="font-size:16px;color:${color};">${icono}</span>` : '<span style="color:#CFD8DC;font-size:12px;">·</span>'}
                 </td>`;
     }).join('')}
+              <td class="asist-hist-td-resumen" style="color:#2E7D32;">${stats.P}</td>
+              <td class="asist-hist-td-resumen" style="color:#E65100;">${stats.T}</td>
+              <td class="asist-hist-td-resumen" style="color:#C62828;" title="${escapeHTML(tituloFaltas)}">${stats.faltasEfectivas}</td>
+              <td class="asist-hist-td-resumen" style="color:#1565C0;">${stats.E}</td>
               <td class="asist-hist-td-pct ${cls}">${stats.pct !== null ? stats.pct + '%' : '—'}</td>
             </tr>`;
   }).join('')}
@@ -38221,6 +38274,17 @@ async function _mostrarFormCentro(centroId) {
     + _textareaCentro('sa-centro-valores', 'Valores', centro.valores, 'Valores institucionales')
     + _textareaCentro('sa-centro-proposito', 'Propósito del año escolar', centro.propositoAnual, 'Propósito del año escolar en curso')
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #C62828;border-radius:10px;background:#FFEBEE;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#B71C1C;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">event_busy</span> Reglas de Asistencia</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Define cuántas tardanzas o excusas acumuladas <strong>en un mismo mes</strong> equivalen a 1 falta real, para la columna "Faltas" del Libro de Calificaciones de todos los docentes de este centro. Deja el campo en 0 para no convertir ese tipo de registro.</p>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Tardanzas por 1 falta</label>'
+    + '<input type="number" id="sa-centro-asist-tardanzas" min="0" step="1" value="' + (centro.asistTardanzasPorFalta != null ? centro.asistTardanzasPorFalta : 3) + '" placeholder="Ej: 3" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+    + '<div><label style="font-size:0.82rem;font-weight:600;color:#37474F;display:block;margin-bottom:4px;">Excusas por 1 falta</label>'
+    + '<input type="number" id="sa-centro-asist-excusas" min="0" step="1" value="' + (centro.asistExcusasPorFalta != null ? centro.asistExcusasPorFalta : 3) + '" placeholder="Ej: 3" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></div>'
+    + '</div>'
+    + '</div>'
     + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #7C4DFF;border-radius:10px;background:#F3E5F5;">'
     + '<label style="font-size:0.82rem;font-weight:600;color:#4527A0;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
     + '<span class="material-icons" style="font-size:18px;">description</span> Plantilla Word para Planificación (.docx)</label>'
@@ -38322,6 +38386,8 @@ async function _guardarCentro(centroId) {
     vision: document.getElementById('sa-centro-vision')?.value?.trim() || '',
     valores: document.getElementById('sa-centro-valores')?.value?.trim() || '',
     propositoAnual: document.getElementById('sa-centro-proposito')?.value?.trim() || '',
+    asistTardanzasPorFalta: parseInt(document.getElementById('sa-centro-asist-tardanzas')?.value) || 0,
+    asistExcusasPorFalta: parseInt(document.getElementById('sa-centro-asist-excusas')?.value) || 0,
     updatedAt: new Date().toISOString()
   };
 

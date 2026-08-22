@@ -6397,6 +6397,25 @@ body.dark-mode .asist-card-nombre {
   background: #FFEBEE;
 }
 
+.asist-hist-th-resumen {
+  text-align: center;
+  padding: 8px 8px;
+  background: #37474F;
+  color: #fff;
+  font-weight: 700;
+  min-width: 46px;
+  font-size: 0.72rem;
+}
+
+.asist-hist-td-resumen {
+  text-align: center;
+  padding: 7px 8px;
+  font-weight: 700;
+  border-bottom: 1px solid #E0E0E0;
+  color: #37474F;
+  background: #FAFAFA;
+}
+
 /* Reporte */
 .asist-rep-header {
   display: flex;
