@@ -1349,7 +1349,11 @@
         <div class="export-buttons">
           <button class="btn-export btn-word" onclick="exportarWord()">
             <span class="material-icons">description</span>
-            Exportar a Word
+            Exportar Planificación por RA
+          </button>
+          <button class="btn-export" onclick="exportarDiariasWord()" style="background:linear-gradient(135deg,#5C6BC0,#3949AB);color:#fff;">
+            <span class="material-icons">today</span>
+            Exportar Planificaciones Diarias
           </button>
           <button class="btn-export" id="btn-guia-estudio" onclick="generarGuiaEstudioRA()" style="background:linear-gradient(135deg,#00897B,#00695C);color:#fff;">
             <span class="material-icons">auto_stories</span>
@@ -3018,6 +3022,48 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#E65100;">v17.36<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Distribuir Puntos" ahora incluye los ítems complementarios</div>
+              <ul class="about-ver-items">
+                <li>El botón de distribuir puntos automáticamente entre actividades antes ignoraba los ítems complementarios (Actitudes, Cuaderno, Participación, etc.) -- ahora también les asigna su parte, ya que estos también califican y suman al total del RA.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6D4C41;">v17.38<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Copiar datos generales" ya no trae los Contenidos del RA</div>
+              <ul class="about-ver-items">
+                <li>"Copiar de otra planificación" ya no copia los Contenidos del RA (Conceptuales, Procedimentales y Actitudinales) -- suelen variar de una planificación a otra aunque compartan institución o módulo. Los Recursos Didácticos Disponibles se siguen copiando.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#3949AB;">v17.37<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Vista Previa: nuevo botón "Exportar Planificaciones Diarias"</div>
+              <ul class="about-ver-items">
+                <li>El botón "Exportar a Word" se renombró a "Exportar Planificación por RA" para dejar claro qué exporta. Se agregó un nuevo botón "Exportar Planificaciones Diarias" al lado, que hace lo mismo que el que ya existía en el paso de Planificaciones Diarias -- ahora también disponible directamente desde Vista Previa y Exportación.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6985,9 +7031,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.35"></script>
+  <script src="app.js?v=17.38"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.35"></script>
+  <script src="auth.js?v=17.38"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

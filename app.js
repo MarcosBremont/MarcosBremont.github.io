@@ -3079,7 +3079,10 @@ function _confirmarItemComplementario() {
 }
 
 function distribuirPuntosAutomatico() {
-  const acts = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  // Incluye tanto las actividades normales como los ítems complementarios (Actitudes,
+  // Cuaderno, Participación, etc.) -- estos también se califican y suman al total del
+  // RA, así que deben recibir su parte al distribuir los puntos automáticamente.
+  const acts = planificacion.actividades || [];
   if (acts.length === 0) { mostrarToast('No hay actividades para distribuir.', 'warning'); return; }
 
   const valorRA = parseFloat(planificacion?.datosGenerales?.valorRA) || 0;
@@ -3095,7 +3098,9 @@ function distribuirPuntosAutomatico() {
 
   renderizarActividades(planificacion.actividades); // ya actualiza el resumen de valores internamente (_actualizarResumenValores)
   guardarBorrador();
-  mostrarToast(`${valorRA} pts distribuidos entre ${acts.length} actividades (${base} pts c/u)`, 'success');
+  const nComp = acts.filter(a => a.esComplementario).length;
+  const detalleComp = nComp ? ` (incluye ${nComp} complementario${nComp > 1 ? 's' : ''})` : '';
+  mostrarToast(`${valorRA} pts distribuidos entre ${acts.length} ítem${acts.length !== 1 ? 's' : ''} (${base} pts c/u)${detalleComp}`, 'success');
 }
 
 function renderizarActividades(listaActividades) {
@@ -21114,8 +21119,8 @@ function abrirModalCopiarDatosGenerales() {
       Selecciona una planificación guardada. Se copiarán: Nombre de la Institución, Regional/Distrito, Politécnico,
       Familia Profesional, Código FP, Ordenanza,
       Nombre del Bachillerato Técnico, Código del Título, Módulo Formativo, Código del Módulo,
-      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana, Días de Clase por Semana,
-      los Contenidos del RA (Conceptuales, Procedimentales y Actitudinales) y los Recursos Didácticos Disponibles.
+      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana, Días de Clase por Semana
+      y los Recursos Didácticos Disponibles.
     </p>
     <div style="max-height:400px;overflow-y:auto;">${listaHTML}</div>`;
   _usarFooterDinamico(`<button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`);
@@ -21153,11 +21158,10 @@ function _confirmarCopiarDatosGenerales(idx) {
   setVal('cantidad-ra', dg.cantidadRA);
   setVal('horas-semana', dg.horasSemana);
 
-  // Contenidos del RA (Paso 2) y Recursos Didácticos Disponibles
+  // Recursos Didácticos Disponibles (Paso 2) -- los Contenidos del RA (Conceptuales/
+  // Procedimentales/Actitudinales) NO se copian a propósito: suelen variar de una
+  // planificación a otra aunque comparta institución/módulo con la de origen.
   setVal('recursos-didacticos', ra.recursos);
-  setVal('contenidos-conceptuales', ra.contenidosConceptuales);
-  setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
-  setVal('contenidos-actitudinales', ra.contenidosActitudinales);
 
   // Repoblar la tabla de ponderación (priorización) con los datos copiados -- el
   // listener de "change" en #cantidad-ra no se dispara al asignar .value por JS,
