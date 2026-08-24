@@ -9979,6 +9979,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+  // --- Listener: limpiar saltos de línea al pegar el RA copiado del currículo ---
+  // (los PDF/Word de currículo suelen partir el texto en muchas líneas cortas por
+  // el ancho de la celda de la tabla; aquí se unen en un solo párrafo automáticamente)
+  document.getElementById('descripcion-ra')?.addEventListener('paste', (e) => {
+    const texto = (e.clipboardData || window.clipboardData)?.getData('text');
+    if (!texto || !texto.includes('\n')) return;
+    e.preventDefault();
+    const limpio = texto.replace(/\s*\n+\s*/g, ' ').replace(/[ \t]{2,}/g, ' ').trim();
+    const el = e.target;
+    const inicio = el.selectionStart;
+    const fin = el.selectionEnd;
+    el.value = el.value.slice(0, inicio) + limpio + el.value.slice(fin);
+    const cursor = inicio + limpio.length;
+    el.setSelectionRange(cursor, cursor);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
   // --- Listener: análisis Bloom en tiempo real mientras escribe el RA ---
 
 
