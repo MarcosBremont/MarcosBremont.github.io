@@ -21326,6 +21326,21 @@ async function _extraerTextoPdf(arrayBuffer) {
   return textoCompleto;
 }
 
+/** Extrae el fragmento inicial del documento (portada + introducción, ANTES del
+ *  primer encabezado "MÓDULO N:") donde suelen estar los datos generales del
+ *  Bachillerato (nombre, código de título, familia profesional...) -- esa
+ *  información vive fuera de la sección de cualquier módulo específico, así que
+ *  _recortarTextoModulo() por sí sola nunca la incluye. Gemini no necesita esto
+ *  (ve el PDF completo), pero el respaldo de texto con Groq/OpenRouter solo
+ *  recibe la sección del módulo, así que hay que mandarle también este trozo. */
+function _extraerEncabezadoDocumento(textoCompleto) {
+  const regexPrimerModulo = /m[oó]dulo\s+\d+\s*[:.\-]/i;
+  const m = regexPrimerModulo.exec(textoCompleto);
+  const limite = m ? m.index : textoCompleto.length;
+  const MAX_CHARS_ENCABEZADO = 6000;
+  return textoCompleto.substring(0, Math.min(limite, MAX_CHARS_ENCABEZADO)).trim();
+}
+
 /** Recorta del texto completo del currículo la sección del módulo formativo buscado
  *  (desde su encabezado "MÓDULO N: ..." hasta el siguiente), para no mandarle a
  *  Groq/OpenRouter el documento entero. Devuelve null si no encuentra ninguna
@@ -21503,8 +21518,10 @@ async function _procesarImportCurriculo() {
           throw new Error('Gemini no respondió y no se pudo ubicar el módulo en el texto extraído del PDF. Intenta de nuevo más tarde, o verifica el nombre/código del módulo.');
         }
         console.log(`[Currículo] Sección del módulo recortada: ${textoRecortado.length} caracteres, se envía como respaldo.`);
+        const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
+        const textoParaPrompt = `=== ENCABEZADO DEL DOCUMENTO ===\n${encabezadoDoc}\n\n=== SECCIÓN DEL MÓDULO BUSCADO ===\n${textoRecortado}`;
 
-        const promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoRecortado });
+        const promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoParaPrompt });
         const GROQ_MAX_TOKENS = 4096;
         // Groq rechaza de entrada (413) cualquier solicitud que supere el límite de
         // tokens por minuto (TPM) de la cuenta -- confirmado en la práctica con
@@ -21528,7 +21545,13 @@ async function _procesarImportCurriculo() {
         } catch (eGroq) {
           console.warn('[Currículo] Groq falló, probando OpenRouter:', eGroq.message);
           if (!getOpenRouterKey()) throw eGroq;
-          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 8000, 45000, MODELOS_OPENROUTER_CURRICULO);
+          // Un módulo con muchos RA (ej. 10) necesita bastante más de 8000 tokens de
+          // salida para no cortarse a mitad de camino -- confirmado en la práctica:
+          // con 8000 solo llegaban 5 de 10 RA completos. Como esta lista prioriza
+          // modelos que responden directo (no "razonan" en voz alta), subir el
+          // presupuesto no debería reintroducir el riesgo de espera larga que
+          // motivó bajarlo la vez anterior (ese riesgo era específico de Nemotron).
+          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 60000, MODELOS_OPENROUTER_CURRICULO);
           proveedorUsado = 'OpenRouter';
           console.log('[Currículo] OpenRouter respondió OK.');
         }
@@ -21619,6 +21642,17 @@ function _confirmarImportCurriculo(idx) {
 
   setVal('modulo-formativo', parsed.moduloFormativo);
   setVal('codigo-modulo', parsed.codigoModulo);
+
+  // Datos generales del Bachillerato: viven en la portada del currículo, no en la
+  // sección del módulo, así que la IA los deja en "" cuando no los encuentra --
+  // en ese caso no se toca el campo, para no borrar algo que el docente ya haya
+  // escrito a mano.
+  if (parsed.nombreBachillerato) setVal('nombre-bachillerato', parsed.nombreBachillerato);
+  if (parsed.codigoTitulo) setVal('codigo-titulo', parsed.codigoTitulo);
+  if (parsed.familiaProfesional) setVal('familia-profesional', parsed.familiaProfesional);
+  if (parsed.codigoFP) setVal('codigo-fp', parsed.codigoFP);
+  if (parsed.ordenanza) setVal('ordenanza', parsed.ordenanza);
+
   setVal('cantidad-ra', String(parsed.ras.length));
   _renderTablaPriorizacion(parsed.ras.length, null);
 
@@ -38247,7 +38281,7 @@ const PROMPTS_IA_DEFS = [
     key: 'prompt_extraer_curriculo',
     label: 'Prompt — Extraer Currículo (PDF)',
     icono: 'picture_as_pdf',
-    desc: 'Prompt para extraer RA, criterios y contenidos de un módulo formativo desde un PDF de currículo oficial subido por el docente. Variables: {{moduloBuscado}}, {{textoPdf}} (vacío cuando se llama a Gemini con el PDF adjunto; con el texto extraído del PDF cuando se llama a Groq/OpenRouter como respaldo)'
+    desc: 'Prompt para extraer los datos generales del Bachillerato y los RA/criterios/contenidos de un módulo formativo desde un PDF de currículo oficial subido por el docente. Variables: {{moduloBuscado}}, {{textoPdf}} (vacío cuando se llama a Gemini con el PDF adjunto; con el encabezado del documento + el texto extraído del módulo cuando se llama a Groq/OpenRouter como respaldo)'
   }
 ];
 
@@ -38763,16 +38797,25 @@ MÓDULO BUSCADO: "{{moduloBuscado}}"
 
 IMPORTANTE sobre dónde buscar: el nombre o código del módulo suele aparecer VARIAS veces en el documento -- por ejemplo en un índice, en un listado resumen de "Módulos formativos asociados a unidades de competencia" al inicio del currículo, o mencionado de pasada en otra sección. NINGUNA de esas menciones es el lugar correcto. La sección real del módulo es un bloque identificable por su estructura: un encabezado tipo "MÓDULO N: <nombre>" seguido de campos como "Nivel:", "Código: <código>" y "Duración:", e inmediatamente después una tabla o listado de "Resultados de Aprendizaje" con sus "Criterios de Evaluación". Extrae SOLO de ese bloque estructural, no de una mención suelta. Si el documento es extenso (puede tener cientos de páginas), revísalo completo hasta encontrar ese bloque -- no te detengas en la primera coincidencia del nombre o código si no tiene esa estructura de tabla RA/Criterios junto a ella.
 
-TEXTO DEL CURRÍCULO (puede venir vacío si el documento se adjuntó directamente como archivo; si NO está vacío, es una extracción de texto plano de un PDF con tablas -- el orden de las columnas de la tabla de Contenidos puede salir desordenado o mezclado. En ese caso, prioriza que el código del RA, su descripción y los criterios de evaluación queden precisos y completos; para los 3 contenidos haz tu mejor esfuerzo razonable a partir del texto disponible, sin inventar contenido que no esté ahí):
+TEXTO DEL CURRÍCULO (puede venir vacío si el documento se adjuntó directamente como archivo; si NO está vacío, es una extracción de texto plano de un PDF con tablas -- el orden de las columnas de la tabla de Contenidos puede salir desordenado o mezclado. En ese caso, prioriza que el código del RA, su descripción y los criterios de evaluación queden precisos y completos; para los 3 contenidos haz tu mejor esfuerzo razonable a partir del texto disponible, sin inventar contenido que no esté ahí. Puede venir dividido en dos partes marcadas con "=== ENCABEZADO DEL DOCUMENTO ===" -- portada e introducción, con los datos generales del Bachillerato -- y "=== SECCIÓN DEL MÓDULO BUSCADO ===" -- la sección específica del módulo con sus RA):
 {{textoPdf}}
 
 Si NO encuentras ningún módulo que coincida, responde exactamente:
 {"encontrado": false}
 
-Si lo encuentras, extrae TODOS los Resultados de Aprendizaje (RA) de ese módulo, cada uno con su descripción completa (sin recortar ni resumir), sus Criterios de Evaluación (uno por elemento del array, con su código, ej "CE3.1.1 Describir..."), y los Contenidos Conceptuales, Procedimentales y Actitudinales que correspondan a ese RA específico (si el documento los agrupa por bloques de varios RA, extrae la porción que aplica a este RA en particular). Responde exactamente con este formato JSON:
+Si lo encuentras, extrae:
+1. Los datos generales del Bachillerato Técnico (suelen estar en la portada o en las primeras páginas del documento, NO dentro de la sección del módulo): nombre completo del Bachillerato Técnico, código del título, familia profesional, código de la familia profesional, y la ordenanza que lo regula (si aparece). Si alguno de estos datos no aparece en el documento, usa cadena vacía "" -- NUNCA inventes un valor.
+2. TODOS los Resultados de Aprendizaje (RA) de ese módulo, cada uno con su descripción completa (sin recortar ni resumir), sus Criterios de Evaluación (uno por elemento del array, con su código, ej "CE3.1.1 Describir..."), y los Contenidos Conceptuales, Procedimentales y Actitudinales que correspondan a ese RA específico (si el documento los agrupa por bloques de varios RA, extrae la porción que aplica a este RA en particular).
+
+Responde exactamente con este formato JSON:
 
 {
   "encontrado": true,
+  "nombreBachillerato": "nombre completo del Bachillerato Técnico tal como aparece en la portada, ej Bachillerato Técnico en Diseño y Desarrollo de Aplicaciones Informáticas",
+  "codigoTitulo": "código del título, ej INCO002_3",
+  "familiaProfesional": "familia profesional tal como aparece, ej Informática y Comunicaciones",
+  "codigoFP": "código de la familia profesional si aparece por separado, si no cadena vacía",
+  "ordenanza": "ordenanza que regula el título si aparece, si no cadena vacía",
   "moduloFormativo": "nombre exacto del módulo tal como aparece en el documento",
   "codigoModulo": "código del módulo tal como aparece, ej INCO-MF034_3",
   "ras": [
