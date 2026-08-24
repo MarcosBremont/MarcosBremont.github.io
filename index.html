@@ -3030,6 +3030,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00897B;">v17.43<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: respaldo automático con Groq/OpenRouter</div>
+              <ul class="about-ver-items">
+                <li>Si Gemini falla al leer el PDF (cuota, alta demanda, timeout), "Cargar Currículo (PDF)" ahora extrae el texto del PDF en el navegador y reintenta automáticamente con Groq y luego OpenRouter (si están configurados en Ajustes), en vez de fallar directo.</li>
+                <li>Cuando el resultado viene del respaldo se indica junto al nombre del módulo (🟢 Groq / 🔵 OpenRouter); si no hay ninguna clave de respaldo configurada, o el respaldo también falla, se sigue mostrando el error original de Gemini como antes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v17.42<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7118,6 +7133,14 @@
   <!-- PizZip + Docxtemplater — para plantillas Word personalizadas -->
   <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
+  <!-- PDF.js — extraer texto de un PDF en el navegador (respaldo de "Cargar Currículo"
+       cuando Gemini falla: solo pdfjs-dist@6+ publica build ESM, por eso va como
+       script type="module" en vez del <script src> clásico del resto de libs -->
+  <script type="module">
+    import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
+  </script>
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
@@ -7138,9 +7161,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.42"></script>
+  <script src="app.js?v=17.43"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.42"></script>
+  <script src="auth.js?v=17.43"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

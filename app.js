@@ -21277,6 +21277,84 @@ function _curriculoArchivoSeleccionado(input) {
   if (res) res.innerHTML = '';
 }
 
+/** Extrae el texto completo de un PDF en el navegador con pdf.js (respaldo de
+ *  "Cargar Currículo" cuando Gemini falla y hay que usar Groq/OpenRouter, que
+ *  son APIs de solo texto y no pueden leer el archivo adjunto). */
+async function _extraerTextoPdf(arrayBuffer) {
+  if (!window.pdfjsLib) {
+    throw new Error('No se pudo cargar el lector de PDF (pdf.js). Revisa tu conexión e intenta de nuevo.');
+  }
+  const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let textoCompleto = '';
+  for (let p = 1; p <= doc.numPages; p++) {
+    const pagina = await doc.getPage(p);
+    const contenido = await pagina.getTextContent();
+    // getTextContent() devuelve los fragmentos en el orden del stream del PDF, que en
+    // tablas multi-columna (ej. la tabla de Contenidos C/P/A del currículo) no siempre
+    // coincide con el orden visual de lectura. Reordenar por posición (Y descendente,
+    // luego X ascendente) lo aproxima mejor, sin ser perfecto.
+    const items = contenido.items.slice().sort((a, b) => {
+      const ya = a.transform[5], yb = b.transform[5];
+      if (Math.abs(ya - yb) > 2) return yb - ya;
+      return a.transform[4] - b.transform[4];
+    });
+    textoCompleto += items.map(it => it.str).join(' ') + '\n\n';
+  }
+  return textoCompleto;
+}
+
+/** Recorta del texto completo del currículo la sección del módulo formativo buscado
+ *  (desde su encabezado "MÓDULO N: ..." hasta el siguiente), para no mandarle a
+ *  Groq/OpenRouter el documento entero. Devuelve null si no encuentra ninguna
+ *  coincidencia razonable. */
+function _recortarTextoModulo(textoCompleto, moduloBuscado) {
+  const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const buscadoNorm = _norm(moduloBuscado);
+  if (!buscadoNorm) return null;
+  const buscadoSinEspacios = buscadoNorm.replace(/\s+/g, '');
+
+  // Encabezados "MÓDULO N: nombre" (tolerante a mayúsculas y separador).
+  const regexEncabezado = /m[oó]dulo\s+\d+\s*[:.\-]?\s*([^\n]+)/gi;
+  const encabezados = [];
+  let m;
+  while ((m = regexEncabezado.exec(textoCompleto)) !== null) {
+    encabezados.push({ indice: m.index, nombre: m[1] });
+  }
+  if (!encabezados.length) return null;
+
+  const palabrasBuscado = buscadoNorm.split(/[\s\-_]+/).filter(w => w.length > 2);
+
+  let mejor = null, mejorPuntaje = 0;
+  encabezados.forEach((enc, idxEnc) => {
+    // Ventana de texto después del encabezado (nombre + un par de líneas más, donde
+    // suele estar "Código: ..."), para encontrar el módulo aunque el docente haya
+    // escrito el código en vez del nombre. Se recorta también al inicio del
+    // siguiente encabezado -- sin este límite, un bloque de módulo corto (pocas
+    // líneas) deja que la ventana de 200 caracteres se "cuele" en el nombre/código
+    // del módulo SIGUIENTE, haciendo que ese match le sume puntaje al módulo
+    // equivocado (ej. buscar por el código del módulo 3 encontraba el módulo 2,
+    // porque la ventana del módulo 2 alcanzaba a incluir "Código: ..." del 3).
+    const siguienteEnc = encabezados[idxEnc + 1];
+    const finVentana = siguienteEnc ? Math.min(siguienteEnc.indice, enc.indice + 200) : enc.indice + 200;
+    const ventana = textoCompleto.substring(enc.indice, finVentana);
+    const ventanaNorm = _norm(ventana);
+    let puntaje = 0;
+    if (ventanaNorm.includes(buscadoNorm)) puntaje += 10;
+    if (buscadoSinEspacios.length > 3 && ventanaNorm.replace(/\s+/g, '').includes(buscadoSinEspacios)) puntaje += 8;
+    palabrasBuscado.forEach(palabra => { if (ventanaNorm.includes(palabra)) puntaje++; });
+    if (puntaje > mejorPuntaje) { mejorPuntaje = puntaje; mejor = enc; }
+  });
+
+  if (!mejor || mejorPuntaje < Math.max(1, Math.ceil(palabrasBuscado.length / 2))) return null;
+
+  const idxInicio = mejor.indice;
+  const siguiente = encabezados.find(enc => enc.indice > idxInicio);
+  const idxFin = siguiente ? siguiente.indice : textoCompleto.length;
+
+  const MAX_CHARS = 40000; // tope de presupuesto de tokens para Groq/OpenRouter
+  return textoCompleto.substring(idxInicio, Math.min(idxFin, idxInicio + MAX_CHARS));
+}
+
 async function _procesarImportCurriculo() {
   const fileInput = document.getElementById('curriculo-file-input');
   const file = fileInput?.files?.[0];
@@ -21298,61 +21376,106 @@ async function _procesarImportCurriculo() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
   if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Gemini y buscando el módulo...</div>';
 
+  let parsed = null;
+  let proveedorUsado = 'Gemini';
+
   try {
-    const base64 = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = e => resolve(e.target.result.split(',')[1]);
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
+    // ---- Intento 1: Gemini con el PDF adjunto directamente (mejor comprensión
+    // de tablas complejas, como la de Contenidos C/P/A del currículo) ----
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = e => resolve(e.target.result.split(',')[1]);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
 
-    const prompt = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado });
+      const prompt = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: '' });
 
-    const bodyExtraccion = modelo => ({
-      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'application/pdf', data: base64 } }] }],
-      generationConfig: modelo.startsWith('gemini-3')
-        ? { temperature: 0.20, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: 'minimal' } }
-        : { temperature: 0.20, maxOutputTokens: 8192 }
-    });
+      const bodyExtraccion = modelo => ({
+        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'application/pdf', data: base64 } }] }],
+        generationConfig: modelo.startsWith('gemini-3')
+          ? { temperature: 0.20, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: 'minimal' } }
+          : { temperature: 0.20, maxOutputTokens: 8192 }
+      });
 
-    const _llamarModelo = async modelo => {
-      const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const r = await _fetchConTimeout(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyExtraccion(modelo)) }, 60000);
-      if (r.ok) return { resp: r, errJson: null };
-      const errJson = await r.json().catch(() => ({}));
-      return { resp: r, errJson };
-    };
+      const _llamarModelo = async modelo => {
+        const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+        const r = await _fetchConTimeout(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyExtraccion(modelo)) }, 60000);
+        if (r.ok) return { resp: r, errJson: null };
+        const errJson = await r.json().catch(() => ({}));
+        return { resp: r, errJson };
+      };
 
-    // Un solo modelo (gemini-3.6-flash, el mismo que usa _llamarGemini() para
-    // texto plano en el resto de la app) -- NO se cae a "gemini-1.5-flash" como
-    // hacía el escáner OCR, porque Google retiró ese modelo por completo y
-    // reintentar ahí solo producía un segundo error (404 "not found ... not
-    // supported for generateContent"), enmascarando la causa real del primer
-    // fallo (típicamente 429 por cuota agotada, más probable aquí que en el
-    // OCR por el tamaño del PDF adjunto).
-    let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
+      // Un solo modelo (gemini-3.6-flash, el mismo que usa _llamarGemini() para
+      // texto plano en el resto de la app) -- NO se cae a "gemini-1.5-flash" como
+      // hacía el escáner OCR, porque Google retiró ese modelo por completo y
+      // reintentar ahí solo producía un segundo error (404 "not found ... not
+      // supported for generateContent"), enmascarando la causa real del primer
+      // fallo (típicamente 429 por cuota agotada, más probable aquí que en el
+      // OCR por el tamaño del PDF adjunto). Si Gemini falla por lo que sea
+      // (cuota, "high demand", timeout), abajo se intenta el respaldo de texto.
+      let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
 
-    if (!resp.ok) {
-      const msg = errJson?.error?.message || '';
-      const esLimiteCero = msg.includes('limit: 0') || msg.includes('limit:0');
-      if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
-        throw new Error(esLimiteCero ? 'BILLING_REQUERIDO' : 'CUOTA_AGOTADA');
+      if (!resp.ok) {
+        const msg = errJson?.error?.message || '';
+        const esLimiteCero = msg.includes('limit: 0') || msg.includes('limit:0');
+        if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
+          throw new Error(esLimiteCero ? 'BILLING_REQUERIDO' : 'CUOTA_AGOTADA');
+        }
+        throw new Error(msg || `Error ${resp.status}`);
       }
-      throw new Error(msg || `Error ${resp.status}`);
+
+      const data = await resp.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+      parsed = _intentarParsearJSON(cleaned, 'extracción de currículo');
+      if (!parsed) throw new Error('Gemini devolvió una respuesta que no se pudo interpretar.');
+    } catch (errGemini) {
+      // ---- Intento 2 (respaldo): extraer el texto del PDF en el navegador y
+      // mandarlo como texto plano a Groq/OpenRouter, ya que no aceptan archivos
+      // adjuntos. Solo se intenta si hay al menos una clave de esos proveedores.
+      if (!getGroqKey() && !getOpenRouterKey()) throw errGemini;
+
+      console.warn('[Currículo] Gemini falló, probando respaldo con texto extraído:', errGemini.message);
+      if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Gemini no respondió. Extrayendo texto del PDF para intentar con Groq/OpenRouter…</div>';
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const textoCompleto = await _extraerTextoPdf(arrayBuffer);
+        const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
+        if (!textoRecortado) {
+          throw new Error('Gemini no respondió y no se pudo ubicar el módulo en el texto extraído del PDF. Intenta de nuevo más tarde, o verifica el nombre/código del módulo.');
+        }
+
+        const promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoRecortado });
+        try {
+          parsed = await _llamarGroqConFallback(promptTexto, 'Extrayendo currículo', 8192);
+          proveedorUsado = 'Groq';
+        } catch (eGroq) {
+          if (!getOpenRouterKey()) throw eGroq;
+          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 4096, 60000);
+          proveedorUsado = 'OpenRouter';
+        }
+      } catch (eRespaldo) {
+        // El respaldo también falló -- el mensaje de Gemini (cuota/facturación/etc.)
+        // suele ser más específico y accionable que el del respaldo, así que se
+        // muestra ese en vez del error genérico de la extracción/Groq/OpenRouter.
+        console.warn('[Currículo] Respaldo con texto también falló:', eRespaldo.message);
+        throw errGemini;
+      }
     }
 
-    const data = await resp.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-    const parsed = _intentarParsearJSON(cleaned, 'extracción de currículo');
-
     if (!parsed || parsed.encontrado === false || !parsed.ras?.length) {
-      if (res) res.innerHTML = '<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">No se encontró ese módulo en el PDF. Verifica que el nombre o código esté escrito tal como aparece en el currículo.</div>';
+      if (res) res.innerHTML = '<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">No se encontró ese módulo en el currículo. Verifica que el nombre o código esté escrito tal como aparece en el documento.</div>';
       window._curriculoExtraido = null;
       return;
     }
 
     window._curriculoExtraido = parsed;
+    const badgeProveedor = proveedorUsado === 'Gemini'
+      ? ''
+      : ` <span style="font-weight:400;color:#90A4AE;">(vía ${proveedorUsado === 'Groq' ? '🟢 Groq' : '🔵 OpenRouter'}, respaldo de texto)</span>`;
     const listaHTML = parsed.ras.map((ra, idx) => {
       const desc = (ra.descripcion || '').trim();
       const preview = desc.length > 140 ? desc.substring(0, 140) + '…' : desc;
@@ -21372,7 +21495,7 @@ async function _procesarImportCurriculo() {
     if (res) res.innerHTML = `
       <div style="font-size:0.82rem;color:#546E7A;margin-bottom:8px;font-weight:600;">
         <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#00897B;">check_circle</span>
-        ${escapeHTML(parsed.moduloFormativo || '')} — selecciona el RA a importar:
+        ${escapeHTML(parsed.moduloFormativo || '')}${badgeProveedor} — selecciona el RA a importar:
       </div>
       <div style="max-height:320px;overflow-y:auto;">${listaHTML}</div>`;
   } catch (e) {
@@ -38017,7 +38140,7 @@ const PROMPTS_IA_DEFS = [
     key: 'prompt_extraer_curriculo',
     label: 'Prompt — Extraer Currículo (PDF)',
     icono: 'picture_as_pdf',
-    desc: 'Prompt para extraer RA, criterios y contenidos de un módulo formativo desde un PDF de currículo oficial subido por el docente. Variables: {{moduloBuscado}}'
+    desc: 'Prompt para extraer RA, criterios y contenidos de un módulo formativo desde un PDF de currículo oficial subido por el docente. Variables: {{moduloBuscado}}, {{textoPdf}} (vacío cuando se llama a Gemini con el PDF adjunto; con el texto extraído del PDF cuando se llama a Groq/OpenRouter como respaldo)'
   }
 ];
 
@@ -38527,9 +38650,12 @@ Genera exactamente este JSON:
 
 const _DEFAULT_PROMPT_EXTRAER_CURRICULO = `Eres un asistente experto en currículos de educación técnico-profesional de la República Dominicana (documentos oficiales MINERD/DETP). Responde SOLO con JSON válido, sin markdown, sin texto adicional.
 
-En el documento PDF adjunto (currículo oficial de un Bachillerato Técnico) busca el módulo formativo cuyo nombre o código coincida, de forma aproximada (ignora mayúsculas, tildes y pequeñas diferencias de orden en las palabras), con:
+En el currículo oficial de un Bachillerato Técnico (adjunto como archivo PDF, o como texto plano más abajo si el PDF no se pudo adjuntar) busca el módulo formativo cuyo nombre o código coincida, de forma aproximada (ignora mayúsculas, tildes y pequeñas diferencias de orden en las palabras), con:
 
 MÓDULO BUSCADO: "{{moduloBuscado}}"
+
+TEXTO DEL CURRÍCULO (puede venir vacío si el documento se adjuntó directamente como archivo; si NO está vacío, es una extracción de texto plano de un PDF con tablas -- el orden de las columnas de la tabla de Contenidos puede salir desordenado o mezclado. En ese caso, prioriza que el código del RA, su descripción y los criterios de evaluación queden precisos y completos; para los 3 contenidos haz tu mejor esfuerzo razonable a partir del texto disponible, sin inventar contenido que no esté ahí):
+{{textoPdf}}
 
 Si NO encuentras ningún módulo que coincida, responde exactamente:
 {"encontrado": false}
