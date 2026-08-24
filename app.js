@@ -21490,15 +21490,30 @@ async function _procesarImportCurriculo() {
         console.log(`[Currículo] Sección del módulo recortada: ${textoRecortado.length} caracteres, se envía como respaldo.`);
 
         const promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoRecortado });
+        const GROQ_MAX_TOKENS = 4096;
+        // Groq rechaza de entrada (413) cualquier solicitud que supere el límite de
+        // tokens por minuto (TPM) de la cuenta -- confirmado en la práctica con
+        // "Limit 8000, Requested 8927" para un módulo real de tamaño normal. Un
+        // módulo con varios RA fácilmente supera ese límite, así que probarlo igual
+        // solo agrega dos rechazos garantizados antes de llegar a OpenRouter. Se
+        // estima el tamaño (≈3.6 caracteres por token en español) y, si claramente
+        // no va a caber, se salta Groq directo -- los módulos pequeños sí lo siguen
+        // intentando primero, ya que ahí Groq es más rápido y no cuesta nada.
+        const tokensEstimados = Math.ceil(promptTexto.length / 3.6);
+        const groqCabria = tokensEstimados + GROQ_MAX_TOKENS < 7500;
         try {
+          if (!groqCabria) {
+            console.warn(`[Currículo] Se salta Groq: prompt estimado en ~${tokensEstimados} tokens, probablemente supere su límite de cuenta (413). Se va directo a OpenRouter.`);
+            throw new Error('prompt_demasiado_grande_para_groq');
+          }
           console.log('[Currículo] Probando respaldo con Groq…');
-          parsed = await _llamarGroqConFallback(promptTexto, 'Extrayendo currículo', 4096);
+          parsed = await _llamarGroqConFallback(promptTexto, 'Extrayendo currículo', GROQ_MAX_TOKENS);
           proveedorUsado = 'Groq';
           console.log('[Currículo] Groq respondió OK.');
         } catch (eGroq) {
           console.warn('[Currículo] Groq falló, probando OpenRouter:', eGroq.message);
           if (!getOpenRouterKey()) throw eGroq;
-          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 12000, 90000);
+          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 8000, 45000);
           proveedorUsado = 'OpenRouter';
           console.log('[Currículo] OpenRouter respondió OK.');
         }

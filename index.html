@@ -3030,6 +3030,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v17.48<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: se salta Groq cuando el módulo es grande, para no quedarse pegado</div>
+              <ul class="about-ver-items">
+                <li>Con un módulo real de tamaño normal, Groq siempre rechazaba la solicitud (excede el límite de tokens por minuto de la cuenta) -- se perdía tiempo intentándolo dos veces antes de llegar a OpenRouter. Ahora se calcula el tamaño de antemano y, si claramente no va a caber en Groq, se salta directo a OpenRouter (los módulos pequeños sí lo siguen probando primero, ahí sí funciona).</li>
+                <li>Se ajustó el tiempo de espera y el espacio de respuesta del respaldo de OpenRouter para que un modelo lento no deje la pantalla pegada en "Analizando..." por varios minutos.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#5D4037;">v17.47<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7219,9 +7234,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.47"></script>
+  <script src="app.js?v=17.48"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.47"></script>
+  <script src="auth.js?v=17.48"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
