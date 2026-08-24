@@ -28525,6 +28525,37 @@ function _ocultarSplash() {
   setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
 }
 
+/** Precarga Nombre de la Institución, Politécnico y Regional/Distrito desde los
+ *  datos del centro educativo del docente -- solo rellena campos que estén
+ *  vacíos (nunca sobreescribe lo que ya haya escrito el docente, ni datos
+ *  restaurados de una planificación en progreso o guardada). Siguen siendo
+ *  editables normalmente, esto solo evita tener que escribirlos a mano. */
+async function _precargarDatosCentroPlanificacion() {
+  try {
+    const nombreEl = document.getElementById('nombre-institucion');
+    const politecnicoEl = document.getElementById('politecnico');
+    const regionalEl = document.getElementById('regional-distrito');
+    if (!nombreEl && !politecnicoEl && !regionalEl) return;
+    if ((nombreEl?.value || '').trim() && (politecnicoEl?.value || '').trim() && (regionalEl?.value || '').trim()) return;
+    if (!window.currentUser || typeof db === 'undefined') return;
+
+    const centroId = await _obtenerCentroIdDeUsuarioActual();
+    if (!centroId) return;
+    const doc = await db.collection('centros').doc(centroId).get();
+    if (!doc.exists) return;
+    const centro = doc.data() || {};
+
+    if (nombreEl && !nombreEl.value.trim() && centro.nombre) nombreEl.value = centro.nombre;
+    if (politecnicoEl && !politecnicoEl.value.trim() && centro.nombre) politecnicoEl.value = centro.nombre;
+    if (regionalEl && !regionalEl.value.trim()) {
+      const partes = [centro.regional, centro.distrito].filter(Boolean);
+      if (partes.length) regionalEl.value = partes.join(' · ');
+    }
+  } catch (e) {
+    console.warn('No se pudieron precargar los datos del centro en Datos Generales:', e);
+  }
+}
+
 function _arrancarApp() {
   if (window._appArranada) return;
   window._appArranada = true;
@@ -28553,6 +28584,9 @@ function _arrancarApp() {
     restaurarBorrador();
     abrirDashboard();
   }
+  // Solo rellena los campos que aún estén vacíos (ver la función) -- no interfiere
+  // con datos ya restaurados arriba ni con lo que el docente haya escrito.
+  _precargarDatosCentroPlanificacion();
   actualizarBadgeNotificaciones();
   // Cargar avisos del director en segundo plano para el badge
   setTimeout(_cargarAvisosDocente, 3000);
