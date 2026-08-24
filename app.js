@@ -14047,13 +14047,37 @@ function renderizarTablaCalificaciones() {
 
   if (actividades.length === 0 || !curso.planActivaId) {
     sinActs?.classList.remove('hidden');
-    thead.innerHTML = '';
-    tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">'
-      + (curso.planIds && curso.planIds.length === 0
-        ? 'Asigna una planificación a este curso para comenzar a registrar calificaciones.'
-        : 'Selecciona una planificación arriba.')
-      + '</td></tr>';
-    tfoot.innerHTML = '';
+    // Sin planificación no hay contra qué calificar, pero el docente igual necesita
+    // ver y gestionar la lista de estudiantes que ya agregó al curso (ej. para
+    // organizar el grupo antes de tener la planificación lista).
+    if (curso.estudiantes && curso.estudiantes.length > 0) {
+      thead.innerHTML = '<tr>'
+        + '<th style="min-width:32px;width:32px;text-align:center;background:var(--color-primario);color:#fff;font-size:0.75rem;border-top-left-radius:var(--radio-lg);">#</th>'
+        + '<th class="th-nombre" style="border-top-right-radius:var(--radio-lg);">Estudiante</th>'
+        + '</tr>';
+      tbody.innerHTML = curso.estudiantes.map((est, estIdx) =>
+        '<tr><td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
+        + '<td class="td-nombre" id="nombre-' + est.id + '">'
+        + '<div class="td-nombre-inner">'
+        + '<span ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
+        + '<button onclick="eliminarEstudiante(\'' + est.id + '\')" title="Eliminar estudiante" style="background:none;border:none;color:#EF5350;cursor:pointer;padding:2px 6px;display:flex;align-items:center;"><span class="material-icons" style="font-size:16px;">delete</span></button>'
+        + '</div></td></tr>'
+      ).join('');
+      tfoot.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:10px 12px;color:#795548;font-size:0.8rem;background:#FFF3E0;">'
+        + '<span class="material-icons" style="font-size:14px;vertical-align:middle;margin-right:4px;">info</span>'
+        + (curso.planIds && curso.planIds.length === 0
+          ? 'Aún no hay planificación asignada -- puedes ver y organizar tus estudiantes aquí mientras tanto.'
+          : 'Selecciona una planificación arriba para empezar a registrar notas.')
+        + '</td></tr>';
+    } else {
+      thead.innerHTML = '';
+      tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">'
+        + (curso.planIds && curso.planIds.length === 0
+          ? 'Asigna una planificación a este curso para comenzar a registrar calificaciones.'
+          : 'Selecciona una planificación arriba.')
+        + '</td></tr>';
+      tfoot.innerHTML = '';
+    }
     return;
   }
   sinActs?.classList.add('hidden');
@@ -29252,8 +29276,9 @@ async function archivarCicloActual() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const fecha = ahora.toISOString().slice(0, 10);
+    const nombreBackup = 'backup-ciclo-' + currentYear + '-' + fecha + '.json';
     a.href = url;
-    a.download = 'backup-ciclo-' + currentYear + '-' + fecha + '.json';
+    a.download = nombreBackup;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -29361,12 +29386,12 @@ async function archivarCicloActual() {
 
     if (firebaseArchiveOk) {
       if (firebaseStorageUsed === 'data') {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
+        mostrarToast('Backup descargado (' + nombreBackup + '). Ciclo ' + currentYear + ' archivado en Firebase (modo compatible). Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
       } else {
-        mostrarToast('Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
+        mostrarToast('Backup descargado (' + nombreBackup + '). Ciclo ' + currentYear + ' archivado en Firebase. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias, 'success');
       }
     } else {
-      mostrarToast('Ciclo ' + currentYear + ' descargado localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias + '. La sincronización en Firebase quedó pendiente.', 'warning');
+      mostrarToast('Backup descargado (' + nombreBackup + '). Ciclo ' + currentYear + ' guardado solo localmente. Cursos movidos: ' + cursosArchivadosCount + '. Horario archivado: ' + horarioArchivadoCount + '. Blog archivado: ' + blogArchivadoCount + '. Reportes archivados: ' + convivenciaArchivada.reportes + '. Denuncias archivadas: ' + convivenciaArchivada.denuncias + '. La sincronización en Firebase quedó pendiente.', 'warning');
     }
     registrarCambio('Ciclo escolar archivado: ' + currentYear);
     abrirBackup();
