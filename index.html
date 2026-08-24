@@ -3030,6 +3030,35 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v17.56<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: nuevo orden de proveedores y extracción sin IA como elección</div>
+              <ul class="about-ver-items">
+                <li>Se cambió el orden de intentos a OpenRouter → Groq → Gemini (antes era al revés) -- en la práctica ha sido el más confiable últimamente, así que va primero.</li>
+                <li>Si ningún proveedor de IA configurado logra generar el resultado, ahora se ofrece la opción de generarlo directamente del texto del PDF sin usar IA (botón "Generar sin IA"), en vez de hacerlo automáticamente o solo mostrar el error -- el docente decide.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v17.55<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: extracción sin IA como primer intento</div>
+              <ul class="about-ver-items">
+                <li>Ahora, antes de llamar a cualquier IA, se intenta leer el módulo directamente del texto del PDF con expresiones regulares (funciona si el documento sigue el formato oficial MINERD/DETP: "MÓDULO N", "RA3.1:", "CE3.1.1..."). Es instantáneo, gratis, y no depende de ninguna clave ni cuota -- si el documento tiene ese formato reconocible, ya no hace falta esperar a Gemini/Groq/OpenRouter en absoluto. Si no lo reconoce, sigue cayendo al camino con IA como antes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#4527A0;">v17.54<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7319,9 +7348,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.54"></script>
+  <script src="app.js?v=17.56"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.54"></script>
+  <script src="auth.js?v=17.56"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

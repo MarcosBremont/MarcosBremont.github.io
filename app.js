@@ -21408,6 +21408,181 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
   return textoCompleto.substring(idxInicio, Math.min(idxFin, idxInicio + MAX_CHARS));
 }
 
+/** Extrae del encabezado del documento (portada) los datos generales del
+ *  Bachillerato con regex simples. Best-effort: si no encuentra un dato, deja
+ *  cadena vacía en vez de inventar algo. */
+function _parsearDatosGeneralesLocal(encabezado) {
+  const matchBachillerato = /BACHILLERATO\s+T[EÉ]CNICO\s+EN\s+([^\n]+)/i.exec(encabezado);
+  const matchCodigoTitulo = /\b([A-Z]{2,8}\d{2,4}_\d)\b/.exec(encabezado);
+  const matchFamilia = /Familia\s+Profesional\s*:?\s*([^\n]+)/i.exec(encabezado);
+  const matchOrdenanza = /Ordenanza\s*[:.\-]?\s*([^\n]+)/i.exec(encabezado);
+  return {
+    nombreBachillerato: matchBachillerato ? ('Bachillerato Técnico en ' + matchBachillerato[1].trim()) : '',
+    codigoTitulo: matchCodigoTitulo ? matchCodigoTitulo[1] : '',
+    familiaProfesional: matchFamilia ? matchFamilia[1].trim() : '',
+    codigoFP: '',
+    ordenanza: matchOrdenanza ? matchOrdenanza[1].trim() : ''
+  };
+}
+
+/** Extrae el currículo de un módulo SIN usar ninguna IA -- solo con expresiones
+ *  regulares sobre el texto que ya extrajo pdf.js. Funciona cuando el documento
+ *  sigue el formato oficial MINERD/DETP (encabezado "MÓDULO N:", RA numerados
+ *  "RA3.1:" y criterios "CE3.1.1 ..."). Es instantáneo, gratis, y no depende de
+ *  ninguna clave ni cuota -- pero es best-effort: si el documento no sigue ese
+ *  formato reconocible, devuelve null y el llamador debe caer al camino con IA.
+ *
+ *  Clave del diseño: los criterios se agrupan con su RA por NÚMERO de código
+ *  (ej. "CE3.1.X" pertenece a "RA3.1"), no por posición en el texto -- una
+ *  tabla de dos columnas (RA | Criterios) con filas de alturas distintas puede
+ *  extraerse con el orden de lectura mezclado (ver _extraerTextoPdf), y agrupar
+ *  por código es inmune a eso. */
+function _extraerCurriculoLocal(textoCompleto, moduloBuscado) {
+  const textoModulo = _recortarTextoModulo(textoCompleto, moduloBuscado);
+  if (!textoModulo) return null;
+
+  const matchNombreModulo = /m[oó]dulo\s+\d+\s*[:.\-]?\s*([^\n]+)/i.exec(textoModulo);
+  const nombreModulo = matchNombreModulo ? matchNombreModulo[1].trim() : moduloBuscado;
+  const matchCodigoModulo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z0-9_\-]{4,})/i.exec(textoModulo);
+  const codigoModulo = matchCodigoModulo ? matchCodigoModulo[1].trim() : '';
+
+  const regexRA = /RA\s*(\d+\.\d+)\s*[:.\-]/g;
+  const posicionesRA = [];
+  let m;
+  while ((m = regexRA.exec(textoModulo)) !== null) {
+    posicionesRA.push({ numero: m[1], indice: m.index, finMarcador: m.index + m[0].length });
+  }
+  if (!posicionesRA.length) return null;
+
+  const regexCE = /CE\s*(\d+\.\d+)\.(\d+)\s+/g;
+  const posicionesCE = [];
+  while ((m = regexCE.exec(textoModulo)) !== null) {
+    posicionesCE.push({ numeroRA: m[1], numeroCE: `${m[1]}.${m[2]}`, indice: m.index, finMarcador: m.index + m[0].length });
+  }
+
+  const todosMarcadores = [...posicionesRA, ...posicionesCE];
+  const finDeBloque = indiceInicio => {
+    const siguientes = todosMarcadores.map(p => p.indice).filter(idx => idx > indiceInicio);
+    return siguientes.length ? Math.min(...siguientes) : textoModulo.length;
+  };
+
+  const ras = posicionesRA.map(ra => {
+    const descripcion = textoModulo.substring(ra.finMarcador, finDeBloque(ra.indice)).replace(/\s+/g, ' ').trim();
+    const criteriosEvaluacion = posicionesCE
+      .filter(ce => ce.numeroRA === ra.numero)
+      .map(ce => {
+        const texto = textoModulo.substring(ce.finMarcador, finDeBloque(ce.indice)).replace(/\s+/g, ' ').trim();
+        return `CE${ce.numeroCE} ${texto}`.trim();
+      })
+      .filter(c => c.length > 6);
+    return {
+      codigo: `RA${ra.numero}`,
+      descripcion,
+      criteriosEvaluacion,
+      // Los Contenidos suelen vivir en una tabla aparte con formato menos
+      // predecible -- en vez de arriesgar un parseo incorrecto, se dejan vacíos
+      // (el docente puede completarlos a mano) en lugar de inventar contenido.
+      contenidosConceptuales: '',
+      contenidosProcedimentales: '',
+      contenidosActitudinales: ''
+    };
+  }).filter(ra => ra.descripcion.length > 5);
+
+  if (!ras.length) return null;
+
+  const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
+  const datosGenerales = _parsearDatosGeneralesLocal(encabezadoDoc);
+
+  return {
+    encontrado: true,
+    ...datosGenerales,
+    moduloFormativo: nombreModulo,
+    codigoModulo,
+    ras
+  };
+}
+
+/** Arma el HTML de error a mostrar en #curriculo-resultados a partir de un Error.
+ *  Los mensajes especiales BILLING_REQUERIDO/CUOTA_AGOTADA son específicos de
+ *  Gemini; cualquier otro proveedor cae en el mensaje genérico. */
+function _construirHtmlErrorCurriculo(e) {
+  if (e.message === 'BILLING_REQUERIDO') {
+    return `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+      <div style="font-weight:700;margin-bottom:6px;">🔑 Clave sin cuota gratuita</div>
+      Tu clave de Gemini pertenece a un proyecto que requiere <strong>facturación activada</strong> en Google.
+      Esperar no lo soluciona — el límite es permanente (limit: 0).<br><br>
+      Para resolverlo:
+      <ul style="margin:6px 0 0 16px;padding:0;">
+        <li>Ve a <strong>aistudio.google.com</strong>, activa la facturación en el proyecto de tu clave (o crea uno nuevo con facturación)</li>
+        <li>Luego actualiza la clave en <strong>Ajustes → Clave de Gemini</strong> si generaste una nueva</li>
+      </ul>
+    </div>`;
+  }
+  if (e.message === 'CUOTA_AGOTADA') {
+    return `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+      <div style="font-weight:700;margin-bottom:6px;">⚠️ Límite de solicitudes alcanzado</div>
+      Un PDF de currículo consume bastantes tokens, así que es fácil llegar al límite gratuito de Gemini con solo un par de intentos.
+      <ul style="margin:8px 0 0 16px;padding:0;">
+        <li>Espera unos minutos (o hasta el día siguiente si es el límite diario) y vuelve a intentarlo</li>
+        <li>O activa facturación en tu proyecto de Google Cloud para subir el límite</li>
+        <li>También ayuda subir un PDF más liviano: solo las páginas del módulo que necesitas, en vez del currículo completo</li>
+      </ul>
+    </div>`;
+  }
+  return `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">
+    <strong>No se pudo procesar el currículo:</strong> ${escapeHTML(e.message || 'error desconocido')}
+  </div>`;
+}
+
+/** Renderiza en #curriculo-resultados la lista de RA para elegir, con una
+ *  etiqueta indicando qué proveedor generó el resultado. */
+function _renderizarResultadosCurriculo(parsed, proveedorUsado) {
+  const res = document.getElementById('curriculo-resultados');
+  window._curriculoExtraido = parsed;
+  const badgeProveedor = proveedorUsado === 'Gemini'
+    ? ''
+    : proveedorUsado === 'Local'
+      ? ` <span style="font-weight:400;color:#2E7D32;">(⚡ extraído sin IA)</span>`
+      : ` <span style="font-weight:400;color:#90A4AE;">(vía ${proveedorUsado === 'Groq' ? '🟢 Groq' : '🔵 OpenRouter'}, respaldo de texto)</span>`;
+  const listaHTML = parsed.ras.map((ra, idx) => {
+    const desc = (ra.descripcion || '').trim();
+    const preview = desc.length > 140 ? desc.substring(0, 140) + '…' : desc;
+    const nCriterios = (ra.criteriosEvaluacion || []).length;
+    return `
+      <div onclick="_confirmarImportCurriculo(${idx})" style="
+        padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;
+        margin-bottom:8px;transition:border-color .15s,background .15s;"
+        onmouseover="this.style.borderColor='#00897B';this.style.background='#E0F2F1';"
+        onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
+        <div style="font-weight:700;color:#00695C;font-size:0.9rem;">${escapeHTML(ra.codigo || '')}</div>
+        <div style="font-size:0.82rem;color:#455A64;margin-top:4px;line-height:1.4;">${escapeHTML(preview)}</div>
+        <div style="font-size:0.75rem;color:#757575;margin-top:4px;">${nCriterios} criterio${nCriterios !== 1 ? 's' : ''} de evaluación</div>
+      </div>`;
+  }).join('');
+
+  if (res) res.innerHTML = `
+    <div style="font-size:0.82rem;color:#546E7A;margin-bottom:8px;font-weight:600;">
+      <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#00897B;">check_circle</span>
+      ${escapeHTML(parsed.moduloFormativo || '')}${badgeProveedor} — selecciona el RA a importar:
+    </div>
+    <div style="max-height:320px;overflow-y:auto;">${listaHTML}</div>`;
+}
+
+/** El docente eligió usar el resultado del extractor local (sin IA) que se
+ *  había ofrecido tras fallar todos los proveedores de IA. */
+function _usarExtractorLocalPendiente() {
+  const parsed = window._curriculoLocalPendiente;
+  window._curriculoLocalPendiente = null;
+  if (!parsed) return;
+  _renderizarResultadosCurriculo(parsed, 'Local');
+}
+
+/** El docente prefirió ver el error de IA en vez de usar el extractor local. */
+function _verErrorIAPendiente() {
+  const res = document.getElementById('curriculo-resultados');
+  if (res && window._curriculoErrorHtmlPendiente) res.innerHTML = window._curriculoErrorHtmlPendiente;
+}
+
 async function _procesarImportCurriculo() {
   const fileInput = document.getElementById('curriculo-file-input');
   const file = fileInput?.files?.[0];
@@ -21418,213 +21593,185 @@ async function _procesarImportCurriculo() {
     return;
   }
 
-  const apiKey = getGeminiKey();
-  if (!apiKey) {
-    mostrarToast('Configura tu clave de Gemini en Ajustes para usar esta función.', 'error');
-    return;
-  }
-
   const btn = document.getElementById('curriculo-extraer-btn');
   const res = document.getElementById('curriculo-resultados');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
-  if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Gemini y buscando el módulo...</div>';
+  if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Buscando el módulo en el currículo...</div>';
 
   let parsed = null;
-  let proveedorUsado = 'Gemini';
+  let proveedorUsado = null;
+  let localResultado = null;
 
   try {
-    // ---- Intento 1: Gemini con el PDF adjunto directamente (mejor comprensión
-    // de tablas complejas, como la de Contenidos C/P/A del currículo) ----
-    try {
-      const base64 = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = e => resolve(e.target.result.split(',')[1]);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
+    // Se extrae el texto del PDF con pdf.js una sola vez al inicio -- lo
+    // necesitan tanto OpenRouter/Groq (solo aceptan texto plano, no el PDF) como
+    // el extractor local de respaldo. Gemini no lo necesita (recibe el PDF
+    // adjunto directo), pero calcularlo aquí evita repetir el trabajo si hay que
+    // caer al texto de todos modos.
+    console.log('[Currículo] Extrayendo texto del PDF con pdf.js…');
+    const arrayBuffer = await file.arrayBuffer();
+    const textoCompleto = await _extraerTextoPdf(arrayBuffer);
+    console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
+    const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
 
-      const prompt = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: '' });
+    // Extractor local (instantáneo, gratis, sin IA) -- NO se usa automáticamente:
+    // solo se ofrece como opción si todos los proveedores de IA configurados
+    // fallan más abajo, para que el docente decida si lo prefiere (queda sin
+    // Contenidos, y las descripciones no se reformulan) o ver el error de IA.
+    localResultado = _extraerCurriculoLocal(textoCompleto, moduloBuscado);
+    if (localResultado) console.log(`[Currículo] Extractor local encontró ${localResultado.ras.length} RA (disponible como respaldo si la IA falla).`);
 
-      const bodyExtraccion = modelo => ({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'application/pdf', data: base64 } }] }],
-        generationConfig: modelo.startsWith('gemini-3')
-          ? { temperature: 0.20, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: 'minimal' } }
-          : { temperature: 0.20, maxOutputTokens: 8192 }
-      });
+    let promptTexto = null;
+    if (textoRecortado) {
+      const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
+      const textoParaPrompt = `=== ENCABEZADO DEL DOCUMENTO ===\n${encabezadoDoc}\n\n=== SECCIÓN DEL MÓDULO BUSCADO ===\n${textoRecortado}`;
+      promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoParaPrompt });
+    }
 
-      const _llamarModelo = async modelo => {
-        const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-        const r = await _fetchConTimeout(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyExtraccion(modelo)) }, 60000);
-        if (r.ok) return { resp: r, errJson: null };
-        const errJson = await r.json().catch(() => ({}));
-        return { resp: r, errJson };
-      };
+    let errorFinal = null;
 
-      // Un solo modelo (gemini-3.6-flash, el mismo que usa _llamarGemini() para
-      // texto plano en el resto de la app) -- NO se cae a "gemini-1.5-flash" como
-      // hacía el escáner OCR, porque Google retiró ese modelo por completo y
-      // reintentar ahí solo producía un segundo error (404 "not found ... not
-      // supported for generateContent"), enmascarando la causa real del primer
-      // fallo (típicamente 429 por cuota agotada, más probable aquí que en el
-      // OCR por el tamaño del PDF adjunto). Si Gemini falla por lo que sea
-      // (cuota, "high demand", timeout), abajo se intenta el respaldo de texto.
-      let resp, errJson;
-      const MAX_REINTENTOS_503 = 2;
-      for (let intento = 0; ; intento++) {
-        ({ resp, errJson } = await _llamarModelo('gemini-3.6-flash'));
-        if (resp.ok) break;
-        // "high demand"/503 es Google saturado momentáneamente, NO un problema de
-        // cuota/facturación de la clave -- se resuelve solo en unos segundos, así
-        // que vale la pena reintentar un par de veces antes de rendirse y pasar al
-        // respaldo de texto (que además es menos confiable que Gemini funcionando).
-        const msg503 = errJson?.error?.message || '';
-        const esAltaDemanda = resp.status === 503 || /high demand|overloaded|sobrecargad/i.test(msg503);
-        if (!esAltaDemanda || intento >= MAX_REINTENTOS_503) break;
-        console.warn(`[Currículo] Gemini con alta demanda (503), reintentando (${intento + 1}/${MAX_REINTENTOS_503})…`);
-        if (res) res.innerHTML = `<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">⏳ Gemini está saturado en este momento. Reintentando (${intento + 1}/${MAX_REINTENTOS_503})…</div>`;
-        await new Promise(r => setTimeout(r, 5000));
-      }
-
-      if (!resp.ok) {
-        const msg = errJson?.error?.message || '';
-        const esLimiteCero = msg.includes('limit: 0') || msg.includes('limit:0');
-        if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
-          throw new Error(esLimiteCero ? 'BILLING_REQUERIDO' : 'CUOTA_AGOTADA');
-        }
-        throw new Error(msg || `Error ${resp.status}`);
-      }
-
-      const data = await resp.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-      parsed = _intentarParsearJSON(cleaned, 'extracción de currículo');
-      if (!parsed) throw new Error('Gemini devolvió una respuesta que no se pudo interpretar.');
-    } catch (errGemini) {
-      // ---- Intento 2 (respaldo): extraer el texto del PDF en el navegador y
-      // mandarlo como texto plano a Groq/OpenRouter, ya que no aceptan archivos
-      // adjuntos. Solo se intenta si hay al menos una clave de esos proveedores.
-      if (!getGroqKey() && !getOpenRouterKey()) throw errGemini;
-
-      console.warn('[Currículo] Gemini falló, probando respaldo con texto extraído:', errGemini.message);
-      if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Gemini no respondió. Extrayendo texto del PDF para intentar con Groq/OpenRouter…</div>';
-
+    // ---- Intento 1: OpenRouter -- en la práctica ha sido el más confiable de
+    // los tres últimamente, así que va primero. ----
+    if (!parsed && promptTexto && getOpenRouterKey()) {
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        console.log('[Currículo] Extrayendo texto del PDF con pdf.js…');
-        const textoCompleto = await _extraerTextoPdf(arrayBuffer);
-        console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
-        const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
-        if (!textoRecortado) {
-          throw new Error('Gemini no respondió y no se pudo ubicar el módulo en el texto extraído del PDF. Intenta de nuevo más tarde, o verifica el nombre/código del módulo.');
-        }
-        console.log(`[Currículo] Sección del módulo recortada: ${textoRecortado.length} caracteres, se envía como respaldo.`);
-        const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
-        const textoParaPrompt = `=== ENCABEZADO DEL DOCUMENTO ===\n${encabezadoDoc}\n\n=== SECCIÓN DEL MÓDULO BUSCADO ===\n${textoRecortado}`;
+        console.log('[Currículo] Probando OpenRouter…');
+        parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 60000, MODELOS_OPENROUTER_CURRICULO);
+        proveedorUsado = 'OpenRouter';
+        console.log('[Currículo] OpenRouter respondió OK.');
+      } catch (eOR) {
+        console.warn('[Currículo] OpenRouter falló:', eOR.message);
+        errorFinal = eOR;
+      }
+    }
 
-        const promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoParaPrompt });
-        const GROQ_MAX_TOKENS = 4096;
-        // Groq rechaza de entrada (413) cualquier solicitud que supere el límite de
-        // tokens por minuto (TPM) de la cuenta -- confirmado en la práctica con
-        // "Limit 8000, Requested 8927" para un módulo real de tamaño normal. Un
-        // módulo con varios RA fácilmente supera ese límite, así que probarlo igual
-        // solo agrega dos rechazos garantizados antes de llegar a OpenRouter. Se
-        // estima el tamaño (≈3.6 caracteres por token en español) y, si claramente
-        // no va a caber, se salta Groq directo -- los módulos pequeños sí lo siguen
-        // intentando primero, ya que ahí Groq es más rápido y no cuesta nada.
-        const tokensEstimados = Math.ceil(promptTexto.length / 3.6);
-        const groqCabria = tokensEstimados + GROQ_MAX_TOKENS < 7500;
+    // ---- Intento 2: Groq ----
+    if (!parsed && promptTexto && getGroqKey()) {
+      const GROQ_MAX_TOKENS = 4096;
+      // Groq rechaza de entrada (413) cualquier solicitud que supere el límite de
+      // tokens por minuto (TPM) de la cuenta -- confirmado en la práctica con
+      // "Limit 8000, Requested 8927" para un módulo real de tamaño normal.
+      const tokensEstimados = Math.ceil(promptTexto.length / 3.6);
+      if (tokensEstimados + GROQ_MAX_TOKENS < 7500) {
         try {
-          if (!groqCabria) {
-            console.warn(`[Currículo] Se salta Groq: prompt estimado en ~${tokensEstimados} tokens, probablemente supere su límite de cuenta (413). Se va directo a OpenRouter.`);
-            throw new Error('prompt_demasiado_grande_para_groq');
-          }
-          console.log('[Currículo] Probando respaldo con Groq…');
+          console.log('[Currículo] Probando Groq…');
           parsed = await _llamarGroqConFallback(promptTexto, 'Extrayendo currículo', GROQ_MAX_TOKENS);
           proveedorUsado = 'Groq';
           console.log('[Currículo] Groq respondió OK.');
         } catch (eGroq) {
-          console.warn('[Currículo] Groq falló, probando OpenRouter:', eGroq.message);
-          if (!getOpenRouterKey()) throw eGroq;
-          // Un módulo con muchos RA (ej. 10) necesita bastante más de 8000 tokens de
-          // salida para no cortarse a mitad de camino -- confirmado en la práctica:
-          // con 8000 solo llegaban 5 de 10 RA completos. Como esta lista prioriza
-          // modelos que responden directo (no "razonan" en voz alta), subir el
-          // presupuesto no debería reintroducir el riesgo de espera larga que
-          // motivó bajarlo la vez anterior (ese riesgo era específico de Nemotron).
-          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 60000, MODELOS_OPENROUTER_CURRICULO);
-          proveedorUsado = 'OpenRouter';
-          console.log('[Currículo] OpenRouter respondió OK.');
+          console.warn('[Currículo] Groq falló:', eGroq.message);
+          errorFinal = eGroq;
         }
-      } catch (eRespaldo) {
-        // El respaldo también falló -- el mensaje de Gemini (cuota/facturación/etc.)
-        // suele ser más específico y accionable que el del respaldo, así que se
-        // muestra ese en vez del error genérico de la extracción/Groq/OpenRouter.
-        console.warn('[Currículo] Respaldo con texto también falló:', eRespaldo.message);
-        throw errGemini;
+      } else {
+        console.warn(`[Currículo] Se salta Groq: prompt estimado en ~${tokensEstimados} tokens, probablemente supere su límite de cuenta (413).`);
       }
     }
 
-    if (!parsed || parsed.encontrado === false || !parsed.ras?.length) {
-      if (res) res.innerHTML = '<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">No se encontró ese módulo en el currículo. Verifica que el nombre o código esté escrito tal como aparece en el documento.</div>';
-      window._curriculoExtraido = null;
+    // ---- Intento 3: Gemini con el PDF adjunto directamente (mejor comprensión
+    // de tablas complejas, pero es el que más problemas de cuota ha dado
+    // últimamente, así que va de último). ----
+    if (!parsed) {
+      const apiKey = getGeminiKey();
+      if (!apiKey) {
+        if (!errorFinal) errorFinal = new Error('No hay ninguna clave de IA configurada (Gemini, Groq u OpenRouter) en Ajustes.');
+      } else {
+        try {
+          if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Gemini…</div>';
+          const base64 = await new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = e => resolve(e.target.result.split(',')[1]);
+            r.onerror = reject;
+            r.readAsDataURL(file);
+          });
+
+          const prompt = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: '' });
+
+          const bodyExtraccion = modelo => ({
+            contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'application/pdf', data: base64 } }] }],
+            generationConfig: modelo.startsWith('gemini-3')
+              ? { temperature: 0.20, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: 'minimal' } }
+              : { temperature: 0.20, maxOutputTokens: 8192 }
+          });
+
+          const _llamarModelo = async modelo => {
+            const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+            const r = await _fetchConTimeout(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyExtraccion(modelo)) }, 60000);
+            if (r.ok) return { resp: r, errJson: null };
+            const errJson = await r.json().catch(() => ({}));
+            return { resp: r, errJson };
+          };
+
+          // Un solo modelo (gemini-3.6-flash) -- NO se cae a "gemini-1.5-flash" como
+          // hacía el escáner OCR, porque Google retiró ese modelo por completo y
+          // reintentar ahí solo producía un segundo error (404 "not found ... not
+          // supported for generateContent"), enmascarando la causa real del primer
+          // fallo (típicamente 429 por cuota agotada).
+          let resp, errJson;
+          const MAX_REINTENTOS_503 = 2;
+          for (let intento = 0; ; intento++) {
+            ({ resp, errJson } = await _llamarModelo('gemini-3.6-flash'));
+            if (resp.ok) break;
+            // "high demand"/503 es Google saturado momentáneamente, NO un problema de
+            // cuota/facturación de la clave -- se resuelve solo en unos segundos.
+            const msg503 = errJson?.error?.message || '';
+            const esAltaDemanda = resp.status === 503 || /high demand|overloaded|sobrecargad/i.test(msg503);
+            if (!esAltaDemanda || intento >= MAX_REINTENTOS_503) break;
+            console.warn(`[Currículo] Gemini con alta demanda (503), reintentando (${intento + 1}/${MAX_REINTENTOS_503})…`);
+            if (res) res.innerHTML = `<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">⏳ Gemini está saturado en este momento. Reintentando (${intento + 1}/${MAX_REINTENTOS_503})…</div>`;
+            await new Promise(r => setTimeout(r, 5000));
+          }
+
+          if (!resp.ok) {
+            const msg = errJson?.error?.message || '';
+            const esLimiteCero = msg.includes('limit: 0') || msg.includes('limit:0');
+            if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
+              throw new Error(esLimiteCero ? 'BILLING_REQUERIDO' : 'CUOTA_AGOTADA');
+            }
+            throw new Error(msg || `Error ${resp.status}`);
+          }
+
+          const data = await resp.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+          const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+          const parsedGemini = _intentarParsearJSON(cleaned, 'extracción de currículo');
+          if (!parsedGemini) throw new Error('Gemini devolvió una respuesta que no se pudo interpretar.');
+          parsed = parsedGemini;
+          proveedorUsado = 'Gemini';
+          console.log('[Currículo] Gemini respondió OK.');
+        } catch (errGemini) {
+          console.warn('[Currículo] Gemini falló:', errGemini.message);
+          errorFinal = errGemini;
+        }
+      }
+    }
+
+    if (parsed && parsed.encontrado !== false && parsed.ras?.length) {
+      _renderizarResultadosCurriculo(parsed, proveedorUsado);
       return;
     }
 
-    window._curriculoExtraido = parsed;
-    const badgeProveedor = proveedorUsado === 'Gemini'
-      ? ''
-      : ` <span style="font-weight:400;color:#90A4AE;">(vía ${proveedorUsado === 'Groq' ? '🟢 Groq' : '🔵 OpenRouter'}, respaldo de texto)</span>`;
-    const listaHTML = parsed.ras.map((ra, idx) => {
-      const desc = (ra.descripcion || '').trim();
-      const preview = desc.length > 140 ? desc.substring(0, 140) + '…' : desc;
-      const nCriterios = (ra.criteriosEvaluacion || []).length;
-      return `
-        <div onclick="_confirmarImportCurriculo(${idx})" style="
-          padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;
-          margin-bottom:8px;transition:border-color .15s,background .15s;"
-          onmouseover="this.style.borderColor='#00897B';this.style.background='#E0F2F1';"
-          onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
-          <div style="font-weight:700;color:#00695C;font-size:0.9rem;">${escapeHTML(ra.codigo || '')}</div>
-          <div style="font-size:0.82rem;color:#455A64;margin-top:4px;line-height:1.4;">${escapeHTML(preview)}</div>
-          <div style="font-size:0.75rem;color:#757575;margin-top:4px;">${nCriterios} criterio${nCriterios !== 1 ? 's' : ''} de evaluación</div>
+    // Todos los proveedores de IA configurados fallaron (o ninguno estaba
+    // configurado) -- si el extractor local sí encontró algo utilizable, se le
+    // ofrece al docente la opción de usarlo en vez de fallar directo.
+    const errorHtml = _construirHtmlErrorCurriculo(errorFinal || new Error('No se encontró ese módulo en el currículo. Verifica que el nombre o código esté escrito tal como aparece en el documento.'));
+    window._curriculoErrorHtmlPendiente = errorHtml;
+    window._curriculoExtraido = null;
+    if (localResultado && localResultado.ras?.length) {
+      window._curriculoLocalPendiente = localResultado;
+      if (res) res.innerHTML = `
+        <div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+          <div style="font-weight:700;margin-bottom:8px;">⚠️ No se pudo generar con IA</div>
+          No respondió ningún proveedor de IA configurado. Se puede generar directamente del texto del PDF sin usar IA -- puede quedar incompleto (los Contenidos siempre quedan vacíos con este método, y las descripciones no se reformulan, salen tal cual del PDF).
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secundario" onclick="_usarExtractorLocalPendiente()" style="font-size:0.82rem;">⚡ Generar sin IA</button>
+            <button class="btn-secundario" onclick="_verErrorIAPendiente()" style="font-size:0.82rem;">Ver el error de IA</button>
+          </div>
         </div>`;
-    }).join('');
-
-    if (res) res.innerHTML = `
-      <div style="font-size:0.82rem;color:#546E7A;margin-bottom:8px;font-weight:600;">
-        <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#00897B;">check_circle</span>
-        ${escapeHTML(parsed.moduloFormativo || '')}${badgeProveedor} — selecciona el RA a importar:
-      </div>
-      <div style="max-height:320px;overflow-y:auto;">${listaHTML}</div>`;
-  } catch (e) {
-    let html;
-    if (e.message === 'BILLING_REQUERIDO') {
-      html = `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
-        <div style="font-weight:700;margin-bottom:6px;">🔑 Clave sin cuota gratuita</div>
-        Tu clave de Gemini pertenece a un proyecto que requiere <strong>facturación activada</strong> en Google.
-        Esperar no lo soluciona — el límite es permanente (limit: 0).<br><br>
-        Para resolverlo:
-        <ul style="margin:6px 0 0 16px;padding:0;">
-          <li>Ve a <strong>aistudio.google.com</strong>, activa la facturación en el proyecto de tu clave (o crea uno nuevo con facturación)</li>
-          <li>Luego actualiza la clave en <strong>Ajustes → Clave de Gemini</strong> si generaste una nueva</li>
-        </ul>
-      </div>`;
-    } else if (e.message === 'CUOTA_AGOTADA') {
-      html = `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
-        <div style="font-weight:700;margin-bottom:6px;">⚠️ Límite de solicitudes alcanzado</div>
-        Un PDF de currículo consume bastantes tokens, así que es fácil llegar al límite gratuito de Gemini con solo un par de intentos.
-        <ul style="margin:8px 0 0 16px;padding:0;">
-          <li>Espera unos minutos (o hasta el día siguiente si es el límite diario) y vuelve a intentarlo</li>
-          <li>O activa facturación en tu proyecto de Google Cloud para subir el límite</li>
-          <li>También ayuda subir un PDF más liviano: solo las páginas del módulo que necesitas, en vez del currículo completo</li>
-        </ul>
-      </div>`;
     } else {
-      html = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">
-        <strong>No se pudo procesar el currículo:</strong> ${escapeHTML(e.message || 'error desconocido')}
-      </div>`;
+      window._curriculoLocalPendiente = null;
+      if (res) res.innerHTML = errorHtml;
     }
-    if (res) res.innerHTML = html;
+  } catch (e) {
+    if (res) res.innerHTML = _construirHtmlErrorCurriculo(e);
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer con IA'; }
   }
