@@ -21284,11 +21284,34 @@ async function _extraerTextoPdf(arrayBuffer) {
   if (!window.pdfjsLib) {
     throw new Error('No se pudo cargar el lector de PDF (pdf.js). Revisa tu conexión e intenta de nuevo.');
   }
-  const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const doc = await Promise.race([
+    window.pdfjsLib.getDocument({ data: arrayBuffer }).promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('El PDF tardó demasiado en cargar (documento muy grande o dañado).')), 20000))
+  ]);
   let textoCompleto = '';
+  const inicio = Date.now();
+  const TOPE_TOTAL_MS = 45000; // presupuesto total de tiempo para todo el documento
   for (let p = 1; p <= doc.numPages; p++) {
-    const pagina = await doc.getPage(p);
-    const contenido = await pagina.getTextContent();
+    if (Date.now() - inicio > TOPE_TOTAL_MS) {
+      console.warn(`[Currículo] Extracción de texto del PDF superó el tope de tiempo total, se detiene en la página ${p} de ${doc.numPages}.`);
+      break;
+    }
+    let contenido;
+    try {
+      const pagina = await doc.getPage(p);
+      // Algunos PDFs institucionales traen fuentes TrueType con programas de hinting
+      // corruptos -- el sanitizador de pdf.js puede quedarse procesándolos (avisos
+      // repetidos "TT: undefined function") y tardar muchísimo en esa página en
+      // particular. Con un tope por página, si una se cuelga se omite y se sigue con
+      // el resto en vez de dejar "Analizando..." congelado indefinidamente.
+      contenido = await Promise.race([
+        pagina.getTextContent(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout_pagina')), 12000))
+      ]);
+    } catch (e) {
+      console.warn(`[Currículo] Página ${p} del PDF tardó demasiado o falló al extraer texto, se omite:`, e.message);
+      continue;
+    }
     // getTextContent() devuelve los fragmentos en el orden del stream del PDF, que en
     // tablas multi-columna (ej. la tabla de Contenidos C/P/A del currículo) no siempre
     // coincide con el orden visual de lectura. Reordenar por posición (Y descendente,
