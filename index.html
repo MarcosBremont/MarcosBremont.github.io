@@ -3030,6 +3030,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#5D4037;">v17.47<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: más registro para diagnosticar el respaldo, y dos fallas corregidas</div>
+              <ul class="about-ver-items">
+                <li>Se agregaron mensajes en la consola ("[Currículo] ...") en cada paso del respaldo con Groq/OpenRouter (extracción del PDF, recorte del módulo, qué proveedor se está probando) para saber exactamente dónde se detiene si algo falla.</li>
+                <li>Se quitó del respaldo un modelo de OpenRouter que ya no está disponible gratis (siempre fallaba con error 404).</li>
+                <li>El modelo de respaldo de OpenRouter ahora tiene más espacio de respuesta -- algunos modelos gratuitos "piensan en voz alta" antes de responder y se quedaban sin espacio para completar el JSON final, lo que hacía fallar la extracción aunque el modelo sí hubiera encontrado el módulo correctamente.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00838F;">v17.46<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7203,9 +7219,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.46"></script>
+  <script src="app.js?v=17.47"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.46"></script>
+  <script src="auth.js?v=17.47"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

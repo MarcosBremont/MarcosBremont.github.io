@@ -21480,20 +21480,27 @@ async function _procesarImportCurriculo() {
 
       try {
         const arrayBuffer = await file.arrayBuffer();
+        console.log('[Currículo] Extrayendo texto del PDF con pdf.js…');
         const textoCompleto = await _extraerTextoPdf(arrayBuffer);
+        console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
         const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
         if (!textoRecortado) {
           throw new Error('Gemini no respondió y no se pudo ubicar el módulo en el texto extraído del PDF. Intenta de nuevo más tarde, o verifica el nombre/código del módulo.');
         }
+        console.log(`[Currículo] Sección del módulo recortada: ${textoRecortado.length} caracteres, se envía como respaldo.`);
 
         const promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoRecortado });
         try {
-          parsed = await _llamarGroqConFallback(promptTexto, 'Extrayendo currículo', 8192);
+          console.log('[Currículo] Probando respaldo con Groq…');
+          parsed = await _llamarGroqConFallback(promptTexto, 'Extrayendo currículo', 4096);
           proveedorUsado = 'Groq';
+          console.log('[Currículo] Groq respondió OK.');
         } catch (eGroq) {
+          console.warn('[Currículo] Groq falló, probando OpenRouter:', eGroq.message);
           if (!getOpenRouterKey()) throw eGroq;
-          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 4096, 60000);
+          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 12000, 90000);
           proveedorUsado = 'OpenRouter';
+          console.log('[Currículo] OpenRouter respondió OK.');
         }
       } catch (eRespaldo) {
         // El respaldo también falló -- el mensaje de Gemini (cuota/facturación/etc.)
@@ -27738,7 +27745,8 @@ function _esperarConCountdown(ms, mensajeBase) {
 const MODELOS_OPENROUTER = [
   'nvidia/nemotron-3-ultra-550b-a55b:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
-  'openai/gpt-oss-20b:free',
+  // 'openai/gpt-oss-20b:free' retirado por OpenRouter (confirmado con error 404:
+  // "This model is unavailable for free" -- solo queda la version de pago).
   'google/gemma-4-26b-a4b-it:free',
   'openrouter/free'
 ];
