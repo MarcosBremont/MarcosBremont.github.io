@@ -21553,7 +21553,16 @@ function _confirmarImportCurriculo(idx) {
     actualizarBloomBadge(ra.descripcion);
   }
 
-  setVal('criterios-referencia', (ra.criteriosEvaluacion || []).join('\n'));
+  // _parsearCriteriosEvaluacion() trata "una línea no vacía = un criterio", pero
+  // un criterio extraído del PDF puede venir con saltos de línea propios (ej. sus
+  // sub-puntos con guion bajo un mismo CE, como "CE3.2.2 ... :\n- Diseñar...\n-
+  // Aplicar..."). Sin colapsar esos saltos a espacios antes de unir, cada sub-punto
+  // terminaba contado como un criterio nuevo (CE.4, CE.7, CE.14...) en vez de quedar
+  // junto al criterio al que pertenece.
+  setVal('criterios-referencia', (ra.criteriosEvaluacion || [])
+    .map(c => (c || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n'));
   setVal('contenidos-conceptuales', ra.contenidosConceptuales);
   setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
   setVal('contenidos-actitudinales', ra.contenidosActitudinales);
