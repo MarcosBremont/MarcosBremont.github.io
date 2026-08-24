@@ -814,7 +814,7 @@
             <span class="material-icons" style="font-size:1rem;">content_copy</span>
             Copiar de otra planificación
           </button>
-          <button class="btn-secundario" onclick="_abrirImportCurriculo()" title="Sube el PDF del currículo oficial y extrae el RA, criterios y contenidos con IA" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
+          <button class="btn-secundario" onclick="_abrirImportCurriculo()" title="Sube el PDF del currículo oficial y extrae el RA, criterios y contenidos con IA" style="display:none;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
             <span class="material-icons" style="font-size:1rem;">upload_file</span>
             Cargar Currículo (PDF)
           </button>
@@ -3026,6 +3026,34 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#757575;">v17.51<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: botón oculto temporalmente</div>
+              <ul class="about-ver-items">
+                <li>Se ocultó el botón "Cargar Currículo (PDF)" en Datos Generales mientras se resuelve la facturación de la clave de Gemini -- el respaldo con Groq/OpenRouter seguía siendo poco confiable para módulos grandes. La función no se eliminó, solo se ocultó del menú.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0277BD;">v17.50<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: prueba primero modelos de respaldo más directos</div>
+              <ul class="about-ver-items">
+                <li>En varios intentos reales, los modelos de OpenRouter que "razonan" antes de responder (Nemotron) resultaron poco fiables para este caso: a veces se quedan sin espacio para terminar, a veces devuelven vacío, a veces tardan mucho más que el resto. Solo para "Cargar Currículo" ahora se prueban primero los modelos que responden directo, dejando esos dos como último recurso en vez de primera opción.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -7248,9 +7276,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.49"></script>
+  <script src="app.js?v=17.51"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.49"></script>
+  <script src="auth.js?v=17.51"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

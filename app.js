@@ -21513,7 +21513,7 @@ async function _procesarImportCurriculo() {
         } catch (eGroq) {
           console.warn('[Currículo] Groq falló, probando OpenRouter:', eGroq.message);
           if (!getOpenRouterKey()) throw eGroq;
-          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 8000, 45000);
+          parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 8000, 45000, MODELOS_OPENROUTER_CURRICULO);
           proveedorUsado = 'OpenRouter';
           console.log('[Currículo] OpenRouter respondió OK.');
         }
@@ -27766,6 +27766,20 @@ const MODELOS_OPENROUTER = [
   'openrouter/free'
 ];
 
+// Para "Cargar Currículo" los dos modelos Nemotron demostraron ser poco fiables
+// en la práctica (confirmado en varios intentos reales): a veces "razonan" en
+// voz alta y se quedan sin presupuesto de tokens antes de llegar al JSON, a
+// veces devuelven una respuesta vacía, y a veces tardan mucho más que los
+// demás. Se prueban de últimos en vez de quitarlos -- para otros usos más
+// cortos de la app sí pueden responder bien, y siguen sirviendo como último
+// recurso aquí también.
+const MODELOS_OPENROUTER_CURRICULO = [
+  'google/gemma-4-26b-a4b-it:free',
+  'openrouter/free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'nvidia/nemotron-3-super-120b-a12b:free'
+];
+
 /** Modelos de Groq a intentar en orden */
 // llama-3.3-70b-versatile y llama-3.1-8b-instant fueron descontinuados por Groq
 // (confirmado con "Probar IA": error 404 "The model does not exist"). Reemplazados
@@ -28032,13 +28046,17 @@ async function generarConOpenRouter(dg, ra, fechasClase) {
   return datosBase;
 }
 
-/** Llama a OpenRouter con fallback entre modelos + 1 reintento tras espera. Devuelve datos parseados o lanza error. */
-async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTokens = 4096, timeoutMs = 60000) {
+/** Llama a OpenRouter con fallback entre modelos + 1 reintento tras espera. Devuelve datos parseados o lanza error.
+ *  `modelosLista` permite a un llamador específico usar un orden distinto al de
+ *  MODELOS_OPENROUTER (ej. currículo prefiere modelos que responden directo en
+ *  vez de "razonar" en voz alta, ya que eso consume el presupuesto de tokens
+ *  sin llegar a producir el JSON). Por defecto usa el orden global de siempre. */
+async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTokens = 4096, timeoutMs = 60000, modelosLista = MODELOS_OPENROUTER) {
   let ultimoError = '';
 
   // Ronda 1: intentar cada modelo una vez
-  for (let m = 0; m < MODELOS_OPENROUTER.length; m++) {
-    const modelo = MODELOS_OPENROUTER[m];
+  for (let m = 0; m < modelosLista.length; m++) {
+    const modelo = modelosLista[m];
     const nombreCorto = modelo.split('/').pop().replace(':free', '');
     const segs = Math.round(timeoutMs / 1000);
     console.log(`[IA-OpenRouter] Intentando modelo: ${modelo}`);
@@ -28050,7 +28068,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTok
     }
     console.warn(`[IA-OpenRouter] ❌ ${modelo} falló:`, resultado.error);
     ultimoError = resultado.error;
-    if (m < MODELOS_OPENROUTER.length - 1) {
+    if (m < modelosLista.length - 1) {
       mostrarToast(`⏳ ${nombreCorto} sin cuota. Probando siguiente...`, 'warning');
     }
   }
@@ -28059,7 +28077,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTok
   console.log('[IA-OpenRouter] Todos los modelos fallaron. Esperando 8s para reintentar...');
   await _esperarConCountdown(8000, '⏳ Todos los modelos ocupados. Reintentando');
 
-  const modeloRetry = MODELOS_OPENROUTER[0];
+  const modeloRetry = modelosLista[0];
   const nombreRetry = modeloRetry.split('/').pop().replace(':free', '');
   console.log(`[IA-OpenRouter] Reintento final: ${modeloRetry}`);
   mostrarToast(`🔵 Reintento: ${nombreRetry}…`, 'info');
