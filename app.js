@@ -21347,7 +21347,7 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
 
   const palabrasBuscado = buscadoNorm.split(/[\s\-_]+/).filter(w => w.length > 2);
 
-  let mejor = null, mejorPuntaje = 0;
+  let mejor = null, mejorPuntaje = 0, mejorPuntajeBase = 0;
   encabezados.forEach((enc, idxEnc) => {
     // Ventana de texto después del encabezado (nombre + un par de líneas más, donde
     // suele estar "Código: ..."), para encontrar el módulo aunque el docente haya
@@ -21361,14 +21361,29 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
     const finVentana = siguienteEnc ? Math.min(siguienteEnc.indice, enc.indice + 200) : enc.indice + 200;
     const ventana = textoCompleto.substring(enc.indice, finVentana);
     const ventanaNorm = _norm(ventana);
-    let puntaje = 0;
-    if (ventanaNorm.includes(buscadoNorm)) puntaje += 10;
-    if (buscadoSinEspacios.length > 3 && ventanaNorm.replace(/\s+/g, '').includes(buscadoSinEspacios)) puntaje += 8;
-    palabrasBuscado.forEach(palabra => { if (ventanaNorm.includes(palabra)) puntaje++; });
-    if (puntaje > mejorPuntaje) { mejorPuntaje = puntaje; mejor = enc; }
+    let puntajeBase = 0;
+    if (ventanaNorm.includes(buscadoNorm)) puntajeBase += 10;
+    if (buscadoSinEspacios.length > 3 && ventanaNorm.replace(/\s+/g, '').includes(buscadoSinEspacios)) puntajeBase += 8;
+    palabrasBuscado.forEach(palabra => { if (ventanaNorm.includes(palabra)) puntajeBase++; });
+
+    // El nombre/código de un módulo suele repetirse en el documento (ej. en un
+    // índice o listado resumen al inicio del currículo), lo que puede darle
+    // puntaje a un encabezado equivocado si dos módulos comparten palabras
+    // similares. Una ventana más amplia que sí detecte la tabla de "Resultados
+    // de Aprendizaje"/"Criterios de Evaluación" cerca del encabezado confirma que
+    // es la sección real del módulo (no una simple mención) y desempata a su favor
+    // -- pero esta frase es genérica (aparece en CASI todos los módulos), así que
+    // el bono solo puede desempatar entre candidatos, nunca decidir por sí solo si
+    // hay o no un match real (eso lo sigue determinando puntajeBase más abajo).
+    let puntaje = puntajeBase;
+    const finVentanaAmplia = siguienteEnc ? Math.min(siguienteEnc.indice, enc.indice + 1000) : enc.indice + 1000;
+    const ventanaAmpliaNorm = _norm(textoCompleto.substring(enc.indice, finVentanaAmplia));
+    if (/resultados de aprendizaje/.test(ventanaAmpliaNorm) || /criterios de evaluaci/.test(ventanaAmpliaNorm)) puntaje += 5;
+
+    if (puntaje > mejorPuntaje) { mejorPuntaje = puntaje; mejorPuntajeBase = puntajeBase; mejor = enc; }
   });
 
-  if (!mejor || mejorPuntaje < Math.max(1, Math.ceil(palabrasBuscado.length / 2))) return null;
+  if (!mejor || mejorPuntajeBase < Math.max(1, Math.ceil(palabrasBuscado.length / 2))) return null;
 
   const idxInicio = mejor.indice;
   const siguiente = encabezados.find(enc => enc.indice > idxInicio);
@@ -38685,6 +38700,8 @@ const _DEFAULT_PROMPT_EXTRAER_CURRICULO = `Eres un asistente experto en currícu
 En el currículo oficial de un Bachillerato Técnico (adjunto como archivo PDF, o como texto plano más abajo si el PDF no se pudo adjuntar) busca el módulo formativo cuyo nombre o código coincida, de forma aproximada (ignora mayúsculas, tildes y pequeñas diferencias de orden en las palabras), con:
 
 MÓDULO BUSCADO: "{{moduloBuscado}}"
+
+IMPORTANTE sobre dónde buscar: el nombre o código del módulo suele aparecer VARIAS veces en el documento -- por ejemplo en un índice, en un listado resumen de "Módulos formativos asociados a unidades de competencia" al inicio del currículo, o mencionado de pasada en otra sección. NINGUNA de esas menciones es el lugar correcto. La sección real del módulo es un bloque identificable por su estructura: un encabezado tipo "MÓDULO N: <nombre>" seguido de campos como "Nivel:", "Código: <código>" y "Duración:", e inmediatamente después una tabla o listado de "Resultados de Aprendizaje" con sus "Criterios de Evaluación". Extrae SOLO de ese bloque estructural, no de una mención suelta. Si el documento es extenso (puede tener cientos de páginas), revísalo completo hasta encontrar ese bloque -- no te detengas en la primera coincidencia del nombre o código si no tiene esa estructura de tabla RA/Criterios junto a ella.
 
 TEXTO DEL CURRÍCULO (puede venir vacío si el documento se adjuntó directamente como archivo; si NO está vacío, es una extracción de texto plano de un PDF con tablas -- el orden de las columnas de la tabla de Contenidos puede salir desordenado o mezclado. En ese caso, prioriza que el código del RA, su descripción y los criterios de evaluación queden precisos y completos; para los 3 contenidos haz tu mejor esfuerzo razonable a partir del texto disponible, sin inventar contenido que no esté ahí):
 {{textoPdf}}
