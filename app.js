@@ -37113,7 +37113,8 @@ async function abrirDirector() {
 function switchTabDirector(tab) {
   const tabs = {
     avisos: 'tab-dir-avisos', calificaciones: 'tab-dir-calificaciones', rendimiento: 'tab-dir-rendimiento',
-    planificaciones: 'tab-dir-planificaciones', resumen: 'tab-dir-resumen', docentes: 'tab-dir-docentes'
+    planificaciones: 'tab-dir-planificaciones', resumen: 'tab-dir-resumen', docentes: 'tab-dir-docentes',
+    sesiones: 'tab-dir-sesiones'
   };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
@@ -37130,7 +37131,8 @@ function switchTabDirector(tab) {
   // su implementación o navegar a otro panel con otro encabezado.
   const dispatch = {
     calificaciones: _coordMonitorCalificaciones, rendimiento: _coordMonitorRendimiento,
-    planificaciones: _coordMonitorPlanificaciones, resumen: _coordResumenDocentes, avisos: _coordAvisos
+    planificaciones: _coordMonitorPlanificaciones, resumen: _coordResumenDocentes, avisos: _coordAvisos,
+    sesiones: _renderMonitoreoSesiones
   };
   if (dispatch[tab]) { dispatch[tab]('dir-contenido'); return; }
 
@@ -37356,7 +37358,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', bugs: 'tab-sa-bugs' };
+  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', sesiones: 'tab-sa-sesiones', bugs: 'tab-sa-bugs' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -37371,6 +37373,7 @@ function switchTabSuperadmin(tab) {
   else if (tab === 'opciones_psico') _renderOpcionesPsicologia();
   else if (tab === 'prompts') _renderPromptsIA();
   else if (tab === 'monitoreo_ia') _renderMonitoreoIA();
+  else if (tab === 'sesiones') { window._coordCentroSeleccionado = null; _renderMonitoreoSesiones('sa-contenido'); }
   else if (tab === 'bugs') _renderBugsSuperadmin();
 }
 
@@ -39306,6 +39309,23 @@ async function _renderOpcionesCoordinadora() {
     + 'Activa o desactiva las opciones que las <strong>coordinadoras</strong> pueden ver en su dashboard. Los módulos desactivados por defecto están pensados para que la coordinadora se enfoque en supervisión.'
     + '</div>';
 
+  const verSesiones = !!opciones.panel_sesiones;
+  html += '<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1.5px dashed #CFD8DC;">'
+    + '<div style="font-size:0.78rem;font-weight:700;color:#455A64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Panel de Supervisión</div>'
+    + '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1.5px solid ' + (verSesiones ? '#80CBC4' : '#E0E0E0') + ';border-radius:10px;">'
+    + '<span class="material-icons" style="font-size:20px;color:' + (verSesiones ? '#00695C' : '#BDBDBD') + ';">login</span>'
+    + '<div style="flex:1;">'
+    + '<div style="font-weight:600;font-size:0.9rem;color:' + (verSesiones ? '#212121' : '#9E9E9E') + ';">Monitoreo de Entradas y Salidas</div>'
+    + '<div style="font-size:0.75rem;color:#999;">Muestra en el Panel Coordinadora a qué hora entró y salió del sistema cada docente del centro (a diferencia de la lista de arriba, esto NO es un módulo de su propio dashboard, es de supervisión).</div>'
+    + '</div>'
+    + '<label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">'
+    + '<input type="checkbox" ' + (verSesiones ? 'checked' : '') + ' onchange="_toggleOpcionPanelSesionesCoord(this.checked)"'
+    + ' style="opacity:0;width:0;height:0;">'
+    + '<span style="position:absolute;inset:0;background:' + (verSesiones ? '#00695C' : '#ccc') + ';border-radius:24px;transition:0.3s;"></span>'
+    + '<span style="position:absolute;top:2px;left:' + (verSesiones ? '22px' : '2px') + ';width:20px;height:20px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>'
+    + '</label></div>'
+    + '</div>';
+
   html += '<div style="display:flex;flex-direction:column;gap:8px;">';
   OPCIONES_COORDINADORA.forEach(opt => {
     const guardado = opciones[opt.id];
@@ -39333,6 +39353,15 @@ async function _toggleOpcionCoordinadora(id, activo) {
   await _guardarOpcionesCoordinadora(opciones);
   _renderOpcionesCoordinadora();
   mostrarToast(`${activo ? 'Activado' : 'Desactivado'}: ${OPCIONES_COORDINADORA.find(o => o.id === id)?.label || id}`, 'success');
+}
+
+async function _toggleOpcionPanelSesionesCoord(activo) {
+  const opciones = await _cargarOpcionesCoordinadora();
+  opciones.panel_sesiones = activo;
+  await _guardarOpcionesCoordinadora(opciones);
+  registrarCambio(activo ? 'Monitoreo de Entradas/Salidas habilitado para Coordinadora' : 'Monitoreo de Entradas/Salidas deshabilitado para Coordinadora');
+  _renderOpcionesCoordinadora();
+  mostrarToast(`${activo ? 'Activado' : 'Desactivado'}: Monitoreo de Entradas y Salidas`, 'success');
 }
 
 /** Aplica restricciones de opciones al dashboard de la coordinadora */
@@ -39651,10 +39680,16 @@ function abrirCoordinadora() {
   if (dirCont) dirCont.innerHTML = '';
   _mostrarPanel('panel-coordinadora');
   switchTabCoordinadora('calificaciones');
+  // La pestaña "Entradas/Salidas" solo se muestra si el superadmin la activó
+  // (Superadmin > Opciones Coordinadora) -- ver _cargarOpcionesCoordinadora().
+  _cargarOpcionesCoordinadora().then(opciones => {
+    const tabSesiones = document.getElementById('tab-coord-sesiones');
+    if (tabSesiones) tabSesiones.style.display = opciones.panel_sesiones ? '' : 'none';
+  }).catch(() => {});
 }
 
 function switchTabCoordinadora(tab) {
-  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos' };
+  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos', sesiones: 'tab-coord-sesiones' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -39666,6 +39701,7 @@ function switchTabCoordinadora(tab) {
   else if (tab === 'planificaciones') _coordMonitorPlanificaciones();
   else if (tab === 'resumen') _coordResumenDocentes();
   else if (tab === 'avisos') _coordAvisos();
+  else if (tab === 'sesiones') _renderMonitoreoSesiones('coord-contenido');
 }
 
 async function _coordGetCentroId() {
@@ -39783,6 +39819,103 @@ async function _coordGetDocentes(centroId) {
   } catch (e) { console.warn('Error buscando superadmins para coordinadora:', e); }
 
   return docentes;
+}
+
+// ── MONITOR DE SESIONES (entradas/salidas del sistema) ───────────
+// Compartido por Director, Coordinadora (visibilidad configurable desde
+// Superadmin > Opciones Coordinadora) y Superadmin. Lee la bitácora de cada
+// usuario del centro (ya sincronizada a Firestore por registrarCambio()) y
+// filtra únicamente sus eventos "Sesión iniciada" / "Sesión cerrada".
+async function _renderMonitoreoSesiones(contId) {
+  contId = contId || 'coord-contenido';
+  const cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { await _coordMostrarSelectorCentro(cont, '_renderMonitoreoSesiones', contId); return; }
+
+  try {
+    const docentes = await _coordGetDocentes(centroId);
+    if (!docentes.length) { cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">No hay usuarios en este centro.</div>'; return; }
+
+    const eventos = [];
+    await Promise.all(docentes.map(async d => {
+      try {
+        const doc = await db.collection('users').doc(d.uid).collection('data').doc('bitacora').get();
+        if (!doc.exists) return;
+        const raw = doc.data().payload;
+        const log = raw ? JSON.parse(raw) : [];
+        (Array.isArray(log) ? log : []).forEach(e => {
+          if (!e || !e.accion || !e.fecha) return;
+          if (e.accion.includes('Sesión iniciada')) eventos.push({ uid: d.uid, nombre: d.nombre || d.email || 'Sin nombre', email: d.email || '', rol: d.rol || '', fecha: e.fecha, tipo: 'entrada' });
+          else if (e.accion.includes('Sesión cerrada')) eventos.push({ uid: d.uid, nombre: d.nombre || d.email || 'Sin nombre', email: d.email || '', rol: d.rol || '', fecha: e.fecha, tipo: 'salida' });
+        });
+      } catch { /* usuario sin bitácora sincronizada aún */ }
+    }));
+
+    if (!eventos.length) {
+      cont.innerHTML = '<div style="text-align:center;padding:30px;color:#999;"><span class="material-icons" style="font-size:48px;display:block;margin-bottom:8px;">login</span>Aún no hay entradas o salidas registradas en este centro.</div>';
+      return;
+    }
+
+    eventos.sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+    // "Activos ahora": el evento más reciente de cada persona es una entrada sin salida posterior
+    const masReciente = {};
+    eventos.forEach(e => { if (!masReciente[e.uid] || e.fecha > masReciente[e.uid].fecha) masReciente[e.uid] = e; });
+    const activos = Object.values(masReciente).filter(e => e.tipo === 'entrada');
+
+    const rolBadge = rol => rol === 'director'
+      ? '<span style="background:#4A148C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.65rem;font-weight:600;margin-left:6px;">Director</span>'
+      : rol === 'coordinadora'
+      ? '<span style="background:#00695C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.65rem;font-weight:600;margin-left:6px;">Coordinadora</span>'
+      : rol === 'superadmin'
+      ? '<span style="background:#B71C1C;color:#fff;padding:1px 8px;border-radius:10px;font-size:0.65rem;font-weight:600;margin-left:6px;">Superadmin</span>' : '';
+
+    let html = '<h4 style="color:#1565C0;margin:0 0 12px;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">login</span> Monitoreo de Entradas y Salidas</h4>';
+
+    html += '<div style="margin-bottom:16px;padding:12px 14px;background:#E8F5E9;border-radius:10px;">'
+      + '<div style="font-size:0.78rem;font-weight:700;color:#1B5E20;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">'
+      + '<span class="material-icons" style="font-size:15px;vertical-align:middle;">circle</span> Actualmente en línea (' + activos.length + ')</div>';
+    html += activos.length
+      ? '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + activos.map(a =>
+          '<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #A5D6A7;border-radius:20px;padding:4px 12px;font-size:0.8rem;font-weight:600;color:#2E7D32;">'
+          + '<span style="width:8px;height:8px;border-radius:50%;background:#4CAF50;"></span>' + escapeHTML(a.nombre) + rolBadge(a.rol) + '</span>'
+        ).join('') + '</div>'
+      : '<div style="font-size:0.82rem;color:#66BB6A;">Nadie parece estar conectado en este momento.</div>';
+    html += '</div>';
+
+    // Agrupar por día
+    const grupos = {};
+    eventos.forEach(e => {
+      const dia = e.fecha.slice(0, 10);
+      if (!grupos[dia]) grupos[dia] = [];
+      grupos[dia].push(e);
+    });
+
+    html += Object.entries(grupos).map(([dia, entries]) => {
+      const diaLabel = new Date(dia + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long' });
+      const rows = entries.map(e => {
+        const hora = new Date(e.fecha).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const icon = e.tipo === 'entrada' ? 'login' : 'logout';
+        const color = e.tipo === 'entrada' ? '#2E7D32' : '#C62828';
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid #F5F5F5;">'
+          + '<span class="material-icons" style="font-size:16px;color:' + color + ';flex-shrink:0;margin-top:1px;">' + icon + '</span>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:0.83rem;line-height:1.4;"><strong>' + escapeHTML(e.nombre) + '</strong>' + rolBadge(e.rol) + ' — ' + (e.tipo === 'entrada' ? 'entró al sistema' : 'salió del sistema') + '</div>'
+          + '<div style="font-size:0.72rem;color:#9E9E9E;margin-top:2px;">' + hora + (e.email ? ' · ' + escapeHTML(e.email) : '') + '</div>'
+          + '</div></div>';
+      }).join('');
+      return '<div style="margin-bottom:12px;background:#fff;border-radius:10px;border:1px solid #E0E0E0;overflow:hidden;">'
+        + '<div style="padding:8px 12px;background:#F5F5F5;font-size:0.75rem;font-weight:700;color:#546E7A;text-transform:capitalize;">' + diaLabel + '</div>'
+        + rows + '</div>';
+    }).join('');
+
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#C62828;">Error: ' + e.message + '</div>';
+  }
 }
 
 // ── 1. MONITOR DE CALIFICACIONES ────────────────────────────────

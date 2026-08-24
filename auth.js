@@ -1418,7 +1418,18 @@ async function authIniciarSesionGoogle() {
 async function authCerrarSesion() {
   _cerrarUserMenu();
   if (!confirm('¿Cerrar sesión? Los datos están guardados en la nube.')) return;
-  if (typeof registrarCambio === 'function') registrarCambio('Sesión cerrada — ' + (window.currentUser?.email || ''));
+  if (typeof registrarCambio === 'function') {
+    registrarCambio('Sesión cerrada — ' + (window.currentUser?.email || ''));
+    // A diferencia de _syncFirebase (fire-and-forget), aquí SÍ hay que esperar a que
+    // termine de escribirse en Firestore antes de invalidar la sesión con signOut()
+    // -- si no, la escritura pierde la carrera contra el signOut y "Sesión cerrada"
+    // nunca llega a quedar guardado (queda huérfano solo en el localStorage que se
+    // borra 3 líneas más abajo), rompiendo el monitoreo de entradas/salidas.
+    try {
+      const log = localStorage.getItem('planificadorRA_bitacora_v1');
+      if (log && window._syncFirebaseAwait) await window._syncFirebaseAwait('bitacora', log, true);
+    } catch (e) { /* best-effort: no bloquear el cierre de sesión por esto */ }
+  }
   await auth.signOut();
   // Limpiar caché local (los datos están en la nube)
   FIREBASE_STORES.forEach(({ key }) => localStorage.removeItem(key));

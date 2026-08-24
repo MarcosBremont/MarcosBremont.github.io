@@ -2251,6 +2251,10 @@
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">monitoring</span> Monitoreo
           Docentes
         </button>
+        <button class="ra-tab" id="tab-dir-sesiones" onclick="switchTabDirector('sesiones')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">login</span> Entradas/Salidas
+        </button>
       </div>
 
       <!-- Contenido dinámico -->
@@ -2290,6 +2294,10 @@
         <button class="ra-tab" id="tab-coord-avisos" onclick="switchTabCoordinadora('avisos')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">campaign</span> Avisos
+        </button>
+        <button class="ra-tab" id="tab-coord-sesiones" onclick="switchTabCoordinadora('sesiones')"
+          style="display:none;padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">login</span> Entradas/Salidas
         </button>
       </div>
 
@@ -2538,6 +2546,10 @@
         <button class="ra-tab" id="tab-sa-monitoreo-ia" onclick="switchTabSuperadmin('monitoreo_ia')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">smart_toy</span> Monitoreo IA
+        </button>
+        <button class="ra-tab" id="tab-sa-sesiones" onclick="switchTabSuperadmin('sesiones')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">login</span> Entradas/Salidas
         </button>
         <button class="ra-tab" id="tab-sa-bugs" onclick="switchTabSuperadmin('bugs')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -3006,6 +3018,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0277BD;">v17.25<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Monitoreo de Entradas y Salidas del sistema</div>
+              <ul class="about-ver-items">
+                <li>Director, Coordinadora y Superadmin tienen ahora una pestaña "Entradas/Salidas" que muestra a qué hora entró y salió del sistema cada usuario del centro, agrupado por día, con quién está conectado en este momento.</li>
+                <li>Para Coordinadora, esta pestaña está oculta por defecto y se activa desde Superadmin → Opciones Coordinadora → "Monitoreo de Entradas y Salidas".</li>
+                <li>De paso se corrigió un bug: "Sesión cerrada" a veces no llegaba a guardarse en la nube porque el cierre de sesión invalidaba las credenciales antes de que terminara de sincronizarse.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6814,9 +6842,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.24"></script>
+  <script src="app.js?v=17.25"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.24"></script>
+  <script src="auth.js?v=17.25"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
