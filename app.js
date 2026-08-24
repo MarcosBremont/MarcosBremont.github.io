@@ -21453,7 +21453,22 @@ async function _procesarImportCurriculo() {
       // fallo (típicamente 429 por cuota agotada, más probable aquí que en el
       // OCR por el tamaño del PDF adjunto). Si Gemini falla por lo que sea
       // (cuota, "high demand", timeout), abajo se intenta el respaldo de texto.
-      let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
+      let resp, errJson;
+      const MAX_REINTENTOS_503 = 2;
+      for (let intento = 0; ; intento++) {
+        ({ resp, errJson } = await _llamarModelo('gemini-3.6-flash'));
+        if (resp.ok) break;
+        // "high demand"/503 es Google saturado momentáneamente, NO un problema de
+        // cuota/facturación de la clave -- se resuelve solo en unos segundos, así
+        // que vale la pena reintentar un par de veces antes de rendirse y pasar al
+        // respaldo de texto (que además es menos confiable que Gemini funcionando).
+        const msg503 = errJson?.error?.message || '';
+        const esAltaDemanda = resp.status === 503 || /high demand|overloaded|sobrecargad/i.test(msg503);
+        if (!esAltaDemanda || intento >= MAX_REINTENTOS_503) break;
+        console.warn(`[Currículo] Gemini con alta demanda (503), reintentando (${intento + 1}/${MAX_REINTENTOS_503})…`);
+        if (res) res.innerHTML = `<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">⏳ Gemini está saturado en este momento. Reintentando (${intento + 1}/${MAX_REINTENTOS_503})…</div>`;
+        await new Promise(r => setTimeout(r, 5000));
+      }
 
       if (!resp.ok) {
         const msg = errJson?.error?.message || '';
