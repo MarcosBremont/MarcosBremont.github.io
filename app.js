@@ -21334,8 +21334,9 @@ async function _procesarImportCurriculo() {
 
     if (!resp.ok) {
       const msg = errJson?.error?.message || '';
+      const esLimiteCero = msg.includes('limit: 0') || msg.includes('limit:0');
       if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
-        throw new Error('CUOTA_AGOTADA');
+        throw new Error(esLimiteCero ? 'BILLING_REQUERIDO' : 'CUOTA_AGOTADA');
       }
       throw new Error(msg || `Error ${resp.status}`);
     }
@@ -21375,10 +21376,34 @@ async function _procesarImportCurriculo() {
       </div>
       <div style="max-height:320px;overflow-y:auto;">${listaHTML}</div>`;
   } catch (e) {
-    const msg = e.message === 'CUOTA_AGOTADA'
-      ? 'Se agotó la cuota gratuita de Gemini por ahora. Intenta de nuevo más tarde.'
-      : ('No se pudo procesar el currículo: ' + (e.message || 'error desconocido'));
-    if (res) res.innerHTML = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">${escapeHTML(msg)}</div>`;
+    let html;
+    if (e.message === 'BILLING_REQUERIDO') {
+      html = `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+        <div style="font-weight:700;margin-bottom:6px;">🔑 Clave sin cuota gratuita</div>
+        Tu clave de Gemini pertenece a un proyecto que requiere <strong>facturación activada</strong> en Google.
+        Esperar no lo soluciona — el límite es permanente (limit: 0).<br><br>
+        Para resolverlo:
+        <ul style="margin:6px 0 0 16px;padding:0;">
+          <li>Ve a <strong>aistudio.google.com</strong>, activa la facturación en el proyecto de tu clave (o crea uno nuevo con facturación)</li>
+          <li>Luego actualiza la clave en <strong>Ajustes → Clave de Gemini</strong> si generaste una nueva</li>
+        </ul>
+      </div>`;
+    } else if (e.message === 'CUOTA_AGOTADA') {
+      html = `<div style="color:#7B3F00;background:#FFF3E0;border-radius:8px;padding:14px;font-size:0.85rem;line-height:1.5;">
+        <div style="font-weight:700;margin-bottom:6px;">⚠️ Límite de solicitudes alcanzado</div>
+        Un PDF de currículo consume bastantes tokens, así que es fácil llegar al límite gratuito de Gemini con solo un par de intentos.
+        <ul style="margin:8px 0 0 16px;padding:0;">
+          <li>Espera unos minutos (o hasta el día siguiente si es el límite diario) y vuelve a intentarlo</li>
+          <li>O activa facturación en tu proyecto de Google Cloud para subir el límite</li>
+          <li>También ayuda subir un PDF más liviano: solo las páginas del módulo que necesitas, en vez del currículo completo</li>
+        </ul>
+      </div>`;
+    } else {
+      html = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">
+        <strong>No se pudo procesar el currículo:</strong> ${escapeHTML(e.message || 'error desconocido')}
+      </div>`;
+    }
+    if (res) res.innerHTML = html;
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer con IA'; }
   }
