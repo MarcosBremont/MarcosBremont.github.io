@@ -808,12 +808,12 @@ function _criteriosContextualizados(nivel, actividad) {
   let tema = enunciado.replace(/^\w+(?:ar|er|ir)\b(?:\s+y\s+\w+(?:ar|er|ir)\b)*\s*/i, '').trim();
   if (!tema || tema === enunciado) tema = enunciado; // fallback si no matchea
 
-  // Acortar a algo legible (máx 70 chars), cortar en palabra completa
-  if (tema.length > 70) {
-    tema = tema.substring(0, 70);
-    const lastSpace = tema.lastIndexOf(' ');
-    if (lastSpace > 40) tema = tema.substring(0, lastSpace);
-  }
+  // Quitar el punto final: tema queda incrustado a media oración en las plantillas
+  // de abajo (ej. "Clasifica ${tema} según sus características"), así que un punto
+  // final del enunciado original dejaría dos oraciones pegadas con mayúscula/minúscula
+  // mezclada en medio de una sola frase.
+  tema = tema.replace(/\.+\s*$/, '').trim();
+
   // Minúscula inicial
   tema = tema.charAt(0).toLowerCase() + tema.slice(1);
 
@@ -2820,8 +2820,13 @@ function _guardarInstrumentoActividad(idx) {
   const tipo = document.getElementById('edit-inst-tipo')?.value || 'cotejo';
   const act = planificacion.actividades[idx];
   if (!act) return;
-  const tipoLabel = _getInstrLabel(tipo);
-  act.instrumento = { ...(act.instrumento || {}), tipo, tipoLabel };
+  // Regenerar el instrumento completo (criterios/niveles) para el tipo elegido, en vez
+  // de solo cambiar tipo/tipoLabel: conservar los criterios del tipo anterior por spread
+  // dejaba, por ejemplo, un cotejo→rúbrica con "criterios" en la forma equivocada
+  // (indicador en vez de criterio+descriptores), exportando filas rotas o vacías.
+  act.instrumento = act.instrumento?.tipo === tipo
+    ? act.instrumento
+    : generarInstrumento(act, act.ecNivel, tipo);
   guardarBorrador();
   cerrarModalBtn();
   renderizarActividades(planificacion.actividades);
@@ -2928,13 +2933,7 @@ function _confirmarNuevaActividad() {
     mostrarToast('Escribe el enunciado de la actividad', 'error'); return;
   }
   const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === ecCodigo);
-  // Calcular código de actividad: Act X.Y.Z
-  const actsDelEC = (planificacion.actividades || []).filter(a => a.ecCodigo === ecCodigo);
-  const numAct = actsDelEC.length + 1;
-  const partes = ecCodigo.replace('E.C.', '').split('.');
-  const codAct = `Act ${partes.join('.')}.${numAct}`;
 
-  const tipoLabel = _getInstrLabel(tipoInst);
   let fechaStr = '';
   if (fecha) {
     const d = new Date(fecha + 'T12:00:00');
@@ -2948,8 +2947,13 @@ function _confirmarNuevaActividad() {
     enunciado,
     fecha: fecha || '',
     fechaStr,
-    instrumento: { tipo: tipoInst, tipoLabel, titulo: `${tipoLabel} – ${codAct}` }
+    instrumento: null
   };
+  // Generar el instrumento COMPLETO (con criterios) de una vez, igual que las
+  // actividades del generador en bloque -- si se dejaba solo el tipo/título como
+  // antes, la actividad exportaba sin criterios (tabla vacía o solo el título) a
+  // menos que el docente abriera manualmente esa actividad para regenerarlo.
+  nuevaAct.instrumento = generarInstrumento(nuevaAct, nuevaAct.ecNivel, tipoInst);
 
   if (!planificacion.actividades) planificacion.actividades = [];
   planificacion.actividades.push(nuevaAct);
@@ -21075,10 +21079,17 @@ function abrirModalCopiarDatosGenerales() {
 
   const listaHTML = items.map((item, idx) => {
     const dg = item.planificacion?.datosGenerales || {};
+    const ra = item.planificacion?.ra || {};
     const modulo = dg.moduloFormativo || dg.codigoModulo || '(sin nombre)';
     const docente = dg.nombreDocente ? ` · ${dg.nombreDocente}` : '';
     const fecha = item.fechaGuardadoLabel || '';
     const cursoNombre = planIdACurso[item.id];
+    const raTexto = (ra.descripcion || '').trim();
+    const raPreview = raTexto
+      ? `<div style="font-size:0.78rem;color:#455A64;margin-top:4px;line-height:1.4;">
+           <span style="font-weight:700;color:#6A1B9A;">RA:</span> ${escapeHTML(raTexto.substring(0, 120))}${raTexto.length > 120 ? '&hellip;' : ''}
+         </div>`
+      : '';
     const cursoTag = cursoNombre
       ? `<span style="display:inline-block;margin-top:4px;padding:2px 8px;background:#E8F5E9;color:#2E7D32;border-radius:12px;font-size:0.75rem;font-weight:600;">
            <span class="material-icons" style="font-size:0.75rem;vertical-align:middle;">school</span> ${cursoNombre}
@@ -21092,6 +21103,7 @@ function abrirModalCopiarDatosGenerales() {
         onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
         <div style="font-weight:700;color:#1A237E;font-size:0.9rem;">${modulo}${docente}</div>
         <div style="margin-top:2px;">${cursoTag}</div>
+        ${raPreview}
         <div style="font-size:0.78rem;color:#757575;margin-top:4px;">${fecha}</div>
       </div>`;
   }).join('');
@@ -21102,7 +21114,8 @@ function abrirModalCopiarDatosGenerales() {
       Selecciona una planificación guardada. Se copiarán: Nombre de la Institución, Regional/Distrito, Politécnico,
       Familia Profesional, Código FP, Ordenanza,
       Nombre del Bachillerato Técnico, Código del Título, Módulo Formativo, Código del Módulo,
-      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana y Días de Clase por Semana.
+      Nombre del Docente, Unidad de Competencia, Código UC, Cantidad de RA, Horas por Semana, Días de Clase por Semana,
+      los Contenidos del RA (Conceptuales, Procedimentales y Actitudinales) y los Recursos Didácticos Disponibles.
     </p>
     <div style="max-height:400px;overflow-y:auto;">${listaHTML}</div>`;
   _usarFooterDinamico(`<button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`);
@@ -21117,6 +21130,7 @@ function _confirmarCopiarDatosGenerales(idx) {
   const item = (window._copiarDGItems || [])[idx];
   if (!item) return;
   const dg = item.planificacion?.datosGenerales || {};
+  const ra = item.planificacion?.ra || {};
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -21138,6 +21152,12 @@ function _confirmarCopiarDatosGenerales(idx) {
   setVal('codigo-uc', dg.codigoUC);
   setVal('cantidad-ra', dg.cantidadRA);
   setVal('horas-semana', dg.horasSemana);
+
+  // Contenidos del RA (Paso 2) y Recursos Didácticos Disponibles
+  setVal('recursos-didacticos', ra.recursos);
+  setVal('contenidos-conceptuales', ra.contenidosConceptuales);
+  setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
+  setVal('contenidos-actitudinales', ra.contenidosActitudinales);
 
   // Repoblar la tabla de ponderación (priorización) con los datos copiados -- el
   // listener de "change" en #cantidad-ra no se dispara al asignar .value por JS,
@@ -26033,6 +26053,18 @@ async function exportarDiariasWord() {
     return txt;
   }
 
+  // Autorreparación: algunas actividades (ej. agregadas manualmente antes de esta
+  // corrección, o de planificaciones importadas/antiguas) quedaron con un instrumento
+  // "vacío" (solo tipo/título, sin criterios reales) -- eso hacía que la exportación
+  // mostrara el instrumento casi en blanco. Si detecta ese caso, regenera el
+  // instrumento completo con los criterios correctos justo antes de exportar.
+  function _instrumentoValido(act) {
+    if (act?.instrumento?.criterios?.length) return act.instrumento;
+    if (typeof generarInstrumento !== 'function') return act?.instrumento;
+    act.instrumento = generarInstrumento(act, act.ecNivel, act?.instrumento?.tipo);
+    return act.instrumento;
+  }
+
   // Genera tabla Word para el instrumento de evaluación
   function _instTablaDocx(inst) {
     if (!inst || !inst.criterios || !inst.criterios.length) return textParas(instTexto(inst));
@@ -26222,7 +26254,7 @@ async function exportarDiariasWord() {
           }),
           new TableRow({ children: [mkLabel('Estrategia(s) utilizada(s):'), mkContent(textParas(s.estrategias), COL2)] }),
           new TableRow({ children: [mkLabel('Recursos:'), mkContent(textParas(s.recursos), COL2)] }),
-          new TableRow({ children: [mkLabel('Instrumentos de evaluaci\u00f3n'), mkContent(_instTablaDocx(act.instrumento), COL2)] }),
+          new TableRow({ children: [mkLabel('Instrumentos de evaluaci\u00f3n'), mkContent(_instTablaDocx(_instrumentoValido(act)), COL2)] }),
         ]
       });
 
@@ -42893,9 +42925,33 @@ async function _actualizarEstadoIAModal() {
 }
 
 async function forzarActualizacionApp() {
-  if (!confirm('Se limpiará la caché de la app y se recargará la página con la última versión. ¿Continuar?')) return;
+  if (!confirm('¿Buscar e instalar la última actualización de la app?')) return;
+
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+
+  const overlay = document.createElement('div');
+  overlay.id = 'update-app-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,27,62,0.94);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;font-family:Roboto,sans-serif;text-align:center;padding:24px;';
+  overlay.innerHTML = `
+    <div style="width:60px;height:60px;border:5px solid rgba(255,255,255,0.25);border-top-color:#fff;border-radius:50%;animation:girar-update-app 0.9s linear infinite;"></div>
+    <div id="update-app-texto" style="font-size:1.05rem;font-weight:700;letter-spacing:0.02em;">Buscando actualización&hellip;</div>
+    <div id="update-app-sub" style="font-size:0.82rem;color:#B0C4DE;max-width:280px;">Esto puede tardar unos segundos</div>
+    <style>@keyframes girar-update-app { to { transform: rotate(360deg); } }</style>`;
+  document.body.appendChild(overlay);
+
+  const setEstado = (txt, sub) => {
+    const t = document.getElementById('update-app-texto');
+    const s = document.getElementById('update-app-sub');
+    if (t) t.textContent = txt;
+    if (s && sub !== undefined) s.textContent = sub;
+  };
 
   try {
+    await espera(700);
+    setEstado('Actualización encontrada ✓', 'Descargando la nueva versión…');
+    await espera(650);
+
+    setEstado('Instalando actualización…', 'Limpiando archivos antiguos');
     if ('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map(r => r.unregister()));
@@ -42904,6 +42960,10 @@ async function forzarActualizacionApp() {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
+    await espera(500);
+
+    setEstado('¡Listo! Reiniciando la app…', '');
+    await espera(500);
   } catch (e) {
     console.warn('No se pudo limpiar completamente la caché/SW:', e);
   }

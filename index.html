@@ -630,9 +630,9 @@
           <span>Tutorial</span>
         </button>
         <button class="dash-nav-btn" id="btn-dash-actualizar" onclick="forzarActualizacionApp()"
-          style="--accent:#546E7A;" title="Descarga la última versión sin tener que presionar Ctrl+Shift+R">
+          style="--accent:#546E7A;" title="Busca e instala la última actualización de la app, sin tener que presionar Ctrl+Shift+R">
           <span class="material-icons">system_update</span>
-          <span>Actualizar App</span>
+          <span>Buscar actualización</span>
         </button>
       </div>
 
@@ -3018,6 +3018,65 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#546E7A;">v17.34<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Buscar actualización": nueva animación al actualizar la app</div>
+              <ul class="about-ver-items">
+                <li>El acceso rápido "Actualizar App" pasó a llamarse "Buscar actualización" y ahora muestra una pantalla con animación (buscando, descargando, instalando) mientras limpia la caché y recarga, en vez de sentirse como un simple refresh.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v17.33<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrige instrumento de evaluación ausente en casos aislados</div>
+              <ul class="about-ver-items">
+                <li>Cuando se agregaba una actividad manualmente (botón "+ Agregar actividad", aparte de las generadas en bloque), su instrumento de evaluación se creaba sin los criterios reales -- solo se completaba si el docente abría esa actividad para revisarla. Si nunca la abría, al exportar a Word el instrumento salía casi vacío (solo el título, sin tabla).</li>
+                <li>Lo mismo pasaba al cambiar el tipo de instrumento de una actividad ya existente (ej. de Lista de Cotejo a Rúbrica): se conservaban los criterios del tipo anterior, en la forma equivocada para el nuevo tipo.</li>
+                <li>Ambos casos ahora generan el instrumento completo de inmediato. Además, la exportación a Word ahora se autorrepara: si detecta una actividad con el instrumento incompleto (por ejemplo, de una planificación guardada antes de esta corrección), lo regenera automáticamente antes de exportar.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v17.32<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrige criterios de evaluación cortados en los instrumentos</div>
+              <ul class="about-ver-items">
+                <li>Los criterios/indicadores de Lista de Cotejo, Rúbrica y demás instrumentos se generaban recortando el tema de la actividad a 70 caracteres, cortando la frase a mitad de palabra (ej. "...acceso a motores de" en vez de "...acceso a motores de bases de datos"). Se quitó ese recorte -- ahora el criterio usa el tema completo, tanto en la app como en el Word exportado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v17.31<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Copiar datos generales": ahora muestra el RA y copia sus contenidos</div>
+              <ul class="about-ver-items">
+                <li>La lista de "Copiar datos generales de otra planificación" ahora muestra una vista previa del RA de cada planificación guardada, para saber de cuál copiar sin tener que adivinar por el nombre del módulo.</li>
+                <li>Además de los datos generales, ahora también se copian los Contenidos del RA (Conceptuales, Procedimentales y Actitudinales) y los Recursos Didácticos Disponibles.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6912,9 +6971,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.30"></script>
+  <script src="app.js?v=17.34"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.30"></script>
+  <script src="auth.js?v=17.34"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
