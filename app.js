@@ -1282,26 +1282,35 @@ function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
   const total = cantidadEC || 4;
   const ec = [];
 
-  for (let i = 0; i < total; i++) {
-    const baseIdx = i % nivelesBase.length;
-    const base = nivelesBase[baseIdx];
-    const vuelta = Math.floor(i / nivelesBase.length); // cuántas vueltas llevamos
-    let verbo = base.verbo;
-    if (vuelta > 0) {
-      const extras = verbosExtra[base.nivel];
-      verbo = extras[(vuelta - 1) % extras.length];
+  // Reparto por nivel: el mismo round-robin de siempre (1 de cada nivel por
+  // "vuelta" completa) determina CUÁNTOS EC le tocan a cada nivel, pero ahora
+  // se generan AGRUPADOS por nivel en vez de intercalados -- antes, con 5+ EC,
+  // salían mezclados (ej. conocer, aplicación, conocer de nuevo) en lugar de
+  // uno detrás del otro.
+  const conteoPorNivel = nivelesBase.map(() => 0);
+  for (let i = 0; i < total; i++) conteoPorNivel[i % nivelesBase.length]++;
+
+  let codigoIdx = 1;
+  nivelesBase.forEach((base, baseIdx) => {
+    for (let vuelta = 0; vuelta < conteoPorNivel[baseIdx]; vuelta++) {
+      let verbo = base.verbo;
+      if (vuelta > 0) {
+        const extras = verbosExtra[base.nivel];
+        verbo = extras[(vuelta - 1) % extras.length];
+      }
+      ec.push({
+        codigo: `E.C.${codigoIdx}.1.1`,
+        nivel: base.nivel,
+        nivelBloom: base.nivel,
+        verbo,
+        enunciado: `${verbo} ${base.prefijo}${objetoRA}, ${base.condicion}.`,
+        horasAsignadas: 0,
+        secuencia: plantillasSecuencia[base.nivel],
+        contraste: []
+      });
+      codigoIdx++;
     }
-    ec.push({
-      codigo: `E.C.${i + 1}.1.1`,
-      nivel: base.nivel,
-      nivelBloom: base.nivel,
-      verbo,
-      enunciado: `${verbo} ${base.prefijo}${objetoRA}, ${base.condicion}.`,
-      horasAsignadas: 0,
-      secuencia: plantillasSecuencia[base.nivel],
-      contraste: []
-    });
-  }
+  });
 
   return ec;
 }
@@ -2258,7 +2267,7 @@ function _agregarNuevoEC() {
   const siguiente = `E.C.${parseInt(partes[0] || 1) + 1}.${partes[1] || 1}.${partes[2] || 1}`;
 
   const NIVELES = [
-    { val: 'conocimiento', label: 'Conocimiento' },
+    { val: 'conocimiento', label: 'Conocer' },
     { val: 'comprension', label: 'Comprensión' },
     { val: 'aplicacion', label: 'Aplicación' },
     { val: 'actitudinal', label: 'Actitudinal' },
@@ -2376,7 +2385,7 @@ function renderizarEC(listaEC) {
 
 
 
-    const nombreNivel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' }[ec.nivel];
+    const nombreNivel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' }[ec.nivel];
 
 
 
@@ -2675,7 +2684,7 @@ function _editarNivelEC(idx, chipEl) {
   document.querySelectorAll('.ec-nivel-dropdown').forEach(d => d.remove());
 
   const NIVELES = [
-    { val: 'conocimiento', label: 'Conocimiento', color: '#1565C0' },
+    { val: 'conocimiento', label: 'Conocer', color: '#1565C0' },
     { val: 'comprension', label: 'Comprensión', color: '#2E7D32' },
     { val: 'aplicacion', label: 'Aplicación', color: '#E65100' },
     { val: 'actitudinal', label: 'Actitudinal', color: '#6A1B9A' },
@@ -4665,7 +4674,7 @@ function renderizarVistaPrevia() {
 
 
 
-  const nivelLabel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
 
 
@@ -4747,7 +4756,7 @@ function renderizarVistaPrevia() {
 
 
   // Tabla de actividades agrupada por EC (con rowspan)
-  const nivelLabelAct = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabelAct = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
   // Agrupar actividades por EC manteniendo orden
   const _actsSeqVP = {};
@@ -5490,7 +5499,7 @@ async function _exportarConPlantillaCentro() {
   // Construir filas para loop de docxtemplater (tabla en Word)
   // Usamos marcadores __VMERGE__ para celdas que deben fusionarse verticalmente
   // y __VSTART__ para la primera celda del grupo (restart del merge)
-  const nivelLabelTpl = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabelTpl = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
   const actividades = [];
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
@@ -19667,17 +19676,12 @@ async function _procesarOcrAsistencia() {
       return { resp: r, errJson };
     };
 
-    // Probar primero gemini-3.6-flash, luego gemini-1.5-flash como fallback.
-    // También reintenta con el alterno si el modelo fue retirado (404), no solo
-    // si está sin cuota (429) -- Google retira modelos ocasionalmente y antes
-    // eso rompía esta función sin caer al modelo alterno.
+    // Un solo modelo (gemini-3.6-flash). Antes caía a "gemini-1.5-flash" si
+    // este fallaba con 429/404, pero Google retiró ese modelo por completo:
+    // el fallback solo producía un segundo error (404 "not found ... not
+    // supported for generateContent") que enmascaraba la causa real del
+    // primer fallo (típicamente 429 por cuota agotada).
     let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
-    if (!resp.ok && (resp.status === 429 || resp.status === 404)) {
-      if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Intentando con modelo alternativo...</div>';
-      const fallback = await _llamarModelo('gemini-1.5-flash');
-      resp = fallback.resp;
-      errJson = fallback.errJson;
-    }
 
     if (!resp.ok) {
       const msg = errJson?.error?.message || '';
@@ -21319,13 +21323,14 @@ async function _procesarImportCurriculo() {
       return { resp: r, errJson };
     };
 
+    // Un solo modelo (gemini-3.6-flash, el mismo que usa _llamarGemini() para
+    // texto plano en el resto de la app) -- NO se cae a "gemini-1.5-flash" como
+    // hacía el escáner OCR, porque Google retiró ese modelo por completo y
+    // reintentar ahí solo producía un segundo error (404 "not found ... not
+    // supported for generateContent"), enmascarando la causa real del primer
+    // fallo (típicamente 429 por cuota agotada, más probable aquí que en el
+    // OCR por el tamaño del PDF adjunto).
     let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
-    if (!resp.ok && (resp.status === 429 || resp.status === 404)) {
-      if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Intentando con modelo alternativo...</div>';
-      const fallback = await _llamarModelo('gemini-1.5-flash');
-      resp = fallback.resp;
-      errJson = fallback.errJson;
-    }
 
     if (!resp.ok) {
       const msg = errJson?.error?.message || '';
@@ -21948,7 +21953,7 @@ function _exportarWordHTML() {
   const ra = planificacion.ra || {};
   const ec = planificacion.elementosCapacidad || [];
   const acts = planificacion.actividades || [];
-  const nivelLabel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
   // Tabla EC
   let tablaEC = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
@@ -25444,7 +25449,7 @@ function renderizarDiarias() {
 
 
 
-  const nivLabel = { conocimiento: 'Conocimiento', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivLabel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
 
 
@@ -27442,12 +27447,22 @@ async function construirPromptBase(dg, ra) {
     actitudinal: 'Verbo actitudinal (Valorar, Asumir, Demostrar compromiso...)'
   };
 
-  // Generar lista de ECs esperados
+  // Generar lista de ECs esperados -- agrupados por nivel (no intercalados):
+  // el reparto (cuántos EC le tocan a cada nivel) sigue siendo el mismo
+  // round-robin de siempre, pero se le pide a la IA los códigos ya en orden
+  // agrupado (conocimiento, conocimiento, comprensión, ...) para que con 5+
+  // EC no salgan mezclados (ej. conocer, aplicación, conocer de nuevo).
+  const conteoPorNivelEC = nivelesBloom.map(() => 0);
+  for (let i = 0; i < cantEC; i++) conteoPorNivelEC[i % nivelesBloom.length]++;
+
   const ecCodigos = [];
-  for (let i = 0; i < cantEC; i++) {
-    const nivel = nivelesBloom[i % nivelesBloom.length];
-    ecCodigos.push({ codigo: `E.C.${i + 1}.1.1`, nivel });
-  }
+  let ecCodigoIdx = 1;
+  nivelesBloom.forEach((nivel, nivelIdx) => {
+    for (let v = 0; v < conteoPorNivelEC[nivelIdx]; v++) {
+      ecCodigos.push({ codigo: `E.C.${ecCodigoIdx}.1.1`, nivel });
+      ecCodigoIdx++;
+    }
+  });
 
   // Generar lista de actividades esperadas -- el EC actitudinal no lleva
   // actividades propias (permea a todos los demás EC, ver _DEFAULT_PROMPT_BASE).
@@ -38391,7 +38406,7 @@ REGLAS PARA LOS EC:
 - NUNCA menciones "CE1", "CE2", "criterios de evaluación", "en correspondencia con" en los enunciados.
 - Además del enunciado, cada EC debe declarar en el campo "contraste" con cuáles criterios de evaluación se relaciona temáticamente, citando 1 o 2 de los códigos "CE.n" listados arriba (ej. ["CE.1"] o ["CE.1","CE.3"]). Citar el código en "contraste" NO es lo mismo que copiar su texto en el enunciado -- eso sigue prohibido. Todo EC debe tener al menos un código en "contraste" si hay criterios definidos; si la lista de criterios está vacía, deja "contraste" como [].
 - El VERBO debe corresponder al nivel de Bloom asignado:
-  * Conocimiento: Identificar, Reconocer, Clasificar, Enumerar, Definir
+  * Conocer: Identificar, Reconocer, Clasificar, Enumerar, Definir
   * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
   * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
   * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
