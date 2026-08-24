@@ -3030,6 +3030,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v17.49<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: corregida la reparación de respuestas cortadas de la IA</div>
+              <ul class="about-ver-items">
+                <li>Cuando una respuesta de la IA se cortaba a mitad de camino (por límite de tokens u otra causa), el intento de reparación cerraba los corchetes y llaves en el orden equivocado para la forma de nuestros datos (un RA dentro de una lista dentro del resultado), así que terminaba descartando una respuesta que en realidad ya tenía el módulo correcto. Ahora se cierra en el orden correcto y esa respuesta se aprovecha en vez de perderse y tener que probar más modelos de respaldo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#6A1B9A;">v17.48<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7234,9 +7248,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.48"></script>
+  <script src="app.js?v=17.49"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.48"></script>
+  <script src="auth.js?v=17.49"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

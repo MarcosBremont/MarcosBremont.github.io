@@ -28079,8 +28079,14 @@ function _repararJsonTruncado(texto) {
   let t = texto.replace(/,\s*$/, '');
   // Quitar valor de string incompleto al final (ej: "texto incomple)
   t = t.replace(/"[^"]*$/, '""');
-  // Contar brackets/braces abiertos
-  let abreLlave = 0, abreCorchete = 0;
+  // Pila de brackets/braces abiertos, en el orden en que se abrieron -- hay que
+  // cerrarlos en el orden INVERSO (el último abierto es el primero en cerrarse).
+  // Antes se contaban por separado ("cerrar todos los ] y luego todas las }"),
+  // lo que produce JSON inválido en el caso más común de este archivo, un objeto
+  // con un array adentro como {"ras": [{"codigo": ..., "descripcion": "texto
+  // cortado -- ahí hacía falta cerrar '}' (el objeto del RA) ANTES que ']' (el
+  // array "ras"), pero el conteo separado cerraba el array primero.
+  const pila = [];
   let enString = false, escape = false;
   for (let i = 0; i < t.length; i++) {
     const c = t[i];
@@ -28088,14 +28094,12 @@ function _repararJsonTruncado(texto) {
     if (c === '\\') { escape = true; continue; }
     if (c === '"') { enString = !enString; continue; }
     if (enString) continue;
-    if (c === '{') abreLlave++;
-    if (c === '}') abreLlave--;
-    if (c === '[') abreCorchete++;
-    if (c === ']') abreCorchete--;
+    if (c === '{' || c === '[') pila.push(c);
+    else if (c === '}' || c === ']') pila.pop();
   }
-  // Cerrar lo que quedó abierto
-  for (let i = 0; i < abreCorchete; i++) t += ']';
-  for (let i = 0; i < abreLlave; i++) t += '}';
+  while (pila.length) {
+    t += pila.pop() === '{' ? '}' : ']';
+  }
   return t;
 }
 
