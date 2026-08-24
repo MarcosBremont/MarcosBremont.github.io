@@ -21211,6 +21211,204 @@ function _confirmarCopiarDatosGenerales(idx) {
   window._copiarDGItems = null;
 }
 
+// ── Importar Currículo (PDF) con IA ──────────────────────────────
+// Sube un PDF de currículo oficial, lo envía completo a Gemini (como inline_data,
+// igual que ya hace el escáner OCR de asistencia con fotos) pidiéndole que ubique
+// el módulo formativo indicado y devuelva sus RA/criterios/contenidos en JSON.
+
+function _abrirImportCurriculo() {
+  const overlay = document.getElementById('curriculo-import-overlay');
+  if (!overlay) return;
+  const fileInput = document.getElementById('curriculo-file-input');
+  if (fileInput) fileInput.value = '';
+  const nombreEl = document.getElementById('curriculo-archivo-nombre');
+  if (nombreEl) { nombreEl.textContent = ''; nombreEl.style.display = 'none'; }
+  const moduloInput = document.getElementById('curriculo-modulo-buscado');
+  if (moduloInput) moduloInput.value = '';
+  const res = document.getElementById('curriculo-resultados');
+  if (res) res.innerHTML = '';
+  const btn = document.getElementById('curriculo-extraer-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer con IA'; }
+  window._curriculoExtraido = null;
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function _cerrarImportCurriculo() {
+  document.getElementById('curriculo-import-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+  window._curriculoExtraido = null;
+}
+
+const CURRICULO_PDF_MAX_BYTES = 15 * 1024 * 1024;
+
+function _curriculoArchivoSeleccionado(input) {
+  const file = input.files?.[0];
+  const nombreEl = document.getElementById('curriculo-archivo-nombre');
+  const btn = document.getElementById('curriculo-extraer-btn');
+  if (!file) return;
+
+  const esPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  if (!esPdf) {
+    mostrarToast('Solo se permiten archivos PDF.', 'error');
+    input.value = '';
+    if (nombreEl) { nombreEl.textContent = ''; nombreEl.style.display = 'none'; }
+    if (btn) btn.disabled = true;
+    return;
+  }
+  if (file.size > CURRICULO_PDF_MAX_BYTES) {
+    mostrarToast('El PDF no debe superar 15 MB.', 'error');
+    input.value = '';
+    if (nombreEl) { nombreEl.textContent = ''; nombreEl.style.display = 'none'; }
+    if (btn) btn.disabled = true;
+    return;
+  }
+
+  if (nombreEl) {
+    nombreEl.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+    nombreEl.style.display = 'block';
+  }
+  if (btn) btn.disabled = false;
+  const res = document.getElementById('curriculo-resultados');
+  if (res) res.innerHTML = '';
+}
+
+async function _procesarImportCurriculo() {
+  const fileInput = document.getElementById('curriculo-file-input');
+  const file = fileInput?.files?.[0];
+  const moduloBuscado = document.getElementById('curriculo-modulo-buscado')?.value?.trim() || '';
+  if (!file) return;
+  if (!moduloBuscado) {
+    mostrarToast('Escribe el nombre o código del módulo formativo que buscas.', 'error');
+    return;
+  }
+
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    mostrarToast('Configura tu clave de Gemini en Ajustes para usar esta función.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('curriculo-extraer-btn');
+  const res = document.getElementById('curriculo-resultados');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
+  if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Gemini y buscando el módulo...</div>';
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result.split(',')[1]);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+    const prompt = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado });
+
+    const bodyExtraccion = modelo => ({
+      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: 'application/pdf', data: base64 } }] }],
+      generationConfig: modelo.startsWith('gemini-3')
+        ? { temperature: 0.20, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: 'minimal' } }
+        : { temperature: 0.20, maxOutputTokens: 8192 }
+    });
+
+    const _llamarModelo = async modelo => {
+      const ep = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+      const r = await _fetchConTimeout(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyExtraccion(modelo)) }, 60000);
+      if (r.ok) return { resp: r, errJson: null };
+      const errJson = await r.json().catch(() => ({}));
+      return { resp: r, errJson };
+    };
+
+    let { resp, errJson } = await _llamarModelo('gemini-3.6-flash');
+    if (!resp.ok && (resp.status === 429 || resp.status === 404)) {
+      if (res) res.innerHTML = '<div style="text-align:center;padding:10px;color:#78909C;font-size:0.82rem;">⏳ Intentando con modelo alternativo...</div>';
+      const fallback = await _llamarModelo('gemini-1.5-flash');
+      resp = fallback.resp;
+      errJson = fallback.errJson;
+    }
+
+    if (!resp.ok) {
+      const msg = errJson?.error?.message || '';
+      if (resp.status === 429 || msg.toLowerCase().includes('quota')) {
+        throw new Error('CUOTA_AGOTADA');
+      }
+      throw new Error(msg || `Error ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    const parsed = _intentarParsearJSON(cleaned, 'extracción de currículo');
+
+    if (!parsed || parsed.encontrado === false || !parsed.ras?.length) {
+      if (res) res.innerHTML = '<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">No se encontró ese módulo en el PDF. Verifica que el nombre o código esté escrito tal como aparece en el currículo.</div>';
+      window._curriculoExtraido = null;
+      return;
+    }
+
+    window._curriculoExtraido = parsed;
+    const listaHTML = parsed.ras.map((ra, idx) => {
+      const desc = (ra.descripcion || '').trim();
+      const preview = desc.length > 140 ? desc.substring(0, 140) + '…' : desc;
+      const nCriterios = (ra.criteriosEvaluacion || []).length;
+      return `
+        <div onclick="_confirmarImportCurriculo(${idx})" style="
+          padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;
+          margin-bottom:8px;transition:border-color .15s,background .15s;"
+          onmouseover="this.style.borderColor='#00897B';this.style.background='#E0F2F1';"
+          onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
+          <div style="font-weight:700;color:#00695C;font-size:0.9rem;">${escapeHTML(ra.codigo || '')}</div>
+          <div style="font-size:0.82rem;color:#455A64;margin-top:4px;line-height:1.4;">${escapeHTML(preview)}</div>
+          <div style="font-size:0.75rem;color:#757575;margin-top:4px;">${nCriterios} criterio${nCriterios !== 1 ? 's' : ''} de evaluación</div>
+        </div>`;
+    }).join('');
+
+    if (res) res.innerHTML = `
+      <div style="font-size:0.82rem;color:#546E7A;margin-bottom:8px;font-weight:600;">
+        <span class="material-icons" style="font-size:14px;vertical-align:middle;color:#00897B;">check_circle</span>
+        ${escapeHTML(parsed.moduloFormativo || '')} — selecciona el RA a importar:
+      </div>
+      <div style="max-height:320px;overflow-y:auto;">${listaHTML}</div>`;
+  } catch (e) {
+    const msg = e.message === 'CUOTA_AGOTADA'
+      ? 'Se agotó la cuota gratuita de Gemini por ahora. Intenta de nuevo más tarde.'
+      : ('No se pudo procesar el currículo: ' + (e.message || 'error desconocido'));
+    if (res) res.innerHTML = `<div style="color:#C62828;background:#FFEBEE;border-radius:8px;padding:12px;font-size:0.85rem;">${escapeHTML(msg)}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer con IA'; }
+  }
+}
+
+function _confirmarImportCurriculo(idx) {
+  const parsed = window._curriculoExtraido;
+  const ra = parsed?.ras?.[idx];
+  if (!ra) return;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+
+  setVal('modulo-formativo', parsed.moduloFormativo);
+  setVal('codigo-modulo', parsed.codigoModulo);
+  setVal('cantidad-ra', String(parsed.ras.length));
+  _renderTablaPriorizacion(parsed.ras.length, null);
+
+  const descripcionEl = document.getElementById('descripcion-ra');
+  if (descripcionEl && ra.descripcion) {
+    descripcionEl.value = ra.descripcion;
+    actualizarBloomBadge(ra.descripcion);
+  }
+
+  setVal('criterios-referencia', (ra.criteriosEvaluacion || []).join('\n'));
+  setVal('contenidos-conceptuales', ra.contenidosConceptuales);
+  setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
+  setVal('contenidos-actitudinales', ra.contenidosActitudinales);
+
+  _cerrarImportCurriculo();
+  mostrarToast(`Datos del currículo importados (${ra.codigo || 'RA'}) ✓`, 'success');
+}
+
 /** Guarda el estado de la biblioteca */
 
 
@@ -37774,6 +37972,12 @@ const PROMPTS_IA_DEFS = [
     label: 'Prompt — Detalle Completo (Instrumento + Sesión)',
     icono: 'description',
     desc: 'Prompt para generar el detalle completo de una sola actividad. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{raDescripcion}}, {{actividad}}, {{ecEnunciado}}, {{nivelBloom}}, {{recursos}}, {{minTotal}}, {{minInicio}}, {{minDesarrollo}}, {{minCierre}}, {{instrPrompt}}'
+  },
+  {
+    key: 'prompt_extraer_curriculo',
+    label: 'Prompt — Extraer Currículo (PDF)',
+    icono: 'picture_as_pdf',
+    desc: 'Prompt para extraer RA, criterios y contenidos de un módulo formativo desde un PDF de currículo oficial subido por el docente. Variables: {{moduloBuscado}}'
   }
 ];
 
@@ -37819,6 +38023,7 @@ function _getPromptDefaultByKey(key) {
   if (key === 'prompt_base') return _DEFAULT_PROMPT_BASE;
   if (key === 'prompt_instrumentos') return _DEFAULT_PROMPT_INSTRUMENTOS;
   if (key === 'prompt_detalle_uno') return _DEFAULT_PROMPT_DETALLE_UNO;
+  if (key === 'prompt_extraer_curriculo') return _DEFAULT_PROMPT_EXTRAER_CURRICULO;
   return '';
 }
 
@@ -38278,6 +38483,33 @@ Genera exactamente este JSON:
     "sintesis": "CIERRE ({{minCierre}} minutos)...",
     "estrategias": "Estrategias didácticas con justificación..."
   }
+}`;
+
+const _DEFAULT_PROMPT_EXTRAER_CURRICULO = `Eres un asistente experto en currículos de educación técnico-profesional de la República Dominicana (documentos oficiales MINERD/DETP). Responde SOLO con JSON válido, sin markdown, sin texto adicional.
+
+En el documento PDF adjunto (currículo oficial de un Bachillerato Técnico) busca el módulo formativo cuyo nombre o código coincida, de forma aproximada (ignora mayúsculas, tildes y pequeñas diferencias de orden en las palabras), con:
+
+MÓDULO BUSCADO: "{{moduloBuscado}}"
+
+Si NO encuentras ningún módulo que coincida, responde exactamente:
+{"encontrado": false}
+
+Si lo encuentras, extrae TODOS los Resultados de Aprendizaje (RA) de ese módulo, cada uno con su descripción completa (sin recortar ni resumir), sus Criterios de Evaluación (uno por elemento del array, con su código, ej "CE3.1.1 Describir..."), y los Contenidos Conceptuales, Procedimentales y Actitudinales que correspondan a ese RA específico (si el documento los agrupa por bloques de varios RA, extrae la porción que aplica a este RA en particular). Responde exactamente con este formato JSON:
+
+{
+  "encontrado": true,
+  "moduloFormativo": "nombre exacto del módulo tal como aparece en el documento",
+  "codigoModulo": "código del módulo tal como aparece, ej INCO-MF034_3",
+  "ras": [
+    {
+      "codigo": "RA3.1",
+      "descripcion": "texto completo del Resultado de Aprendizaje, sin recortar",
+      "criteriosEvaluacion": ["CE3.1.1 texto completo...", "CE3.1.2 texto completo...", "..."],
+      "contenidosConceptuales": "texto de los contenidos conceptuales de este RA",
+      "contenidosProcedimentales": "texto de los contenidos procedimentales de este RA",
+      "contenidosActitudinales": "texto de los contenidos actitudinales de este RA"
+    }
+  ]
 }`;
 
 /** Construye bloque de contenidos para el prompt (solo si hay datos) */

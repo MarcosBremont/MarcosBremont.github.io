@@ -814,6 +814,10 @@
             <span class="material-icons" style="font-size:1rem;">content_copy</span>
             Copiar de otra planificación
           </button>
+          <button class="btn-secundario" onclick="_abrirImportCurriculo()" title="Sube el PDF del currículo oficial y extrae el RA, criterios y contenidos con IA" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
+            <span class="material-icons" style="font-size:1rem;">upload_file</span>
+            Cargar Currículo (PDF)
+          </button>
         </div>
 
         <div class="form-grid">
@@ -3022,6 +3026,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v17.40<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Cargar Currículo (PDF) con IA</div>
+              <ul class="about-ver-items">
+                <li>En Datos Generales se agregó el botón "Cargar Currículo (PDF)": sube el PDF oficial del currículo (MINERD/DETP), indica el módulo formativo que buscas, y la IA (Gemini) localiza ese módulo dentro del documento y extrae automáticamente el Resultado de Aprendizaje, sus criterios de evaluación y los contenidos conceptuales/procedimentales/actitudinales, listos para revisar y usar. Requiere tener configurada una clave de Gemini en Ajustes.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -6740,6 +6758,51 @@
     </div>
   </div>
 
+  <!-- ===== MODAL CARGAR CURRÍCULO (PDF) ===== -->
+  <div id="curriculo-import-overlay" class="modal-overlay hidden" onclick="_cerrarImportCurriculo()">
+    <div class="modal-box" style="max-width:480px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">picture_as_pdf</span>Cargar Currículo (PDF)</h3>
+        <button class="modal-close" onclick="_cerrarImportCurriculo()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px;">
+        <p style="font-size:0.82rem;color:#546E7A;margin:0 0 14px;">
+          Sube el PDF del currículo oficial (MINERD/DETP) e indica el módulo formativo que necesitas. Gemini buscará el módulo dentro del documento y extraerá el Resultado de Aprendizaje, sus criterios y contenidos.
+        </p>
+
+        <!-- Zona de carga -->
+        <label for="curriculo-file-input" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;
+          border:2px dashed #4DB6AC;border-radius:12px;cursor:pointer;background:#E0F2F1;transition:background 0.2s;"
+          onmouseover="this.style.background='#B2DFDB'" onmouseout="this.style.background='#E0F2F1'">
+          <span class="material-icons" style="font-size:36px;color:#00897B;">upload_file</span>
+          <span style="font-size:0.85rem;font-weight:700;color:#00695C;">Toca para subir el PDF del currículo</span>
+          <span style="font-size:0.75rem;color:#00897B;">PDF · Máximo 15 MB</span>
+        </label>
+        <input type="file" id="curriculo-file-input" accept="application/pdf"
+          style="display:none;" onchange="_curriculoArchivoSeleccionado(this)">
+        <div id="curriculo-archivo-nombre" style="display:none;margin-top:8px;font-size:0.78rem;color:#455A64;text-align:center;"></div>
+
+        <!-- Módulo formativo buscado -->
+        <div style="margin-top:14px;">
+          <label for="curriculo-modulo-buscado" style="display:block;font-size:0.8rem;font-weight:700;color:#455A64;margin-bottom:6px;">Nombre o código del módulo formativo</label>
+          <input type="text" id="curriculo-modulo-buscado" placeholder="Ej: Diseño de Portales Web y Recursos Multimedia"
+            style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.88rem;font-family:inherit;box-sizing:border-box;">
+        </div>
+
+        <!-- Botón extraer -->
+        <button id="curriculo-extraer-btn" onclick="_procesarImportCurriculo()" disabled
+          style="margin-top:12px;width:100%;padding:11px;background:linear-gradient(135deg,#00897B,#00695C);
+          color:#fff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;">
+          <span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer con IA
+        </button>
+
+        <!-- Resultados -->
+        <div id="curriculo-resultados" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== MODAL DUPLICAR PLANIFICACIÓN ===== -->
   <div id="dup-plan-overlay" class="modal-overlay hidden">
     <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
@@ -7045,9 +7108,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.39"></script>
+  <script src="app.js?v=17.40"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.39"></script>
+  <script src="auth.js?v=17.40"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
