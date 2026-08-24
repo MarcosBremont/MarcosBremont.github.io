@@ -2972,7 +2972,7 @@ function _agregarItemComplementario() {
   const opciones = ITEMS_COMPLEMENTARIOS.map(it =>
     `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FAFAFA;border:1.5px solid #E0E0E0;border-radius:10px;cursor:pointer;transition:all 0.15s;"
        onmouseover="this.style.borderColor='#E65100'" onmouseout="this.style.borderColor='#E0E0E0'">
-      <input type="radio" name="comp-tipo" value="${it.id}" style="accent-color:#E65100;">
+      <input type="checkbox" name="comp-tipo" value="${it.id}" style="accent-color:#E65100;width:17px;height:17px;">
       <span class="material-icons" style="font-size:22px;color:#E65100;">${it.icono}</span>
       <span style="font-weight:600;font-size:0.9rem;">${it.label}</span>
     </label>`
@@ -2983,6 +2983,7 @@ function _agregarItemComplementario() {
     <div style="display:flex;flex-direction:column;gap:10px;">
       <p style="color:#78909C;font-size:0.82rem;margin:0;">
         Los ítems complementarios se califican igual que las actividades y suman al total del RA.
+        Puedes seleccionar varios a la vez -- se agregarán cada uno por separado.
       </p>
       <div style="display:flex;flex-direction:column;gap:8px;">${opciones}</div>
       <div id="comp-custom-wrap" class="hidden" style="margin-top:4px;">
@@ -2999,58 +3000,78 @@ function _agregarItemComplementario() {
     </div>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
 
-  // Mostrar campo custom cuando selecciona "Otro"
+  // Mostrar campo custom cuando marca "Otro" (revisa TODOS los checkboxes, no solo el que
+  // cambió, ya que ahora se puede marcar más de uno a la vez).
   setTimeout(() => {
     document.querySelectorAll('input[name="comp-tipo"]').forEach(r => {
       r.addEventListener('change', () => {
         const wrap = document.getElementById('comp-custom-wrap');
-        if (wrap) wrap.classList.toggle('hidden', r.value !== 'otro');
+        const otroMarcado = document.querySelector('input[name="comp-tipo"][value="otro"]')?.checked;
+        if (wrap) wrap.classList.toggle('hidden', !otroMarcado);
       });
     });
   }, 50);
 }
 
 function _confirmarItemComplementario() {
-  const sel = document.querySelector('input[name="comp-tipo"]:checked');
-  if (!sel) { mostrarToast('Selecciona un tipo de ítem', 'error'); return; }
+  const seleccionados = Array.from(document.querySelectorAll('input[name="comp-tipo"]:checked'));
+  if (!seleccionados.length) { mostrarToast('Selecciona al menos un tipo de ítem', 'error'); return; }
 
-  const tipo = sel.value;
-  let label, icono;
-
-  if (tipo === 'otro') {
-    label = document.getElementById('comp-custom-nombre')?.value?.trim();
-    if (!label || label.length < 2) { mostrarToast('Escribe el nombre del ítem', 'error'); return; }
-    icono = 'add_box';
-  } else {
-    const def = ITEMS_COMPLEMENTARIOS.find(i => i.id === tipo);
-    label = def.label;
-    icono = def.icono;
+  const nombreCustom = document.getElementById('comp-custom-nombre')?.value?.trim();
+  if (seleccionados.some(sel => sel.value === 'otro') && (!nombreCustom || nombreCustom.length < 2)) {
+    mostrarToast('Escribe el nombre del ítem personalizado', 'error');
+    return;
   }
 
-  // Verificar que no exista ya uno igual
-  const yaExiste = (planificacion.actividades || []).some(a =>
-    a.esComplementario && a.complementarioTipo === tipo && tipo !== 'otro'
-  );
-  if (yaExiste) { mostrarToast(`Ya existe un ítem "${label}". Solo se permite uno por tipo.`, 'error'); return; }
-
-  const nuevoItem = {
-    id: 'comp-' + Date.now(),
-    ecCodigo: 'COMP',
-    enunciado: label,
-    fecha: '',
-    fechaStr: '',
-    esComplementario: true,
-    complementarioTipo: tipo,
-    complementarioIcono: icono,
-    instrumento: { tipo: 'complementario', tipoLabel: label, titulo: label }
-  };
-
   if (!planificacion.actividades) planificacion.actividades = [];
-  planificacion.actividades.push(nuevoItem);
+  const agregados = [];
+  const yaExistentes = [];
+
+  seleccionados.forEach(sel => {
+    const tipo = sel.value;
+    let label, icono;
+    if (tipo === 'otro') {
+      label = nombreCustom;
+      icono = 'add_box';
+    } else {
+      const def = ITEMS_COMPLEMENTARIOS.find(i => i.id === tipo);
+      label = def.label;
+      icono = def.icono;
+    }
+
+    // Verificar que no exista ya uno igual (no aplica a "Otro": cada uno es personalizado)
+    const yaExiste = tipo !== 'otro' && (planificacion.actividades || []).some(a =>
+      a.esComplementario && a.complementarioTipo === tipo
+    );
+    if (yaExiste) { yaExistentes.push(label); return; }
+
+    planificacion.actividades.push({
+      id: 'comp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      ecCodigo: 'COMP',
+      enunciado: label,
+      fecha: '',
+      fechaStr: '',
+      esComplementario: true,
+      complementarioTipo: tipo,
+      complementarioIcono: icono,
+      instrumento: { tipo: 'complementario', tipoLabel: label, titulo: label }
+    });
+    agregados.push(label);
+  });
+
+  if (!agregados.length) {
+    mostrarToast(`Ya existe${yaExistentes.length > 1 ? 'n' : ''}: ${yaExistentes.join(', ')}`, 'error');
+    return;
+  }
+
   guardarBorrador();
   cerrarModalBtn();
   renderizarActividades(planificacion.actividades);
-  mostrarToast(`Ítem "${label}" agregado ✓ — Asígnale un valor en puntos`, 'success');
+  let msg = agregados.length > 1
+    ? `${agregados.length} ítems agregados ✓ (${agregados.join(', ')}) — Asígnales un valor en puntos`
+    : `Ítem "${agregados[0]}" agregado ✓ — Asígnale un valor en puntos`;
+  if (yaExistentes.length) msg += `. Ya existía${yaExistentes.length > 1 ? 'n' : ''}: ${yaExistentes.join(', ')}`;
+  mostrarToast(msg, 'success');
 }
 
 function distribuirPuntosAutomatico() {
@@ -21117,6 +21138,12 @@ function _confirmarCopiarDatosGenerales(idx) {
   setVal('codigo-uc', dg.codigoUC);
   setVal('cantidad-ra', dg.cantidadRA);
   setVal('horas-semana', dg.horasSemana);
+
+  // Repoblar la tabla de ponderación (priorización) con los datos copiados -- el
+  // listener de "change" en #cantidad-ra no se dispara al asignar .value por JS,
+  // así que sin esto la tabla se quedaba oculta aunque "Cantidad de RA" ya mostrara
+  // el valor copiado.
+  _renderTablaPriorizacion(parseInt(dg.cantidadRA) || 0, dg.priorizacion);
 
   // Copiar días de clase
   if (dg.diasClase) {
