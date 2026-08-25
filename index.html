@@ -3030,6 +3030,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C2185B;">v17.75<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: RA sin ":" ya no se saltaban</div>
+              <ul class="about-ver-items">
+                <li>Se corrigieron dos RA que se saltaban por completo en un currículo real: "RA3.8 Presentar..." y "RAE3.10 Configurar..." -- ninguno de los dos lleva ":" después del número (el sistema lo exigía). Ahora la puntuación después del número es opcional.</li>
+                <li>De paso, los criterios de evaluación con un punto extra después del código (ej. "CE3.10.1. Monitorear...", visto en el mismo documento) también se reconocen -- antes ese punto de más impedía el match.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#5E35B1;">v17.74<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7590,9 +7605,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.74"></script>
+  <script src="app.js?v=17.75"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.74"></script>
+  <script src="auth.js?v=17.75"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

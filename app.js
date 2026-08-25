@@ -21601,7 +21601,7 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   });
   if (!itemsRelevantes.length) return null;
 
-  const esRA = s => /RAE?\s*\d+\.\d+\s*[:.\-]/.test(s);
+  const esRA = s => /RAE?\s*\d+\.\d+/.test(s);
   const esCE = s => /CE\s*\d+\.\d+\.\d+/.test(s);
   const xRA = itemsRelevantes.filter(it => esRA(it.str)).map(it => it.x);
   const xCE = itemsRelevantes.filter(it => esCE(it.str)).map(it => it.x);
@@ -21665,7 +21665,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   while ((mUC = regexUC.exec(textoModulo)) !== null) {
     posicionesUC.push({ codigo: `UC${String(mUC[1]).padStart(2, '0')}_${mUC[2]}`, indice: mUC.index, finMarcador: mUC.index + mUC[0].length });
   }
-  const matchPrimerRA = /RAE?\s*\d+\.\d+\s*[:.\-]/i.exec(textoModulo);
+  const matchPrimerRA = /RAE?\s*\d+\.\d+/i.exec(textoModulo);
   const limiteUC = matchPrimerRA ? matchPrimerRA.index : textoModulo.length;
   let unidadCompetencia = '', codigoUC = '';
   if (posicionesUC.length) {
@@ -21690,7 +21690,11 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     if (columnas) { textoRA = columnas.textoRA; textoCE = columnas.textoCE; columnasSeparadas = true; }
   }
 
-  const regexRA = /RAE?\s*(\d+\.\d+)\s*[:.\-]/g;
+  // La puntuación después del número (":", "." o "-") es OPCIONAL: se vio en
+  // documentos reales tanto "RA3.1: texto" como "RA3.8 texto" (sin nada) y
+  // "CE3.10.1. texto" (con un punto extra que "CE3.1.1 texto" no tiene) --
+  // exigirla dejaba esos RA/criterios sin reconocer del todo.
+  const regexRA = /RAE?\s*(\d+\.\d+)\s*[:.\-]?\s*/g;
   const posicionesRA = [];
   let m;
   while ((m = regexRA.exec(textoRA)) !== null) {
@@ -21698,7 +21702,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   }
   if (!posicionesRA.length) return null;
 
-  const regexCE = /CE\s*(\d+\.\d+)\.(\d+)\s+/g;
+  const regexCE = /CE\s*(\d+\.\d+)\.(\d+)[:.\-]?\s*/g;
   const posicionesCE = [];
   while ((m = regexCE.exec(textoCE)) !== null) {
     posicionesCE.push({ numeroRA: m[1], numeroCE: `${m[1]}.${m[2]}`, indice: m.index, finMarcador: m.index + m[0].length });
