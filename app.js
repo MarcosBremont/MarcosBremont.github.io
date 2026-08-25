@@ -21533,22 +21533,32 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
  *  deja cadena vacía en vez de inventar algo.
  *
  *  Estructura confirmada de la portada (formato oficial MINERD/DETP): el
- *  título grande "BACHILLERATO TÉCNICO EN <nombre>", seguido del Código FP
- *  (ej. "INCO002_3"), seguido de "Familia Profesional <nombre>". El Código FP
- *  se ancla contra "Familia Profesional" (el código que aparece justo antes)
- *  en vez de buscar cualquier patrón de código suelto en la página, porque
- *  ese mismo patrón de código puede repetirse más abajo (ej. en el código del
- *  módulo) y el anclaje evita agarrar el equivocado. */
+ *  título grande "BACHILLERATO TÉCNICO EN <nombre>", seguido del código
+ *  completo del título (ej. "INCO002_3"), seguido de "Familia Profesional
+ *  <nombre>". Ese código completo se ancla contra "Familia Profesional" (el
+ *  código que aparece justo antes) en vez de buscar cualquier patrón de
+ *  código suelto en la página, porque ese mismo patrón puede repetirse más
+ *  abajo (ej. en el código del módulo) y el anclaje evita agarrar el
+ *  equivocado.
+ *
+ *  De ese mismo código completo salen DOS campos distintos:
+ *  - Código del Título: el código completo tal cual (ej. "INCO002_3" --
+ *    familia + secuencia + nivel).
+ *  - Código FP (de la Familia Profesional): solo el prefijo de letras del
+ *    código completo (ej. "INCO"), que identifica el sector/familia amplia
+ *    (Informática y Comunicaciones), no el título específico. */
 function _parsearDatosGeneralesLocal(encabezado) {
-  const matchCodigoFP = /\b([A-Z]{2,8}\d{2,4}_\d)\b\s+Familia\s+Profesional/i.exec(encabezado);
+  const matchCodigoTitulo = /\b([A-Z]{2,8}\d{2,4}_\d)\b\s+Familia\s+Profesional/i.exec(encabezado);
+  const codigoTitulo = matchCodigoTitulo ? matchCodigoTitulo[1] : '';
+  const codigoFP = codigoTitulo ? (/^[A-Za-z]+/.exec(codigoTitulo)?.[0] || '') : '';
   const matchBachillerato = /BACHILLERATO\s+T[EÉ]CNICO\s+EN\s+(.+?)(?=\s+[A-Z]{2,8}\d{2,4}_\d\b|\s+Familia\s+Profesional|\n|$)/i.exec(encabezado);
   const matchFamilia = /Familia\s+Profesional\s+([^\n]{2,80}?)(?=\s{2,}|\n|$)/i.exec(encabezado);
   const matchOrdenanza = /Ordenanza\s*[:.\-]?\s*([^\n]{2,60})/i.exec(encabezado);
   return {
     nombreBachillerato: matchBachillerato ? ('Bachillerato Técnico en ' + matchBachillerato[1].trim()) : '',
-    codigoTitulo: '',
+    codigoTitulo,
     familiaProfesional: matchFamilia ? matchFamilia[1].trim() : '',
-    codigoFP: matchCodigoFP ? matchCodigoFP[1] : '',
+    codigoFP,
     ordenanza: matchOrdenanza ? matchOrdenanza[1].trim() : ''
   };
 }
@@ -29423,6 +29433,14 @@ function _ocultarSplash() {
  *  restaurados de una planificación en progreso o guardada). Siguen siendo
  *  editables normalmente, esto solo evita tener que escribirlos a mano. */
 async function _precargarDatosCentroPlanificacion() {
+  // Nombre del Docente: se toma del perfil (displayName de la cuenta), igual
+  // que ya se usa en otras partes de la app (ej. autor de un aviso) -- no
+  // depende de Firestore ni del centro, así que se rellena aparte del resto.
+  const docenteEl = document.getElementById('nombre-docente');
+  if (docenteEl && !docenteEl.value.trim() && window.currentUser?.displayName) {
+    docenteEl.value = window.currentUser.displayName;
+  }
+
   try {
     const nombreEl = document.getElementById('nombre-institucion');
     const politecnicoEl = document.getElementById('politecnico');

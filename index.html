@@ -3030,6 +3030,34 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#F57C00;">v17.77<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: Código FP y Código del Título corregidos</div>
+              <ul class="about-ver-items">
+                <li>El código de la portada (ej. "INCO002_3") se estaba usando completo como "Código FP". Ahora se separa correctamente: "Código del Título" recibe el código completo (familia + secuencia + nivel), y "Código FP" recibe solo el prefijo de letras (ej. "INCO"), que identifica la familia profesional/sector, no el título específico.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00897B;">v17.76<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Datos Generales: "Nombre del Docente" se toma del perfil</div>
+              <ul class="about-ver-items">
+                <li>El campo "Nombre del Docente" ahora se rellena solo con el nombre de la cuenta al iniciar una planificación nueva, en vez de quedar vacío para escribirlo a mano cada vez. Solo lo llena si el campo está vacío -- si ya tiene algo escrito, no lo toca.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C2185B;">v17.75<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7605,9 +7633,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.75"></script>
+  <script src="app.js?v=17.77"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.75"></script>
+  <script src="auth.js?v=17.77"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
