@@ -21719,13 +21719,72 @@ async function _procesarImportCurriculo() {
 
     let errorFinal = null;
 
-    // ---- Intento 1: OpenRouter -- en la práctica ha sido el más confiable de
-    // los tres últimamente, así que va primero. Timeout de 25s por modelo (antes
-    // 60s): con hasta 4 modelos en la lista más una ronda de reintento, un
-    // timeout largo hacía que un modelo lento/atascado se comiera varios
-    // minutos completos antes de pasar al siguiente -- confirmado en la
-    // práctica (~6 minutos totales). 25s sigue siendo tiempo de sobra para un
-    // modelo que sí va a responder, pero deja fallar rápido a uno que no.
+    // ---- Intento 1: Claude (Anthropic) con el PDF adjunto directamente -- va
+    // primero cuando hay clave configurada: al ser de pago, suele ser más
+    // confiable que las capas gratuitas de abajo. ----
+    if (!parsed) {
+      const claudeKey = getClaudeKey();
+      if (claudeKey) {
+        try {
+          if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Claude…</div>';
+          const base64Claude = await new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = e => resolve(e.target.result.split(',')[1]);
+            r.onerror = reject;
+            r.readAsDataURL(file);
+          });
+          const promptClaude = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: '' });
+          const rClaude = await _fetchConTimeout('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': claudeKey,
+              'anthropic-version': '2023-06-01',
+              // Anthropic bloquea por CORS las llamadas directas desde el navegador
+              // salvo que se envíe este header -- ver _llamarClaude() más arriba.
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-5',
+              max_tokens: 8192,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Claude } },
+                  { type: 'text', text: promptClaude }
+                ]
+              }]
+            })
+          }, 60000);
+
+          if (!rClaude.ok) {
+            const errJson = await rClaude.json().catch(() => ({}));
+            throw new Error(errJson?.error?.message || `Claude error ${rClaude.status}`);
+          }
+
+          const dataClaude = await rClaude.json();
+          const rawTextClaude = dataClaude?.content?.[0]?.text?.trim() || '';
+          const cleanedClaude = rawTextClaude.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+          const parsedClaude = _intentarParsearJSON(cleanedClaude, 'extracción de currículo (Claude)');
+          if (!parsedClaude) throw new Error('Claude devolvió una respuesta que no se pudo interpretar.');
+          parsed = parsedClaude;
+          proveedorUsado = 'Claude';
+          console.log('[Currículo] Claude respondió OK.');
+        } catch (errClaude) {
+          console.warn('[Currículo] Claude falló:', errClaude.message);
+          errorFinal = errClaude;
+        }
+      }
+    }
+
+    // ---- Intento 2: OpenRouter -- en la práctica ha sido el más confiable de
+    // los proveedores gratuitos, así que va antes que Groq/Gemini. Timeout de
+    // 25s por modelo (antes 60s): con hasta 4 modelos en la lista más una
+    // ronda de reintento, un timeout largo hacía que un modelo lento/atascado
+    // se comiera varios minutos completos antes de pasar al siguiente --
+    // confirmado en la práctica (~6 minutos totales). 25s sigue siendo tiempo
+    // de sobra para un modelo que sí va a responder, pero deja fallar rápido
+    // a uno que no.
     if (!parsed && promptTexto && getOpenRouterKey()) {
       try {
         console.log('[Currículo] Probando OpenRouter…');
@@ -21738,7 +21797,7 @@ async function _procesarImportCurriculo() {
       }
     }
 
-    // ---- Intento 2: Groq ----
+    // ---- Intento 3: Groq ----
     if (!parsed && promptTexto && getGroqKey()) {
       const GROQ_MAX_TOKENS = 4096;
       // Groq rechaza de entrada (413) cualquier solicitud que supere el límite de
@@ -21760,9 +21819,9 @@ async function _procesarImportCurriculo() {
       }
     }
 
-    // ---- Intento 3: Gemini con el PDF adjunto directamente (mejor comprensión
+    // ---- Intento 4: Gemini con el PDF adjunto directamente (mejor comprensión
     // de tablas complejas, pero es el que más problemas de cuota ha dado
-    // últimamente, así que va de último). ----
+    // últimamente, así que va de último entre los proveedores gratuitos). ----
     if (!parsed) {
       const apiKey = getGeminiKey();
       if (!apiKey) {
@@ -21834,63 +21893,6 @@ async function _procesarImportCurriculo() {
         } catch (errGemini) {
           console.warn('[Currículo] Gemini falló:', errGemini.message);
           errorFinal = errGemini;
-        }
-      }
-    }
-
-    // ---- Intento 4: Claude (Anthropic) con el PDF adjunto directamente --
-    // respaldo de pago si los proveedores gratuitos/configurados fallaron. ----
-    if (!parsed) {
-      const claudeKey = getClaudeKey();
-      if (claudeKey) {
-        try {
-          if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Claude…</div>';
-          const base64Claude = await new Promise((resolve, reject) => {
-            const r = new FileReader();
-            r.onload = e => resolve(e.target.result.split(',')[1]);
-            r.onerror = reject;
-            r.readAsDataURL(file);
-          });
-          const promptClaude = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: '' });
-          const rClaude = await _fetchConTimeout('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': claudeKey,
-              'anthropic-version': '2023-06-01',
-              // Anthropic bloquea por CORS las llamadas directas desde el navegador
-              // salvo que se envíe este header -- ver _llamarClaude() más arriba.
-              'anthropic-dangerous-direct-browser-access': 'true'
-            },
-            body: JSON.stringify({
-              model: 'claude-sonnet-5',
-              max_tokens: 8192,
-              messages: [{
-                role: 'user',
-                content: [
-                  { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Claude } },
-                  { type: 'text', text: promptClaude }
-                ]
-              }]
-            })
-          }, 60000);
-
-          if (!rClaude.ok) {
-            const errJson = await rClaude.json().catch(() => ({}));
-            throw new Error(errJson?.error?.message || `Claude error ${rClaude.status}`);
-          }
-
-          const dataClaude = await rClaude.json();
-          const rawTextClaude = dataClaude?.content?.[0]?.text?.trim() || '';
-          const cleanedClaude = rawTextClaude.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-          const parsedClaude = _intentarParsearJSON(cleanedClaude, 'extracción de currículo (Claude)');
-          if (!parsedClaude) throw new Error('Claude devolvió una respuesta que no se pudo interpretar.');
-          parsed = parsedClaude;
-          proveedorUsado = 'Claude';
-          console.log('[Currículo] Claude respondió OK.');
-        } catch (errClaude) {
-          console.warn('[Currículo] Claude falló:', errClaude.message);
-          errorFinal = errClaude;
         }
       }
     }
@@ -27892,6 +27894,40 @@ async function _llamarClaude(prompt, maxTokens = 8192) {
 }
 
 /** Genera planificación completa con Gemini */
+/** Genera planificación completa con Claude (Anthropic) -- va primero en la
+ *  cascada cuando hay una clave configurada, ya que al ser de pago suele ser
+ *  más confiable que las capas gratuitas de Groq/Gemini/OpenRouter. */
+async function generarConClaude(dg, ra, fechasClase) {
+  if (!getClaudeKey()) return null;
+
+  mostrarToast('🟠 Consultando Claude...', 'info');
+  const promptBase = await construirPromptBase(dg, ra);
+  const datosBase = await _llamarClaude(promptBase);
+
+  if (!datosBase || !datosBase.elementosCapacidad || !datosBase.actividades) {
+    throw new Error('Claude no devolvió la estructura esperada de EC y actividades');
+  }
+
+  // Instrumentos batch
+  try {
+    mostrarToast('🟠 Generando instrumentos (Claude)…', 'info');
+    const promptInst = await construirPromptInstrumentos(dg, ra, datosBase.actividades, datosBase.elementosCapacidad);
+    const instData = await _llamarClaude(promptInst, 2048);
+    if (instData && instData.detalles && Array.isArray(instData.detalles)) {
+      instData.detalles.forEach((det, i) => {
+        if (i < datosBase.actividades.length) {
+          datosBase.actividades[i].instrumentoDetalle = det.instrumentoDetalle || null;
+          datosBase.actividades[i].sesionDiaria = det.sesionDiaria || null;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[IA-Claude] Instrumentos batch falló:', e.message);
+  }
+
+  return datosBase;
+}
+
 async function generarConGemini(dg, ra, fechasClase) {
   if (!getGeminiKey()) return null;
 
@@ -28882,8 +28918,9 @@ generarPlanificacion = async function () {
 
   const groqKey = getGroqKey();
   const openrouterKey = getOpenRouterKey();
+  const claudeKey = getClaudeKey();
 
-  if (!groqKey && !getGeminiKey() && !openrouterKey) {
+  if (!groqKey && !getGeminiKey() && !openrouterKey && !claudeKey) {
     mostrarToast('💡 Sin claves de IA: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
     _generarPlanificacionLocal();
     _mostrarLabelGeneracion('local');
@@ -28903,10 +28940,26 @@ generarPlanificacion = async function () {
     let aiData = null;
     let proveedorUsado = 'local';
 
-    console.log('[IA] Claves disponibles — Groq:', !!groqKey, '| Gemini:', !!getGeminiKey(), '| OpenRouter:', !!openrouterKey);
+    console.log('[IA] Claves disponibles — Claude:', !!claudeKey, '| Groq:', !!groqKey, '| Gemini:', !!getGeminiKey(), '| OpenRouter:', !!openrouterKey);
 
-    // 1. Intentar con Groq primero
-    if (groqKey) {
+    // 0. Claude va primero si hay clave configurada -- de pago, suele ser más
+    // confiable que las capas gratuitas de abajo.
+    if (claudeKey) {
+      try {
+        console.log('[IA] Intentando generar con CLAUDE...');
+        aiData = await generarConClaude(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        if (aiData) {
+          proveedorUsado = 'Claude';
+          console.log('[IA] ✅ Generado exitosamente con CLAUDE — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+        }
+      } catch (errClaude) {
+        console.warn('[IA] ❌ Claude falló:', errClaude.message);
+        mostrarToast('⏳ Claude no respondió. Probando el resto de proveedores...', 'warning');
+      }
+    }
+
+    // 1. Si Claude no devolvió datos (o no hay clave), intentar con Groq
+    if (!aiData && groqKey) {
       try {
         console.log('[IA] Intentando generar con GROQ...');
         mostrarToast('🟢 Consultando Groq...', 'info');
@@ -29074,17 +29127,29 @@ Responde SOLO con JSON válido (sin markdown, sin texto adicional), con esta est
 Genera una sección por cada subtema listado arriba. Sé exhaustivo y claro, como si estuvieras escribiendo un capítulo de libro de texto.`;
 }
 
-/** Genera el contenido de la guía de estudio probando Groq → Gemini → OpenRouter, el
- *  mismo orden de proveedores (y las mismas funciones de bajo nivel, con su propio
- *  manejo de reintentos/cuota por modelo) que ya usa generarPlanificacion(). */
+/** Genera el contenido de la guía de estudio probando Claude → Groq → Gemini →
+ *  OpenRouter (Claude primero cuando hay clave, igual que generarPlanificacion()),
+ *  usando las mismas funciones de bajo nivel de cada proveedor, con su propio
+ *  manejo de reintentos/cuota por modelo. */
 async function _generarContenidoGuiaEstudioIA(dg, ra, ec) {
   const prompt = _construirPromptGuiaEstudio(dg, ra, ec);
   const groqKey = getGroqKey();
   const openrouterKey = getOpenRouterKey();
+  const claudeKey = getClaudeKey();
   let data = null;
   let proveedor = null;
 
-  if (groqKey) {
+  if (claudeKey) {
+    try {
+      mostrarToast('🟠 Redactando guía de estudio con Claude...', 'info');
+      data = await _llamarClaude(prompt, 8192);
+      if (data) proveedor = 'Claude';
+    } catch (e) {
+      console.warn('[GuíaEstudio] Claude falló:', e.message);
+    }
+  }
+
+  if (!data && groqKey) {
     try {
       data = await _llamarGroqConFallback(prompt, 'Redactando guía de estudio', 8192);
       if (data) proveedor = 'Groq';
@@ -30864,11 +30929,16 @@ async function generarRecuperacionesIA() {
     + `No agregues comentarios adicionales, solo retorna el JSON. Tipo solicitado: ${tipo}.`;
 
   console.log('[IA RECUP] prompt generado:', prompt);
-  console.log('[IA RECUP] claves disponibles — Groq:', !!getGroqKey(), 'Gemini:', !!getGeminiKey(), 'OpenRouter:', !!getOpenRouterKey());
+  console.log('[IA RECUP] claves disponibles — Claude:', !!getClaudeKey(), 'Groq:', !!getGroqKey(), 'Gemini:', !!getGeminiKey(), 'OpenRouter:', !!getOpenRouterKey());
 
   try {
     let data = null;
-    if (getGroqKey()) {
+    if (getClaudeKey()) {
+      mostrarToast('🟠 Generando con Claude...', 'info');
+      data = await _llamarClaude(prompt, 2048);
+      console.log('[IA RECUP] Claude respuesta:', data);
+    }
+    if (!data && getGroqKey()) {
       mostrarToast('🧠 Generando con Groq...', 'info');
       data = await _llamarGroqConFallback(prompt, 'Generando recuperaciones', 2048);
       console.log('[IA RECUP] Groq respuesta:', data);
@@ -38976,8 +39046,9 @@ async function _probarIA() {
   const groqKey = getGroqKey();
   const geminiKey = getGeminiKey();
   const openrouterKey = getOpenRouterKey();
+  const claudeKey = getClaudeKey();
 
-  if (!groqKey && !geminiKey && !openrouterKey) {
+  if (!groqKey && !geminiKey && !openrouterKey && !claudeKey) {
     cont.innerHTML = '<div style="padding:10px 12px;background:#FFF3E0;border:1px solid #FFE0B2;border-radius:8px;color:#E65100;font-size:0.82rem;">No hay ninguna clave de IA configurada. Ve a ⚙️ Config. IA para agregar una.</div>';
     return;
   }
@@ -38987,6 +39058,7 @@ async function _probarIA() {
 
   const testPrompt = 'Responde SOLO con JSON válido, sin markdown, sin texto adicional, con esta estructura exacta: {"chiste": "un chiste corto y original sobre programadores, en español"}';
   const proveedores = [
+    { nombre: 'Claude', key: claudeKey, llamar: () => _llamarClaude(testPrompt, 200) },
     { nombre: 'Groq', key: groqKey, llamar: () => _llamarGroqConFallback(testPrompt, 'Prueba IA', 200) },
     { nombre: 'Gemini', key: geminiKey, llamar: () => _llamarGemini(testPrompt, 200) },
     { nombre: 'OpenRouter', key: openrouterKey, llamar: () => _llamarOpenRouterConFallback(testPrompt, openrouterKey, 'Prueba IA', 200, 30000) }
