@@ -6026,7 +6026,10 @@ async function _exportarDiariaConPlantillaCentro() {
 
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
-  const actividades = planificacion.actividades || [];
+  // Los ítems complementarios (Actitudes y Valores, Cuaderno, Participación...)
+  // no tienen sesión de clase propia -- no deben generar una Matriz de
+  // Planificación Diaria, solo las actividades reales ligadas a un EC.
+  const actividades = (planificacion.actividades || []).filter(a => !a.esComplementario);
 
   if (!actividades.length) {
     mostrarToast('No hay sesiones para exportar', 'error');
@@ -26653,7 +26656,10 @@ function renderizarDiarias() {
 
 async function exportarDiariasWord() {
   guardarTodasDiarias();
-  const actividades = planificacion.actividades || [];
+  // Los ítems complementarios (Actitudes y Valores, Cuaderno, Participación...)
+  // no tienen sesión de clase propia -- no deben generar una Matriz de
+  // Planificación Diaria, solo las actividades reales ligadas a un EC.
+  const actividades = (planificacion.actividades || []).filter(a => !a.esComplementario);
   if (!actividades.length) { mostrarToast('No hay sesiones para exportar', 'error'); return; }
 
   // Intentar exportar con plantilla del centro si existe
