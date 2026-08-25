@@ -38840,7 +38840,7 @@ async function _renderPromptsIA() {
       <h3 style="margin:0;font-size:1rem;color:#424242;">Probar Proveedores de IA</h3>
     </div>
     <p style="font-size:0.8rem;color:#78909C;margin:0 0 12px;">
-      Le pide a cada proveedor configurado (Groq, Gemini, OpenRouter) una respuesta corta de prueba, sin tener que generar una planificación completa. Sirve para confirmar que las claves funcionan y ver cuál responde más rápido.
+      Le pide a cada proveedor configurado (Claude, Groq, Gemini, OpenRouter) una respuesta corta de prueba, sin tener que generar una planificación completa. Sirve para confirmar que las claves funcionan y ver cuál responde más rápido.
     </p>
     <button id="btn-probar-ia" onclick="_probarIA()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:#00897B;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;">
       <span class="material-icons" style="font-size:18px;">bolt</span> Probar IA ahora
