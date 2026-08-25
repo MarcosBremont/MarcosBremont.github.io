@@ -21661,7 +21661,7 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
 function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const ubicacion = _ubicarModulo(textoCompleto, moduloBuscado);
   if (!ubicacion) return null;
-  const textoModulo = textoCompleto.substring(ubicacion.idxInicio, ubicacion.idxFin);
+  let textoModulo = textoCompleto.substring(ubicacion.idxInicio, ubicacion.idxFin);
 
   // pdf.js une TODO el texto de una página en una sola línea (ver
   // _extraerTextoPdf) -- si el encabezado, "Nivel:", "Código:" y el resto del
@@ -21670,8 +21670,48 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // los campos que le siguen (Nivel/Código) además del salto de línea real.
   const matchNombreModulo = /m[oó]dulo\s+\d+\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\n|$)/i.exec(textoModulo);
   const nombreModulo = matchNombreModulo ? matchNombreModulo[1].trim() : moduloBuscado;
-  const matchCodigoModulo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z0-9_\-]{4,})/i.exec(textoModulo);
+
+  // Patrón del código institucional (ej. "INCO-MF034_3", "INCO002_3"):
+  // letras + opcional "-XXXX" + 2-4 dígitos + "_" + 1 dígito. Deliberadamente
+  // más estricto que "cualquier palabra después de Código:" -- en un
+  // currículo de informática la palabra "código" aparece todo el tiempo en
+  // sentido de PROGRAMACIÓN ("código fuente", "código HTML", "código
+  // limpio"), y un patrón genérico tomaría esas menciones como si fueran el
+  // código de otro módulo.
+  const matchCodigoModulo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/i.exec(textoModulo);
   const codigoModulo = matchCodigoModulo ? matchCodigoModulo[1].trim() : '';
+
+  // Defensas adicionales a la de _ubicarModulo: recortan textoModulo si
+  // aparece contenido que NO es de la tabla de RA/Criterios de este módulo,
+  // aunque el límite normal no lo haya detectado.
+  let corteExtra = textoModulo.length;
+
+  // 1) La tabla de "Contenidos" (Conceptuales/Procedimentales/Actitudinales)
+  //    que sigue a la de RA/Criterios NUNCA se parsea a propósito (ver más
+  //    abajo, queda vacía para que el docente la complete) -- pero sin
+  //    cortar ahí, su texto se pega como si fuera parte de la descripción o
+  //    los criterios del ÚLTIMO RA del módulo, que es justo lo que no debe
+  //    pasar.
+  const matchContenidos = /\bcontenidos\b\s+conceptuales\s+procedimentales\s+actitudinales/i.exec(textoModulo);
+  if (matchContenidos) corteExtra = Math.min(corteExtra, matchContenidos.index);
+
+  // 2) Otro código institucional distinto al de este módulo es señal de que
+  //    ahí empieza el módulo siguiente, aunque su encabezado "MÓDULO N:" no
+  //    se haya detectado como tal (ej. porque el bloque de "Contenidos" justo
+  //    antes salió desordenado en el texto lineal y confundió la detección).
+  if (codigoModulo) {
+    const codigoModuloNorm = codigoModulo.toLowerCase().replace(/[\s_\-]+/g, '');
+    const regexOtroCodigo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/gi;
+    let mCod;
+    while ((mCod = regexOtroCodigo.exec(textoModulo)) !== null) {
+      if (mCod[1].toLowerCase().replace(/[\s_\-]+/g, '') !== codigoModuloNorm) {
+        corteExtra = Math.min(corteExtra, mCod.index);
+        break;
+      }
+    }
+  }
+
+  if (corteExtra < textoModulo.length) textoModulo = textoModulo.substring(0, corteExtra);
 
   // Unidad de Competencia asociada: el módulo suele listar varias ("Módulo
   // formativo asociado a las Unidades de Competencias: UC01_3: ..., UC02_3:
@@ -21703,7 +21743,11 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   let textoRA = textoModulo, textoCE = textoModulo, columnasSeparadas = false;
   if (paginas && paginas.length) {
     const paginaInicio = _paginaDeIndice(textoCompleto, ubicacion.idxInicio);
-    const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxFin);
+    // Usa el largo real de textoModulo (puede haberse acortado arriba por el
+    // recorte de "otro código institucional"), no ubicacion.idxFin a secas --
+    // si no, se seguirían incluyendo páginas del módulo siguiente en la
+    // reconstrucción de columnas aunque el texto lineal ya se haya recortado.
+    const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxInicio + textoModulo.length);
     const columnas = _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin);
     if (columnas) { textoRA = columnas.textoRA; textoCE = columnas.textoCE; columnasSeparadas = true; }
   }
