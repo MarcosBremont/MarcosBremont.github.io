@@ -5658,6 +5658,24 @@ async function _exportarConPlantillaCentro() {
     if (docXml) {
       let xml = docXml.asText();
 
+      // El esquema OOXML exige un orden fijo para los hijos de <w:tcPr> (entre
+      // otros: tcW, gridSpan/hMerge, luego vMerge, luego tcBorders/shd/...).
+      // Insertar <w:vMerge> siempre como PRIMER hijo (como hacía antes) deja el
+      // XML fuera de ese orden en cuanto la celda ya trae un ancho (<w:tcW>) de
+      // la plantilla original -- eso es justo lo que Word detecta como
+      // "contenido no legible" al abrir y repara solo (al hacer clic en "Sí").
+      // Se inserta después de <w:tcW> cuando existe, para respetar el orden.
+      const insertarEnTcPr = (cell, vMergeTag) => {
+        if (cell.indexOf('<w:tcPr>') === -1) {
+          return cell.replace('<w:tc>', '<w:tc><w:tcPr>' + vMergeTag + '</w:tcPr>');
+        }
+        const matchTcW = cell.match(/<w:tcW\b[^>]*\/>/);
+        if (matchTcW) {
+          return cell.replace(matchTcW[0], matchTcW[0] + vMergeTag);
+        }
+        return cell.replace('<w:tcPr>', '<w:tcPr>' + vMergeTag);
+      };
+
       // __VSTART__ → primera celda del merge: agregar vMerge restart y quitar marcador
       xml = xml.replace(/<w:tc>([\s\S]*?)<\/w:tc>/g, function(match) {
         if (match.indexOf('__VSTART__') === -1 && match.indexOf('__VMERGE__') === -1) return match;
@@ -5665,12 +5683,7 @@ async function _exportarConPlantillaCentro() {
         if (match.indexOf('__VSTART__') !== -1) {
           // Primera celda del grupo: agregar vMerge restart
           let cell = match.replace(/__VSTART__/g, '');
-          if (cell.indexOf('<w:tcPr>') !== -1) {
-            cell = cell.replace('<w:tcPr>', '<w:tcPr><w:vMerge w:val="restart"/>');
-          } else {
-            cell = cell.replace('<w:tc>', '<w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr>');
-          }
-          return cell;
+          return insertarEnTcPr(cell, '<w:vMerge w:val="restart"/>');
         }
 
         if (match.indexOf('__VMERGE__') !== -1) {
@@ -5679,12 +5692,7 @@ async function _exportarConPlantillaCentro() {
           // Quitar todo el contenido de texto de la celda
           cell = cell.replace(/<w:r>[\s\S]*?<\/w:r>/g, '');
           cell = cell.replace(/__VMERGE__/g, '');
-          if (cell.indexOf('<w:tcPr>') !== -1) {
-            cell = cell.replace('<w:tcPr>', '<w:tcPr><w:vMerge/>');
-          } else {
-            cell = cell.replace('<w:tc>', '<w:tc><w:tcPr><w:vMerge/></w:tcPr>');
-          }
-          return cell;
+          return insertarEnTcPr(cell, '<w:vMerge/>');
         }
 
         return match;
@@ -6017,8 +6025,10 @@ function _generarInstTablaXml(inst) {
   return xml;
 }
 
-/** Exporta planificaciones diarias usando la plantilla .docx del centro con docxtemplater */
-async function _exportarDiariaConPlantillaCentro() {
+/** Exporta planificaciones diarias usando la plantilla .docx del centro con
+ *  docxtemplater. Si se pasa `soloActividadId`, exporta solo esa actividad en
+ *  vez de todas (usado por el botón "Descargar" de una sesión individual). */
+async function _exportarDiariaConPlantillaCentro(soloActividadId) {
   const DocxModule = window.docxtemplater || window.Docxtemplater;
   const Docxtemplater = DocxModule?.default || DocxModule;
   if (typeof PizZip === 'undefined' || !Docxtemplater) {
@@ -6041,7 +6051,8 @@ async function _exportarDiariaConPlantillaCentro() {
   // Los ítems complementarios (Actitudes y Valores, Cuaderno, Participación...)
   // no tienen sesión de clase propia -- no deben generar una Matriz de
   // Planificación Diaria, solo las actividades reales ligadas a un EC.
-  const actividades = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  let actividades = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  if (soloActividadId) actividades = actividades.filter(a => a.id === soloActividadId);
 
   if (!actividades.length) {
     mostrarToast('No hay sesiones para exportar', 'error');
@@ -6250,7 +6261,12 @@ async function _exportarDiariaConPlantillaCentro() {
   // Descargamos el primero como archivo principal
   if (allBlobs.length === 1) {
     const blob = new Blob([allBlobs[0]], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    const nombre = 'PlanificacionDiaria_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
+    // Al descargar una sola sesión puntual (botón "Descargar" de una tarjeta),
+    // el nombre incluye el EC y la fecha para distinguirla -- si es la única
+    // actividad de toda la planificación, sigue usando el nombre genérico.
+    const nombre = soloActividadId
+      ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
+      : 'PlanificacionDiaria_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = nombre;
@@ -16790,7 +16806,7 @@ function abrirTutorial() {
           <div class="tut-step-card">
             <div class="tut-step-badge" style="background:#E3F2FD;color:#1565C0;">3\u00ba \u2014 Red de seguridad</div>
             <h4 class="tut-step-title">\ud83d\udd35 OpenRouter</h4>
-            <p class="tut-step-desc">Alternativa en <strong>openrouter.ai/keys</strong>. Crea una cuenta, genera una clave en "Keys". La clave comienza con <code>sk-or-</code>.</p>
+            <p class="tut-step-desc">Alternativa en <strong>openrouter.ai/keys</strong>. Crea una cuenta, genera una clave en "Keys".</p>
           </div>
 
           <div class="tut-tip">
@@ -21596,13 +21612,14 @@ function _renderizarResultadosCurriculo(parsed, proveedorUsado, duracionSeg) {
   const tiempoTexto = (typeof duracionSeg === 'number') ? ` · ${duracionSeg}s` : '';
   let modeloTexto = '';
   if (proveedorUsado === 'Gemini') modeloTexto = 'gemini-3.6-flash';
+  else if (proveedorUsado === 'Claude') modeloTexto = 'claude-sonnet-5';
   else if (proveedorUsado === 'Groq') modeloTexto = window._ultimoModeloGroqExitoso || '';
   else if (proveedorUsado === 'OpenRouter') modeloTexto = window._ultimoModeloOpenRouterExitoso || '';
   const detalleModelo = modeloTexto ? ` — ${modeloTexto}` : '';
 
   const badgeProveedor = proveedorUsado === 'Local'
     ? ` <span style="font-weight:400;color:#2E7D32;">(⚡ extraído sin IA${tiempoTexto})</span>`
-    : proveedorUsado === 'Gemini'
+    : (proveedorUsado === 'Gemini' || proveedorUsado === 'Claude')
       ? ` <span style="font-weight:400;color:#90A4AE;">(${modeloTexto}${tiempoTexto})</span>`
       : ` <span style="font-weight:400;color:#90A4AE;">(vía ${proveedorUsado === 'Groq' ? '🟢 Groq' : '🔵 OpenRouter'}${detalleModelo}${tiempoTexto}, respaldo de texto)</span>`;
   const listaHTML = parsed.ras.map((ra, idx) => {
@@ -21667,27 +21684,37 @@ async function _procesarImportCurriculo() {
   try {
     // Se extrae el texto del PDF con pdf.js una sola vez al inicio -- lo
     // necesitan tanto OpenRouter/Groq (solo aceptan texto plano, no el PDF) como
-    // el extractor local de respaldo. Gemini no lo necesita (recibe el PDF
-    // adjunto directo), pero calcularlo aquí evita repetir el trabajo si hay que
-    // caer al texto de todos modos.
-    console.log('[Currículo] Extrayendo texto del PDF con pdf.js…');
-    const arrayBuffer = await file.arrayBuffer();
-    const textoCompleto = await _extraerTextoPdf(arrayBuffer);
-    console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
-    const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
-
-    // Extractor local (instantáneo, gratis, sin IA) -- NO se usa automáticamente:
-    // solo se ofrece como opción si todos los proveedores de IA configurados
-    // fallan más abajo, para que el docente decida si lo prefiere (queda sin
-    // Contenidos, y las descripciones no se reformulan) o ver el error de IA.
-    localResultado = _extraerCurriculoLocal(textoCompleto, moduloBuscado);
-    if (localResultado) console.log(`[Currículo] Extractor local encontró ${localResultado.ras.length} RA (disponible como respaldo si la IA falla).`);
-
+    // el extractor local de respaldo. Gemini y Claude no lo necesitan (reciben
+    // el PDF adjunto directo), pero calcularlo aquí evita repetir el trabajo si
+    // hay que caer al texto de todos modos.
+    //
+    // Este bloque tiene su PROPIO try/catch: un PDF que pdf.js no puede leer
+    // (protegido, corrupto, formato raro) no debe impedir intentar Gemini o
+    // Claude, que leen el archivo directamente y no dependen de pdf.js -- antes
+    // un fallo aquí hacía fallar la función entera sin llegar siquiera a
+    // intentarlos.
     let promptTexto = null;
-    if (textoRecortado) {
-      const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
-      const textoParaPrompt = `=== ENCABEZADO DEL DOCUMENTO ===\n${encabezadoDoc}\n\n=== SECCIÓN DEL MÓDULO BUSCADO ===\n${textoRecortado}`;
-      promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoParaPrompt });
+    try {
+      console.log('[Currículo] Extrayendo texto del PDF con pdf.js…');
+      const arrayBuffer = await file.arrayBuffer();
+      const textoCompleto = await _extraerTextoPdf(arrayBuffer);
+      console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
+      const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
+
+      // Extractor local (instantáneo, gratis, sin IA) -- NO se usa automáticamente:
+      // solo se ofrece como opción si todos los proveedores de IA configurados
+      // fallan más abajo, para que el docente decida si lo prefiere (queda sin
+      // Contenidos, y las descripciones no se reformulan) o ver el error de IA.
+      localResultado = _extraerCurriculoLocal(textoCompleto, moduloBuscado);
+      if (localResultado) console.log(`[Currículo] Extractor local encontró ${localResultado.ras.length} RA (disponible como respaldo si la IA falla).`);
+
+      if (textoRecortado) {
+        const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
+        const textoParaPrompt = `=== ENCABEZADO DEL DOCUMENTO ===\n${encabezadoDoc}\n\n=== SECCIÓN DEL MÓDULO BUSCADO ===\n${textoRecortado}`;
+        promptTexto = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: textoParaPrompt });
+      }
+    } catch (ePdfJs) {
+      console.warn('[Currículo] pdf.js no pudo leer el PDF, se sigue solo con los proveedores que reciben el archivo directo (Gemini/Claude):', ePdfJs.message);
     }
 
     let errorFinal = null;
@@ -21739,7 +21766,7 @@ async function _procesarImportCurriculo() {
     if (!parsed) {
       const apiKey = getGeminiKey();
       if (!apiKey) {
-        if (!errorFinal) errorFinal = new Error('No hay ninguna clave de IA configurada (Gemini, Groq u OpenRouter) en Ajustes.');
+        if (!errorFinal) errorFinal = new Error('No hay ninguna clave de IA configurada (Gemini, Groq, OpenRouter o Claude) en Ajustes.');
       } else {
         try {
           if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Gemini…</div>';
@@ -21807,6 +21834,63 @@ async function _procesarImportCurriculo() {
         } catch (errGemini) {
           console.warn('[Currículo] Gemini falló:', errGemini.message);
           errorFinal = errGemini;
+        }
+      }
+    }
+
+    // ---- Intento 4: Claude (Anthropic) con el PDF adjunto directamente --
+    // respaldo de pago si los proveedores gratuitos/configurados fallaron. ----
+    if (!parsed) {
+      const claudeKey = getClaudeKey();
+      if (claudeKey) {
+        try {
+          if (res) res.innerHTML = '<div style="text-align:center;padding:20px;color:#78909C;font-size:0.88rem;">Enviando currículo a Claude…</div>';
+          const base64Claude = await new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = e => resolve(e.target.result.split(',')[1]);
+            r.onerror = reject;
+            r.readAsDataURL(file);
+          });
+          const promptClaude = await _getPromptResuelto('prompt_extraer_curriculo', { moduloBuscado, textoPdf: '' });
+          const rClaude = await _fetchConTimeout('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': claudeKey,
+              'anthropic-version': '2023-06-01',
+              // Anthropic bloquea por CORS las llamadas directas desde el navegador
+              // salvo que se envíe este header -- ver _llamarClaude() más arriba.
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-5',
+              max_tokens: 8192,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Claude } },
+                  { type: 'text', text: promptClaude }
+                ]
+              }]
+            })
+          }, 60000);
+
+          if (!rClaude.ok) {
+            const errJson = await rClaude.json().catch(() => ({}));
+            throw new Error(errJson?.error?.message || `Claude error ${rClaude.status}`);
+          }
+
+          const dataClaude = await rClaude.json();
+          const rawTextClaude = dataClaude?.content?.[0]?.text?.trim() || '';
+          const cleanedClaude = rawTextClaude.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+          const parsedClaude = _intentarParsearJSON(cleanedClaude, 'extracción de currículo (Claude)');
+          if (!parsedClaude) throw new Error('Claude devolvió una respuesta que no se pudo interpretar.');
+          parsed = parsedClaude;
+          proveedorUsado = 'Claude';
+          console.log('[Currículo] Claude respondió OK.');
+        } catch (errClaude) {
+          console.warn('[Currículo] Claude falló:', errClaude.message);
+          errorFinal = errClaude;
         }
       }
     }
@@ -26069,6 +26153,9 @@ function renderizarDiarias() {
           <button class="btn-pd-generar" onclick="event.stopPropagation();generarSesion('${act.id}')" title="Generar contenido automáticamente">
             <span class="material-icons">auto_awesome</span> Generar
           </button>
+          <button class="btn-pd-index" onclick="event.stopPropagation();exportarDiariasWord('${act.id}')" title="Descargar solo esta planificación diaria en Word">
+            <span class="material-icons">download</span> Descargar
+          </button>
           <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
             <span class="material-icons">html</span> Index.html
           </button>
@@ -26666,18 +26753,22 @@ function renderizarDiarias() {
 
 
 
-async function exportarDiariasWord() {
+/** Exporta las Planificaciones Diarias a Word. Si se pasa `soloActividadId`,
+ *  exporta solo esa sesión (botón "Descargar" de una tarjeta individual) en
+ *  vez de todas las sesiones de la planificación. */
+async function exportarDiariasWord(soloActividadId) {
   guardarTodasDiarias();
   // Los ítems complementarios (Actitudes y Valores, Cuaderno, Participación...)
   // no tienen sesión de clase propia -- no deben generar una Matriz de
   // Planificación Diaria, solo las actividades reales ligadas a un EC.
-  const actividades = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  let actividades = (planificacion.actividades || []).filter(a => !a.esComplementario);
+  if (soloActividadId) actividades = actividades.filter(a => a.id === soloActividadId);
   if (!actividades.length) { mostrarToast('No hay sesiones para exportar', 'error'); return; }
 
   // Intentar exportar con plantilla del centro si existe
   try {
     console.log('[ExportarDiarias] Intentando con plantilla del centro...');
-    const exported = await _exportarDiariaConPlantillaCentro();
+    const exported = await _exportarDiariaConPlantillaCentro(soloActividadId);
     if (exported) return;
     console.log('[ExportarDiarias] Sin plantilla diaria, usando método programático');
   } catch (e) {
@@ -26989,10 +27080,12 @@ async function exportarDiariasWord() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'PlanificacionesDiarias_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
+      a.download = soloActividadId
+        ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
+        : 'PlanificacionesDiarias_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
-      mostrarToast('\u00a1Planificaciones exportadas con la plantilla del centro!', 'success');
+      mostrarToast(soloActividadId ? '\u00a1Planificaci\u00f3n exportada!' : '\u00a1Planificaciones exportadas con la plantilla del centro!', 'success');
     }).catch(function (e) {
       console.error(e);
       mostrarToast('Error al generar Word: ' + e.message, 'error');
@@ -27649,6 +27742,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const GROQ_KEY_STORAGE = 'planificadorRA_groqKey';
 const OPENROUTER_KEY_STORAGE = 'planificadorRA_openrouterKey';
 const GEMINI_KEY_STORAGE = 'planificadorRA_geminiKey';
+const CLAUDE_KEY_STORAGE = 'planificadorRA_claudeKey';
 
 /** Retorna la API key de Groq guardada o null */
 function getGroqKey() {
@@ -27663,6 +27757,11 @@ function getOpenRouterKey() {
 /** Retorna la API key de Gemini guardada o null */
 function getGeminiKey() {
   return localStorage.getItem(GEMINI_KEY_STORAGE) || null;
+}
+
+/** Retorna la API key de Claude (Anthropic) guardada o null */
+function getClaudeKey() {
+  return localStorage.getItem(CLAUDE_KEY_STORAGE) || null;
 }
 
 /** Llama a la API de Google Gemini */
@@ -27729,6 +27828,69 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   throw new Error(`Gemini error ${resp.status}: ${msg}`);
 }
 
+/** Llama a la API de Claude (Anthropic). A diferencia de Groq/Gemini/OpenRouter,
+ *  la API de Anthropic bloquea por CORS las llamadas directas desde el
+ *  navegador salvo que se envíe el header "anthropic-dangerous-direct-browser-
+ *  access" -- el nombre es adrede alarmante porque expone la clave del lado
+ *  del cliente, pero es el mismo modelo de confianza que ya usan las otras 3
+ *  claves de este sistema (se guardan solo en el navegador del propio
+ *  docente, nunca en un servidor). */
+async function _llamarClaude(prompt, maxTokens = 8192) {
+  const apiKey = getClaudeKey();
+  if (!apiKey) throw new Error('Sin clave de Claude');
+
+  const modelo = 'claude-sonnet-5';
+  const endpoint = 'https://api.anthropic.com/v1/messages';
+  const instruccion = 'Eres un asistente experto en educación técnico profesional. Responde SOLO con JSON válido, sin markdown, sin texto adicional.';
+
+  const body = {
+    model: modelo,
+    max_tokens: maxTokens,
+    system: instruccion,
+    messages: [{ role: 'user', content: prompt }]
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  let resp;
+  try {
+    resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('Claude timeout (30s)');
+    throw new Error('Claude error de red: ' + e.message);
+  }
+  clearTimeout(timeoutId);
+
+  if (resp.ok) {
+    const data = await resp.json();
+    const rawText = data?.content?.[0]?.text;
+    if (!rawText) throw new Error('Claude: respuesta vacía');
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    const parsed = _intentarParsearJSON(cleaned, 'Claude');
+    if (parsed !== null) return parsed;
+    throw new Error('Claude: JSON inválido en respuesta');
+  }
+
+  const errJson = await resp.json().catch(() => ({}));
+  const msg = errJson?.error?.message || resp.statusText;
+  const esRateLimit = resp.status === 429;
+  console.error('Claude error detalle:', resp.status, JSON.stringify(errJson));
+  if (esRateLimit) throw new Error('rate_limit: Claude cuota agotada. ' + msg);
+  throw new Error(`Claude error ${resp.status}: ${msg}`);
+}
+
 /** Genera planificación completa con Gemini */
 async function generarConGemini(dg, ra, fechasClase) {
   if (!getGeminiKey()) return null;
@@ -27775,7 +27937,8 @@ function abrirConfigIA() {
   const groqKeyActual = getGroqKey();
   const geminiKeyActual = getGeminiKey();
   const openrouterKeyActual = getOpenRouterKey();
-  const tieneAlguna = groqKeyActual || geminiKeyActual || openrouterKeyActual;
+  const claudeKeyActual = getClaudeKey();
+  const tieneAlguna = groqKeyActual || geminiKeyActual || openrouterKeyActual || claudeKeyActual;
   const estado = tieneAlguna
     ? '<span class="ia-status-chip ia-activa-chip"><span class="material-icons" style="font-size:14px;">check_circle</span> IA configurada</span>'
     : '<span class="ia-status-chip ia-inactiva-chip"><span class="material-icons" style="font-size:14px;">warning</span> Sin claves configuradas</span>';
@@ -27815,7 +27978,7 @@ function abrirConfigIA() {
       <div style="background:#E3F2FD;border-radius:8px;padding:12px;margin:8px 0;">
         <label for="input-openrouter-key" style="margin:0;font-weight:600;">🔵 OpenRouter (3º — red de seguridad)</label>
         <input type="password" id="input-openrouter-key"
-               placeholder="sk-or-..."
+               placeholder="Pega tu clave de OpenRouter"
                value="${openrouterKeyActual || ''}"
                autocomplete="off" style="margin-top:6px;" />
         <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
@@ -27823,10 +27986,21 @@ function abrirConfigIA() {
         </p>
       </div>
 
+      <div style="background:#FBE9E7;border-radius:8px;padding:12px;margin:8px 0;">
+        <label for="input-claude-key" style="margin:0;font-weight:600;">🟠 Claude (Anthropic) — respaldo de pago</label>
+        <input type="password" id="input-claude-key"
+               placeholder="sk-ant-..."
+               value="${claudeKeyActual || ''}"
+               autocomplete="off" style="margin-top:6px;" />
+        <p style="margin:4px 0 0;font-size:0.78rem;color:#555;">
+          Obtén tu clave en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#D84315;font-weight:600;">console.anthropic.com</a> (de pago, no tiene nivel gratuito)
+        </p>
+      </div>
+
       <div class="info-tip" style="margin:0;">
         <span class="material-icons" style="color:#1565C0;font-size:16px;">info</span>
         <p style="margin:0;font-size:0.8rem;color:#757575;">
-          Se intenta en orden: Groq → Gemini → OpenRouter. Si uno falla por cuota, pasa al siguiente automáticamente. Las claves se guardan solo en tu navegador.
+          Se intenta en orden: Groq → Gemini → OpenRouter → Claude. Si uno falla por cuota, pasa al siguiente automáticamente. Las claves se guardan solo en tu navegador.
         </p>
       </div>
       ${tieneAlguna ? '<button class="btn-secundario" style="align-self:flex-start;margin-top:8px;" onclick="borrarApiKey()"><span class="material-icons" style="font-size:16px;">delete</span> Eliminar claves</button>' : ''}
@@ -27850,15 +28024,19 @@ function guardarApiKey() {
   const groqKey = document.getElementById('input-groq-key')?.value?.trim();
   const geminiKey = document.getElementById('input-gemini-key')?.value?.trim();
   const openrouterKey = document.getElementById('input-openrouter-key')?.value?.trim();
+  const claudeKey = document.getElementById('input-claude-key')?.value?.trim();
 
-  if (!groqKey && !geminiKey && !openrouterKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
+  if (!groqKey && !geminiKey && !openrouterKey && !claudeKey) { mostrarToast('Ingresa al menos una clave', 'error'); return; }
   if (groqKey && !groqKey.startsWith('gsk_')) { mostrarToast('La clave de Groq debe comenzar con "gsk_..."', 'error'); return; }
   // Gemini: NO se valida el prefijo. Google esta en medio de migrar el formato de
   // sus claves durante 2026 -- las nuevas empiezan con "AQ." en vez de "AIza", y
   // algunas cuentas ya solo pueden generar el formato nuevo. Bloquear el guardado
   // por prefijo dejaba a esos usuarios sin poder guardar una clave real y valida.
   if (geminiKey && geminiKey.length < 10) { mostrarToast('La clave de Gemini parece incompleta', 'error'); return; }
-  if (openrouterKey && !openrouterKey.startsWith('sk-or-')) { mostrarToast('La clave de OpenRouter debe comenzar con "sk-or-..."', 'error'); return; }
+  // OpenRouter: tampoco se valida el prefijo "sk-or-" -- ya no es obligatorio en
+  // las claves nuevas, así que exigirlo bloqueaba claves reales y válidas.
+  if (openrouterKey && openrouterKey.length < 10) { mostrarToast('La clave de OpenRouter parece incompleta', 'error'); return; }
+  if (claudeKey && !claudeKey.startsWith('sk-ant-')) { mostrarToast('La clave de Claude debe comenzar con "sk-ant-..."', 'error'); return; }
 
   if (groqKey) localStorage.setItem(GROQ_KEY_STORAGE, groqKey);
   else localStorage.removeItem(GROQ_KEY_STORAGE);
@@ -27869,16 +28047,20 @@ function guardarApiKey() {
   if (openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, openrouterKey);
   else localStorage.removeItem(OPENROUTER_KEY_STORAGE);
 
+  if (claudeKey) localStorage.setItem(CLAUDE_KEY_STORAGE, claudeKey);
+  else localStorage.removeItem(CLAUDE_KEY_STORAGE);
+
   // Sincronizar claves con Firebase
   if (window._syncFirebase) {
     window._syncFirebase('groqKey', groqKey || '');
     window._syncFirebase('geminiKey', geminiKey || '');
     window._syncFirebase('openrouterKey', openrouterKey || '');
+    window._syncFirebase('claudeKey', claudeKey || '');
   }
 
   actualizarBtnConfigIA();
   cerrarModalBtn();
-  const proveedores = [groqKey && 'Groq', geminiKey && 'Gemini', openrouterKey && 'OpenRouter'].filter(Boolean).join(' + ');
+  const proveedores = [groqKey && 'Groq', geminiKey && 'Gemini', openrouterKey && 'OpenRouter', claudeKey && 'Claude'].filter(Boolean).join(' + ');
   registrarCambio(`Claves de API de IA actualizadas (${proveedores})`);
   mostrarToast(`Claves guardadas (${proveedores}). La IA está lista.`, 'success');
 }
@@ -27887,10 +28069,12 @@ function borrarApiKey() {
   localStorage.removeItem(GROQ_KEY_STORAGE);
   localStorage.removeItem(GEMINI_KEY_STORAGE);
   localStorage.removeItem(OPENROUTER_KEY_STORAGE);
+  localStorage.removeItem(CLAUDE_KEY_STORAGE);
   if (window._syncFirebase) {
     window._syncFirebase('groqKey', '');
     window._syncFirebase('geminiKey', '');
     window._syncFirebase('openrouterKey', '');
+    window._syncFirebase('claudeKey', '');
   }
   actualizarBtnConfigIA();
   cerrarModalBtn();
@@ -27901,7 +28085,7 @@ function borrarApiKey() {
 function actualizarBtnConfigIA() {
   const btn = document.getElementById('btn-config-ia');
   if (!btn) return;
-  if (getGroqKey() || getGeminiKey() || getOpenRouterKey()) {
+  if (getGroqKey() || getGeminiKey() || getOpenRouterKey() || getClaudeKey()) {
     btn.classList.add('ia-activa');
     btn.title = 'IA configurada ✓ — clic para cambiar las claves';
   } else {
@@ -38340,7 +38524,8 @@ async function _saAsignarCentro(uid) {
 const _MONITOREO_IA_PROVIDERS = [
   { store: 'groqKey', label: 'Groq', url: 'https://console.groq.com/keys', urlLabel: 'console.groq.com', color: '#2E7D32' },
   { store: 'geminiKey', label: 'Gemini', url: 'https://aistudio.google.com/apikey', urlLabel: 'aistudio.google.com', color: '#F57F17' },
-  { store: 'openrouterKey', label: 'OpenRouter', url: 'https://openrouter.ai/keys', urlLabel: 'openrouter.ai', color: '#1565C0' }
+  { store: 'openrouterKey', label: 'OpenRouter', url: 'https://openrouter.ai/keys', urlLabel: 'openrouter.ai', color: '#1565C0' },
+  { store: 'claudeKey', label: 'Claude', url: 'https://console.anthropic.com/settings/keys', urlLabel: 'console.anthropic.com', color: '#D84315' }
 ];
 
 /** Vista de Superadmin: busca docentes por nombre (sin necesitar su email)

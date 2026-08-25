@@ -3030,6 +3030,63 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00838F;">v17.70<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Plan Diario: botón para descargar una sola sesión</div>
+              <ul class="about-ver-items">
+                <li>Cada tarjeta de sesión en Plan Diario ahora tiene su propio botón "Descargar" para bajar solo esa planificación diaria en Word, sin necesidad de descargar todas juntas. El botón que descarga todas las sesiones a la vez sigue igual.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v17.69<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: Word pedía "recuperar contenido" al abrir una Planificación por RA</div>
+              <ul class="about-ver-items">
+                <li>Al exportar con la plantilla del centro, las celdas fusionadas verticalmente (ej. la columna del Elemento de Capacidad cuando tiene varias actividades) podían dejar el XML del documento en un orden inválido según el estándar de Word, lo que hacía que Word mostrara la advertencia "Word encontró contenido no legible" al abrirlo (se recuperaba bien al aceptar, pero no debía pedirlo). Corregido el orden en que se insertan las marcas de fusión de celdas.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#455A64;">v17.68<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Configuración de IA: ya no exige el prefijo "sk-or-" en OpenRouter</div>
+              <ul class="about-ver-items">
+                <li>OpenRouter dejó de requerir ese prefijo en sus claves nuevas -- exigirlo bloqueaba claves reales y válidas. Ahora solo se valida que la clave no esté vacía ni parezca incompleta, igual que ya se hacía con Gemini.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#D84315;">v17.67<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Claude (Anthropic) como cuarto proveedor de IA</div>
+              <ul class="about-ver-items">
+                <li>En Configuración de IA ahora se puede agregar una clave de Claude (Anthropic) como respaldo de pago. Se usa como último recurso en "Cargar Currículo" si Groq, Gemini y OpenRouter fallan o no están configurados -- lee el PDF directamente, igual que Gemini.</li>
+                <li>Corregido de paso: si pdf.js no podía leer el PDF (documento protegido o dañado), antes eso impedía intentar Gemini y Claude siquiera, aunque esos dos leen el archivo directo y no dependen de pdf.js.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#6A1B9A;">v17.66<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7474,9 +7531,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.66"></script>
+  <script src="app.js?v=17.70"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.66"></script>
+  <script src="auth.js?v=17.70"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
