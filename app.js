@@ -21631,11 +21631,16 @@ async function _procesarImportCurriculo() {
     let errorFinal = null;
 
     // ---- Intento 1: OpenRouter -- en la práctica ha sido el más confiable de
-    // los tres últimamente, así que va primero. ----
+    // los tres últimamente, así que va primero. Timeout de 25s por modelo (antes
+    // 60s): con hasta 4 modelos en la lista más una ronda de reintento, un
+    // timeout largo hacía que un modelo lento/atascado se comiera varios
+    // minutos completos antes de pasar al siguiente -- confirmado en la
+    // práctica (~6 minutos totales). 25s sigue siendo tiempo de sobra para un
+    // modelo que sí va a responder, pero deja fallar rápido a uno que no.
     if (!parsed && promptTexto && getOpenRouterKey()) {
       try {
         console.log('[Currículo] Probando OpenRouter…');
-        parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 60000, MODELOS_OPENROUTER_CURRICULO);
+        parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 25000, MODELOS_OPENROUTER_CURRICULO);
         proveedorUsado = 'OpenRouter';
         console.log('[Currículo] OpenRouter respondió OK.');
       } catch (eOR) {
@@ -27968,10 +27973,14 @@ const MODELOS_OPENROUTER = [
 // veces devuelven una respuesta vacía, y a veces tardan mucho más que los
 // demás. Se prueban de últimos en vez de quitarlos -- para otros usos más
 // cortos de la app sí pueden responder bien, y siguen sirviendo como último
-// recurso aquí también.
+// recurso aquí también. "gemma" también demostró ser poco fiable (rate-limited
+// en el pool compartido gratuito en prácticamente todos los intentos reales
+// vistos hasta ahora), así que se movió después de "openrouter/free" (el
+// enrutador automático, que en la práctica suele resolver a algo disponible
+// más rápido).
 const MODELOS_OPENROUTER_CURRICULO = [
-  'google/gemma-4-26b-a4b-it:free',
   'openrouter/free',
+  'google/gemma-4-26b-a4b-it:free',
   'nvidia/nemotron-3-ultra-550b-a55b:free',
   'nvidia/nemotron-3-super-120b-a12b:free'
 ];
