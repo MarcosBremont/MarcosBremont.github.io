@@ -814,7 +814,7 @@
             <span class="material-icons" style="font-size:1rem;">content_copy</span>
             Copiar de otra planificación
           </button>
-          <button class="btn-secundario" onclick="_abrirImportCurriculo()" title="Sube el PDF del currículo oficial y extrae el RA, criterios y contenidos con IA" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
+          <button class="btn-secundario" onclick="_abrirImportCurriculo()" title="Sube el PDF del currículo oficial y extrae los datos del módulo por su código, sin IA" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
             <span class="material-icons" style="font-size:1rem;">upload_file</span>
             Cargar Currículo (PDF)
           </button>
@@ -3026,6 +3026,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00838F;">v17.73<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: rediseñado para funcionar sin IA</div>
+              <ul class="about-ver-items">
+                <li>"Cargar Currículo (PDF)" ya no llama a ningún proveedor de IA (Claude/Gemini/Groq/OpenRouter): ahora extrae todos los datos directamente del texto del PDF con reglas fijas, siguiendo el formato oficial MINERD/DETP. Es instantáneo y no depende de ninguna clave ni cuota.</li>
+                <li>El campo para buscar el módulo ahora pide su <strong>código exacto</strong> (ej. "INCO-MF034_3") en vez del nombre -- mucho más confiable, porque el código aparece una sola vez de forma inequívoca junto al encabezado del módulo.</li>
+                <li>Nuevo: también se extrae automáticamente el Código FP y la Unidad de Competencia asociada al módulo (se toma la primera de la lista) con su Código UC, que antes había que escribir a mano.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -7210,7 +7226,7 @@
       </div>
       <div class="modal-body" style="padding:20px 24px;">
         <p style="font-size:0.82rem;color:#546E7A;margin:0 0 14px;">
-          Sube el PDF del currículo oficial (MINERD/DETP) e indica el módulo formativo que necesitas. Gemini buscará el módulo dentro del documento y extraerá el Resultado de Aprendizaje, sus criterios y contenidos.
+          Sube el PDF del currículo oficial (MINERD/DETP) e indica el <strong>código exacto</strong> del módulo formativo que necesitas (ej. INCO-MF034_3). El sistema lo ubica en el documento y extrae los Resultados de Aprendizaje y sus criterios directamente del texto, sin usar IA.
         </p>
 
         <!-- Zona de carga -->
@@ -7227,8 +7243,8 @@
 
         <!-- Módulo formativo buscado -->
         <div style="margin-top:14px;">
-          <label for="curriculo-modulo-buscado" style="display:block;font-size:0.8rem;font-weight:700;color:#455A64;margin-bottom:6px;">Nombre o código del módulo formativo</label>
-          <input type="text" id="curriculo-modulo-buscado" placeholder="Ej: Diseño de Portales Web y Recursos Multimedia"
+          <label for="curriculo-modulo-buscado" style="display:block;font-size:0.8rem;font-weight:700;color:#455A64;margin-bottom:6px;">Código del módulo formativo</label>
+          <input type="text" id="curriculo-modulo-buscado" placeholder="Ej: INCO-MF034_3"
             style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.88rem;font-family:inherit;box-sizing:border-box;">
         </div>
 
@@ -7237,7 +7253,7 @@
           style="margin-top:12px;width:100%;padding:11px;background:linear-gradient(135deg,#00897B,#00695C);
           color:#fff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;
           display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;">
-          <span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer con IA
+          <span class="material-icons" style="font-size:16px;">picture_as_pdf</span> Extraer datos
         </button>
 
         <!-- Resultados -->
@@ -7531,8 +7547,8 @@
   <!-- PizZip + Docxtemplater — para plantillas Word personalizadas -->
   <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
-  <!-- PDF.js — extraer texto de un PDF en el navegador (respaldo de "Cargar Currículo"
-       cuando Gemini falla: solo pdfjs-dist@6+ publica build ESM, por eso va como
+  <!-- PDF.js — extraer texto de un PDF en el navegador, base de "Cargar Currículo"
+       (100% local, sin IA): solo pdfjs-dist@6+ publica build ESM, por eso va como
        script type="module" en vez del <script src> clásico del resto de libs -->
   <script type="module">
     import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs';
@@ -7559,9 +7575,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.72"></script>
+  <script src="app.js?v=17.73"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.72"></script>
+  <script src="auth.js?v=17.73"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
