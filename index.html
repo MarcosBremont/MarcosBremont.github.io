@@ -3030,6 +3030,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#5E35B1;">v17.74<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: corregidas descripciones cortadas y un RA que no aparecía</div>
+              <ul class="about-ver-items">
+                <li>Con currículos reales, la tabla de RA/Criterios tiene la columna de "Resultados de Aprendizaje" angosta (envuelve en líneas de 2-3 palabras) junto a la de "Criterios de Evaluación", mucho más ancha y alta. El orden de lectura lineal del PDF mezclaba ambas columnas, cortando la descripción del RA a solo sus primeras 2-3 palabras (ej. "Seleccionar las"). Ahora se reconstruyen las dos columnas por separado usando la posición real de cada fragmento de texto, antes de buscar los RA y Criterios -- ya no se cortan, y esto también funciona cuando la fila de un RA cruza de una página a la siguiente.</li>
+                <li>Se tolera el error tipográfico "RAE3.4:" (en vez de "RA3.4:") visto en un documento real, que antes hacía que ese RA no se reconociera en absoluto.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00838F;">v17.73<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7575,9 +7590,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.73"></script>
+  <script src="app.js?v=17.74"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.73"></script>
+  <script src="auth.js?v=17.74"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

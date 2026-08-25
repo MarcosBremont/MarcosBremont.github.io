@@ -21348,7 +21348,15 @@ function _curriculoArchivoSeleccionado(input) {
 
 /** Extrae el texto completo de un PDF en el navegador con pdf.js -- base de
  *  "Cargar Currículo" (100% local, sin ninguna IA: los datos se sacan del
- *  texto con expresiones regulares en _extraerCurriculoLocal()). */
+ *  texto con expresiones regulares en _extraerCurriculoLocal()).
+ *
+ *  Devuelve { texto, paginas }. `texto` es todo el documento concatenado
+ *  (una sola línea por página, con "\n\n" como separador entre páginas --
+ *  suficiente para ubicar encabezados de módulo y datos generales por
+ *  posición de caracter). `paginas` guarda además, por cada página que se
+ *  pudo leer, sus fragmentos de texto CON posición (x, y) real -- lo necesita
+ *  _reconstruirColumnasTabla() para separar las dos columnas de la tabla de
+ *  RA/Criterios (ver ahí por qué el orden lineal de `texto` no alcanza). */
 async function _extraerTextoPdf(arrayBuffer) {
   if (!window.pdfjsLib) {
     throw new Error('No se pudo cargar el lector de PDF (pdf.js). Revisa tu conexión e intenta de nuevo.');
@@ -21358,6 +21366,7 @@ async function _extraerTextoPdf(arrayBuffer) {
     new Promise((_, reject) => setTimeout(() => reject(new Error('El PDF tardó demasiado en cargar (documento muy grande o dañado).')), 20000))
   ]);
   let textoCompleto = '';
+  const paginas = [];
   const inicio = Date.now();
   const TOPE_TOTAL_MS = 45000; // presupuesto total de tiempo para todo el documento
   for (let p = 1; p <= doc.numPages; p++) {
@@ -21382,17 +21391,20 @@ async function _extraerTextoPdf(arrayBuffer) {
       continue;
     }
     // getTextContent() devuelve los fragmentos en el orden del stream del PDF, que en
-    // tablas multi-columna (ej. la tabla de Contenidos C/P/A del currículo) no siempre
+    // tablas multi-columna (ej. la tabla de RA/Criterios del currículo) no siempre
     // coincide con el orden visual de lectura. Reordenar por posición (Y descendente,
-    // luego X ascendente) lo aproxima mejor, sin ser perfecto.
+    // luego X ascendente) lo aproxima mejor, sin ser perfecto -- por eso además se
+    // guarda la posición real de cada fragmento en `paginas`, para poder separar
+    // columnas cuando este orden lineal no basta (ver _reconstruirColumnasTabla).
     const items = contenido.items.slice().sort((a, b) => {
       const ya = a.transform[5], yb = b.transform[5];
       if (Math.abs(ya - yb) > 2) return yb - ya;
       return a.transform[4] - b.transform[4];
     });
     textoCompleto += items.map(it => it.str).join(' ') + '\n\n';
+    paginas.push({ numero: p, items: items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] })) });
   }
-  return textoCompleto;
+  return { texto: textoCompleto, paginas };
 }
 
 /** Extrae el fragmento inicial del documento (portada + introducción, ANTES del
@@ -21409,11 +21421,14 @@ function _extraerEncabezadoDocumento(textoCompleto) {
   return textoCompleto.substring(0, Math.min(limite, MAX_CHARS_ENCABEZADO)).trim();
 }
 
-/** Recorta del texto completo del currículo la sección del módulo formativo buscado
- *  (desde su encabezado "MÓDULO N: ..." hasta el siguiente), para no mandarle a
- *  Groq/OpenRouter el documento entero. Devuelve null si no encuentra ninguna
- *  coincidencia razonable. */
-function _recortarTextoModulo(textoCompleto, moduloBuscado) {
+/** Ubica en el texto completo del currículo la sección del módulo formativo
+ *  buscado (desde su encabezado "MÓDULO N: ..." hasta el siguiente, o fin de
+ *  documento) y devuelve sus índices de caracter {idxInicio, idxFin}, sin
+ *  recortar todavía -- _recortarTextoModulo() la usa para devolver el texto,
+ *  y _extraerCurriculoLocal() la usa además para ubicar qué páginas cubre el
+ *  módulo (ver _reconstruirColumnasTabla). Devuelve null si no encuentra
+ *  ninguna coincidencia razonable. */
+function _ubicarModulo(textoCompleto, moduloBuscado) {
   const _norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   const buscadoNorm = _norm(moduloBuscado);
   if (!buscadoNorm) return null;
@@ -21433,6 +21448,7 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
   // a cada encabezado como "Código: INCO-MF034_3" -- si hay un match exacto
   // por código, se usa directo y se salta el puntaje por nombre (mucho más
   // confiable: el nombre puede repetirse en un índice o listado resumen).
+  const MAX_CHARS = 40000; // tope de presupuesto para no arrastrar el documento entero
   const buscadoCodigoNorm = buscadoNorm.replace(/[\s_\-]+/g, '');
   if (buscadoCodigoNorm.length >= 4) {
     for (let idxEnc = 0; idxEnc < encabezados.length; idxEnc++) {
@@ -21444,8 +21460,7 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
       if (matchCodigo && _norm(matchCodigo[1]).replace(/[\s_\-]+/g, '') === buscadoCodigoNorm) {
         const idxInicio = enc.indice;
         const idxFin = siguienteEnc ? siguienteEnc.indice : textoCompleto.length;
-        const MAX_CHARS_CODIGO = 40000;
-        return textoCompleto.substring(idxInicio, Math.min(idxFin, idxInicio + MAX_CHARS_CODIGO));
+        return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS) };
       }
     }
   }
@@ -21501,8 +21516,16 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
   const siguiente = encabezados.find(enc => enc.indice > idxInicio);
   const idxFin = siguiente ? siguiente.indice : textoCompleto.length;
 
-  const MAX_CHARS = 40000; // tope de presupuesto de tokens para Groq/OpenRouter
-  return textoCompleto.substring(idxInicio, Math.min(idxFin, idxInicio + MAX_CHARS));
+  return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS) };
+}
+
+/** Recorta del texto completo del currículo la sección del módulo formativo
+ *  buscado (ver _ubicarModulo). Devuelve null si no encuentra ninguna
+ *  coincidencia razonable. */
+function _recortarTextoModulo(textoCompleto, moduloBuscado) {
+  const ubicacion = _ubicarModulo(textoCompleto, moduloBuscado);
+  if (!ubicacion) return null;
+  return textoCompleto.substring(ubicacion.idxInicio, ubicacion.idxFin);
 }
 
 /** Extrae del encabezado del documento (portada, página 1) los datos generales
@@ -21530,21 +21553,97 @@ function _parsearDatosGeneralesLocal(encabezado) {
   };
 }
 
+/** Cuenta cuántos separadores de página ("\n\n", que _extraerTextoPdf agrega
+ *  al final de cada página que sí pudo leer) hay antes de `indice` en
+ *  `textoCompleto`, para saber en qué posición del array `paginas` cae ese
+ *  caracter (0 = primera página leída, 1 = segunda, etc. -- páginas que
+ *  fallaron/se saltaron no agregan separador, así que este conteo coincide
+ *  con el índice real del array). */
+function _paginaDeIndice(textoCompleto, indice) {
+  let pagina = 0, pos = 0;
+  while (true) {
+    const sep = textoCompleto.indexOf('\n\n', pos);
+    if (sep === -1 || sep >= indice) break;
+    pagina++;
+    pos = sep + 2;
+  }
+  return pagina;
+}
+
+/** Reconstruye por separado el texto de la columna "Resultados de
+ *  Aprendizaje" y el de "Criterios de Evaluación" de la tabla del módulo,
+ *  usando la posición X real de cada fragmento (no el orden lineal de lectura
+ *  Y/X de _extraerTextoPdf, que MEZCLA ambas columnas cuando una fila es
+ *  mucho más alta en una columna que en la otra -- confirmado con capturas
+ *  reales: la celda de RA es angosta y envuelve en líneas de 2-3 palabras
+ *  ("Seleccionar las"), mientras la celda de Criterios de al lado es ancha y
+ *  mucho más alta (5-6 criterios); al ordenar todo el texto de la página por
+ *  posición vertical sin separar columnas, la primera línea de un criterio
+ *  terminaba intercalada justo después de la primera línea del RA, cortando
+ *  su descripción a solo 2-3 palabras.
+ *
+ *  La separación por columna X no tiene este problema: dentro de una sola
+ *  columna, el espacio en blanco que deja una celda corta (como la del RA)
+ *  no genera fragmentos de texto, así que el siguiente fragmento de esa
+ *  misma columna es directamente el de la fila siguiente -- sin ningún
+ *  fragmento de la otra columna de por medio.
+ *
+ *  `paginaInicio`/`paginaFin` son índices (0-based) dentro del array
+ *  `paginas` que cubren el módulo. Devuelve null si no hay suficientes datos
+ *  para determinar con confianza dónde está la división entre columnas (en
+ *  ese caso el llamador debe caer al texto lineal de siempre). */
+function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
+  if (!paginas || !paginas.length) return null;
+  const itemsRelevantes = [];
+  paginas.forEach((pag, idx) => {
+    if (idx < paginaInicio || idx > paginaFin) return;
+    (pag.items || []).forEach(it => itemsRelevantes.push({ str: it.str, x: it.x, y: it.y, pagina: idx }));
+  });
+  if (!itemsRelevantes.length) return null;
+
+  const esRA = s => /RAE?\s*\d+\.\d+\s*[:.\-]/.test(s);
+  const esCE = s => /CE\s*\d+\.\d+\.\d+/.test(s);
+  const xRA = itemsRelevantes.filter(it => esRA(it.str)).map(it => it.x);
+  const xCE = itemsRelevantes.filter(it => esCE(it.str)).map(it => it.x);
+  if (!xRA.length || !xCE.length) return null;
+
+  const promedio = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const xSplit = (promedio(xRA) + promedio(xCE)) / 2;
+
+  const ordenados = itemsRelevantes.slice().sort((a, b) => {
+    if (a.pagina !== b.pagina) return a.pagina - b.pagina;
+    if (Math.abs(a.y - b.y) > 2) return b.y - a.y;
+    return a.x - b.x;
+  });
+
+  let textoRA = '', textoCE = '';
+  ordenados.forEach(it => {
+    if (it.x < xSplit) textoRA += it.str + ' ';
+    else textoCE += it.str + ' ';
+  });
+
+  return { textoRA, textoCE };
+}
+
 /** Extrae el currículo de un módulo SIN usar ninguna IA -- solo con expresiones
  *  regulares sobre el texto que ya extrajo pdf.js. Funciona cuando el documento
  *  sigue el formato oficial MINERD/DETP (encabezado "MÓDULO N:", RA numerados
- *  "RA3.1:" y criterios "CE3.1.1 ..."). Es instantáneo, gratis, y no depende de
- *  ninguna clave ni cuota -- pero es best-effort: si el documento no sigue ese
- *  formato reconocible, devuelve null y el llamador debe caer al camino con IA.
+ *  "RA3.1:" -- también se tolera el error tipográfico "RAE3.1:" visto en
+ *  documentos reales -- y criterios "CE3.1.1 ..."). Es instantáneo, gratis, y
+ *  no depende de ninguna clave ni cuota -- pero es best-effort: si el
+ *  documento no sigue ese formato reconocible, devuelve null.
  *
  *  Clave del diseño: los criterios se agrupan con su RA por NÚMERO de código
- *  (ej. "CE3.1.X" pertenece a "RA3.1"), no por posición en el texto -- una
- *  tabla de dos columnas (RA | Criterios) con filas de alturas distintas puede
- *  extraerse con el orden de lectura mezclado (ver _extraerTextoPdf), y agrupar
- *  por código es inmune a eso. */
-function _extraerCurriculoLocal(textoCompleto, moduloBuscado) {
-  const textoModulo = _recortarTextoModulo(textoCompleto, moduloBuscado);
-  if (!textoModulo) return null;
+ *  (ej. "CE3.1.X" pertenece a "RA3.1"), no por posición en el texto. Además,
+ *  si se recibe `paginas` (de _extraerTextoPdf), la descripción de cada RA y
+ *  el texto de cada criterio se toman de columnas reconstruidas por posición
+ *  real (ver _reconstruirColumnasTabla) en vez del texto lineal de la página
+ *  -- sin esto, una tabla de dos columnas con filas de alturas muy distintas
+ *  corta las descripciones cuando el orden de lectura las mezcla. */
+function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
+  const ubicacion = _ubicarModulo(textoCompleto, moduloBuscado);
+  if (!ubicacion) return null;
+  const textoModulo = textoCompleto.substring(ubicacion.idxInicio, ubicacion.idxFin);
 
   // pdf.js une TODO el texto de una página en una sola línea (ver
   // _extraerTextoPdf) -- si el encabezado, "Nivel:", "Código:" y el resto del
@@ -21566,7 +21665,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado) {
   while ((mUC = regexUC.exec(textoModulo)) !== null) {
     posicionesUC.push({ codigo: `UC${String(mUC[1]).padStart(2, '0')}_${mUC[2]}`, indice: mUC.index, finMarcador: mUC.index + mUC[0].length });
   }
-  const matchPrimerRA = /RA\s*\d+\.\d+\s*[:.\-]/i.exec(textoModulo);
+  const matchPrimerRA = /RAE?\s*\d+\.\d+\s*[:.\-]/i.exec(textoModulo);
   const limiteUC = matchPrimerRA ? matchPrimerRA.index : textoModulo.length;
   let unidadCompetencia = '', codigoUC = '';
   if (posicionesUC.length) {
@@ -21576,32 +21675,59 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado) {
     codigoUC = primeraUC.codigo;
   }
 
-  const regexRA = /RA\s*(\d+\.\d+)\s*[:.\-]/g;
+  // Reconstrucción por columnas (ver _reconstruirColumnasTabla): si hay datos
+  // de página disponibles y se puede determinar con confianza la división de
+  // columnas, se usa un texto separado para RA y otro para CE -- así cada
+  // descripción se acota solo contra marcadores de su MISMA columna, inmune
+  // a que la otra columna tenga filas mucho más altas. Si no hay datos de
+  // página (ej. llamadas de prueba que no las pasan) se cae al texto lineal
+  // de siempre, acotando cada bloque contra CUALQUIER marcador (RA o CE).
+  let textoRA = textoModulo, textoCE = textoModulo, columnasSeparadas = false;
+  if (paginas && paginas.length) {
+    const paginaInicio = _paginaDeIndice(textoCompleto, ubicacion.idxInicio);
+    const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxFin);
+    const columnas = _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin);
+    if (columnas) { textoRA = columnas.textoRA; textoCE = columnas.textoCE; columnasSeparadas = true; }
+  }
+
+  const regexRA = /RAE?\s*(\d+\.\d+)\s*[:.\-]/g;
   const posicionesRA = [];
   let m;
-  while ((m = regexRA.exec(textoModulo)) !== null) {
+  while ((m = regexRA.exec(textoRA)) !== null) {
     posicionesRA.push({ numero: m[1], indice: m.index, finMarcador: m.index + m[0].length });
   }
   if (!posicionesRA.length) return null;
 
   const regexCE = /CE\s*(\d+\.\d+)\.(\d+)\s+/g;
   const posicionesCE = [];
-  while ((m = regexCE.exec(textoModulo)) !== null) {
+  while ((m = regexCE.exec(textoCE)) !== null) {
     posicionesCE.push({ numeroRA: m[1], numeroCE: `${m[1]}.${m[2]}`, indice: m.index, finMarcador: m.index + m[0].length });
   }
 
-  const todosMarcadores = [...posicionesRA, ...posicionesCE];
-  const finDeBloque = indiceInicio => {
-    const siguientes = todosMarcadores.map(p => p.indice).filter(idx => idx > indiceInicio);
-    return siguientes.length ? Math.min(...siguientes) : textoModulo.length;
+  // Si las columnas se separaron, cada bloque solo compite con marcadores de
+  // su MISMA columna (RA contra RA, CE contra CE) -- ya no hace falta un
+  // límite combinado, porque textoRA nunca contiene texto de la columna CE
+  // ni viceversa. Si no se pudieron separar, se conserva el comportamiento
+  // anterior (límite combinado sobre el mismo texto lineal).
+  const finDeBloqueRA = indiceInicio => {
+    const siguientes = posicionesRA.map(p => p.indice).filter(idx => idx > indiceInicio);
+    const limite = columnasSeparadas ? [] : posicionesCE.map(p => p.indice).filter(idx => idx > indiceInicio);
+    const todos = [...siguientes, ...limite];
+    return todos.length ? Math.min(...todos) : textoRA.length;
+  };
+  const finDeBloqueCE = indiceInicio => {
+    const siguientes = posicionesCE.map(p => p.indice).filter(idx => idx > indiceInicio);
+    const limite = columnasSeparadas ? [] : posicionesRA.map(p => p.indice).filter(idx => idx > indiceInicio);
+    const todos = [...siguientes, ...limite];
+    return todos.length ? Math.min(...todos) : textoCE.length;
   };
 
   const ras = posicionesRA.map(ra => {
-    const descripcion = textoModulo.substring(ra.finMarcador, finDeBloque(ra.indice)).replace(/\s+/g, ' ').trim();
+    const descripcion = textoRA.substring(ra.finMarcador, finDeBloqueRA(ra.indice)).replace(/\s+/g, ' ').trim();
     const criteriosEvaluacion = posicionesCE
       .filter(ce => ce.numeroRA === ra.numero)
       .map(ce => {
-        const texto = textoModulo.substring(ce.finMarcador, finDeBloque(ce.indice)).replace(/\s+/g, ' ').trim();
+        const texto = textoCE.substring(ce.finMarcador, finDeBloqueCE(ce.indice)).replace(/\s+/g, ' ').trim();
         return `CE${ce.numeroCE} ${texto}`.trim();
       })
       .filter(c => c.length > 6);
@@ -21692,10 +21818,10 @@ async function _procesarImportCurriculo() {
 
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const textoCompleto = await _extraerTextoPdf(arrayBuffer);
-    console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
+    const { texto: textoCompleto, paginas } = await _extraerTextoPdf(arrayBuffer);
+    console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales, ${paginas.length} páginas leídas.`);
 
-    const parsed = _extraerCurriculoLocal(textoCompleto, moduloBuscado);
+    const parsed = _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas);
     if (parsed && parsed.ras?.length) {
       _renderizarResultadosCurriculo(parsed);
       return;
