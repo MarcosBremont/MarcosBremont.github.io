@@ -21535,15 +21535,24 @@ function _construirHtmlErrorCurriculo(e) {
 }
 
 /** Renderiza en #curriculo-resultados la lista de RA para elegir, con una
- *  etiqueta indicando qué proveedor generó el resultado. */
-function _renderizarResultadosCurriculo(parsed, proveedorUsado) {
+ *  etiqueta indicando qué proveedor (y qué modelo específico, si aplica)
+ *  generó el resultado, y cuánto tardó todo el proceso. */
+function _renderizarResultadosCurriculo(parsed, proveedorUsado, duracionSeg) {
   const res = document.getElementById('curriculo-resultados');
   window._curriculoExtraido = parsed;
-  const badgeProveedor = proveedorUsado === 'Gemini'
-    ? ''
-    : proveedorUsado === 'Local'
-      ? ` <span style="font-weight:400;color:#2E7D32;">(⚡ extraído sin IA)</span>`
-      : ` <span style="font-weight:400;color:#90A4AE;">(vía ${proveedorUsado === 'Groq' ? '🟢 Groq' : '🔵 OpenRouter'}, respaldo de texto)</span>`;
+
+  const tiempoTexto = (typeof duracionSeg === 'number') ? ` · ${duracionSeg}s` : '';
+  let modeloTexto = '';
+  if (proveedorUsado === 'Gemini') modeloTexto = 'gemini-3.6-flash';
+  else if (proveedorUsado === 'Groq') modeloTexto = window._ultimoModeloGroqExitoso || '';
+  else if (proveedorUsado === 'OpenRouter') modeloTexto = window._ultimoModeloOpenRouterExitoso || '';
+  const detalleModelo = modeloTexto ? ` — ${modeloTexto}` : '';
+
+  const badgeProveedor = proveedorUsado === 'Local'
+    ? ` <span style="font-weight:400;color:#2E7D32;">(⚡ extraído sin IA${tiempoTexto})</span>`
+    : proveedorUsado === 'Gemini'
+      ? ` <span style="font-weight:400;color:#90A4AE;">(${modeloTexto}${tiempoTexto})</span>`
+      : ` <span style="font-weight:400;color:#90A4AE;">(vía ${proveedorUsado === 'Groq' ? '🟢 Groq' : '🔵 OpenRouter'}${detalleModelo}${tiempoTexto}, respaldo de texto)</span>`;
   const listaHTML = parsed.ras.map((ra, idx) => {
     const desc = (ra.descripcion || '').trim();
     const preview = desc.length > 140 ? desc.substring(0, 140) + '…' : desc;
@@ -21601,6 +21610,7 @@ async function _procesarImportCurriculo() {
   let parsed = null;
   let proveedorUsado = null;
   let localResultado = null;
+  const inicioTotal = Date.now();
 
   try {
     // Se extrae el texto del PDF con pdf.js una sola vez al inicio -- lo
@@ -21750,7 +21760,8 @@ async function _procesarImportCurriculo() {
     }
 
     if (parsed && parsed.encontrado !== false && parsed.ras?.length) {
-      _renderizarResultadosCurriculo(parsed, proveedorUsado);
+      const duracionSeg = Math.round((Date.now() - inicioTotal) / 1000);
+      _renderizarResultadosCurriculo(parsed, proveedorUsado, duracionSeg);
       return;
     }
 
@@ -27977,8 +27988,11 @@ const MODELOS_OPENROUTER = [
 // en el pool compartido gratuito en prácticamente todos los intentos reales
 // vistos hasta ahora), así que se movió después de "openrouter/free" (el
 // enrutador automático, que en la práctica suele resolver a algo disponible
-// más rápido).
+// más rápido). "deepseek-chat" (no la variante "r1", que razona igual que
+// Nemotron) va primero para probarlo -- si el slug ya no está vigente en
+// OpenRouter, fallará rápido (404/400) y sigue con el resto de la lista.
 const MODELOS_OPENROUTER_CURRICULO = [
+  'deepseek/deepseek-chat-v3.1:free',
   'openrouter/free',
   'google/gemma-4-26b-a4b-it:free',
   'nvidia/nemotron-3-ultra-550b-a55b:free',
@@ -28063,7 +28077,7 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
     const modelo = MODELOS_GROQ[m];
     mostrarToast(`🟢 ${mensajeToast} (${modelo})…`, 'info');
     const resultado = await _llamarModeloGroq(modelo, groqKey, prompt, maxTokens);
-    if (resultado.ok) return resultado.data;
+    if (resultado.ok) { window._ultimoModeloGroqExitoso = modelo; return resultado.data; }
     ultimoError = resultado.error;
     const errMsg = resultado.error || '';
     if (errMsg.includes('model_not_found') || errMsg.includes('decommissioned')) {
@@ -28269,6 +28283,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTok
     const resultado = await _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens, timeoutMs);
     if (resultado.ok) {
       console.log(`[IA-OpenRouter] ✅ ${modelo} respondió OK`);
+      window._ultimoModeloOpenRouterExitoso = modelo;
       return resultado.data;
     }
     console.warn(`[IA-OpenRouter] ❌ ${modelo} falló:`, resultado.error);
@@ -28289,6 +28304,7 @@ async function _llamarOpenRouterConFallback(prompt, apiKey, mensajeToast, maxTok
   const resultado2 = await _llamarModeloOpenRouter(modeloRetry, apiKey, prompt, maxTokens, timeoutMs);
   if (resultado2.ok) {
     console.log(`[IA-OpenRouter] ✅ Reintento exitoso con ${modeloRetry}`);
+    window._ultimoModeloOpenRouterExitoso = modeloRetry;
     return resultado2.data;
   }
   console.warn(`[IA-OpenRouter] ❌ Reintento falló:`, resultado2.error);
