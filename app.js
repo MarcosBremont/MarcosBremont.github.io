@@ -5996,9 +5996,21 @@ function _generarInstTablaXml(inst) {
     (inst.criterios || []).forEach((c, i) => {
       xml += mkRow(mkCell(String(i + 1), 500, false, true) + mkCell(c.indicador || c.criterio || c) + mkCell('', 1100, false, true) + mkCell('', 1100, false, true));
     });
-  } else if (inst.tipo === 'rubrica') {
-    const niveles = inst.niveles || [{ nombre: 'Excelente' }, { nombre: 'Bueno' }, { nombre: 'En proceso' }, { nombre: 'Insuficiente' }];
+  } else if (inst.niveles && inst.niveles.length) {
+    // Cubre "rubrica" y cualquier otro tipo con la misma forma (niveles +
+    // criterios con descriptores por nivel), ej. "estimativa" y "rango" --
+    // antes solo entraba aquí cuando inst.tipo === 'rubrica' exactamente, así
+    // que esos dos tipos ni siquiera generaban el encabezado de la tabla.
+    const niveles = inst.niveles;
     xml += mkRow(mkCell('#', 400, true, true) + mkCell('Criterio', null, true) + niveles.map(n => mkCell(n.nombre, 1400, true, true)).join(''));
+    // Faltaban las filas de datos (una por criterio, con sus descriptores por
+    // nivel) -- la tabla solo llevaba el encabezado, aunque el instrumento sí
+    // tuviera criterios cargados (confirmado: la vista previa en la app los
+    // mostraba bien, solo la exportación con plantilla del centro los omitía).
+    (inst.criterios || []).forEach((c, i) => {
+      const descs = c.descriptores || [];
+      xml += mkRow(mkCell(String(i + 1), 400, false, true) + mkCell(c.criterio || c) + niveles.map((_, ni) => mkCell(descs[ni] || '', 1400, false, false)).join(''));
+    });
   }
 
   xml += '</w:tbl>';
