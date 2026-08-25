@@ -11,6 +11,20 @@ function _parsearCriteriosEvaluacion(texto) {
   return lineas.map((l, i) => ({ codigo: 'CE.' + (i + 1), descripcion: l.replace(/^CE\.?\s*\d+\s*[-:.]?\s*/i, '') }));
 }
 
+/** Cuando el docente PEGA texto en "Criterios de Evaluación de Referencia",
+ *  reformatea automáticamente para que quede una línea en blanco entre cada
+ *  criterio (uno por línea no vacía) -- mismo criterio que usa
+ *  _parsearCriteriosEvaluacion() para contarlos, así que no afecta el conteo,
+ *  solo la lectura. El paste todavía no terminó de insertarse cuando se
+ *  dispara el evento, por eso el setTimeout(0): deja que el navegador
+ *  complete el pegado y recién ahí reformatea. */
+function _autoformatearCriteriosPegados(textarea) {
+  setTimeout(() => {
+    const lineas = textarea.value.split('\n').map(l => l.trim()).filter(Boolean);
+    textarea.value = lineas.join('\n\n');
+  }, 0);
+}
+
 /** Arma, por cada EC, a cuáles criterios se refiere (según ec.contraste, un
  *  array de códigos "CE.n" asignado por la IA) y el texto resuelto de esos
  *  criterios. Función pura, reutilizada por Vista Previa, la exportación con

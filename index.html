@@ -1095,7 +1095,7 @@
               Criterios de Evaluación de Referencia del Currículo
               <span class="label-optional">(opcional, uno por línea)</span>
             </label>
-            <textarea id="criterios-referencia" rows="5"
+            <textarea id="criterios-referencia" rows="5" onpaste="_autoformatearCriteriosPegados(this)"
               placeholder="Ingresa los criterios del currículo, uno por línea. Ej:&#10;Identifica los fundamentos de la programación orientada a objetos&#10;Desarrolla interfaces de usuario responsivas&#10;Aplica buenas prácticas de codificación"></textarea>
           </div>
 
@@ -3026,6 +3026,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0277BD;">v17.63<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Criterios de Evaluación: reformateo automático al pegar</div>
+              <ul class="about-ver-items">
+                <li>Si pegas los criterios directamente (no solo al importar el currículo con IA), el campo "Criterios de Evaluación de Referencia" ahora los separa automáticamente con una línea en blanco entre cada uno.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -7418,9 +7432,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.62"></script>
+  <script src="app.js?v=17.63"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.62"></script>
+  <script src="auth.js?v=17.63"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
