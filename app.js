@@ -21830,11 +21830,14 @@ function _confirmarImportCurriculo(idx) {
   // sub-puntos con guion bajo un mismo CE, como "CE3.2.2 ... :\n- Diseñar...\n-
   // Aplicar..."). Sin colapsar esos saltos a espacios antes de unir, cada sub-punto
   // terminaba contado como un criterio nuevo (CE.4, CE.7, CE.14...) en vez de quedar
-  // junto al criterio al que pertenece.
+  // junto al criterio al que pertenece. Se unen con una línea en blanco entre cada
+  // uno (en vez de un solo salto de línea) para que se lean separados en el
+  // textarea -- _parsearCriteriosEvaluacion() ya descarta las líneas vacías, así
+  // que esto no afecta el conteo de criterios.
   setVal('criterios-referencia', (ra.criteriosEvaluacion || [])
     .map(c => (c || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
-    .join('\n'));
+    .join('\n\n'));
   setVal('contenidos-conceptuales', ra.contenidosConceptuales);
   setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
   setVal('contenidos-actitudinales', ra.contenidosActitudinales);
