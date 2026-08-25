@@ -21443,11 +21443,11 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
   // SIGUIENTE completo como si fuera parte del nombre del módulo actual --
   // eso hacía que ese módulo nunca quedara registrado en `encabezados`, y el
   // recorte del módulo anterior se extendía de más, arrastrando sus RA.
-  const regexEncabezado = /m[oó]dulo\s+\d+\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo\s+\d+|\n|$)/gi;
+  const regexEncabezado = /m[oó]dulo\s+(\d+)\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo\s+\d+|\n|$)/gi;
   const encabezados = [];
   let m;
   while ((m = regexEncabezado.exec(textoCompleto)) !== null) {
-    encabezados.push({ indice: m.index, nombre: m[1] });
+    encabezados.push({ indice: m.index, numero: m[1], nombre: m[2] });
   }
   if (!encabezados.length) return null;
 
@@ -21468,7 +21468,7 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
       if (matchCodigo && _norm(matchCodigo[1]).replace(/[\s_\-]+/g, '') === buscadoCodigoNorm) {
         const idxInicio = enc.indice;
         const idxFin = siguienteEnc ? siguienteEnc.indice : textoCompleto.length;
-        return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS) };
+        return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS), numeroModulo: enc.numero };
       }
     }
   }
@@ -21524,7 +21524,7 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
   const siguiente = encabezados.find(enc => enc.indice > idxInicio);
   const idxFin = siguiente ? siguiente.indice : textoCompleto.length;
 
-  return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS) };
+  return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS), numeroModulo: mejor.numero };
 }
 
 /** Recorta del texto completo del currículo la sección del módulo formativo
@@ -21720,6 +21720,19 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   }
   if (!posicionesRA.length) return null;
 
+  // Defensa adicional además del acotado de _ubicarModulo: si por cualquier
+  // motivo el recorte se pasó de largo (ej. un caso de borde no cubierto en
+  // el límite de encabezados), un RA cuyo número no empiece con el número del
+  // módulo buscado (ej. "RA4.2" al buscar el módulo 3) NUNCA es del módulo
+  // correcto y se descarta del resultado final -- pero se mantiene en
+  // `posicionesRA` para el cálculo de límites de abajo, porque SÍ sirve como
+  // frontera válida (la descripción del último RA correcto debe parar ahí,
+  // sea o no del mismo módulo).
+  const posicionesRAModulo = ubicacion.numeroModulo
+    ? posicionesRA.filter(ra => ra.numero.split('.')[0] === ubicacion.numeroModulo)
+    : posicionesRA;
+  if (!posicionesRAModulo.length) return null;
+
   const regexCE = /CE\s*(\d+\.\d+)\.(\d+)[:.\-]?\s*/g;
   const posicionesCE = [];
   while ((m = regexCE.exec(textoCE)) !== null) {
@@ -21744,7 +21757,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     return todos.length ? Math.min(...todos) : textoCE.length;
   };
 
-  const ras = posicionesRA.map(ra => {
+  const ras = posicionesRAModulo.map(ra => {
     const descripcion = textoRA.substring(ra.finMarcador, finDeBloqueRA(ra.indice)).replace(/\s+/g, ' ').trim();
     const criteriosEvaluacion = posicionesCE
       .filter(ce => ce.numeroRA === ra.numero)
