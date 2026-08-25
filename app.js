@@ -21434,8 +21434,16 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
   if (!buscadoNorm) return null;
   const buscadoSinEspacios = buscadoNorm.replace(/\s+/g, '');
 
-  // Encabezados "MÓDULO N: nombre" (tolerante a mayúsculas y separador).
-  const regexEncabezado = /m[oó]dulo\s+\d+\s*[:.\-]?\s*([^\n]+)/gi;
+  // Encabezados "MÓDULO N: nombre" (tolerante a mayúsculas y separador). El
+  // nombre se acota con un lookahead (a "Nivel:", al siguiente "MÓDULO N",
+  // o a un salto de línea real) en vez de "hasta el próximo \n" a secas --
+  // pdf.js concatena TODA una página en una sola línea (ver _extraerTextoPdf),
+  // así que si un módulo termina y el siguiente empieza en la MISMA página
+  // del PDF, una captura sin acotar se "tragaba" el encabezado del módulo
+  // SIGUIENTE completo como si fuera parte del nombre del módulo actual --
+  // eso hacía que ese módulo nunca quedara registrado en `encabezados`, y el
+  // recorte del módulo anterior se extendía de más, arrastrando sus RA.
+  const regexEncabezado = /m[oó]dulo\s+\d+\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo\s+\d+|\n|$)/gi;
   const encabezados = [];
   let m;
   while ((m = regexEncabezado.exec(textoCompleto)) !== null) {
