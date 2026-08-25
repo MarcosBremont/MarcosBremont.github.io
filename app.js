@@ -21280,7 +21280,14 @@ function _curriculoArchivoSeleccionado(input) {
 /** Extrae el texto completo de un PDF en el navegador con pdf.js (respaldo de
  *  "Cargar Currículo" cuando Gemini falla y hay que usar Groq/OpenRouter, que
  *  son APIs de solo texto y no pueden leer el archivo adjunto). */
-async function _extraerTextoPdf(arrayBuffer) {
+/** Extrae el texto de un PDF con pdf.js. Si se pasa `moduloBuscado`, se detiene
+ *  antes de procesar el documento completo: en cuanto _recortarTextoModulo()
+ *  logra ubicar el encabezado real del módulo (no una simple mención, como en
+ *  un índice) en el texto acumulado hasta el momento, se extraen unas páginas
+ *  más de margen para capturar todo su contenido y se corta ahí -- un currículo
+ *  institucional puede tener cientos de páginas, y solo hace falta la sección
+ *  de un módulo, así que procesarlo completo es tiempo desperdiciado. */
+async function _extraerTextoPdf(arrayBuffer, moduloBuscado) {
   if (!window.pdfjsLib) {
     throw new Error('No se pudo cargar el lector de PDF (pdf.js). Revisa tu conexión e intenta de nuevo.');
   }
@@ -21291,6 +21298,8 @@ async function _extraerTextoPdf(arrayBuffer) {
   let textoCompleto = '';
   const inicio = Date.now();
   const TOPE_TOTAL_MS = 45000; // presupuesto total de tiempo para todo el documento
+  const PAGINAS_MARGEN_TRAS_ENCONTRAR = 15;
+  let paginaDondeSeEncontro = null;
   for (let p = 1; p <= doc.numPages; p++) {
     if (Date.now() - inicio > TOPE_TOTAL_MS) {
       console.warn(`[Currículo] Extracción de texto del PDF superó el tope de tiempo total, se detiene en la página ${p} de ${doc.numPages}.`);
@@ -21322,6 +21331,17 @@ async function _extraerTextoPdf(arrayBuffer) {
       return a.transform[4] - b.transform[4];
     });
     textoCompleto += items.map(it => it.str).join(' ') + '\n\n';
+
+    if (moduloBuscado) {
+      if (paginaDondeSeEncontro === null) {
+        if (_recortarTextoModulo(textoCompleto, moduloBuscado)) {
+          paginaDondeSeEncontro = p;
+          console.log(`[Currículo] Módulo localizado cerca de la página ${p} de ${doc.numPages}, se extraen ${PAGINAS_MARGEN_TRAS_ENCONTRAR} páginas más de margen y se detiene ahí (en vez de procesar el resto del documento).`);
+        }
+      } else if (p >= paginaDondeSeEncontro + PAGINAS_MARGEN_TRAS_ENCONTRAR) {
+        break;
+      }
+    }
   }
   return textoCompleto;
 }
@@ -21610,7 +21630,7 @@ async function _procesarImportCurriculo() {
     // caer al texto de todos modos.
     console.log('[Currículo] Extrayendo texto del PDF con pdf.js…');
     const arrayBuffer = await file.arrayBuffer();
-    const textoCompleto = await _extraerTextoPdf(arrayBuffer);
+    const textoCompleto = await _extraerTextoPdf(arrayBuffer, moduloBuscado);
     console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales.`);
     const textoRecortado = _recortarTextoModulo(textoCompleto, moduloBuscado);
 
@@ -21631,16 +21651,14 @@ async function _procesarImportCurriculo() {
     let errorFinal = null;
 
     // ---- Intento 1: OpenRouter -- en la práctica ha sido el más confiable de
-    // los tres últimamente, así que va primero. Timeout de 25s por modelo (antes
-    // 60s): con hasta 4 modelos en la lista más una ronda de reintento, un
-    // timeout largo hacía que un modelo lento/atascado se comiera varios
-    // minutos completos antes de pasar al siguiente -- confirmado en la
-    // práctica (~6 minutos totales). 25s sigue siendo tiempo de sobra para un
-    // modelo que sí va a responder, pero deja fallar rápido a uno que no.
+    // los tres últimamente, así que va primero. Timeout de 20s por modelo (antes
+    // 60s, luego 25s): la lista curricular ahora solo tiene 2 modelos (se
+    // quitaron los que nunca respondían), así que el peor caso completo
+    // (2 modelos + 1 reintento) queda en ~1 minuto en vez de varios.
     if (!parsed && promptTexto && getOpenRouterKey()) {
       try {
         console.log('[Currículo] Probando OpenRouter…');
-        parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 25000, MODELOS_OPENROUTER_CURRICULO);
+        parsed = await _llamarOpenRouterConFallback(promptTexto, getOpenRouterKey(), 'Extrayendo currículo', 16000, 20000, MODELOS_OPENROUTER_CURRICULO);
         proveedorUsado = 'OpenRouter';
         console.log('[Currículo] OpenRouter respondió OK.');
       } catch (eOR) {
@@ -27971,18 +27989,16 @@ const MODELOS_OPENROUTER = [
 // en la práctica (confirmado en varios intentos reales): a veces "razonan" en
 // voz alta y se quedan sin presupuesto de tokens antes de llegar al JSON, a
 // veces devuelven una respuesta vacía, y a veces tardan mucho más que los
-// demás. Se prueban de últimos en vez de quitarlos -- para otros usos más
-// cortos de la app sí pueden responder bien, y siguen sirviendo como último
-// recurso aquí también. "gemma" también demostró ser poco fiable (rate-limited
-// en el pool compartido gratuito en prácticamente todos los intentos reales
-// vistos hasta ahora), así que se movió después de "openrouter/free" (el
-// enrutador automático, que en la práctica suele resolver a algo disponible
-// más rápido).
+// demás. Se QUITARON de esta lista (no solo se movieron al final): confirmado
+// en varios intentos reales que nunca fueron los que terminaron respondiendo,
+// y cada intento con ellos agregaba hasta 25s de espera antes de pasar al
+// siguiente -- con "Cargar Currículo" tardando varios minutos en la práctica,
+// probarlos igual solo restaba velocidad sin sumar fiabilidad. Si algún día
+// mejoran, MODELOS_OPENROUTER (la lista completa, usada por el resto de la
+// app) los sigue incluyendo.
 const MODELOS_OPENROUTER_CURRICULO = [
   'openrouter/free',
-  'google/gemma-4-26b-a4b-it:free',
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'nvidia/nemotron-3-super-120b-a12b:free'
+  'google/gemma-4-26b-a4b-it:free'
 ];
 
 /** Modelos de Groq a intentar en orden */

@@ -3030,6 +3030,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#D84315;">v17.58<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: mucho más rápido con documentos grandes</div>
+              <ul class="about-ver-items">
+                <li>Con un currículo de cientos de páginas, se procesaba el documento COMPLETO con pdf.js aunque solo hiciera falta un módulo -- ahora se detiene apenas se localiza la sección del módulo buscado (con un margen de páginas de sobra), en vez de seguir hasta la última página.</li>
+                <li>Se quitaron de la lista de respaldo de OpenRouter los dos modelos que en la práctica nunca terminaban respondiendo (cada intento con ellos sumaba hasta 25 segundos de espera antes de pasar al siguiente) y se bajó el tiempo de espera por modelo a 20s.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#EF6C00;">v17.57<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7362,9 +7377,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.57"></script>
+  <script src="app.js?v=17.58"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.57"></script>
+  <script src="auth.js?v=17.58"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
