@@ -3030,6 +3030,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#7B1FA2;">v17.81<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: la tabla de Contenidos seguía colándose</div>
+              <ul class="about-ver-items">
+                <li>El corte de la v17.80 se aplicaba solo al texto lineal, pero la reconstrucción de columnas (RA / Criterios) vuelve a traer los ítems de la página completa por su posición real -- si el corte no caía justo en un límite de página, el contenido recortado reaparecía igual. Peor aún, al ser una tabla de 3 columnas propia (Conceptuales/Procedimentales/Actitudinales), sus columnas podían repartirse entre el lado de RA y el de Criterios de forma distinta a la tabla RA/Criterios normal. Ahora el corte se aplica también sobre cada columna ya reconstruida, buscando cualquiera de esas 4 palabras por separado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#D32F2F;">v17.80<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7676,9 +7690,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.80"></script>
+  <script src="app.js?v=17.81"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.80"></script>
+  <script src="auth.js?v=17.81"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

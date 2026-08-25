@@ -21643,6 +21643,46 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   return { textoRA, textoCE };
 }
 
+/** Busca dentro de `texto` señales de que ahí empieza contenido que NO es de
+ *  la tabla de RA/Criterios del módulo buscado, y devuelve el índice donde
+ *  cortar (o `texto.length` si no encuentra ninguna): la tabla de
+ *  "Contenidos" (Conceptuales/Procedimentales/Actitudinales) que sigue a la
+ *  de RA/Criterios, o el código institucional de OTRO módulo. Se usa tanto
+ *  sobre el texto lineal (`textoModulo`) como sobre cada columna reconstruida
+ *  por separado (`textoRA`/`textoCE`) -- un corte solo en el texto lineal NO
+ *  alcanza: _reconstruirColumnasTabla() vuelve a traer los ítems de la página
+ *  completa por posición real, así que si el corte no cae justo en un límite
+ *  de página, el contenido recortado del texto lineal reaparece igual en las
+ *  columnas reconstruidas. */
+function _indiceCorteExtra(texto, codigoModuloNorm) {
+  let corte = texto.length;
+
+  // "Contenidos" y sus 3 sub-columnas son los encabezados (con mayúscula,
+  // como "Resultados de Aprendizaje"/"Criterios de Evaluación") de la tabla
+  // que sigue a la de RA/Criterios -- exigir mayúscula inicial evita
+  // confundirse con menciones normales en minúscula dentro de un criterio
+  // (ej. "el contenido de la página"). Se buscan los 4 por separado, sin
+  // exigir que aparezcan juntos ni en orden: una tabla de 3 columnas puede
+  // salir con sus sub-columnas repartidas entre textoRA/textoCE al
+  // reconstruir por posición X (ver más abajo), así que "Contenidos" puede
+  // caer en una columna y sus sub-encabezados en la otra.
+  const matchContenidos = /\b(?:Contenidos|Conceptuales|Procedimentales|Actitudinales)\b/.exec(texto);
+  if (matchContenidos) corte = Math.min(corte, matchContenidos.index);
+
+  if (codigoModuloNorm) {
+    const regexOtroCodigo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/gi;
+    let mCod;
+    while ((mCod = regexOtroCodigo.exec(texto)) !== null) {
+      if (mCod[1].toLowerCase().replace(/[\s_\-]+/g, '') !== codigoModuloNorm) {
+        corte = Math.min(corte, mCod.index);
+        break;
+      }
+    }
+  }
+
+  return corte;
+}
+
 /** Extrae el currículo de un módulo SIN usar ninguna IA -- solo con expresiones
  *  regulares sobre el texto que ya extrajo pdf.js. Funciona cuando el documento
  *  sigue el formato oficial MINERD/DETP (encabezado "MÓDULO N:", RA numerados
@@ -21681,36 +21721,14 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const matchCodigoModulo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/i.exec(textoModulo);
   const codigoModulo = matchCodigoModulo ? matchCodigoModulo[1].trim() : '';
 
-  // Defensas adicionales a la de _ubicarModulo: recortan textoModulo si
-  // aparece contenido que NO es de la tabla de RA/Criterios de este módulo,
-  // aunque el límite normal no lo haya detectado.
-  let corteExtra = textoModulo.length;
-
-  // 1) La tabla de "Contenidos" (Conceptuales/Procedimentales/Actitudinales)
-  //    que sigue a la de RA/Criterios NUNCA se parsea a propósito (ver más
-  //    abajo, queda vacía para que el docente la complete) -- pero sin
-  //    cortar ahí, su texto se pega como si fuera parte de la descripción o
-  //    los criterios del ÚLTIMO RA del módulo, que es justo lo que no debe
-  //    pasar.
-  const matchContenidos = /\bcontenidos\b\s+conceptuales\s+procedimentales\s+actitudinales/i.exec(textoModulo);
-  if (matchContenidos) corteExtra = Math.min(corteExtra, matchContenidos.index);
-
-  // 2) Otro código institucional distinto al de este módulo es señal de que
-  //    ahí empieza el módulo siguiente, aunque su encabezado "MÓDULO N:" no
-  //    se haya detectado como tal (ej. porque el bloque de "Contenidos" justo
-  //    antes salió desordenado en el texto lineal y confundió la detección).
-  if (codigoModulo) {
-    const codigoModuloNorm = codigoModulo.toLowerCase().replace(/[\s_\-]+/g, '');
-    const regexOtroCodigo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/gi;
-    let mCod;
-    while ((mCod = regexOtroCodigo.exec(textoModulo)) !== null) {
-      if (mCod[1].toLowerCase().replace(/[\s_\-]+/g, '') !== codigoModuloNorm) {
-        corteExtra = Math.min(corteExtra, mCod.index);
-        break;
-      }
-    }
-  }
-
+  // Defensa adicional a la de _ubicarModulo (ver _indiceCorteExtra): recorta
+  // textoModulo si aparece contenido que NO es de la tabla de RA/Criterios de
+  // este módulo (la tabla de "Contenidos" que sigue, o el código de otro
+  // módulo), aunque el límite normal no lo haya detectado. Los Contenidos
+  // NUNCA se parsean a propósito (quedan vacíos más abajo, para que el
+  // docente los complete).
+  const codigoModuloNorm = codigoModulo ? codigoModulo.toLowerCase().replace(/[\s_\-]+/g, '') : '';
+  const corteExtra = _indiceCorteExtra(textoModulo, codigoModuloNorm);
   if (corteExtra < textoModulo.length) textoModulo = textoModulo.substring(0, corteExtra);
 
   // Unidad de Competencia asociada: el módulo suele listar varias ("Módulo
@@ -21750,6 +21768,21 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxInicio + textoModulo.length);
     const columnas = _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin);
     if (columnas) { textoRA = columnas.textoRA; textoCE = columnas.textoCE; columnasSeparadas = true; }
+  }
+
+  // La misma defensa de _indiceCorteExtra se aplica OTRA VEZ, ahora sobre
+  // cada columna ya reconstruida: _reconstruirColumnasTabla trae los ítems
+  // de la página completa por posición real (x/y), así que si el corte de
+  // arriba (sobre el texto lineal) no cayó justo en un límite de página, el
+  // contenido recortado ahí reaparece igual dentro de textoRA/textoCE -- una
+  // tabla de "Contenidos" de 3 columnas además puede quedar repartida entre
+  // ambas (ej. "Conceptuales" en una, "Procedimentales"/"Actitudinales" en la
+  // otra), así que cada columna necesita su propio corte independiente.
+  if (columnasSeparadas) {
+    const corteRA = _indiceCorteExtra(textoRA, codigoModuloNorm);
+    if (corteRA < textoRA.length) textoRA = textoRA.substring(0, corteRA);
+    const corteCE = _indiceCorteExtra(textoCE, codigoModuloNorm);
+    if (corteCE < textoCE.length) textoCE = textoCE.substring(0, corteCE);
   }
 
   // La puntuación después del número (":", "." o "-") es OPCIONAL: se vio en
