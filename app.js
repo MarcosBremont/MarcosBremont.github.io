@@ -13,15 +13,38 @@ function _parsearCriteriosEvaluacion(texto) {
 
 /** Cuando el docente PEGA texto en "Criterios de Evaluación de Referencia",
  *  reformatea automáticamente para que quede una línea en blanco entre cada
- *  criterio (uno por línea no vacía) -- mismo criterio que usa
- *  _parsearCriteriosEvaluacion() para contarlos, así que no afecta el conteo,
- *  solo la lectura. El paste todavía no terminó de insertarse cuando se
- *  dispara el evento, por eso el setTimeout(0): deja que el navegador
- *  complete el pegado y recién ahí reformatea. */
+ *  criterio. Muchas fuentes (PDF, Word) parten el texto de UN SOLO criterio en
+ *  varias líneas al copiarlo -- si se tratara "una línea = un criterio" a
+ *  ciegas, cada una de esas líneas partidas quedaría separada como si fuera un
+ *  criterio nuevo. Por eso: si el texto pegado trae códigos "CE..." (ej.
+ *  "CE3.6.1"), un criterio nuevo empieza SOLO donde aparece uno de esos
+ *  códigos, y las líneas sin código se pegan como continuación del criterio
+ *  anterior. Si el texto NO trae ningún código "CE", se asume "una línea = un
+ *  criterio" como antes (caso típico de texto escrito a mano, sin códigos).
+ *  El paste todavía no terminó de insertarse cuando se dispara el evento, por
+ *  eso el setTimeout(0): deja que el navegador complete el pegado y recién
+ *  ahí reformatea. */
 function _autoformatearCriteriosPegados(textarea) {
   setTimeout(() => {
     const lineas = textarea.value.split('\n').map(l => l.trim()).filter(Boolean);
-    textarea.value = lineas.join('\n\n');
+    const esInicioDeCriterio = l => /^CE\.?\s*\d+/i.test(l);
+    const tieneCodigosCE = lineas.some(esInicioDeCriterio);
+
+    let criterios;
+    if (tieneCodigosCE) {
+      criterios = [];
+      lineas.forEach(linea => {
+        if (esInicioDeCriterio(linea) || criterios.length === 0) {
+          criterios.push(linea);
+        } else {
+          criterios[criterios.length - 1] += ' ' + linea;
+        }
+      });
+    } else {
+      criterios = lineas;
+    }
+
+    textarea.value = criterios.join('\n\n');
   }, 0);
 }
 
