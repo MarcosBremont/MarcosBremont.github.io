@@ -21666,6 +21666,13 @@ function _indiceCorteExtra(texto, codigoModuloNorm) {
   // salir con sus sub-columnas repartidas entre textoRA/textoCE al
   // reconstruir por posición X (ver más abajo), así que "Contenidos" puede
   // caer en una columna y sus sub-encabezados en la otra.
+  //
+  // OJO: el pie de página repetido en cada hoja ("INCO002_3 BACHILLERATO
+  // TÉCNICO EN...") NO se trata acá como límite -- a diferencia de
+  // "Contenidos", el pie de página aparece VARIAS veces DENTRO del mismo
+  // módulo (una vez por página), así que cortar en la primera aparición
+  // descartaría el resto del módulo. Ese caso se resuelve aparte quitando el
+  // pie de página del texto (ver _quitarPieDePagina), no cortando ahí.
   const matchContenidos = /\b(?:Contenidos|Conceptuales|Procedimentales|Actitudinales)\b/.exec(texto);
   if (matchContenidos) corte = Math.min(corte, matchContenidos.index);
 
@@ -21681,6 +21688,28 @@ function _indiceCorteExtra(texto, codigoModuloNorm) {
   }
 
   return corte;
+}
+
+/** Quita del texto TODAS las apariciones del pie de página que el documento
+ *  repite en cada hoja (ej. "INCO002_3 BACHILLERATO TÉCNICO EN DISEÑO Y
+ *  DESARROLLO DE APLICACIONES INFORMÁTICAS"), usando el nombre del
+ *  Bachillerato que ya se extrajo de la portada -- a diferencia de
+ *  _indiceCorteExtra (que corta todo lo que sigue), esto solo QUITA cada
+ *  aparición puntual, porque el pie de página se repite VARIAS veces dentro
+ *  de un mismo módulo (una por página) y cortar en la primera descartaría el
+ *  resto del módulo. Coincidencia por texto exacto (no un patrón genérico de
+ *  "racha en mayúsculas"), para no comerse por error el "RA"/"CE"/"UC" de un
+ *  marcador que quede pegado justo después sin espacio. */
+function _quitarPieDePagina(texto, nombreBachillerato) {
+  if (!nombreBachillerato) return texto;
+  const titulo = nombreBachillerato.replace(/^Bachillerato\s+T[eé]cnico\s+en\s+/i, '').trim();
+  if (!titulo) return texto;
+  const tituloEscapado = titulo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  // El código del título (ej. "INCO002_3") suele ir pegado justo ANTES de
+  // "BACHILLERATO" en el pie de página -- opcional, para no dejarlo suelto
+  // si se quita el resto.
+  const regexPie = new RegExp('(?:[A-Za-z]{2,10}\\d{2,4}_\\d\\s+)?BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+' + tituloEscapado, 'gi');
+  return texto.replace(regexPie, ' ');
 }
 
 /** Extrae el currículo de un módulo SIN usar ninguna IA -- solo con expresiones
@@ -21702,6 +21731,12 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const ubicacion = _ubicarModulo(textoCompleto, moduloBuscado);
   if (!ubicacion) return null;
   let textoModulo = textoCompleto.substring(ubicacion.idxInicio, ubicacion.idxFin);
+
+  // Datos generales del Bachillerato (portada) -- se calculan aquí (no solo
+  // al final, para el resultado) porque _quitarPieDePagina() los necesita YA
+  // para limpiar el pie de página repetido de cada hoja del módulo.
+  const datosGenerales = _parsearDatosGeneralesLocal(_extraerEncabezadoDocumento(textoCompleto));
+  textoModulo = _quitarPieDePagina(textoModulo, datosGenerales.nombreBachillerato);
 
   // pdf.js une TODO el texto de una página en una sola línea (ver
   // _extraerTextoPdf) -- si el encabezado, "Nivel:", "Código:" y el resto del
@@ -21734,15 +21769,28 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // Unidad de Competencia asociada: el módulo suele listar varias ("Módulo
   // formativo asociado a las Unidades de Competencias: UC01_3: ..., UC02_3:
   // ..."), justo antes de la tabla de RA/Criterios. Por defecto se toma la
-  // PRIMERA de la lista.
-  const regexUC = /UC\s*0*(\d+)_(\d)\s*[:.\-]\s*/gi;
+  // PRIMERA de la lista. El código NO siempre sigue el mismo formato -- un
+  // módulo real usa "UC_ETP_02_3" en vez de "UC01_3" -- así que se captura el
+  // código completo tal como aparece (letras/dígitos/guion bajo terminando en
+  // "_dígito") en vez de asumir un formato fijo y reconstruirlo mal.
+  const regexUC = /\b(UC[A-Za-z0-9_]*_\d)\b\s*[:.\-]?\s*/gi;
   const posicionesUC = [];
   let mUC;
   while ((mUC = regexUC.exec(textoModulo)) !== null) {
-    posicionesUC.push({ codigo: `UC${String(mUC[1]).padStart(2, '0')}_${mUC[2]}`, indice: mUC.index, finMarcador: mUC.index + mUC[0].length });
+    posicionesUC.push({ codigo: mUC[1].toUpperCase(), indice: mUC.index, finMarcador: mUC.index + mUC[0].length });
   }
-  const matchPrimerRA = /RAE?\s*\d+\.\d+/i.exec(textoModulo);
-  const limiteUC = matchPrimerRA ? matchPrimerRA.index : textoModulo.length;
+  // El primer RA del módulo tampoco sigue siempre el mismo formato -- un
+  // módulo real usa "RA4:" (sin ".1") para el primero y recién decimal desde
+  // el segundo ("RA4.2:") -- el ".N" es opcional para no perderlo.
+  const matchPrimerRA = /RAE?\s*\d+(?:\.\d+)?/i.exec(textoModulo);
+  // Cuando el módulo solo tiene UNA Unidad de Competencia (no hay
+  // posicionesUC[1] que la acote), el límite caía directo en el primer RA --
+  // pero entre la UC y el primer RA suele estar el encabezado de la tabla
+  // ("Resultados de Aprendizaje" / "Criterios de Evaluación"), que sin este
+  // límite quedaba pegado al final de la descripción de la UC.
+  const matchEncabezadoTabla = /Resultados\s+de\s+Aprendizaje/i.exec(textoModulo);
+  let limiteUC = matchPrimerRA ? matchPrimerRA.index : textoModulo.length;
+  if (matchEncabezadoTabla) limiteUC = Math.min(limiteUC, matchEncabezadoTabla.index);
   let unidadCompetencia = '', codigoUC = '';
   if (posicionesUC.length) {
     const primeraUC = posicionesUC[0];
@@ -21767,7 +21815,14 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     // reconstrucción de columnas aunque el texto lineal ya se haya recortado.
     const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxInicio + textoModulo.length);
     const columnas = _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin);
-    if (columnas) { textoRA = columnas.textoRA; textoCE = columnas.textoCE; columnasSeparadas = true; }
+    if (columnas) {
+      // El pie de página repetido también reaparece dentro de las columnas
+      // reconstruidas por la misma razón (se trae por página completa) --
+      // se vuelve a quitar aquí, en cada columna por separado.
+      textoRA = _quitarPieDePagina(columnas.textoRA, datosGenerales.nombreBachillerato);
+      textoCE = _quitarPieDePagina(columnas.textoCE, datosGenerales.nombreBachillerato);
+      columnasSeparadas = true;
+    }
   }
 
   // La misma defensa de _indiceCorteExtra se aplica OTRA VEZ, ahora sobre
@@ -21788,8 +21843,10 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // La puntuación después del número (":", "." o "-") es OPCIONAL: se vio en
   // documentos reales tanto "RA3.1: texto" como "RA3.8 texto" (sin nada) y
   // "CE3.10.1. texto" (con un punto extra que "CE3.1.1 texto" no tiene) --
-  // exigirla dejaba esos RA/criterios sin reconocer del todo.
-  const regexRA = /RAE?\s*(\d+\.\d+)\s*[:.\-]?\s*/g;
+  // exigirla dejaba esos RA/criterios sin reconocer del todo. La parte
+  // decimal también es OPCIONAL: un módulo real usa "RA4:" (sin ".1") para
+  // el primer RA y recién decimal desde el segundo ("RA4.2:").
+  const regexRA = /RAE?\s*(\d+(?:\.\d+)?)\s*[:.\-]?\s*/g;
   const posicionesRA = [];
   let m;
   while ((m = regexRA.exec(textoRA)) !== null) {
@@ -21836,8 +21893,13 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
 
   const ras = posicionesRAModulo.map(ra => {
     const descripcion = textoRA.substring(ra.finMarcador, finDeBloqueRA(ra.indice)).replace(/\s+/g, ' ').trim();
+    // Un RA sin parte decimal (ej. "RA4", ver arriba) puede tener sus
+    // criterios codificados igual como si fuera ".1" (ej. "CE4.1.1..."),
+    // visto en un documento real -- se acepta esa variante además del match
+    // exacto, sin afectar los RA que sí llevan decimal (ej. "RA3.1" solo
+    // acepta "CE3.1.X", nunca "CE3.1.1.X" ni nada distinto).
     const criteriosEvaluacion = posicionesCE
-      .filter(ce => ce.numeroRA === ra.numero)
+      .filter(ce => ce.numeroRA === ra.numero || (!ra.numero.includes('.') && ce.numeroRA === ra.numero + '.1'))
       .map(ce => {
         const texto = textoCE.substring(ce.finMarcador, finDeBloqueCE(ce.indice)).replace(/\s+/g, ' ').trim();
         return `CE${ce.numeroCE} ${texto}`.trim();
@@ -21857,9 +21919,6 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   }).filter(ra => ra.descripcion.length > 5);
 
   if (!ras.length) return null;
-
-  const encabezadoDoc = _extraerEncabezadoDocumento(textoCompleto);
-  const datosGenerales = _parsearDatosGeneralesLocal(encabezadoDoc);
 
   return {
     encontrado: true,

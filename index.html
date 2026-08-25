@@ -3030,6 +3030,23 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00695C;">v17.82<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: probado con un segundo módulo, varios formatos más tolerados</div>
+              <ul class="about-ver-items">
+                <li>Un RA sin parte decimal (ej. "RA4:" en vez de "RA4.1:", visto en un módulo real) no se reconocía -- ahora sí, y sus criterios (que sí llevan decimal, ej. "CE4.1.1") se agrupan correctamente con él.</li>
+                <li>El código de Unidad de Competencia no siempre sigue el mismo formato -- un módulo real usa "UC_ETP_02_3" en vez de "UC01_3" -- ahora se reconoce cualquiera de los dos.</li>
+                <li>Cuando el módulo solo tiene UNA Unidad de Competencia, su descripción se pegaba con el encabezado de la tabla ("Resultados de Aprendizaje / Criterios de Evaluación"). Corregido.</li>
+                <li>El pie de página que se repite en cada hoja del documento ("INCO002_3 BACHILLERATO TÉCNICO EN...") se pegaba a la descripción o los criterios de RA que NO son el último del módulo -- se quita en cada aparición (no solo se corta la primera vez, porque se repite varias veces dentro de un mismo módulo).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#7B1FA2;">v17.81<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7690,9 +7707,9 @@
   <script src="error-reporter.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.81"></script>
+  <script src="app.js?v=17.82"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.81"></script>
+  <script src="auth.js?v=17.82"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
