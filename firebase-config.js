@@ -120,11 +120,19 @@ const ADMIN_EMAIL = 'soymarcosbremont@gmail.com';
 const EMAILJS_SERVICE_ID  = 'service_bvrdwji';   // Reemplaza con tu Service ID
 const EMAILJS_TEMPLATE_ID = 'template_9wj88ub';  // Reemplaza con tu Template ID
 const EMAILJS_PUBLIC_KEY  = 'lxnRazLrE3DNoOV99';   // Reemplaza con tu Public Key
-// Plantilla EXCLUSIVA para alertas de errores (debe ser distinta a OTP).
-// Variables recomendadas en la plantilla:
+
+// ================================================================
+// EMAILJS — Alertas de error (CUENTA SEPARADA de la del OTP)
+// ================================================================
+// El OTP es crítico (login de docentes) y las alertas de error son solo
+// diagnóstico -- usan una cuenta de EmailJS DISTINTA (con su propia cuota de
+// 200 correos/mes) para que un pico de alertas nunca compita por cuota con
+// el envío de códigos de acceso. Variables de la plantilla:
 // {{alert_subject}}, {{alert_title}}, {{error_message}}, {{error_where}}, {{error_when}},
 // {{route_url}}, {{severity}}, {{build_version}}, {{sw_version}}, {{user_uid}}, {{user_email_context}}, {{stack}}
-const EMAILJS_ERROR_TEMPLATE_ID = 'template_u3ql93h';
+const EMAILJS_ERROR_SERVICE_ID = 'service_sgj6ij6';
+const EMAILJS_ERROR_PUBLIC_KEY = 'XPOUVX51K_CUwNDVJ';
+const EMAILJS_ERROR_TEMPLATE_ID = 'template_u82f83c';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",

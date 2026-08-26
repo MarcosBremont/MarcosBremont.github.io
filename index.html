@@ -3030,6 +3030,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#4E342E;">v17.84<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Alertas de error: cuenta de EmailJS separada del OTP</div>
+              <ul class="about-ver-items">
+                <li>Las alertas de error ahora usan una cuenta de EmailJS propia (con su propia cuota mensual de 200 correos), distinta de la que envía los códigos de acceso (OTP) -- así un pico de alertas nunca le quita cuota al login de los docentes, que es lo crítico.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#37474F;">v17.83<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7704,7 +7718,7 @@
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js"></script>
+  <script src="firebase-config.js?v=17.84"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -7718,12 +7732,12 @@
       })
       .catch(() => {});
   </script>
-  <script src="error-reporter.js?v=17.83"></script>
+  <script src="error-reporter.js?v=17.84"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.83"></script>
+  <script src="app.js?v=17.84"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.83"></script>
+  <script src="auth.js?v=17.84"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

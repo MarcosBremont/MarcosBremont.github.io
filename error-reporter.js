@@ -279,16 +279,23 @@
 
   async function _sendByEmail(payload) {
     const hasEmailJs = typeof emailjs !== 'undefined' && emailjs && typeof emailjs.send === 'function';
-    const hasConfig = typeof EMAILJS_SERVICE_ID !== 'undefined' && typeof EMAILJS_PUBLIC_KEY !== 'undefined';
-    if (!hasEmailJs || !hasConfig) return { ok: false, reason: 'emailjs-not-available' };
+    if (!hasEmailJs) return { ok: false, reason: 'emailjs-not-available' };
 
-    const serviceId = EMAILJS_SERVICE_ID;
+    // Las alertas de error usan una cuenta de EmailJS SEPARADA de la del OTP
+    // (EMAILJS_ERROR_SERVICE_ID/EMAILJS_ERROR_PUBLIC_KEY, cada una con su
+    // propia cuota de 200 correos/mes) para que un pico de alertas nunca le
+    // quite cuota al envío de códigos de acceso, que es crítico. Si esa
+    // cuenta no está configurada, cae a la del OTP como respaldo.
+    const serviceId = (typeof EMAILJS_ERROR_SERVICE_ID !== 'undefined' && EMAILJS_ERROR_SERVICE_ID)
+      || (typeof EMAILJS_SERVICE_ID !== 'undefined' ? EMAILJS_SERVICE_ID : null);
+    const publicKey = (typeof EMAILJS_ERROR_PUBLIC_KEY !== 'undefined' && EMAILJS_ERROR_PUBLIC_KEY)
+      || (typeof EMAILJS_PUBLIC_KEY !== 'undefined' ? EMAILJS_PUBLIC_KEY : null);
     const cfgTemplateId = String(_getCfg().templateId || '').trim();
     const templateId = cfgTemplateId
       || ((typeof EMAILJS_ERROR_TEMPLATE_ID !== 'undefined' && EMAILJS_ERROR_TEMPLATE_ID) ? EMAILJS_ERROR_TEMPLATE_ID : null);
     const target = (typeof ADMIN_EMAIL !== 'undefined' && ADMIN_EMAIL) ? ADMIN_EMAIL : null;
 
-    if (!templateId || !target) return { ok: false, reason: 'email-config-missing' };
+    if (!serviceId || !publicKey || !templateId || !target) return { ok: false, reason: 'email-config-missing' };
     if (typeof EMAILJS_TEMPLATE_ID !== 'undefined' && templateId === EMAILJS_TEMPLATE_ID) {
       return { ok: false, reason: 'error-template-must-be-different-from-otp' };
     }
@@ -339,7 +346,7 @@
     };
 
     try {
-      const response = await emailjs.send(serviceId, templateId, params, { publicKey: EMAILJS_PUBLIC_KEY });
+      const response = await emailjs.send(serviceId, templateId, params, { publicKey: publicKey });
       return { ok: true, status: response && response.status ? response.status : 200 };
     } catch (e) {
       return { ok: false, reason: (e && (e.text || e.message)) ? (e.text || e.message) : String(e) };
