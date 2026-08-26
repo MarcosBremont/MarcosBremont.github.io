@@ -117,19 +117,19 @@ const ADMIN_EMAIL = 'soymarcosbremont@gmail.com';
 // 5. En EmailJS revisa "Allowed Origins" y agrega https://tinclass.com
 // 5. Pega los tres valores aquí abajo:
 // ================================================================
-const EMAILJS_SERVICE_ID  = 'service_bvrdwji';   // Reemplaza con tu Service ID
-const EMAILJS_TEMPLATE_ID = 'template_9wj88ub';  // Reemplaza con tu Template ID
-const EMAILJS_PUBLIC_KEY  = 'lxnRazLrE3DNoOV99';   // Reemplaza con tu Public Key
+const EMAILJS_SERVICE_ID  = 'service_sgj6ij6';   // Reemplaza con tu Service ID
+const EMAILJS_TEMPLATE_ID = 'template_z6zqstl';  // Reemplaza con tu Template ID
+const EMAILJS_PUBLIC_KEY  = 'XPOUVX51K_CUwNDVJ';   // Reemplaza con tu Public Key
 
 // ================================================================
-// EMAILJS — Alertas de error (CUENTA SEPARADA de la del OTP)
-// ================================================================
-// El OTP es crítico (login de docentes) y las alertas de error son solo
-// diagnóstico -- usan una cuenta de EmailJS DISTINTA (con su propia cuota de
-// 200 correos/mes) para que un pico de alertas nunca compita por cuota con
-// el envío de códigos de acceso. Variables de la plantilla:
+// EMAILJS — Alertas de error (misma cuenta que el OTP de arriba, plantilla
+// distinta). El envío de correo de estas alertas está DESACTIVADO por
+// defecto (ver DEFAULT_CFG.sendEmail en error-reporter.js) para no gastar
+// cuota -- los errores se siguen guardando en Firestore igual, revisables
+// desde Superadmin > Bugs. Variables de la plantilla:
 // {{alert_subject}}, {{alert_title}}, {{error_message}}, {{error_where}}, {{error_when}},
 // {{route_url}}, {{severity}}, {{build_version}}, {{sw_version}}, {{user_uid}}, {{user_email_context}}, {{stack}}
+// ================================================================
 const EMAILJS_ERROR_SERVICE_ID = 'service_sgj6ij6';
 const EMAILJS_ERROR_PUBLIC_KEY = 'XPOUVX51K_CUwNDVJ';
 const EMAILJS_ERROR_TEMPLATE_ID = 'template_u82f83c';

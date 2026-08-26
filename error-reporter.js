@@ -9,7 +9,10 @@
   const DEFAULT_CFG = {
     enabled: true,
     minSeverity: 'medium',
-    sendEmail: true,
+    // Desactivado por defecto para no gastar cuota de EmailJS -- los errores
+    // se siguen guardando en Firestore igual (saveFirestore abajo), revisables
+    // desde Superadmin > Bugs. Se puede reactivar desde ahí cuando haga falta.
+    sendEmail: false,
     saveFirestore: true,
     includeUserAgent: true,
     includeUrl: true,

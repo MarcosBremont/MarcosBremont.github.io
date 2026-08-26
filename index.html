@@ -3030,6 +3030,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v17.85<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">EmailJS: OTP movido a la cuenta nueva, alertas de error sin correo por ahora</div>
+              <ul class="about-ver-items">
+                <li>El envío de código OTP (login/registro) ahora usa la cuenta nueva de EmailJS -- la cuenta original se había quedado sin cupo mensual.</li>
+                <li>El envío de correo de las alertas de error queda desactivado por defecto para no gastar cuota -- los errores se siguen guardando en Firestore igual, visibles desde Superadmin → Bugs. Se puede reactivar el correo desde ahí cuando haga falta.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#4E342E;">v17.84<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7718,7 +7733,7 @@
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=17.84"></script>
+  <script src="firebase-config.js?v=17.85"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -7732,12 +7747,12 @@
       })
       .catch(() => {});
   </script>
-  <script src="error-reporter.js?v=17.84"></script>
+  <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.84"></script>
+  <script src="app.js?v=17.85"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.84"></script>
+  <script src="auth.js?v=17.85"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
