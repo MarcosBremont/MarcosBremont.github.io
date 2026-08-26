@@ -3030,6 +3030,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#37474F;">v17.83<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Alertas de error: ya no se envía correo por fallas esperadas de IA</div>
+              <ul class="about-ver-items">
+                <li>Cuando a un docente se le agota la cuota gratuita de Groq/Gemini, o falla la facturación de Claude, la app ya maneja sola esa situación (cae al siguiente proveedor, o muestra un mensaje claro) -- pero el sistema de alertas igual mandaba un correo cada vez, y eso agotó la cuota mensual gratuita de EmailJS con puro ruido esperado. Ahora esas fallas específicas de proveedores de IA ya no disparan correo (sí se siguen guardando en Superadmin → Bugs para revisarlas si hace falta).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v17.82<span class="about-ver-fecha">Ago
                   2026</span>
               </div>
@@ -7704,12 +7718,12 @@
       })
       .catch(() => {});
   </script>
-  <script src="error-reporter.js"></script>
+  <script src="error-reporter.js?v=17.83"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.82"></script>
+  <script src="app.js?v=17.83"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.82"></script>
+  <script src="auth.js?v=17.83"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

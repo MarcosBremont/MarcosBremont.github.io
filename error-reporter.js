@@ -163,6 +163,31 @@
     return false;
   }
 
+  /** Fallas de proveedores de IA por cuota/facturación agotada o rate limit
+   *  (Groq, Gemini, Claude, OpenRouter): son condiciones EXTERNAS que la app
+   *  ya maneja sola (cae al siguiente proveedor, o muestra un mensaje claro
+   *  al docente) -- no ameritan una alerta por correo cada vez que a algún
+   *  usuario se le agota la cuota gratuita de un proveedor. Sin este filtro,
+   *  este ruido esperado agotó la cuota mensual gratuita de EmailJS (200
+   *  correos/mes) por sí solo. Sigue guardándose en Firestore igual (ver
+   *  _dispatchReport) para que Superadmin > Bugs pueda revisarlas si hace
+   *  falta -- solo se salta el CORREO. */
+  function _esRuidoProveedorIA(message) {
+    const s = String(message || '').toLowerCase();
+    return (
+      s.includes('error detalle:') ||
+      s.includes('credit balance is too low') ||
+      s.includes('resource_exhausted') ||
+      s.includes('rate_limit') ||
+      s.includes('prepayment credits are depleted') ||
+      s.includes('cuota_agotada') ||
+      s.includes('billing_requerido') ||
+      s.includes('agotaron su cuota') ||
+      s.includes('agotó su cuota') ||
+      s.includes('agotó la cuota')
+    );
+  }
+
   function _isDuplicate(payload) {
     const fp = _fingerprint(payload);
     const now = Date.now();
@@ -361,7 +386,7 @@
     _isReporting = true;
     const result = { ok: false, email: null, firestore: null };
     try {
-      if (cfg.sendEmail) {
+      if (cfg.sendEmail && !_esRuidoProveedorIA(payload.message)) {
         result.email = await _sendByEmail(payload);
         if (!result.email.ok) {
           console.warn('[ErrorReporter] Fallo enviando correo:', result.email.reason || result.email.status || 'desconocido');
