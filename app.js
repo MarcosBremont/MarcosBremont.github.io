@@ -9777,9 +9777,9 @@ ${procedimentales || '(sin elementos)'}
 - Lista de Contenidos Actitudinales:
 ${actitudinales || '(sin elementos)'}
 
-Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en las listas de arriba. Si una lista no tiene ningún elemento relacionado con el RA, devuelve un arreglo vacío para esa categoría.
+Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en las listas de arriba. Revisa las TRES listas de forma independiente y con el mismo cuidado -- que una tenga pocos o ningún elemento relacionado con el RA no significa que las otras también deban quedar vacías.
 
-Devuelve EXCLUSIVAMENTE un JSON con este formato exacto, sin markdown ni texto adicional:
+Devuelve EXCLUSIVAMENTE un JSON con EXACTAMENTE estas 3 claves, sin markdown ni texto adicional. Si una categoría no tiene ningún elemento relacionado, su valor debe ser un arreglo vacío -- nunca omitas la clave:
 {"conceptuales": ["elemento exacto de la lista", "..."], "procedimentales": ["elemento exacto de la lista", "..."], "actitudinales": ["elemento exacto de la lista", "..."]}`;
 }
 
@@ -9836,16 +9836,30 @@ async function _generarContenidosConIA() {
     return;
   }
 
-  const setListVal = (id, arr) => {
+  // Un arreglo vacío ([]) es una respuesta válida: la IA revisó esa lista y no
+  // encontró nada relacionado con el RA, así que SÍ se vacía el cuadro. Pero si
+  // la IA omite la clave por completo (no es un arreglo) puede ser un fallo de
+  // formato del modelo -- en ese caso NO se toca el cuadro (para no borrar en
+  // silencio contenido que sí correspondía) y se avisa cuál categoría falló.
+  const categorias = [
+    { key: 'conceptuales', id: 'contenidos-conceptuales', label: 'Conceptuales' },
+    { key: 'procedimentales', id: 'contenidos-procedimentales', label: 'Procedimentales' },
+    { key: 'actitudinales', id: 'contenidos-actitudinales', label: 'Actitudinales' }
+  ];
+  const categoriasSinRespuesta = [];
+  categorias.forEach(({ key, id, label }) => {
+    const val = resultado[key];
+    if (!Array.isArray(val)) { categoriasSinRespuesta.push(label); return; }
     const el = document.getElementById(id);
-    if (el) el.value = (Array.isArray(arr) ? arr : []).filter(v => typeof v === 'string' && v.trim()).join('\n');
-  };
-  setListVal('contenidos-conceptuales', resultado.conceptuales);
-  setListVal('contenidos-procedimentales', resultado.procedimentales);
-  setListVal('contenidos-actitudinales', resultado.actitudinales);
+    if (el) el.value = val.filter(v => typeof v === 'string' && v.trim()).join('\n');
+  });
 
   _cancelarAsistenteContenidosIA();
-  mostrarToast('Contenidos del RA generados con IA ✓', 'success');
+  if (categoriasSinRespuesta.length) {
+    mostrarToast('Se generaron los contenidos, pero la IA no devolvió datos de: ' + categoriasSinRespuesta.join(', ') + '. Revisa esa(s) categoría(s) manualmente.', 'info');
+  } else {
+    mostrarToast('Contenidos del RA generados con IA ✓', 'success');
+  }
 }
 
 

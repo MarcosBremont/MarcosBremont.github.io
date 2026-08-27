@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=17.96" />
+  <link rel="stylesheet" href="styles.css?v=17.97" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=17.96" />
+  <link rel="stylesheet" href="auth.css?v=17.97" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3382,6 +3382,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#5D4037;">v17.97<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Preguntarle a la IA los contenidos" podía vaciar una categoría en silencio</div>
+              <ul class="about-ver-items">
+                <li>Si la IA devolvía Conceptuales y Actitudinales pero omitía Procedimentales (en vez de indicar explícitamente "ninguno relacionado"), el sistema borraba ese cuadro sin avisar. Ahora, si la IA no envía una categoría, el cuadro correspondiente no se toca y se muestra un aviso indicando cuál categoría hay que revisar manualmente.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8266,9 +8280,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.96"></script>
+  <script src="app.js?v=17.97"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.96"></script>
+  <script src="auth.js?v=17.97"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
