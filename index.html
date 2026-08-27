@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.08" />
+  <link rel="stylesheet" href="styles.css?v=18.09" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.08" />
+  <link rel="stylesheet" href="auth.css?v=18.09" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -1124,13 +1124,8 @@
               style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
 
               <div id="contenidos-manual-wrap" style="display:flex;flex-direction:column;gap:12px;">
-                <!-- Oculto temporalmente: la cuenta de Groq en uso tiene un límite muy bajo
-                     (8000 tokens/minuto) y varias llamadas seguidas (una por categoría) lo
-                     agotan, devolviendo resultados vacíos o inconsistentes pese al sistema
-                     de reintentos. Pendiente de retomar con otro enfoque. El código de
-                     _abrirAsistenteContenidosIA()/_generarContenidosConIA() queda intacto. -->
-                <button type="button" onclick="_abrirAsistenteContenidosIA()" style="display:none;
-                  align-self:flex-start;background:#EDE7F6;color:#4527A0;border:1px solid #B39DDB;border-radius:8px;padding:6px 12px;font-size:0.8rem;cursor:pointer;align-items:center;gap:6px;">
+                <button type="button" onclick="_abrirAsistenteContenidosIA()"
+                  style="align-self:flex-start;background:#EDE7F6;color:#4527A0;border:1px solid #B39DDB;border-radius:8px;padding:6px 12px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
                   <span class="material-icons" style="font-size:16px;">auto_awesome</span>
                   Preguntarle a la IA los contenidos
                 </button>
@@ -3383,6 +3378,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4527A0;">v18.09<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Preguntarle a la IA los contenidos" habilitado de nuevo</div>
+              <ul class="about-ver-items">
+                <li>Se vuelve a mostrar el botón de "Contenidos del RA". Sigue funcionando con 3 llamadas independientes a la IA (una por categoría); ten en cuenta que con listas muy largas todavía puede toparse con el límite de la cuenta de IA configurada.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8436,9 +8445,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.08"></script>
+  <script src="app.js?v=18.09"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.08"></script>
+  <script src="auth.js?v=18.09"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
