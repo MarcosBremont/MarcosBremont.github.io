@@ -531,6 +531,19 @@ body {
   outline: none;
 }
 
+/* Los checkboxes dentro de un .form-group (ej. checklists de cursos o de
+   competencias) no deben heredar el ancho 100%/borde/padding de arriba --
+   eso los infla a cajas enormes en blanco y empuja el texto de su label. */
+.form-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  flex-shrink: 0;
+}
+
 .form-group input:focus,
 .form-group textarea:focus {
   border-color: var(--color-primario);
