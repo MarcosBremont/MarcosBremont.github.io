@@ -9810,29 +9810,43 @@ async function _generarContenidosConIA() {
   if (btn) { btn.disabled = true; btn.dataset._origText = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
 
   let resultado = null;
+  let ultimoError = null;
   try {
     if (claudeKey) {
       try { resultado = await _llamarClaude(prompt, 4096); }
-      catch (e) { console.warn('[ContenidosIA] Claude falló:', e.message); }
+      catch (e) { console.warn('[ContenidosIA] Claude falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && groqKey) {
       try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 4096); }
-      catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); }
+      catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && geminiKey) {
       try { resultado = await _llamarGemini(prompt, 4096); }
-      catch (e) { console.warn('[ContenidosIA] Gemini falló:', e.message); }
+      catch (e) { console.warn('[ContenidosIA] Gemini falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && openrouterKey) {
       try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 4096, 60000); }
-      catch (e) { console.warn('[ContenidosIA] OpenRouter falló:', e.message); }
+      catch (e) { console.warn('[ContenidosIA] OpenRouter falló:', e.message); ultimoError = e.message; }
     }
   } finally {
     if (btn) { btn.disabled = false; if (btn.dataset._origText) btn.innerHTML = btn.dataset._origText; }
   }
 
   if (!resultado) {
-    mostrarToast('No se pudo contactar ninguna IA configurada. Intenta de nuevo o completa los contenidos manualmente.', 'error');
+    // Mismo criterio de clasificación de errores que generarPlanificacion() --
+    // sin esto, un fallo real (ej. clave sin créditos) se reportaba con el
+    // mismo mensaje genérico que "no tienes ninguna IA configurada", que es
+    // engañoso cuando sí hay una clave puesta pero el proveedor la rechazó.
+    const msg = ultimoError || '';
+    if (msg.includes('401') || msg.includes('invalid_api_key') || msg.includes('API_KEY_INVALID')) {
+      mostrarToast('❌ Clave de IA inválida. Ve a ⚙️ Config. IA y verifica tus claves.', 'error');
+    } else if (msg.includes('429') || msg.includes('rate_limit') || msg.includes('QUOTA')) {
+      mostrarToast('⏳ Cuota agotada en todos los proveedores configurados. Completa los contenidos manualmente.', 'error');
+    } else if (msg) {
+      mostrarToast('No se pudo generar con IA: ' + msg.substring(0, 150), 'error');
+    } else {
+      mostrarToast('No se pudo contactar ninguna IA configurada. Completa los contenidos manualmente.', 'error');
+    }
     return;
   }
 
