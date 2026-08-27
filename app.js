@@ -22584,7 +22584,11 @@ function _confirmarImportCurriculo(idx) {
 
   const descripcionEl = document.getElementById('descripcion-ra');
   if (descripcionEl && ra.descripcion) {
-    descripcionEl.value = ra.descripcion;
+    // Se antepone el código del RA (ej. "RA3.2") a la descripción para que el
+    // docente lo tenga a la vista y no tenga que volver a la Biblioteca/PDF
+    // a recordar cuál RA es -- Bloom se sigue detectando sobre el texto
+    // limpio, sin el prefijo del código.
+    descripcionEl.value = (ra.codigo ? ra.codigo + ' ' : '') + ra.descripcion;
     actualizarBloomBadge(ra.descripcion);
   }
 
