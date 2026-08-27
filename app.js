@@ -9824,24 +9824,55 @@ function _cancelarAsistenteContenidosIA() {
   document.getElementById('contenidos-manual-wrap')?.classList.remove('hidden');
 }
 
-function _construirPromptContenidosIA(ra, conceptuales, procedimentales, actitudinales) {
-  return `Actúa como un experto en diseño curricular de Educación Técnico-Profesional (ETP). Analiza el siguiente Resultado de Aprendizaje (RA) e identifica únicamente qué contenidos de las listas adjuntas se corresponden con él.
+/** Prompt para UNA sola categoría de contenidos. Se probó primero con un
+ *  único prompt combinado (las 3 listas + un JSON de 3 claves), pero en la
+ *  práctica una categoría (normalmente Conceptuales, la que va primero en el
+ *  prompt) volvía vacía o incompleta de forma inconsistente aun con listas
+ *  pegadas reales -- confirmado con el registro de diagnóstico de la versión
+ *  anterior. Pedirle a la IA "revisa 3 listas y llena 3 claves de un JSON a
+ *  la vez" es una tarea más difícil de seguir con precisión que "revisa ESTA
+ *  lista y dame los que apliquen", así que ahora cada categoría es su propia
+ *  llamada independiente -- más lento (hasta 3 llamadas en vez de 1), pero
+ *  cada una es una tarea mucho más simple y confiable. */
+function _construirPromptContenidosCategoria(ra, nombreCategoria, lista) {
+  return `Actúa como un experto en diseño curricular de Educación Técnico-Profesional (ETP). Analiza el siguiente Resultado de Aprendizaje (RA) e identifica únicamente qué elementos de la lista de Contenidos ${nombreCategoria} adjunta se corresponden con él.
 
 - Resultado de Aprendizaje (RA): ${ra}
 
-- Lista de Contenidos Conceptuales:
-${conceptuales || '(sin elementos)'}
+- Lista de Contenidos ${nombreCategoria}:
+${lista}
 
-- Lista de Contenidos Procedimentales:
-${procedimentales || '(sin elementos)'}
+Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en la lista de arriba. Revisa la lista COMPLETA de principio a fin, por larga que sea -- no te limites a revisar solo el principio. Si ningún elemento se relaciona con el RA, devuelve un arreglo vacío.
 
-- Lista de Contenidos Actitudinales:
-${actitudinales || '(sin elementos)'}
+Devuelve EXCLUSIVAMENTE un JSON con esta única clave, sin markdown ni texto adicional:
+{"elementos": ["elemento exacto de la lista", "..."]}`;
+}
 
-Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en las listas de arriba. Revisa las TRES listas COMPLETAS de principio a fin y con el mismo cuidado -- que una tenga pocos o ningún elemento relacionado con el RA no significa que las otras también deban quedar vacías. Las listas de Conceptuales y Procedimentales del Módulo suelen ser mucho más largas que la de Actitudinales: no te limites a revisar solo el principio de esas listas largas, ni acortes tu selección para hacer la respuesta más corta.
+/** Filtra UNA categoría con la cascada Groq -> Gemini -> OpenRouter (Claude
+ *  excluido a propósito, ver _generarContenidosConIA). Devuelve
+ *  {elementos: string[]|null, error: string|null} -- elementos es null solo
+ *  si NINGÚN proveedor respondió (fallo real), nunca por una lista vacía. */
+async function _filtrarCategoriaConIA(ra, nombreCategoria, lista, groqKey, geminiKey, openrouterKey) {
+  const prompt = _construirPromptContenidosCategoria(ra, nombreCategoria, lista);
+  let resultado = null;
+  let ultimoError = null;
 
-Devuelve EXCLUSIVAMENTE un JSON con EXACTAMENTE estas 3 claves, sin markdown ni texto adicional. Si una categoría no tiene ningún elemento relacionado, su valor debe ser un arreglo vacío -- nunca omitas la clave:
-{"conceptuales": ["elemento exacto de la lista", "..."], "procedimentales": ["elemento exacto de la lista", "..."], "actitudinales": ["elemento exacto de la lista", "..."]}`;
+  if (groqKey) {
+    try { resultado = await _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096); }
+    catch (e) { console.warn(`[ContenidosIA] Groq falló (${nombreCategoria}):`, e.message); ultimoError = e.message; }
+  }
+  if (!resultado && geminiKey) {
+    try { resultado = await _llamarGemini(prompt, 4096); }
+    catch (e) { console.warn(`[ContenidosIA] Gemini falló (${nombreCategoria}):`, e.message); ultimoError = e.message; }
+  }
+  if (!resultado && openrouterKey) {
+    try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000); }
+    catch (e) { console.warn(`[ContenidosIA] OpenRouter falló (${nombreCategoria}):`, e.message); ultimoError = e.message; }
+  }
+
+  console.log(`[ContenidosIA] Resultado crudo de la IA (${nombreCategoria}):`, JSON.stringify(resultado));
+  const elementos = resultado && Array.isArray(resultado.elementos) ? resultado.elementos : null;
+  return { elementos, error: ultimoError };
 }
 
 async function _generarContenidosConIA() {
@@ -9868,47 +9899,44 @@ async function _generarContenidosConIA() {
     return;
   }
 
-  const prompt = _construirPromptContenidosIA(ra, conceptuales, procedimentales, actitudinales);
-
   const btn = document.getElementById('btn-generar-contenidos-ia');
   if (btn) { btn.disabled = true; btn.dataset._origText = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
 
-  // Revertido a 4096 (se probó subir a 8192, pero en la cuenta de Groq usada
-  // en producción el límite es 8000 tokens/minuto, así que pedir 8192 de una
-  // vez hacía fallar los 3 modelos de Groq con 413 "Request too large" antes
-  // de intentar nada -- la causa real de las categorías incompletas resultó
-  // ser un bug de _fusionarLineasPartidas(), no falta de espacio de respuesta).
-  let resultado = null;
-  let ultimoError = null;
+  // Una llamada independiente por categoría (ver _construirPromptContenidosCategoria
+  // para el porqué) -- secuenciales, no en paralelo: 3 llamadas simultáneas a la
+  // misma clave de Groq compiten por el mismo límite de tokens/minuto de la
+  // cuenta y pueden hacer fallar 2 de las 3 por rate limit aunque individualmente
+  // cada una quepa de sobra.
+  const categorias = [
+    { key: 'conceptuales', id: 'contenidos-conceptuales', label: 'Conceptuales', lista: conceptuales },
+    { key: 'procedimentales', id: 'contenidos-procedimentales', label: 'Procedimentales', lista: procedimentales },
+    { key: 'actitudinales', id: 'contenidos-actitudinales', label: 'Actitudinales', lista: actitudinales }
+  ];
+
+  const categoriasSinRespuesta = [];
+  let algunaSeGeneroConExito = false;
+  let ultimoErrorGlobal = null;
   try {
-    if (!resultado && groqKey) {
-      try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 4096); }
-      catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); ultimoError = e.message; }
-    }
-    if (!resultado && geminiKey) {
-      try { resultado = await _llamarGemini(prompt, 4096); }
-      catch (e) { console.warn('[ContenidosIA] Gemini falló:', e.message); ultimoError = e.message; }
-    }
-    if (!resultado && openrouterKey) {
-      try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 4096, 60000); }
-      catch (e) { console.warn('[ContenidosIA] OpenRouter falló:', e.message); ultimoError = e.message; }
+    for (const cat of categorias) {
+      if (!cat.lista) continue; // nada pegado en esta categoría -- no hay nada que pedirle a la IA
+      const { elementos, error } = await _filtrarCategoriaConIA(ra, cat.label, cat.lista, groqKey, geminiKey, openrouterKey);
+      if (elementos === null) {
+        categoriasSinRespuesta.push(cat.label);
+        if (error) ultimoErrorGlobal = error;
+        continue;
+      }
+      algunaSeGeneroConExito = true;
+      const el = document.getElementById(cat.id);
+      if (el) el.value = elementos.filter(v => typeof v === 'string' && v.trim()).join('\n');
     }
   } finally {
     if (btn) { btn.disabled = false; if (btn.dataset._origText) btn.innerHTML = btn.dataset._origText; }
   }
 
-  // Diagnóstico: si una categoría vuelve vacía sin razón aparente (ej. el
-  // docente sí pegó una lista pero la IA no seleccionó nada), esto permite
-  // ver en la consola exactamente qué devolvió la IA en crudo, en vez de
-  // adivinar si fue un arreglo vacío legítimo o un fallo de formato.
-  if (resultado) console.log('[ContenidosIA] Resultado crudo de la IA:', JSON.stringify(resultado));
-
-  if (!resultado) {
-    // Mismo criterio de clasificación de errores que generarPlanificacion() --
-    // sin esto, un fallo real (ej. clave sin créditos) se reportaba con el
-    // mismo mensaje genérico que "no tienes ninguna IA configurada", que es
-    // engañoso cuando sí hay una clave puesta pero el proveedor la rechazó.
-    const msg = ultimoError || '';
+  if (!algunaSeGeneroConExito) {
+    // Ninguna categoría con lista pegada logró respuesta de ningún proveedor --
+    // mismo criterio de clasificación de errores que generarPlanificacion().
+    const msg = ultimoErrorGlobal || '';
     if (msg.includes('401') || msg.includes('invalid_api_key') || msg.includes('API_KEY_INVALID')) {
       mostrarToast('❌ Clave de IA inválida. Ve a ⚙️ Config. IA y verifica tus claves.', 'error');
     } else if (msg.includes('429') || msg.includes('rate_limit') || msg.includes('QUOTA')) {
@@ -9921,27 +9949,9 @@ async function _generarContenidosConIA() {
     return;
   }
 
-  // Un arreglo vacío ([]) es una respuesta válida: la IA revisó esa lista y no
-  // encontró nada relacionado con el RA, así que SÍ se vacía el cuadro. Pero si
-  // la IA omite la clave por completo (no es un arreglo) puede ser un fallo de
-  // formato del modelo -- en ese caso NO se toca el cuadro (para no borrar en
-  // silencio contenido que sí correspondía) y se avisa cuál categoría falló.
-  const categorias = [
-    { key: 'conceptuales', id: 'contenidos-conceptuales', label: 'Conceptuales' },
-    { key: 'procedimentales', id: 'contenidos-procedimentales', label: 'Procedimentales' },
-    { key: 'actitudinales', id: 'contenidos-actitudinales', label: 'Actitudinales' }
-  ];
-  const categoriasSinRespuesta = [];
-  categorias.forEach(({ key, id, label }) => {
-    const val = resultado[key];
-    if (!Array.isArray(val)) { categoriasSinRespuesta.push(label); return; }
-    const el = document.getElementById(id);
-    if (el) el.value = val.filter(v => typeof v === 'string' && v.trim()).join('\n');
-  });
-
   _cancelarAsistenteContenidosIA();
   if (categoriasSinRespuesta.length) {
-    mostrarToast('Se generaron los contenidos, pero la IA no devolvió datos de: ' + categoriasSinRespuesta.join(', ') + '. Revisa esa(s) categoría(s) manualmente.', 'info');
+    mostrarToast('Se generaron los contenidos, pero falló: ' + categoriasSinRespuesta.join(', ') + '. Revisa esa(s) categoría(s) manualmente.', 'info');
   } else {
     mostrarToast('Contenidos del RA generados con IA ✓', 'success');
   }
