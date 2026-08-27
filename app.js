@@ -28894,7 +28894,13 @@ async function _llamarGemini(prompt, maxTokens = 8192) {
   const errJson = await resp.json().catch(() => ({}));
   const msg = errJson?.error?.message || resp.statusText;
   const esRateLimit = resp.status === 429;
-  console.error('Gemini error detalle:', resp.status, JSON.stringify(errJson));
+  // Un 429 es esperado y ya se maneja arriba en la cascada (se pasa al
+  // siguiente proveedor) -- console.error dispara una alerta de severidad
+  // "alta" al dueño (ver error-reporter.js) por algo que no requiere su
+  // atención. Solo los fallos genuinos (clave inválida, error de servidor)
+  // se reportan como error real.
+  if (esRateLimit) console.warn('Gemini rate limit (se pasa al siguiente proveedor):', resp.status, JSON.stringify(errJson));
+  else console.error('Gemini error detalle:', resp.status, JSON.stringify(errJson));
   if (esRateLimit) throw new Error('rate_limit: Gemini cuota agotada. ' + msg);
   throw new Error(`Gemini error ${resp.status}: ${msg}`);
 }
@@ -28957,7 +28963,11 @@ async function _llamarClaude(prompt, maxTokens = 8192) {
   const errJson = await resp.json().catch(() => ({}));
   const msg = errJson?.error?.message || resp.statusText;
   const esRateLimit = resp.status === 429;
-  console.error('Claude error detalle:', resp.status, JSON.stringify(errJson));
+  // Ver comentario equivalente en _llamarGemini: un 429 ya se maneja en la
+  // cascada (pasa al siguiente proveedor), no amerita una alerta de severidad
+  // "alta" al dueño.
+  if (esRateLimit) console.warn('Claude rate limit (se pasa al siguiente proveedor):', resp.status, JSON.stringify(errJson));
+  else console.error('Claude error detalle:', resp.status, JSON.stringify(errJson));
   if (esRateLimit) throw new Error('rate_limit: Claude cuota agotada. ' + msg);
   throw new Error(`Claude error ${resp.status}: ${msg}`);
 }
@@ -29387,7 +29397,11 @@ async function _llamarModeloGroq(modelo, groqKey, prompt, maxTokens = 8192, time
   // Extraer tiempo de espera sugerido del mensaje de Groq ("Please try again in 29.22s")
   const retryMatch = (msg || '').match(/try again in ([0-9.]+)s/i);
   const retryDelaySeg = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 0;
-  console.error('Groq error detalle:', resp.status, JSON.stringify(errJson));
+  // Ver comentario equivalente en _llamarGemini: un 429/413 ya se maneja en
+  // _llamarGroqConFallback (pasa al siguiente modelo/proveedor), no amerita
+  // una alerta de severidad "alta" al dueño.
+  if (esRateLimit) console.warn(`Groq (${modelo}) rate limit (se pasa al siguiente modelo/proveedor):`, resp.status, JSON.stringify(errJson));
+  else console.error('Groq error detalle:', resp.status, JSON.stringify(errJson));
   return { ok: false, esRateLimit, retryDelaySeg, error: `Groq (${modelo}) error ${resp.status}: ${msg}` };
 }
 
@@ -29760,7 +29774,11 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096,
   const errJson = await resp.json().catch(() => ({}));
   const msg = errJson?.error?.message || resp.statusText;
   const esRateLimit = resp.status === 429 || resp.status === 402;
-  console.error('OpenRouter error detalle:', resp.status, JSON.stringify(errJson));
+  // Ver comentario equivalente en _llamarGemini: un 429/402 ya se maneja en
+  // el llamador (pasa al siguiente modelo/proveedor), no amerita una alerta
+  // de severidad "alta" al dueño.
+  if (esRateLimit) console.warn(`OpenRouter (${modelo}) rate limit (se pasa al siguiente modelo/proveedor):`, resp.status, JSON.stringify(errJson));
+  else console.error('OpenRouter error detalle:', resp.status, JSON.stringify(errJson));
   return { ok: false, esRateLimit, error: `OpenRouter (${modelo}) error ${resp.status}: ${msg}` };
 }
 

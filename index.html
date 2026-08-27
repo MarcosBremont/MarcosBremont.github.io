@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.01" />
+  <link rel="stylesheet" href="styles.css?v=18.02" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.01" />
+  <link rel="stylesheet" href="auth.css?v=18.02" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3382,6 +3382,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#F9A825;">v18.02<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Menos ruido en el registro de errores: los límites de uso de la IA ya no se marcan como error grave</div>
+              <ul class="about-ver-items">
+                <li>Cuando un modelo de IA (Groq, Gemini, Claude u OpenRouter) llega a su límite de uso (429), el sistema ya lo maneja pasando automáticamente al siguiente modelo o proveedor disponible -- pero igual se registraba en la consola como un error grave. Ahora se registra como un aviso normal, ya que es una situación esperada y que se resuelve sola.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8336,9 +8350,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.01"></script>
+  <script src="app.js?v=18.02"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.01"></script>
+  <script src="auth.js?v=18.02"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
