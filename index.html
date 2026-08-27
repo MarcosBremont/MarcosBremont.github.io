@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.02" />
+  <link rel="stylesheet" href="styles.css?v=18.03" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.02" />
+  <link rel="stylesheet" href="auth.css?v=18.03" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3382,6 +3382,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v18.03<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: un contenido sin punto final se pegaba con el siguiente al unir líneas</div>
+              <ul class="about-ver-items">
+                <li>El auto-formato de Contenidos (v18.00) unía líneas hasta encontrar un punto final -- pero un contenido válido a veces no termina en punto (ej. "Enfoque en la Actualización Continua"), y eso lo pegaba con el contenido independiente que le seguía. Ahora se usa la mayúscula inicial de la siguiente línea como señal de que empieza un contenido nuevo, sin importar si el anterior tenía o no punto final.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8350,9 +8364,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.02"></script>
+  <script src="app.js?v=18.03"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.02"></script>
+  <script src="auth.js?v=18.03"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

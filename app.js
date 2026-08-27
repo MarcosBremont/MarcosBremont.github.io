@@ -51,11 +51,21 @@ function _autoformatearCriteriosPegados(textarea) {
 /** Muchas fuentes (PDF, Word) parten el texto de un contenido en varias líneas
  *  al copiarlo, por el ancho de columna del documento original -- un contenido
  *  que en realidad es una sola oración queda partido en 3-4 líneas. Fusiona
- *  esas líneas partidas en una sola por contenido: una línea nueva NO se
- *  fusiona con la anterior a menos que la anterior no haya terminado todavía
- *  en ".", ":" o ";". Las líneas que ya vienen con guion/viñeta ("- DHTML.")
- *  se tratan como sub-elementos propios y nunca se fusionan ni con la línea
- *  anterior ni con la siguiente. */
+ *  esas líneas partidas en una sola por contenido.
+ *
+ *  No basta con "fusionar hasta encontrar un punto final": hay contenidos
+ *  legítimos que no terminan en punto (ej. "Enfoque en la Actualización
+ *  Continua"), y tratarlos así los pegaba con el contenido que le seguía. La
+ *  señal más confiable de que una línea empieza un contenido NUEVO (no es
+ *  una continuación partida) es que arranque con mayúscula -- una línea
+ *  partida a la mitad de una oración normalmente sigue en minúscula. La
+ *  única excepción es una línea que arranca con "(" (ej. una sigla como
+ *  "(UI)." que quedó sola en su línea): esa SIEMPRE se trata como
+ *  continuación, sin importar la mayúscula que tenga adentro.
+ *
+ *  Las líneas que ya vienen con guion/viñeta ("- DHTML.") se tratan como
+ *  sub-elementos propios y nunca se fusionan ni con la línea anterior ni con
+ *  la siguiente. */
 function _fusionarLineasPartidas(texto) {
   const lineas = String(texto || '').split('\n').map(l => l.trim()).filter(Boolean);
   const resultado = [];
@@ -65,6 +75,16 @@ function _fusionarLineasPartidas(texto) {
       if (actual) { resultado.push(actual); actual = ''; }
       resultado.push(linea);
       return;
+    }
+    if (actual) {
+      const empiezaConParentesis = /^\(/.test(linea);
+      const primeraLetra = (linea.match(/[A-Za-zÀ-ÿ]/) || [''])[0];
+      const empiezaMinuscula = !!primeraLetra && primeraLetra === primeraLetra.toLowerCase() && primeraLetra !== primeraLetra.toUpperCase();
+      const esContinuacion = empiezaConParentesis || empiezaMinuscula;
+      if (!esContinuacion) {
+        resultado.push(actual);
+        actual = '';
+      }
     }
     actual = actual ? actual + ' ' + linea : linea;
     if (/[.:;]\s*$/.test(actual)) {
