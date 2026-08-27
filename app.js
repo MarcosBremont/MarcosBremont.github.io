@@ -9832,7 +9832,7 @@ ${procedimentales || '(sin elementos)'}
 - Lista de Contenidos Actitudinales:
 ${actitudinales || '(sin elementos)'}
 
-Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en las listas de arriba. Revisa las TRES listas de forma independiente y con el mismo cuidado -- que una tenga pocos o ningún elemento relacionado con el RA no significa que las otras también deban quedar vacías.
+Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en las listas de arriba. Revisa las TRES listas COMPLETAS de principio a fin y con el mismo cuidado -- que una tenga pocos o ningún elemento relacionado con el RA no significa que las otras también deban quedar vacías. Las listas de Conceptuales y Procedimentales del Módulo suelen ser mucho más largas que la de Actitudinales: no te limites a revisar solo el principio de esas listas largas, ni acortes tu selección para hacer la respuesta más corta.
 
 Devuelve EXCLUSIVAMENTE un JSON con EXACTAMENTE estas 3 claves, sin markdown ni texto adicional. Si una categoría no tiene ningún elemento relacionado, su valor debe ser un arreglo vacío -- nunca omitas la clave:
 {"conceptuales": ["elemento exacto de la lista", "..."], "procedimentales": ["elemento exacto de la lista", "..."], "actitudinales": ["elemento exacto de la lista", "..."]}`;
@@ -9867,24 +9867,35 @@ async function _generarContenidosConIA() {
   const btn = document.getElementById('btn-generar-contenidos-ia');
   if (btn) { btn.disabled = true; btn.dataset._origText = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
 
+  // 8192 en vez de 4096: si el docente pega listas largas del Módulo completo
+  // (frecuente en Conceptuales/Procedimentales, que suelen tener muchos más
+  // elementos que Actitudinales), la respuesta con los elementos elegidos de
+  // las 3 categorías puede necesitar más espacio -- con 4096 se vio un caso
+  // real donde solo Actitudinales (la lista más corta) volvía con contenido.
   let resultado = null;
   let ultimoError = null;
   try {
     if (!resultado && groqKey) {
-      try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 4096); }
+      try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 8192); }
       catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && geminiKey) {
-      try { resultado = await _llamarGemini(prompt, 4096); }
+      try { resultado = await _llamarGemini(prompt, 8192); }
       catch (e) { console.warn('[ContenidosIA] Gemini falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && openrouterKey) {
-      try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 4096, 60000); }
+      try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 8192, 60000); }
       catch (e) { console.warn('[ContenidosIA] OpenRouter falló:', e.message); ultimoError = e.message; }
     }
   } finally {
     if (btn) { btn.disabled = false; if (btn.dataset._origText) btn.innerHTML = btn.dataset._origText; }
   }
+
+  // Diagnóstico: si una categoría vuelve vacía sin razón aparente (ej. el
+  // docente sí pegó una lista pero la IA no seleccionó nada), esto permite
+  // ver en la consola exactamente qué devolvió la IA en crudo, en vez de
+  // adivinar si fue un arreglo vacío legítimo o un fallo de formato.
+  if (resultado) console.log('[ContenidosIA] Resultado crudo de la IA:', JSON.stringify(resultado));
 
   if (!resultado) {
     // Mismo criterio de clasificación de errores que generarPlanificacion() --
