@@ -800,7 +800,7 @@
   </div>
 
   <!-- ===== CONTENIDO PRINCIPAL ===== -->
-  <main class="main-content">
+  <main class="main-content" id="main-content-etp">
 
     <!-- =========================================
          PASO 1: DATOS GENERALES
@@ -901,14 +901,15 @@
             <input type="text" id="codigo-uc" placeholder="Ej: UC-INCO002_3" />
           </div>
 
-          <!-- Curso asignado -->
+          <!-- Curso(s) asignado(s) -->
           <div class="form-group" id="grupo-curso-asignado">
-            <label for="sel-curso-paso1">Curso</label>
-            <select id="sel-curso-paso1" style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;" onchange="_actualizarCalendarioDiasClase()">
-              <option value="">— Selecciona un curso —</option>
-            </select>
+            <label>Curso(s)</label>
+            <div style="font-size:0.74rem;color:#757575;margin-bottom:4px;">Marca uno o varios cursos que compartan esta misma planificación.</div>
+            <div id="cursos-checklist-paso1" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:0.82rem;color:#9E9E9E;">— No hay cursos creados —</span>
+            </div>
             <span id="aviso-curso-paso1" style="display:none;font-size:0.78rem;color:#E65100;margin-top:4px;">
-              Esta planificación se guardó sin vincularse a ningún curso. Puedes seleccionar uno para que aparezca en el Libro de Calificaciones.
+              Esta planificación se guardó sin vincularse a ningún curso. Puedes marcar uno o más para que aparezca en el Libro de Calificaciones.
             </span>
           </div>
 
@@ -1385,6 +1386,280 @@
 
   </main>
 
+  <!-- =========================================
+       MODO ACADÉMICO -- asistente paralelo para áreas académicas
+       (Matemática, Español, Ciencias, etc.), activable en Ajustes.
+       No comparte estado ni funciones con el asistente de ETP de arriba.
+       ========================================= -->
+  <main class="main-content hidden" id="wizard-academico">
+
+    <div class="stepper-container">
+      <div class="stepper" id="stepper-academico">
+        <div class="step active" data-step="1" onclick="irAlPasoAcademico(1)" style="cursor:pointer;">
+          <div class="step-circle"><span class="step-number">1</span></div>
+          <span class="step-label">Datos Generales</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2" onclick="irAlPasoAcademico(2)" style="cursor:pointer;">
+          <div class="step-circle"><span class="step-number">2</span></div>
+          <span class="step-label">Unidad de Aprendizaje</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3" onclick="irAlPasoAcademico(3)" style="cursor:pointer;">
+          <div class="step-circle"><span class="step-number">3</span></div>
+          <span class="step-label">Indicadores de Logro</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="4" onclick="irAlPasoAcademico(4)" style="cursor:pointer;">
+          <div class="step-circle"><span class="step-number">4</span></div>
+          <span class="step-label">Actividades</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="5" onclick="irAlPasoAcademico(5)" style="cursor:pointer;">
+          <div class="step-circle"><span class="step-number">5</span></div>
+          <span class="step-label">Vista Previa</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 1: DATOS GENERALES (académico) -->
+    <section class="step-section step-section-ac active" id="section-ac-1">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">assignment</span>
+          <h2>Datos Generales de la Unidad</h2>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group form-group--full">
+            <label for="ac-nombre-institucion">Nombre de la Institución</label>
+            <input type="text" id="ac-nombre-institucion" placeholder="Ej: Colegio San Judas Tadeo" />
+          </div>
+          <div class="form-group">
+            <label for="ac-regional">Regional/Distrito</label>
+            <input type="text" id="ac-regional" placeholder="Ej: 08-06" />
+          </div>
+          <div class="form-group">
+            <label for="ac-nombre-docente">Nombre del Docente *</label>
+            <input type="text" id="ac-nombre-docente" placeholder="Ej: Prof. Ana García Pérez" required />
+          </div>
+          <div class="form-group">
+            <label for="ac-nivel-educativo">Nivel Educativo *</label>
+            <select id="ac-nivel-educativo" required style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;">
+              <option value="">— Selecciona —</option>
+              <option value="Inicial">Inicial</option>
+              <option value="Primario">Primario</option>
+              <option value="Secundario">Secundario</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ac-grado">Grado *</label>
+            <input type="text" id="ac-grado" placeholder="Ej: 2do de Secundaria" required />
+          </div>
+          <div class="form-group">
+            <label for="ac-area-curricular">Área Curricular *</label>
+            <input type="text" id="ac-area-curricular" placeholder="Ej: Matemática" required />
+          </div>
+          <div class="form-group">
+            <label for="ac-ano-escolar">Año Escolar</label>
+            <input type="text" id="ac-ano-escolar" placeholder="Ej: 2026-2027" />
+          </div>
+          <div class="form-group" id="grupo-curso-asignado-ac">
+            <label for="ac-sel-curso">Curso</label>
+            <select id="ac-sel-curso" style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;background:#fff;">
+              <option value="">— Selecciona un curso —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ac-valor-unidad">Valor de la Unidad (puntos) *</label>
+            <input type="number" id="ac-valor-unidad" min="1" max="100" placeholder="Ej: 20" required />
+          </div>
+          <div class="form-group">
+            <label for="ac-horas-semana">Horas por Semana *</label>
+            <input type="number" id="ac-horas-semana" min="1" max="40" placeholder="Ej: 4" required />
+          </div>
+          <div class="form-group">
+            <label for="ac-fecha-inicio">Fecha de Inicio *</label>
+            <input type="date" id="ac-fecha-inicio" required style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
+          </div>
+          <div class="form-group">
+            <label for="ac-fecha-termino">Fecha de Término *</label>
+            <input type="date" id="ac-fecha-termino" required style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
+          </div>
+        </div>
+
+        <div class="dias-clase-section">
+          <h3 class="subsection-title"><span class="material-icons">calendar_today</span>Días de Clase por Semana</h3>
+          <div class="dias-grid">
+            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-lunes" class="dia-checkbox"><span class="dia-nombre">Lunes</span></label></div>
+            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-martes" class="dia-checkbox"><span class="dia-nombre">Martes</span></label></div>
+            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-miercoles" class="dia-checkbox"><span class="dia-nombre">Miércoles</span></label></div>
+            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-jueves" class="dia-checkbox"><span class="dia-nombre">Jueves</span></label></div>
+            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-viernes" class="dia-checkbox"><span class="dia-nombre">Viernes</span></label></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <div></div>
+        <button class="btn-siguiente" onclick="irAlPasoAcademico(2)">Siguiente <span class="material-icons">arrow_forward</span></button>
+      </div>
+    </section>
+
+    <!-- PASO 2: UNIDAD DE APRENDIZAJE -->
+    <section class="step-section step-section-ac" id="section-ac-2">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">psychology</span>
+          <h2>Unidad de Aprendizaje</h2>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group form-group--full">
+            <label for="ac-unidad-titulo">Título de la Unidad *</label>
+            <input type="text" id="ac-unidad-titulo" placeholder="Ej: Ecuaciones Lineales" required />
+          </div>
+          <div class="form-group form-group--full">
+            <label for="ac-unidad-descripcion">Descripción / Propósito de la Unidad *</label>
+            <textarea id="ac-unidad-descripcion" rows="4" required
+              placeholder="Ej: El/la estudiante resolverá situaciones cotidianas y matemáticas aplicando ecuaciones lineales con una incógnita..."></textarea>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label style="display:block;margin-bottom:6px;">Competencias Fundamentales</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Ética y Ciudadana"> Ética y Ciudadana</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Comunicativa"> Comunicativa</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Pensamiento Lógico, Creativo y Crítico"> Pensamiento Lógico, Creativo y Crítico</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Resolución de Problemas"> Resolución de Problemas</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Científica y Tecnológica"> Científica y Tecnológica</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Ambiental y de Salud"> Ambiental y de Salud</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Desarrollo Personal y Espiritual"> Desarrollo Personal y Espiritual</label>
+            </div>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label for="ac-competencias-especificas">Competencias Específicas del Área <span class="label-optional">(una por línea)</span></label>
+            <textarea id="ac-competencias-especificas" rows="3" placeholder="Ej: Resuelve ecuaciones lineales aplicando propiedades algebraicas."></textarea>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label for="ac-contenidos-conceptuales">Contenidos Conceptuales</label>
+            <textarea id="ac-contenidos-conceptuales" rows="3"></textarea>
+          </div>
+          <div class="form-group form-group--full">
+            <label for="ac-contenidos-procedimentales">Contenidos Procedimentales</label>
+            <textarea id="ac-contenidos-procedimentales" rows="3"></textarea>
+          </div>
+          <div class="form-group form-group--full">
+            <label for="ac-contenidos-actitudinales">Contenidos Actitudinales</label>
+            <textarea id="ac-contenidos-actitudinales" rows="3"></textarea>
+          </div>
+          <div class="form-group form-group--full">
+            <label for="ac-recursos">Recursos Didácticos Disponibles</label>
+            <textarea id="ac-recursos" rows="2" placeholder="Ej: Pizarrón, calculadora, libro de texto, hojas de trabajo..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="ac-cantidad-indicadores">Cantidad de Indicadores de Logro</label>
+            <input type="number" id="ac-cantidad-indicadores" min="1" max="10" value="4" />
+          </div>
+          <div class="form-group">
+            <label for="ac-cantidad-act-por-indicador">Actividades por Indicador</label>
+            <input type="number" id="ac-cantidad-act-por-indicador" min="1" max="5" value="1" />
+          </div>
+        </div>
+      </div>
+
+      <div class="generar-section">
+        <button id="btn-generar-ac" class="btn-generar" onclick="generarPlanificacionAcademica()">
+          <span class="material-icons btn-generar-icon">auto_awesome</span>
+          <span id="btn-generar-ac-texto">Generar Planificación</span>
+        </button>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPasoAcademico(1)"><span class="material-icons">arrow_back</span>Anterior</button>
+        <button class="btn-siguiente" onclick="irAlPasoAcademico(3)" id="btn-paso-ac2-siguiente" disabled>Siguiente <span class="material-icons">arrow_forward</span></button>
+      </div>
+    </section>
+
+    <!-- PASO 3: INDICADORES DE LOGRO -->
+    <section class="step-section step-section-ac" id="section-ac-3">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">layers</span>
+          <h2>Indicadores de Logro</h2>
+        </div>
+        <div class="info-tip">
+          <span class="material-icons">edit_note</span>
+          <p>Los indicadores se generaron automáticamente. Puedes <strong>editarlos</strong> haciendo clic en el texto.</p>
+        </div>
+        <div id="ac-indicadores-container" class="ec-container"></div>
+        <div style="display:flex;justify-content:center;margin-top:16px;">
+          <button onclick="_acAgregarIndicador()" style="display:flex;align-items:center;gap:7px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:9px 22px;font-size:0.85rem;font-weight:700;cursor:pointer;">
+            <span class="material-icons">add_circle</span> Agregar Indicador de Logro
+          </button>
+        </div>
+      </div>
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPasoAcademico(2)"><span class="material-icons">arrow_back</span>Anterior</button>
+        <button class="btn-siguiente" onclick="irAlPasoAcademico(4)">Siguiente <span class="material-icons">arrow_forward</span></button>
+      </div>
+    </section>
+
+    <!-- PASO 4: ACTIVIDADES -->
+    <section class="step-section step-section-ac" id="section-ac-4">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">event_note</span>
+          <h2>Actividades</h2>
+          <button onclick="_acDistribuirPuntosAutomatico()" style="margin-left:auto;display:flex;align-items:center;gap:6px;background:#E8F5E9;border:1.5px solid #A5D6A7;color:#2E7D32;border-radius:20px;padding:7px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+            <span class="material-icons" style="font-size:17px;">auto_fix_high</span> Distribuir puntos
+          </button>
+        </div>
+        <div class="tabla-responsiva">
+          <table id="ac-tabla-actividades" class="tabla-actividades">
+            <thead>
+              <tr>
+                <th>Indicador</th>
+                <th>Actividad</th>
+                <th style="text-align:center;">Valor (pts)</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="ac-tabla-actividades-body"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:14px;">
+          <button onclick="_acAgregarActividad()" style="display:flex;align-items:center;gap:6px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:8px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;">
+            <span class="material-icons">add_circle</span> Agregar actividad
+          </button>
+        </div>
+      </div>
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPasoAcademico(3)"><span class="material-icons">arrow_back</span>Anterior</button>
+        <button class="btn-siguiente" onclick="irAlPasoAcademico(5)">Siguiente <span class="material-icons">arrow_forward</span></button>
+      </div>
+    </section>
+
+    <!-- PASO 5: VISTA PREVIA -->
+    <section class="step-section step-section-ac" id="section-ac-5">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="material-icons section-icon">picture_as_pdf</span>
+          <h2>Vista Previa</h2>
+        </div>
+        <div id="ac-vista-previa" class="vista-previa"></div>
+      </div>
+      <div class="nav-buttons">
+        <button class="btn-anterior" onclick="irAlPasoAcademico(4)"><span class="material-icons">arrow_back</span>Anterior</button>
+        <div></div>
+      </div>
+    </section>
+
+  </main>
+
 
   <!-- ===== PANEL PLANIFICACIONES (Biblioteca) ===== -->
   <!-- ===== PANEL TUTORIAL ===== -->
@@ -1408,6 +1683,17 @@
             onclick="nuevaPlanificacion()">
             <span class="material-icons">add_circle_outline</span>
             <span class="btn-nueva-label">Nueva planificación</span>
+          </button>
+          <button id="btn-nueva-planificacion-academica" class="btn-nueva"
+            style="display:none;background:rgba(0,131,143,0.15);border-color:rgba(77,182,172,0.6);color:#00695C;"
+            onclick="nuevaPlanificacionAcademica()" title="Planificación por Unidad de Aprendizaje para áreas académicas (Matemática, Español, Ciencias, etc.)">
+            <span class="material-icons">school</span>
+            <span class="btn-nueva-label">Nueva Planificación Académica</span>
+          </button>
+          <button class="btn-nueva" style="background:rgba(97,97,97,0.12);border-color:rgba(189,189,189,0.6);color:#616161;"
+            onclick="abrirPapeleraPlanificaciones()" title="Ver planificaciones eliminadas recientemente">
+            <span class="material-icons">delete_outline</span>
+            <span class="btn-nueva-label">Papelera</span>
           </button>
         </div>
       </div>
@@ -2833,6 +3119,22 @@
           </div>
         </div>
 
+        <!-- Modo Académico -->
+        <div class="config-section">
+          <div class="config-section-title"><span class="material-icons">school</span>Modo Académico</div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              Habilitar planificación para áreas académicas
+              <small>Agrega la opción de crear planificaciones por Unidad de Aprendizaje (Matemática, Español, Ciencias, etc.), separadas de las planificaciones por RA de Técnico Profesional</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-modo-academico"
+                onchange="localStorage.setItem('cfg_modo_academico',this.checked);_aplicarModoAcademico();_syncPreferencias()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
         <!-- Rendimiento y Riesgo -->
         <div class="config-section">
           <div class="config-section-title"><span class="material-icons">insights</span>Rendimiento y Riesgo</div>
@@ -3026,6 +3328,40 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#455A64;">v17.90<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Papelera de reciclaje, aviso al descargar diarias vacías, y varios cursos por planificación</div>
+              <ul class="about-ver-items">
+                <li>Nuevo: al eliminar una planificación de "Mis Planificaciones Guardadas" ya no se borra para siempre al instante -- queda en una nueva Papelera de reciclaje por 30 días, desde donde se puede restaurar o eliminar definitivamente.</li>
+                <li>Corregido: el botón "Word Diarias" del listado de planificaciones guardadas parecía no hacer nada cuando la planificación diaria aún no tenía contenido generado (el sistema creaba sesiones vacías al guardar, y eso confundía la validación). Ahora, si no hay contenido real en ninguna sesión diaria, se muestra un aviso claro indicando que hay que generarlas primero.</li>
+                <li>Nuevo: en Datos Generales del Módulo, el campo "Curso" ahora permite marcar varios cursos a la vez, para cuando la misma planificación se imparte en más de una sección.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v17.89<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Modo Académico para maestros de área (Matemática, Español, Ciencias, etc.)</div>
+              <ul class="about-ver-items">
+                <li>Se agregó un asistente de planificación totalmente nuevo y separado, pensado para maestros de áreas académicas (no técnicas), con el vocabulario del Diseño Curricular Dominicano: Unidad de Aprendizaje, Competencias Fundamentales y Específicas, Contenidos e Indicadores de Logro.</li>
+                <li>Se activa desde Ajustes (Configuración) con el interruptor "Modo Académico". Apagado por defecto: si no lo activas, no ves ningún botón ni cambio nuevo.</li>
+                <li>Al activarlo aparece un botón "Nueva Planificación Académica" junto al de "Nueva planificación" en Mis Planificaciones Guardadas, con su propio asistente de 5 pasos, generación con IA (o manual) de Indicadores de Logro y Actividades, y vista previa.</li>
+                <li>Las planificaciones académicas se guardan en la misma Biblioteca (con una insignia "Académica" para distinguirlas) y funcionan con el Libro de Calificaciones existente sin necesitar ningún cambio ahí.</li>
+                <li>Esta ronda no toca en absoluto la planificación técnica (ETP) actual: el asistente, los botones y el flujo de siempre siguen exactamente igual.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -7792,9 +8128,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.88"></script>
+  <script src="app.js?v=17.90"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.88"></script>
+  <script src="auth.js?v=17.90"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

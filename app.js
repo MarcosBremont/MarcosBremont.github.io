@@ -1008,8 +1008,511 @@ let planificacion = {
 
 };
 
+// ── Modo Académico (planificación por Unidad de Aprendizaje, para áreas
+// académicas -- Matemática, Español, Ciencias, etc. -- distinta de la
+// planificación por RA de Técnico Profesional de arriba) ──────────────────
+// Activable en Ajustes (ver _aplicarModoAcademico). Usa el MISMO `planificacion`
+// global (distinguido por `tipo`), pero un wizard de DOM completamente aparte
+// (#wizard-academico) con su propia navegación (irAlPasoAcademico), para no
+// tocar nada del wizard/datos de ETP.
 
+/** Objeto `planificacion` fresco para una nueva planificación académica.
+ *  `ra.descripcion` se mantiene como espejo de `unidad.descripcion` (y
+ *  `datosGenerales.moduloFormativo` como espejo de `unidadAprendizaje`)
+ *  únicamente para que _ensureRA() (Libro de Calificaciones) encuentre lo que
+ *  ya espera sin que haya que tocarle una sola línea. */
+function _planificacionAcademicaDefault() {
+  return {
+    tipo: 'academico',
+    datosGenerales: {},
+    unidad: {
+      descripcion: '',
+      competenciasFundamentales: [],
+      competenciasEspecificas: '',
+      contenidosConceptuales: '',
+      contenidosProcedimentales: '',
+      contenidosActitudinales: '',
+      recursos: ''
+    },
+    ra: { descripcion: '' },
+    indicadoresLogro: [],
+    actividades: [],
+    fechasClase: [],
+    horasTotal: 0,
+    semanas: 0
+  };
+}
 
+let pasoActualAcademico = 1;
+const TOTAL_PASOS_ACADEMICO = 5;
+
+/** Oculta el wizard de ETP y muestra el de Modo Académico. */
+function _mostrarWizardAcademico() {
+  document.getElementById('main-content-etp')?.classList.add('hidden');
+  document.getElementById('wizard-academico')?.classList.remove('hidden');
+}
+
+/** Oculta el wizard de Modo Académico y muestra el de ETP (comportamiento
+ *  por defecto de siempre). */
+function _mostrarWizardEtp() {
+  document.getElementById('wizard-academico')?.classList.add('hidden');
+  document.getElementById('main-content-etp')?.classList.remove('hidden');
+}
+
+/** Análogo a _ocultarPaneles() (app.js) pero para Modo Académico -- cierra
+ *  cualquier panel lateral abierto (Biblioteca, Calificaciones, etc.) y deja
+ *  visible el wizard académico en el paso indicado. No toca _ocultarPaneles()
+ *  ni irAlPaso() de ETP. */
+function _ocultarPanelesAcademico() {
+  _mostrarWizardAcademico();
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
+  });
+  irAlPasoAcademico(pasoActualAcademico || 1, false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Rellena el selector de curso del Paso 1 académico -- mismo patrón que
+ *  _mostrarCursoAsignado() de ETP, sobre #ac-sel-curso. */
+function _acMostrarCursoAsignado() {
+  const grupo = document.getElementById('grupo-curso-asignado-ac');
+  const sel = document.getElementById('ac-sel-curso');
+  if (!grupo || !sel) return;
+  const cursos = Object.values(calState.cursos || {});
+  if (cursos.length === 0) { grupo.style.display = 'none'; return; }
+  grupo.style.display = '';
+  const valorActual = sel.value;
+  sel.innerHTML = '<option value="">— Selecciona un curso —</option>';
+  cursos.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.nombre;
+    sel.appendChild(opt);
+  });
+  const planId = planificacion._id;
+  if (planId) {
+    const cursoAsignado = cursos.find(c => (c.planIds || []).includes(planId));
+    if (cursoAsignado) { sel.value = cursoAsignado.id; return; }
+  }
+  if (valorActual && cursos.some(c => c.id === valorActual)) sel.value = valorActual;
+}
+
+function actualizarStepperAcademico(pasoActivo) {
+  const steps = document.querySelectorAll('#stepper-academico .step');
+  const lines = document.querySelectorAll('#stepper-academico .step-line');
+  steps.forEach((step, idx) => {
+    const numPaso = idx + 1;
+    step.classList.remove('active', 'completed');
+    if (numPaso < pasoActivo) step.classList.add('completed');
+    if (numPaso === pasoActivo) step.classList.add('active');
+  });
+  lines.forEach((line, idx) => line.classList.toggle('completed', idx + 1 < pasoActivo));
+}
+
+function validarPasoAc1() {
+  const campos = ['ac-nombre-docente', 'ac-nivel-educativo', 'ac-grado', 'ac-area-curricular',
+    'ac-valor-unidad', 'ac-horas-semana', 'ac-fecha-inicio', 'ac-fecha-termino'];
+  let valido = true;
+  campos.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const vacio = !String(el.value || '').trim();
+    el.classList.toggle('error', vacio);
+    if (vacio) valido = false;
+  });
+  if (!valido) mostrarToast('Completa los campos requeridos (*) antes de continuar.', 'error');
+  return valido;
+}
+
+function validarPasoAc2() {
+  const campos = ['ac-unidad-titulo', 'ac-unidad-descripcion'];
+  let valido = true;
+  campos.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const vacio = !String(el.value || '').trim();
+    el.classList.toggle('error', vacio);
+    if (vacio) valido = false;
+  });
+  if (!valido) mostrarToast('Completa el título y la descripción de la Unidad antes de continuar.', 'error');
+  return valido;
+}
+
+function validarPasoActualAcademico() {
+  if (pasoActualAcademico === 1) return validarPasoAc1();
+  if (pasoActualAcademico === 2) return validarPasoAc2();
+  return true;
+}
+
+/** Lee los campos del DOM del Paso 1/2 académico hacia `planificacion`.
+ *  Espeja unidadAprendizaje→moduloFormativo y unidad.descripcion→ra.descripcion
+ *  para que _ensureRA() (Libro de Calificaciones) siga funcionando sin cambios. */
+function guardarDatosFormularioAcademico() {
+  const getVal = id => document.getElementById(id)?.value?.trim() || '';
+  const diasClase = [];
+  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
+    if (document.getElementById('ac-dia-' + dia)?.checked) diasClase.push(dia);
+  });
+
+  planificacion.datosGenerales = {
+    ...(planificacion.datosGenerales || {}),
+    nombreInstitucion: getVal('ac-nombre-institucion'),
+    regional: getVal('ac-regional'),
+    nombreDocente: getVal('ac-nombre-docente'),
+    nivelEducativo: getVal('ac-nivel-educativo'),
+    grado: getVal('ac-grado'),
+    areaCurricular: getVal('ac-area-curricular'),
+    anoEscolar: getVal('ac-ano-escolar'),
+    valorRA: getVal('ac-valor-unidad'),
+    horasSemana: getVal('ac-horas-semana'),
+    fechaInicio: getVal('ac-fecha-inicio'),
+    fechaTermino: getVal('ac-fecha-termino'),
+    diasClase,
+    unidadAprendizaje: getVal('ac-unidad-titulo'),
+    moduloFormativo: getVal('ac-unidad-titulo') // espejo -- ver _ensureRA()
+  };
+
+  const competenciasFundamentales = Array.from(document.querySelectorAll('.ac-comp-fund:checked')).map(c => c.value);
+  planificacion.unidad = {
+    descripcion: getVal('ac-unidad-descripcion'),
+    competenciasFundamentales,
+    competenciasEspecificas: getVal('ac-competencias-especificas'),
+    contenidosConceptuales: getVal('ac-contenidos-conceptuales'),
+    contenidosProcedimentales: getVal('ac-contenidos-procedimentales'),
+    contenidosActitudinales: getVal('ac-contenidos-actitudinales'),
+    recursos: getVal('ac-recursos')
+  };
+  planificacion.ra = { descripcion: planificacion.unidad.descripcion }; // espejo -- ver _ensureRA()
+}
+
+/** Repuebla el formulario académico desde `planificacion` (al cargar un plan
+ *  guardado). Análogo a poblarFormularioDesdeEstado() de ETP. */
+function poblarFormularioAcademicoDesdeEstado() {
+  const dg = planificacion.datosGenerales || {};
+  const unidad = planificacion.unidad || {};
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+
+  setVal('ac-nombre-institucion', dg.nombreInstitucion);
+  setVal('ac-regional', dg.regional);
+  setVal('ac-nombre-docente', dg.nombreDocente);
+  setVal('ac-nivel-educativo', dg.nivelEducativo);
+  setVal('ac-grado', dg.grado);
+  setVal('ac-area-curricular', dg.areaCurricular);
+  setVal('ac-ano-escolar', dg.anoEscolar);
+  setVal('ac-valor-unidad', dg.valorRA);
+  setVal('ac-horas-semana', dg.horasSemana);
+  setVal('ac-fecha-inicio', dg.fechaInicio);
+  setVal('ac-fecha-termino', dg.fechaTermino);
+  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
+    const chk = document.getElementById('ac-dia-' + dia);
+    if (chk) chk.checked = (dg.diasClase || []).includes(dia);
+  });
+  setVal('ac-unidad-titulo', dg.unidadAprendizaje);
+  setVal('ac-unidad-descripcion', unidad.descripcion);
+  document.querySelectorAll('.ac-comp-fund').forEach(chk => {
+    chk.checked = (unidad.competenciasFundamentales || []).includes(chk.value);
+  });
+  setVal('ac-competencias-especificas', unidad.competenciasEspecificas);
+  setVal('ac-contenidos-conceptuales', unidad.contenidosConceptuales);
+  setVal('ac-contenidos-procedimentales', unidad.contenidosProcedimentales);
+  setVal('ac-contenidos-actitudinales', unidad.contenidosActitudinales);
+  setVal('ac-recursos', unidad.recursos);
+
+  _acRenderizarIndicadores();
+  _acRenderizarActividades();
+  const btnSig = document.getElementById('btn-paso-ac2-siguiente');
+  if (btnSig && (planificacion.indicadoresLogro || []).length) btnSig.disabled = false;
+}
+
+function irAlPasoAcademico(nuevoPaso, validar = true) {
+  if (validar && nuevoPaso > pasoActualAcademico) {
+    if (!validarPasoActualAcademico()) return;
+  }
+  if (nuevoPaso >= pasoActualAcademico) guardarDatosFormularioAcademico();
+
+  document.querySelectorAll('.step-section-ac').forEach(s => s.classList.remove('active'));
+  const seccion = document.getElementById('section-ac-' + nuevoPaso);
+  if (seccion) seccion.classList.add('active');
+  actualizarStepperAcademico(nuevoPaso);
+  pasoActualAcademico = nuevoPaso;
+
+  if (nuevoPaso === 1) _acMostrarCursoAsignado();
+  if (nuevoPaso === 3) _acRenderizarIndicadores();
+  if (nuevoPaso === 4) _acRenderizarActividades();
+  if (nuevoPaso === 5) {
+    renderizarVistaPreviaAcademico();
+    const dgCheck = planificacion.datosGenerales || {};
+    if (dgCheck.unidadAprendizaje) guardarPlanificacionActual(true);
+  }
+  guardarBorrador();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Indicadores de Logro (paso 3 académico) ────────────────────────────
+function _acRenderizarIndicadores() {
+  const cont = document.getElementById('ac-indicadores-container');
+  if (!cont) return;
+  const lista = planificacion.indicadoresLogro || [];
+  if (!lista.length) {
+    cont.innerHTML = '<p style="color:#78909C;font-size:0.85rem;text-align:center;padding:20px;">Aún no hay indicadores. Vuelve al paso "Unidad de Aprendizaje" y usa "Generar Planificación", o agrégalos manualmente.</p>';
+    return;
+  }
+  cont.innerHTML = lista.map((ind, idx) => `
+    <div class="ec-card" style="border:1.5px solid #E0E0E0;border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <strong style="color:#00695C;">${escapeHTML(ind.codigo || ('IL' + (idx + 1)))}</strong>
+        <input type="text" value="${escapeHTML(ind.competenciaAsociada || '')}" placeholder="Competencia asociada"
+          onchange="planificacion.indicadoresLogro[${idx}].competenciaAsociada=this.value;guardarBorrador();"
+          style="flex:1;border:1px solid #CFD8DC;border-radius:6px;padding:5px 8px;font-size:0.78rem;color:#546E7A;">
+        <button onclick="_acEliminarIndicador(${idx})" title="Eliminar" style="background:none;border:none;color:#C62828;cursor:pointer;">
+          <span class="material-icons" style="font-size:18px;">delete</span>
+        </button>
+      </div>
+      <textarea rows="2" style="width:100%;border:1px solid #E0E0E0;border-radius:6px;padding:8px;font-size:0.85rem;box-sizing:border-box;"
+        onchange="planificacion.indicadoresLogro[${idx}].enunciado=this.value;guardarBorrador();">${escapeHTML(ind.enunciado || '')}</textarea>
+    </div>`).join('');
+}
+
+function _acAgregarIndicador() {
+  if (!planificacion.indicadoresLogro) planificacion.indicadoresLogro = [];
+  const n = planificacion.indicadoresLogro.length + 1;
+  planificacion.indicadoresLogro.push({ codigo: 'IL' + n, enunciado: '', competenciaAsociada: '' });
+  _acRenderizarIndicadores();
+  guardarBorrador();
+}
+
+function _acEliminarIndicador(idx) {
+  if (!confirm('¿Eliminar este indicador de logro?')) return;
+  planificacion.indicadoresLogro.splice(idx, 1);
+  _acRenderizarIndicadores();
+  guardarBorrador();
+}
+
+// ── Actividades (paso 4 académico) ─────────────────────────────────────
+function _acRenderizarActividades() {
+  const body = document.getElementById('ac-tabla-actividades-body');
+  if (!body) return;
+  const acts = planificacion.actividades || [];
+  if (!acts.length) {
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#78909C;padding:16px;">No hay actividades todavía.</td></tr>';
+    return;
+  }
+  body.innerHTML = acts.map((a, idx) => `
+    <tr>
+      <td><input type="text" value="${escapeHTML(a.indicadorCodigo || '')}" onchange="planificacion.actividades[${idx}].indicadorCodigo=this.value;guardarBorrador();" style="width:70px;border:1px solid #E0E0E0;border-radius:6px;padding:4px 6px;font-size:0.8rem;"></td>
+      <td><input type="text" value="${escapeHTML(a.enunciado || '')}" onchange="planificacion.actividades[${idx}].enunciado=this.value;guardarBorrador();" style="width:100%;border:1px solid #E0E0E0;border-radius:6px;padding:4px 8px;font-size:0.85rem;box-sizing:border-box;"></td>
+      <td style="text-align:center;"><input type="number" value="${a.valor ?? ''}" min="0" step="0.1" onchange="planificacion.actividades[${idx}].valor=parseFloat(this.value)||0;guardarBorrador();" style="width:64px;text-align:center;border:1px solid #E0E0E0;border-radius:6px;padding:4px;"></td>
+      <td style="text-align:center;"><button onclick="_acEliminarActividad(${idx})" title="Eliminar" style="background:none;border:none;color:#C62828;cursor:pointer;"><span class="material-icons" style="font-size:18px;">delete</span></button></td>
+    </tr>`).join('');
+}
+
+function _acAgregarActividad() {
+  if (!planificacion.actividades) planificacion.actividades = [];
+  planificacion.actividades.push({
+    id: 'act-ac-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    enunciado: '', valor: 0, indicadorCodigo: '', esComplementario: false
+  });
+  _acRenderizarActividades();
+  guardarBorrador();
+}
+
+function _acEliminarActividad(idx) {
+  if (!confirm('¿Eliminar esta actividad?')) return;
+  planificacion.actividades.splice(idx, 1);
+  _acRenderizarActividades();
+  guardarBorrador();
+}
+
+/** Reparte el Valor de la Unidad equitativamente entre las actividades --
+ *  mismo algoritmo que distribuirPuntosAutomatico() de ETP, sobre el mismo
+ *  campo planificacion.actividades. */
+function _acDistribuirPuntosAutomatico() {
+  const acts = planificacion.actividades || [];
+  if (!acts.length) { mostrarToast('No hay actividades para distribuir.', 'warning'); return; }
+  const valorTotal = parseFloat(planificacion?.datosGenerales?.valorRA) || 0;
+  if (valorTotal <= 0) { mostrarToast('Define primero el Valor de la Unidad en Datos Generales.', 'warning'); return; }
+  const base = Math.floor((valorTotal / acts.length) * 100) / 100;
+  const restante = Math.round((valorTotal - base * (acts.length - 1)) * 100) / 100;
+  acts.forEach((a, i) => { a.valor = i === acts.length - 1 ? restante : base; });
+  _acRenderizarActividades();
+  guardarBorrador();
+  mostrarToast(`${valorTotal} pts distribuidos entre ${acts.length} actividad${acts.length !== 1 ? 'es' : ''}`, 'success');
+}
+
+// ── Generación con IA (Unidad → Indicadores + Actividades) ─────────────
+/** Arma el prompt de generación académica -- vocabulario de Diseño
+ *  Curricular Dominicano (Unidad/Indicadores/Competencias), sin Bloom/EC. */
+function construirPromptAcademico(dg, unidad) {
+  const cantidadIndicadores = parseInt(document.getElementById('ac-cantidad-indicadores')?.value) || 4;
+  const cantidadActPorIndicador = parseInt(document.getElementById('ac-cantidad-act-por-indicador')?.value) || 1;
+  const totalActs = cantidadIndicadores * cantidadActPorIndicador;
+  return `Eres un docente experto en el Diseño Curricular Dominicano de educación regular (Inicial/Primaria/Secundaria) -- NO es educación técnico-profesional, no uses vocabulario de "Resultado de Aprendizaje", "Elemento de Capacidad" ni Taxonomía de Bloom.
+
+Área Curricular: ${dg.areaCurricular || ''}
+Grado: ${dg.grado || ''} (Nivel ${dg.nivelEducativo || ''})
+Título de la Unidad de Aprendizaje: ${dg.unidadAprendizaje || ''}
+Descripción/Propósito de la Unidad: ${unidad.descripcion || ''}
+Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
+Competencias Específicas del Área: ${unidad.competenciasEspecificas || 'no especificadas'}
+Contenidos Conceptuales: ${unidad.contenidosConceptuales || 'no especificados'}
+Contenidos Procedimentales: ${unidad.contenidosProcedimentales || 'no especificados'}
+Contenidos Actitudinales: ${unidad.contenidosActitudinales || 'no especificados'}
+Recursos disponibles: ${unidad.recursos || 'no especificados'}
+
+TAREA: Genera exactamente ${cantidadIndicadores} Indicadores de Logro (código "IL1", "IL2"...) alineados a las Competencias Específicas, y ${cantidadActPorIndicador} actividad(es) concreta(s) por cada indicador (${totalActs} actividades en total).
+
+Reglas:
+- Cada Indicador de Logro describe lo que el/la estudiante es capaz de HACER al finalizar la unidad (verbo + objeto + condición), no lo que el docente enseña.
+- Las actividades son tareas concretas y evaluables que el estudiante realiza -- NO deben repetir el enunciado del indicador.
+- No inventes contenidos fuera del área curricular indicada.
+
+Responde SOLO con este JSON exacto, sin markdown ni texto adicional:
+{
+  "indicadoresLogro": [
+    {"codigo": "IL1", "enunciado": "...", "competenciaAsociada": "..."}
+  ],
+  "actividades": [
+    {"indicadorCodigo": "IL1", "enunciado": "..."}
+  ]
+}`;
+}
+
+/** Genera Indicadores de Logro + Actividades con IA para la Unidad actual --
+ *  misma cascada de proveedores que generarPlanificacion() de ETP (Claude →
+ *  Groq → Gemini → OpenRouter), pero con un prompt propio del Diseño
+ *  Curricular académico (ver construirPromptAcademico). Si ningún proveedor
+ *  está configurado o todos fallan, genera localmente a partir de las
+ *  Competencias Específicas escritas a mano (sin inventar contenido). */
+async function generarPlanificacionAcademica() {
+  guardarDatosFormularioAcademico();
+  const dg = planificacion.datosGenerales || {};
+  const unidad = planificacion.unidad || {};
+
+  if (!unidad.descripcion?.trim()) {
+    mostrarToast('Escribe la descripción de la Unidad antes de generar', 'error');
+    return;
+  }
+
+  const groqKey = getGroqKey(), openrouterKey = getOpenRouterKey(),
+    claudeKey = getClaudeKey(), geminiKey = getGeminiKey();
+  const btn = document.getElementById('btn-generar-ac');
+  const btnTexto = document.getElementById('btn-generar-ac-texto');
+
+  if (!groqKey && !geminiKey && !openrouterKey && !claudeKey) {
+    mostrarToast('💡 Sin claves de IA: generando localmente a partir de las Competencias Específicas.', 'info');
+    _acGenerarLocal(dg, unidad);
+    return;
+  }
+
+  if (btn) btn.classList.add('btn-generando');
+  if (btnTexto) btnTexto.textContent = 'Generando con IA...';
+
+  const prompt = construirPromptAcademico(dg, unidad);
+  let aiData = null;
+
+  try {
+    if (claudeKey) {
+      try { aiData = await _llamarClaude(prompt, 8192); }
+      catch (e) { console.warn('[IA académica] Claude falló:', e.message); }
+    }
+    if (!aiData && groqKey) {
+      try { aiData = await _llamarGroqConFallback(prompt, 'Generando planificación académica', 8192); }
+      catch (e) { console.warn('[IA académica] Groq falló:', e.message); }
+    }
+    if (!aiData && geminiKey) {
+      try { aiData = await _llamarGemini(prompt, 8192); }
+      catch (e) { console.warn('[IA académica] Gemini falló:', e.message); }
+    }
+    if (!aiData && openrouterKey) {
+      try { aiData = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Generando planificación académica', 4096, 60000); }
+      catch (e) { console.warn('[IA académica] OpenRouter falló:', e.message); }
+    }
+
+    if (aiData && Array.isArray(aiData.indicadoresLogro) && aiData.indicadoresLogro.length) {
+      planificacion.indicadoresLogro = aiData.indicadoresLogro.map((ind, i) => ({
+        codigo: ind.codigo || ('IL' + (i + 1)),
+        enunciado: ind.enunciado || '',
+        competenciaAsociada: ind.competenciaAsociada || ''
+      }));
+      planificacion.actividades = (Array.isArray(aiData.actividades) ? aiData.actividades : []).map(a => ({
+        id: 'act-ac-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        enunciado: a.enunciado || '',
+        valor: 0,
+        indicadorCodigo: a.indicadorCodigo || '',
+        esComplementario: false
+      }));
+      _acDistribuirPuntosAutomatico();
+      mostrarToast('Planificación académica generada con IA ✓', 'success');
+    } else {
+      mostrarToast('⏳ Ningún proveedor de IA respondió. Generando localmente...', 'warning');
+      _acGenerarLocal(dg, unidad);
+    }
+  } finally {
+    if (btn) btn.classList.remove('btn-generando');
+    if (btnTexto) btnTexto.textContent = 'Generar Planificación';
+    _acRenderizarIndicadores();
+    _acRenderizarActividades();
+    const btnSig = document.getElementById('btn-paso-ac2-siguiente');
+    if (btnSig && planificacion.indicadoresLogro?.length) btnSig.disabled = false;
+    guardarBorrador();
+  }
+}
+
+/** Generación local sin IA -- best effort a partir de lo que el docente ya
+ *  escribió en Competencias Específicas (una línea = un indicador), sin
+ *  inventar contenido que no esté ahí. */
+function _acGenerarLocal(dg, unidad) {
+  const lineas = (unidad.competenciasEspecificas || '').split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lineas.length) {
+    mostrarToast('Escribe al menos una Competencia Específica (una por línea) para generar localmente.', 'error');
+    return;
+  }
+  planificacion.indicadoresLogro = lineas.map((linea, i) => ({
+    codigo: 'IL' + (i + 1),
+    enunciado: linea,
+    competenciaAsociada: linea
+  }));
+  planificacion.actividades = lineas.map((linea, i) => ({
+    id: 'act-ac-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + i,
+    enunciado: 'Actividad relacionada con: ' + linea,
+    valor: 0,
+    indicadorCodigo: 'IL' + (i + 1),
+    esComplementario: false
+  }));
+  _acDistribuirPuntosAutomatico();
+  _acRenderizarIndicadores();
+  _acRenderizarActividades();
+  const btnSig = document.getElementById('btn-paso-ac2-siguiente');
+  if (btnSig) btnSig.disabled = false;
+  guardarBorrador();
+}
+
+// ── Vista Previa (paso 5 académico) ────────────────────────────────────
+function renderizarVistaPreviaAcademico() {
+  const cont = document.getElementById('ac-vista-previa');
+  if (!cont) return;
+  const dg = planificacion.datosGenerales || {};
+  const unidad = planificacion.unidad || {};
+  const indicadores = planificacion.indicadoresLogro || [];
+  const actividades = planificacion.actividades || [];
+
+  cont.innerHTML = `
+    <div style="padding:16px;">
+      <h2 style="text-align:center;color:#00695C;">${escapeHTML(dg.unidadAprendizaje || 'Unidad sin título')}</h2>
+      <p style="text-align:center;color:#546E7A;font-size:0.9rem;">${escapeHTML(dg.areaCurricular || '')} · ${escapeHTML(dg.grado || '')} · ${escapeHTML(dg.nombreDocente || '')}</p>
+      <hr>
+      <h3>Descripción</h3>
+      <p>${escapeHTML(unidad.descripcion || '')}</p>
+      ${(unidad.competenciasFundamentales || []).length ? `<h3>Competencias Fundamentales</h3><p>${(unidad.competenciasFundamentales || []).map(escapeHTML).join(', ')}</p>` : ''}
+      <h3>Indicadores de Logro</h3>
+      <ul>${indicadores.map(i => `<li><strong>${escapeHTML(i.codigo)}:</strong> ${escapeHTML(i.enunciado)}</li>`).join('') || '<li>Sin indicadores todavía.</li>'}</ul>
+      <h3>Actividades</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead><tr><th style="border:1px solid #CFD8DC;padding:6px;">Indicador</th><th style="border:1px solid #CFD8DC;padding:6px;">Actividad</th><th style="border:1px solid #CFD8DC;padding:6px;">Puntos</th></tr></thead>
+        <tbody>${actividades.map(a => `<tr><td style="border:1px solid #CFD8DC;padding:6px;">${escapeHTML(a.indicadorCodigo || '')}</td><td style="border:1px solid #CFD8DC;padding:6px;">${escapeHTML(a.enunciado || '')}</td><td style="border:1px solid #CFD8DC;padding:6px;text-align:center;">${a.valor ?? 0}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;padding:8px;">Sin actividades todavía.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+}
 
 
 
@@ -7362,11 +7865,18 @@ function restaurarBorrador() {
 
 
 
-/** Rellena el selector de curso en Paso 1 y pre-selecciona el curso asignado */
+/** Devuelve el id del primer curso marcado en el checklist de Paso 1 (uso en
+ *  vistas previas de horario/calendario, que solo pueden mostrar un curso a la vez). */
+function _cursoIdSeleccionadoPaso1() {
+  const chk = document.querySelector('.chk-curso-paso1:checked');
+  return chk ? chk.value : '';
+}
+
+/** Rellena el checklist de cursos en Paso 1 y marca los cursos ya asignados a esta planificación */
 function _mostrarCursoAsignado() {
   const grupo = document.getElementById('grupo-curso-asignado');
-  const sel = document.getElementById('sel-curso-paso1');
-  if (!grupo || !sel) return;
+  const contenedor = document.getElementById('cursos-checklist-paso1');
+  if (!grupo || !contenedor) return;
 
   const cursos = Object.values(calState.cursos || {});
 
@@ -7377,29 +7887,29 @@ function _mostrarCursoAsignado() {
   }
   grupo.style.display = '';
 
-  // Reconstruir opciones
-  const valorActual = sel.value;
-  sel.innerHTML = '<option value="">— Selecciona un curso —</option>';
-  cursos.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.nombre;
-    sel.appendChild(opt);
-  });
+  // Conservar marcados actuales (por si el usuario ya había tildado alguno en esta sesión)
+  const marcadosActuales = Array.from(contenedor.querySelectorAll('.chk-curso-paso1:checked')).map(c => c.value);
 
-  // Pre-seleccionar el curso que ya tiene asignada esta planificación
+  // Cursos ya asignados a esta planificación (si ya tiene _id)
   const planId = planificacion._id;
-  if (planId) {
-    const cursoAsignado = cursos.find(c => (c.planIds || []).includes(planId));
-    if (cursoAsignado) {
-      sel.value = cursoAsignado.id;
-      return;
-    }
-  }
-  // Restaurar selección previa si sigue siendo válida
-  if (valorActual && cursos.some(c => c.id === valorActual)) {
-    sel.value = valorActual;
-  }
+  const idsAsignados = planId ? cursos.filter(c => (c.planIds || []).includes(planId)).map(c => c.id) : [];
+
+  const idsAMarcar = idsAsignados.length > 0 ? idsAsignados : marcadosActuales;
+
+  contenedor.innerHTML = '';
+  cursos.forEach(c => {
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.85rem;';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'chk-curso-paso1';
+    input.value = c.id;
+    input.checked = idsAMarcar.includes(c.id);
+    input.onchange = _actualizarCalendarioDiasClase;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(' ' + c.nombre));
+    contenedor.appendChild(label);
+  });
 }
 
 /** Mini-calendario que muestra los días de clase del curso seleccionado */
@@ -7407,7 +7917,7 @@ function _actualizarCalendarioDiasClase() {
   const contenedor = document.getElementById('dias-clase-calendario');
   if (!contenedor) return;
 
-  const cursoId = document.getElementById('sel-curso-paso1')?.value;
+  const cursoId = _cursoIdSeleccionadoPaso1();
   const curso = cursoId ? calState.cursos[cursoId] : null;
   const nombreCurso = curso?.nombre || '';
 
@@ -7543,7 +8053,7 @@ const _DG_PALETA = [
 ];
 
 function _dgFpGetMaterias() {
-  const cursoId = document.getElementById('sel-curso-paso1')?.value;
+  const cursoId = _cursoIdSeleccionadoPaso1();
   const curso = cursoId && typeof calState !== 'undefined' ? calState.cursos?.[cursoId] : null;
   const nombreCurso = curso?.nombre || '';
   if (!nombreCurso || typeof cargarHorario !== 'function') return { materias:[], colorDe:{}, diaAMaterias:{} };
@@ -7940,6 +8450,19 @@ function nuevaPlanificacion() {
   // en bucle (el guardado local se borra, pero el de la nube seguía intacto).
   if (window._syncFirebase) window._syncFirebase('planificacion', '');
   sessionStorage.setItem('planificador_goto', 'step1');
+  sessionStorage.removeItem('planificador_modo');
+  location.reload();
+}
+
+/** Igual que nuevaPlanificacion(), pero arranca el asistente de Modo
+ *  Académico (Unidad de Aprendizaje) en vez del de ETP -- ver
+ *  sessionStorage 'planificador_modo', leído en _arrancarApp(). */
+function nuevaPlanificacionAcademica() {
+  if (!confirm('¿Deseas iniciar una nueva planificación académica? Se perderán los datos actuales.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  if (window._syncFirebase) window._syncFirebase('planificacion', '');
+  sessionStorage.setItem('planificador_goto', 'step1');
+  sessionStorage.setItem('planificador_modo', 'academico');
   location.reload();
 }
 
@@ -21092,6 +21615,30 @@ document.addEventListener('DOMContentLoaded', () => {
 const BIBLIO_KEY = 'planificadorRA_biblioteca_v1';
 const BIBLIO_PLANES_ELIMINADOS_KEY = 'planificadorRA_biblio_planes_eliminados_v1';
 const BIBLIO_PLANES_ELIMINADOS_DIAS = 30;
+const BIBLIO_PAPELERA_KEY = 'planificadorRA_biblio_papelera_v1';
+const BIBLIO_PAPELERA_DIAS = BIBLIO_PLANES_ELIMINADOS_DIAS;
+
+/** Papelera de reciclaje: al eliminar una planificación de la Biblioteca, se
+ *  guarda completa aquí por unos días en vez de borrarse para siempre, por
+ *  si el docente la eliminó por error. */
+function _cargarPapelera() {
+  try { return JSON.parse(localStorage.getItem(BIBLIO_PAPELERA_KEY) || '{"items":[]}'); }
+  catch (e) { return { items: [] }; }
+}
+
+function _guardarPapelera(papelera) {
+  try { localStorage.setItem(BIBLIO_PAPELERA_KEY, JSON.stringify(papelera)); }
+  catch (e) { console.warn('No se pudo guardar la papelera:', e); }
+}
+
+/** Purga de la papelera los planes que superaron BIBLIO_PAPELERA_DIAS días desde que se eliminaron */
+function _purgarPapeleraVencida() {
+  const papelera = _cargarPapelera();
+  const hoy = Date.now();
+  const antes = papelera.items.length;
+  papelera.items = papelera.items.filter(it => hoy - (it._eliminadoTs || 0) < BIBLIO_PAPELERA_DIAS * 86400000);
+  if (papelera.items.length !== antes) _guardarPapelera(papelera);
+}
 
 /** Registra que una planificación se eliminó. Mismo motivo que _registrarCursoEliminado
  *  (ver arriba, cursos de calificaciones): el merge de biblioteca con Firestore
@@ -22129,7 +22676,9 @@ async function guardarPlanificacionActual(silencioso = false) {
 
 
 
-  guardarDatosFormulario(); // asegurar que lo último del form esté en el estado
+  const esAcademica = planificacion.tipo === 'academico';
+  if (esAcademica) guardarDatosFormularioAcademico(); // ver bloque Modo Académico
+  else guardarDatosFormulario(); // asegurar que lo último del form esté en el estado
 
 
 
@@ -22206,9 +22755,11 @@ async function guardarPlanificacionActual(silencioso = false) {
 
 
 
-    nombre: (dg.moduloFormativo || 'Sin módulo') + ' — ' + (dg.nombreDocente || 'Sin docente'),
+    nombre: esAcademica
+      ? (dg.unidadAprendizaje || 'Sin unidad') + ' — ' + (dg.areaCurricular || dg.nombreDocente || 'Sin docente')
+      : (dg.moduloFormativo || 'Sin módulo') + ' — ' + (dg.nombreDocente || 'Sin docente'),
 
-
+    tipo: planificacion.tipo || 'etp',
 
     planificacion: JSON.parse(JSON.stringify(planificacion, (k, v) =>
 
@@ -22263,31 +22814,71 @@ async function guardarPlanificacionActual(silencioso = false) {
     if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardar.dataset._origText) btnGuardar.innerHTML = btnGuardar.dataset._origText; }
   }
 
-  // Asignar al curso seleccionado en Paso 1
+  // Asignar al curso (o cursos) seleccionado en Paso 1
   const finalId = registro.id;
   const cursosExist = Object.values(calState.cursos);
-  const selCurso = document.getElementById('sel-curso-paso1');
-  const cursoIdSel = selCurso ? selCurso.value : '';
 
-  if (cursosExist.length > 0) {
-    const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
-    if (!yaAsignada) {
-      if (!silencioso && !cursoIdSel) {
-        // Advertir que falta seleccionar curso (sin bloquear el guardado)
-        const aviso = document.getElementById('aviso-curso-paso1');
-        if (aviso) {
-          aviso.style.display = '';
-          setTimeout(() => { aviso.style.display = 'none'; }, 5000);
+  if (esAcademica) {
+    const selCurso = document.getElementById('ac-sel-curso');
+    const cursoIdSel = selCurso ? selCurso.value : '';
+    if (cursosExist.length > 0) {
+      const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
+      if (!yaAsignada) {
+        if (!silencioso && !cursoIdSel) {
+          // Advertir que falta seleccionar curso (sin bloquear el guardado)
+          const aviso = document.getElementById('aviso-curso-paso1');
+          if (aviso) {
+            aviso.style.display = '';
+            setTimeout(() => { aviso.style.display = 'none'; }, 5000);
+          }
+          selCurso?.focus();
+        } else if (cursoIdSel && calState.cursos[cursoIdSel]) {
+          const curso = calState.cursos[cursoIdSel];
+          if (!curso.planIds) curso.planIds = [];
+          if (!curso.planIds.includes(finalId)) {
+            curso.planIds.push(finalId);
+            if (!curso.planActivaId) curso.planActivaId = finalId;
+            guardarCalificaciones();
+            if (!silencioso) mostrarToast('Planificación guardada y asignada al curso "' + curso.nombre + '"', 'success');
+          }
+          const aviso = document.getElementById('aviso-curso-paso1');
+          if (aviso) aviso.style.display = 'none';
         }
-        selCurso?.focus();
-      } else if (cursoIdSel && calState.cursos[cursoIdSel]) {
-        const curso = calState.cursos[cursoIdSel];
-        if (!curso.planIds) curso.planIds = [];
-        if (!curso.planIds.includes(finalId)) {
-          curso.planIds.push(finalId);
-          if (!curso.planActivaId) curso.planActivaId = finalId;
+      }
+    }
+  } else {
+    // Selector múltiple: se puede marcar más de un curso para que comparta la
+    // misma planificación. Es aditivo (solo agrega los recién marcados a esos
+    // cursos) -- nunca desasigna por desmarcar aquí, para no arriesgar borrar
+    // una asignación existente si el checklist aún no se restauró en esta
+    // sesión (p.ej. al llegar directo al paso 5/6 sin pasar antes por el paso 1).
+    const cursoIdsSel = Array.from(document.querySelectorAll('.chk-curso-paso1:checked')).map(chk => chk.value);
+    if (cursosExist.length > 0) {
+      const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
+      if (!yaAsignada && cursoIdsSel.length === 0) {
+        if (!silencioso) {
+          // Advertir que falta seleccionar curso (sin bloquear el guardado)
+          const aviso = document.getElementById('aviso-curso-paso1');
+          if (aviso) {
+            aviso.style.display = '';
+            setTimeout(() => { aviso.style.display = 'none'; }, 5000);
+          }
+        }
+      } else if (cursoIdsSel.length > 0) {
+        const nombresAsignados = [];
+        cursoIdsSel.forEach(cursoId => {
+          const curso = calState.cursos[cursoId];
+          if (!curso) return;
+          if (!curso.planIds) curso.planIds = [];
+          if (!curso.planIds.includes(finalId)) {
+            curso.planIds.push(finalId);
+            if (!curso.planActivaId) curso.planActivaId = finalId;
+            nombresAsignados.push(curso.nombre);
+          }
+        });
+        if (nombresAsignados.length > 0) {
           guardarCalificaciones();
-          if (!silencioso) mostrarToast('Planificación guardada y asignada al curso "' + curso.nombre + '"', 'success');
+          if (!silencioso) mostrarToast('Planificación guardada y asignada a: ' + nombresAsignados.join(', '), 'success');
         }
         const aviso = document.getElementById('aviso-curso-paso1');
         if (aviso) aviso.style.display = 'none';
@@ -22407,9 +22998,18 @@ function cargarPlanificacionGuardada(id) {
 
 
 
-  // Repoblar el formulario
-
-
+  // Repoblar el formulario -- ramificado según el tipo de planificación
+  // cargada (ver bloque Modo Académico). Una planificación ETP guardada
+  // antes de este cambio no tiene `.tipo`, así que sigue el camino de
+  // siempre sin ningún cambio de comportamiento.
+  if (planificacion.tipo === 'academico') {
+    poblarFormularioAcademicoDesdeEstado();
+    guardarBorrador();
+    _ocultarPanelesAcademico();
+    irAlPasoAcademico(1, false);
+    mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
+    return;
+  }
 
   poblarFormularioDesdeEstado();
 
@@ -22561,6 +23161,24 @@ async function exportarPlanDesdeListado(id) {
   }
 }
 
+/** Una sesión diaria "vacía" se crea automáticamente al guardar la planificación
+ *  (guardarTodasDiarias() vuelca un registro por actividad aunque el docente
+ *  nunca haya entrado al Paso 5), así que solo comprobar que existe la clave
+ *  en `sesiones` no sirve para saber si en verdad hay contenido generado.
+ *  Este helper revisa si algún campo de texto real quedó relleno. */
+function _sesionDiariaTieneContenido(s) {
+  if (!s) return false;
+  const campos = [
+    s.inicio?.apertura, s.inicio?.encuadre, s.inicio?.organizacion,
+    s.desarrollo?.procedimental, s.desarrollo?.conceptual, s.desarrollo?.pasos,
+    s.cierre?.sintesis, s.cierre?.conexion, s.cierre?.proximopaso,
+    s.estrategias, s.recursos, s.recursoUrl, s.tipo, s.estrategiaCorta, s.intencionEducativa,
+    s.diversidad?.apoyos, s.diversidad?.adaptaciones, s.diversidad?.estrategiasInclusivas, s.diversidad?.adaptacionesEspecificas,
+    s.contenidos?.conceptual, s.contenidos?.procedimental, s.contenidos?.actitudinal
+  ];
+  return campos.some(v => typeof v === 'string' && v.trim().length > 0);
+}
+
 async function exportarDiariasDesdeListado(id) {
   const biblio = cargarBiblioteca();
   const reg = (biblio.items || []).find(i => i.id === id);
@@ -22569,11 +23187,11 @@ async function exportarDiariasDesdeListado(id) {
   const acts = reg.planificacion.actividades || [];
   if (!acts.length) { mostrarToast('Esta planificación no tiene actividades/sesiones', 'error'); return; }
 
-  // Verificar que hay sesiones diarias para estas actividades
+  // Verificar que hay sesiones diarias con contenido real para estas actividades
   const diarias = JSON.parse(localStorage.getItem(DIARIAS_KEY) || '{"sesiones":{}}');
-  const tieneSesiones = acts.some(a => diarias.sesiones && diarias.sesiones[a.id]);
+  const tieneSesiones = acts.some(a => diarias.sesiones && _sesionDiariaTieneContenido(diarias.sesiones[a.id]));
   if (!tieneSesiones) {
-    mostrarToast('No hay planificaciones diarias generadas para esta planificación. Cárgala primero y genera las sesiones.', 'warning');
+    mostrarToast('No hay planificaciones diarias generadas todavía para esta planificación. Cárgala primero, ve al paso "Plan. Diaria" y genera o completa las sesiones.', 'error');
     return;
   }
 
@@ -23141,7 +23759,7 @@ function eliminarPlanificacionGuardada(id) {
 
 
 
-  if (!confirm('¿Eliminar la planificación "' + reg.nombre + '"? Esta acción no se puede deshacer.')) return;
+  if (!confirm('¿Eliminar la planificación "' + reg.nombre + '"? Se guardará en la Papelera de reciclaje por ' + BIBLIO_PAPELERA_DIAS + ' días antes de borrarse definitivamente.')) return;
 
 
 
@@ -23151,6 +23769,11 @@ function eliminarPlanificacionGuardada(id) {
 
   biblio.items = biblio.items.filter(i => i.id !== id);
   _registrarPlanEliminado(id);
+
+  // Mover a la papelera de reciclaje en vez de descartar el contenido para siempre
+  const papelera = _cargarPapelera();
+  papelera.items.unshift({ ...reg, _eliminadoTs: Date.now() });
+  _guardarPapelera(papelera);
 
   // Limpiar el ID eliminado de todos los cursos en calificaciones
   Object.values(calState.cursos).forEach(curso => {
@@ -23170,10 +23793,79 @@ function eliminarPlanificacionGuardada(id) {
 
 
   registrarCambio(`Planificación eliminada: "${reg.nombre}"`);
-  mostrarToast('Planificación eliminada', 'info');
+  mostrarToast('Planificación movida a la Papelera de reciclaje', 'info');
 
 
 
+}
+
+/** Abre un modal con las planificaciones eliminadas recientemente, con opción de
+ *  restaurarlas o borrarlas para siempre antes de que se purguen automáticamente. */
+function abrirPapeleraPlanificaciones() {
+  _purgarPapeleraVencida();
+  const papelera = _cargarPapelera();
+  const items = papelera.items || [];
+
+  document.getElementById('modal-title').textContent = 'Papelera de reciclaje';
+
+  if (items.length === 0) {
+    document.getElementById('modal-body').innerHTML =
+      `<p style="font-size:0.85rem;color:#757575;text-align:center;padding:24px 0;">La papelera está vacía.</p>`;
+  } else {
+    const hoy = Date.now();
+    const listaHTML = items.map(item => {
+      const dg = item.planificacion?.datosGenerales || {};
+      const nombre = escapeHTML(item.nombre || dg.moduloFormativo || dg.unidadAprendizaje || '(sin nombre)');
+      const diasRestantes = Math.max(0, BIBLIO_PAPELERA_DIAS - Math.floor((hoy - (item._eliminadoTs || 0)) / 86400000));
+      return `
+        <div style="padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;color:#1A237E;font-size:0.9rem;">${nombre}</div>
+            <div style="font-size:0.78rem;color:#757575;margin-top:2px;">Se borrará definitivamente en ${diasRestantes} día${diasRestantes === 1 ? '' : 's'}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn-secundario" style="padding:6px 10px;font-size:0.78rem;" onclick="restaurarPlanificacionDesdePapelera('${item.id}')">Restaurar</button>
+            <button style="padding:6px 10px;font-size:0.78rem;background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;cursor:pointer;" onclick="eliminarPlanificacionDefinitivamente('${item.id}')">Eliminar</button>
+          </div>
+        </div>`;
+    }).join('');
+    document.getElementById('modal-body').innerHTML = `
+      <p style="font-size:0.82rem;color:#555;margin-bottom:12px;">Las planificaciones eliminadas permanecen aquí por ${BIBLIO_PAPELERA_DIAS} días antes de borrarse para siempre.</p>
+      <div style="max-height:420px;overflow-y:auto;">${listaHTML}</div>`;
+  }
+
+  _usarFooterDinamico(`<button class="btn-secundario" onclick="cerrarModalBtn()">Cerrar</button>`);
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function restaurarPlanificacionDesdePapelera(id) {
+  const papelera = _cargarPapelera();
+  const idx = papelera.items.findIndex(i => i.id === id);
+  if (idx === -1) return;
+  const [item] = papelera.items.splice(idx, 1);
+  delete item._eliminadoTs;
+  _guardarPapelera(papelera);
+
+  const biblio = cargarBiblioteca();
+  biblio.items.unshift(item);
+  persistirBiblioteca(biblio);
+
+  registrarCambio(`Planificación restaurada desde la papelera: "${item.nombre}"`);
+  mostrarToast('Planificación "' + item.nombre + '" restaurada', 'success');
+  abrirPapeleraPlanificaciones();
+  renderizarBiblioteca();
+}
+
+function eliminarPlanificacionDefinitivamente(id) {
+  const papelera = _cargarPapelera();
+  const item = papelera.items.find(i => i.id === id);
+  if (!item) return;
+  if (!confirm('¿Eliminar definitivamente "' + item.nombre + '"? Esta acción no se puede deshacer.')) return;
+  papelera.items = papelera.items.filter(i => i.id !== id);
+  _guardarPapelera(papelera);
+  mostrarToast('Planificación eliminada definitivamente', 'info');
+  abrirPapeleraPlanificaciones();
 }
 
 
@@ -23265,8 +23957,14 @@ function renderizarBiblioteca() {
     if (!query) return true;
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
-    return [dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato,
-    dg.familiaProfesional, ra.descripcion].join(' ').toLowerCase().includes(query);
+    // Modo Académico usa nombres de campo distintos (unidadAprendizaje/
+    // areaCurricular en vez de moduloFormativo/nombreBachillerato/
+    // familiaProfesional) -- ra.descripcion sí se comparte (ver
+    // _planificacionAcademicaDefault, es un espejo de unidad.descripcion).
+    const campos = reg.tipo === 'academico'
+      ? [dg.unidadAprendizaje, dg.nombreDocente, dg.areaCurricular, dg.grado, ra.descripcion]
+      : [dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato, dg.familiaProfesional, ra.descripcion];
+    return campos.join(' ').toLowerCase().includes(query);
   };
   const filtrados = activosBase.filter(_matchQuery);
   const archivadosFiltrados = archivadosBase.filter(_matchQuery);
@@ -23322,9 +24020,12 @@ function renderizarBiblioteca() {
 
   // ── Renderizar función de card ────────────────────────────────
   const _renderCard = (reg, esPlanActiva, cursoId, raNum, totalPlanes, archivada) => {
+    const esAcademica = reg.tipo === 'academico';
     const dg = reg.planificacion?.datosGenerales || {};
     const ra = reg.planificacion?.ra || {};
-    const ec = reg.planificacion?.elementosCapacidad || [];
+    // "EC" (Modo ETP) o "Indicadores de Logro" (Modo Académico) -- distinto
+    // nombre de campo, mismo propósito de mostrar cuántos hay.
+    const ec = esAcademica ? (reg.planificacion?.indicadoresLogro || []) : (reg.planificacion?.elementosCapacidad || []);
     const acts = reg.planificacion?.actividades || [];
     const horasTotal = reg.planificacion?.horasTotal || 0;
     const resumenRA = ra.descripcion
@@ -23367,17 +24068,18 @@ function renderizarBiblioteca() {
         ${esPlanActiva ? '<span class="pln-badge-activa"><span class="material-icons" style="font-size:11px;">star</span>Activa</span>' : ''}
         ${moveButtons}
       </div>
-      <div class="pln-card-modulo">${escHTML(dg.moduloFormativo || 'Sin módulo')}</div>
+      ${esAcademica ? '<span class="pln-chip" style="background:#E0F2F1;color:#00695C;font-size:0.7rem;margin-bottom:4px;display:inline-block;">Académica</span>' : ''}
+      <div class="pln-card-modulo">${escHTML((esAcademica ? dg.unidadAprendizaje : dg.moduloFormativo) || 'Sin título')}</div>
       <div class="pln-card-meta">
         <span><span class="material-icons">person</span>${escHTML(dg.nombreDocente || '—')}</span>
-        <span><span class="material-icons">school</span>${escHTML(dg.nombreBachillerato || '—')}</span>
+        <span><span class="material-icons">school</span>${escHTML((esAcademica ? [dg.areaCurricular, dg.grado].filter(Boolean).join(' · ') : dg.nombreBachillerato) || '—')}</span>
         ${dg.fechaInicio ? '<span><span class="material-icons">date_range</span>' +
         escHTML(dg.fechaInicio) + ' → ' + escHTML(dg.fechaTermino || '') + '</span>' : ''}
       </div>
       ${diasChip}
       <div class="pln-card-ra">${escHTML(resumenRA)}</div>
       <div class="pln-card-chips">
-        ${ec.length ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + ' EC</span>' : ''}
+        ${ec.length ? '<span class="pln-chip pln-chip-ec"><span class="material-icons" style="font-size:12px;">layers</span>' + ec.length + (esAcademica ? ' Indicadores' : ' EC') + '</span>' : ''}
         ${acts.length ? '<span class="pln-chip pln-chip-acts"><span class="material-icons" style="font-size:12px;">event_note</span>' + acts.length + ' actividades</span>' : ''}
         ${horasTotal ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">schedule</span>' + horasTotal + 'h</span>' : ''}
         ${dg.valorRA ? '<span class="pln-chip pln-chip-pts"><span class="material-icons" style="font-size:12px;">star</span>' + dg.valorRA + ' pts</span>' : ''}
@@ -23399,17 +24101,19 @@ function renderizarBiblioteca() {
         <button class="btn-pln-dup" onclick="abrirDuplicarPlan('${reg.id}')" title="Duplicar planificación" style="width:100%;justify-content:center;">
           <span class="material-icons">content_copy</span> Duplicar
         </button>
+        ${esAcademica ? '' : `
         <button class="btn-pln-export" onclick="exportarPlanDesdeListado('${reg.id}')" title="Exportar planificación RA a Word" style="width:100%;justify-content:center;background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:15px;">description</span> Word RA
         </button>
         <button class="btn-pln-export" onclick="exportarDiariasDesdeListado('${reg.id}')" title="Exportar planificaciones diarias a Word" style="width:100%;justify-content:center;background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:15px;">event_note</span> Word Diarias
-        </button>
+        </button>`}
         ${archivada ? '' : `<button onclick="archivarPlanificacion('${reg.id}')" title="Archivar planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#F5F5F5;color:#546E7A;border:1px solid #E0E0E0;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
           <span class="material-icons" style="font-size:15px;">archive</span> Archivar</button>`}
+        ${esAcademica ? '' : `
         <button onclick="cerrarPanelBiblioteca?.();cargarPlanEnPaso5('${reg.id}')" title="Ver planificaciones diarias de esta planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#E0F2F1;color:#00695C;border:1.5px solid #80CBC4;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
           <span class="material-icons" style="font-size:15px;">today</span> Ver Planificaciones Diarias
-        </button>
+        </button>`}
         <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar" style="width:100%;justify-content:center;grid-column:1/-1;">
           <span class="material-icons">delete_outline</span>
         </button>
@@ -23839,7 +24543,13 @@ function irAlHome() {
 }
 
 function irAlHomeBase() {
-  const hayDatos = planificacion && (planificacion._id || (planificacion.datosGenerales && planificacion.datosGenerales.familiaProfesional));
+  // Si hay una planificación académica en progreso (ver bloque Modo
+  // Académico), también cuenta como "hay datos" -- sin esto, el tile "Nueva
+  // Planificación" del dashboard (ETP) podía descartarla en silencio y dejar
+  // `planificacion` con forma académica mientras se muestra el wizard de ETP.
+  const hayDatosAcademicos = planificacion && planificacion.tipo === 'academico' &&
+    (planificacion._id || (planificacion.datosGenerales && planificacion.datosGenerales.unidadAprendizaje));
+  const hayDatos = hayDatosAcademicos || (planificacion && (planificacion._id || (planificacion.datosGenerales && planificacion.datosGenerales.familiaProfesional)));
   if (hayDatos) {
     if (!confirm('¿Deseas iniciar una nueva planificación? Se perderán los datos actuales.')) return;
     localStorage.removeItem(STORAGE_KEY);
@@ -29628,6 +30338,8 @@ function _arrancarApp() {
   window._appArranada = true;
   _ocultarSplash();
 
+  _purgarPapeleraVencida();
+
   // Limpiar planIds duplicados al arrancar (limpia datos existentes en Firebase)
   let hayCambios = false;
   Object.values(calState.cursos || {}).forEach(curso => {
@@ -29644,12 +30356,23 @@ function _arrancarApp() {
     // -- NO restaurar el borrador aquí, o el mismo diálogo de descarte
     // volvería a aparecer en bucle con los datos que se acaba de decidir botar.
     sessionStorage.removeItem('planificador_goto');
-    irAlHomeBase();
+    if (sessionStorage.getItem('planificador_modo') === 'academico') {
+      // Nueva planificación académica (ver nuevaPlanificacionAcademica) --
+      // no pasa por irAlHomeBase() (ETP) en absoluto.
+      sessionStorage.removeItem('planificador_modo');
+      planificacion = _planificacionAcademicaDefault();
+      _ocultarPanelesAcademico();
+    } else {
+      irAlHomeBase();
+    }
   } else {
     // Recuperar en memoria cualquier planificación en progreso que no se
     // hubiera llegado a guardar en Biblioteca (ver guardarBorrador/restaurarBorrador).
     restaurarBorrador();
     abrirDashboard();
+    // Si el borrador restaurado resulta ser una planificación académica,
+    // dejar el wizard correcto listo para cuando se cierre el dashboard.
+    if (planificacion && planificacion.tipo === 'academico') _mostrarWizardAcademico();
   }
   // Solo rellena los campos que aún estén vacíos (ver la función) -- no interfiere
   // con datos ya restaurados arriba ni con lo que el docente haya escrito.
@@ -31522,7 +32245,7 @@ function abrirConfiguracion() {
   _logElementosRequeridos('abrirConfiguracion:dom', [
     'config-overlay', 'cfg-dark-mode', 'cfg-fuente-grande', 'cfg-alertas', 'cfg-manana',
     'cfg-umbral-asist', 'cfg-umbral-riesgo', 'cfg-umbral-acts', 'cfg-touch-mode',
-    'cfg-asistencia-activa', 'cfg-asistencia-umbral-row', 'cfg-invite-code-actual'
+    'cfg-asistencia-activa', 'cfg-asistencia-umbral-row', 'cfg-invite-code-actual', 'cfg-modo-academico'
   ]);
   const overlay = _resolverOverlay('config-overlay');
   if (!overlay) {
@@ -31547,6 +32270,8 @@ function abrirConfiguracion() {
   if (cfgAlert) cfgAlert.checked = alertas;
   if (cfgMan) cfgMan.checked = manana;
   if (cfgUmbral) cfgUmbral.value = umbral;
+  const cfgModoAcademico = document.getElementById('cfg-modo-academico');
+  if (cfgModoAcademico) cfgModoAcademico.checked = localStorage.getItem('cfg_modo_academico') === 'true';
   const cfgUmbralRiesgo = document.getElementById('cfg-umbral-riesgo');
   if (cfgUmbralRiesgo) cfgUmbralRiesgo.value = localStorage.getItem('cfg_umbral_riesgo') || '70';
   const cfgUmbralActs = document.getElementById('cfg-umbral-acts');
@@ -31716,7 +32441,7 @@ function _syncPreferencias() {
   if (!window._syncFirebase) return;
   const keys = ['cfg_dark_mode','cfg_fuente_grande','cfg_alertas','cfg_manana',
                  'cfg_asistencia_activa','cfg_umbral_riesgo','cfg_umbral_acts','asist_umbral',
-                 'planificadorRA_touchMode_v1','tinclass_error_alerts_cfg_v1'];
+                 'planificadorRA_touchMode_v1','tinclass_error_alerts_cfg_v1','cfg_modo_academico'];
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
   _syncFirebase('preferencias', data);
@@ -31750,6 +32475,17 @@ function _aplicarPreferencias() {
     _inyectarCSSTouch(true);
   }
   _aplicarAsistenciaActiva();
+  _aplicarModoAcademico();
+}
+
+/** Muestra/oculta el botón "Nueva Planificación Académica" de la Biblioteca
+ *  según el toggle de Ajustes -- con el modo desactivado (default), este
+ *  botón no existe visualmente y el flujo de planificación por RA de ETP
+ *  queda exactamente igual que siempre. */
+function _aplicarModoAcademico() {
+  const activo = localStorage.getItem('cfg_modo_academico') === 'true';
+  const btn = document.getElementById('btn-nueva-planificacion-academica');
+  if (btn) btn.style.display = activo ? '' : 'none';
 }
 
 function _aplicarAsistenciaActiva() {
