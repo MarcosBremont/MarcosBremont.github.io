@@ -58,10 +58,15 @@ function _autoformatearCriteriosPegados(textarea) {
  *  Continua"), y tratarlos así los pegaba con el contenido que le seguía. La
  *  señal más confiable de que una línea empieza un contenido NUEVO (no es
  *  una continuación partida) es que arranque con mayúscula -- una línea
- *  partida a la mitad de una oración normalmente sigue en minúscula. La
- *  única excepción es una línea que arranca con "(" (ej. una sigla como
- *  "(UI)." que quedó sola en su línea): esa SIEMPRE se trata como
- *  continuación, sin importar la mayúscula que tenga adentro.
+ *  partida a la mitad de una oración normalmente sigue en minúscula. Dos
+ *  excepciones, ambas SIEMPRE tratadas como continuación sin importar la
+ *  mayúscula: (1) una línea que arranca con "(" (ej. una sigla como "(UI)."
+ *  que quedó sola en su línea), y (2) una línea de UNA SOLA PALABRA (ej.
+ *  "Continua" completando "Actualización Continua" partida en dos líneas) --
+ *  un contenido nuevo real casi nunca es una sola palabra suelta sin viñeta,
+ *  así que una palabra sola aislada es casi siempre la cola de algo que se
+ *  partió, aunque esa palabra empiece con mayúscula por ser parte de una
+ *  frase con Mayúsculas de Título.
  *
  *  Las líneas que ya vienen con guion/viñeta ("- DHTML.") se tratan como
  *  sub-elementos propios y nunca se fusionan ni con la línea anterior ni con
@@ -78,9 +83,10 @@ function _fusionarLineasPartidas(texto) {
     }
     if (actual) {
       const empiezaConParentesis = /^\(/.test(linea);
+      const esUnaSolaPalabra = !/\s/.test(linea);
       const primeraLetra = (linea.match(/[A-Za-zÀ-ÿ]/) || [''])[0];
       const empiezaMinuscula = !!primeraLetra && primeraLetra === primeraLetra.toLowerCase() && primeraLetra !== primeraLetra.toUpperCase();
-      const esContinuacion = empiezaConParentesis || empiezaMinuscula;
+      const esContinuacion = empiezaConParentesis || empiezaMinuscula || esUnaSolaPalabra;
       if (!esContinuacion) {
         resultado.push(actual);
         actual = '';
@@ -9867,24 +9873,24 @@ async function _generarContenidosConIA() {
   const btn = document.getElementById('btn-generar-contenidos-ia');
   if (btn) { btn.disabled = true; btn.dataset._origText = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
 
-  // 8192 en vez de 4096: si el docente pega listas largas del Módulo completo
-  // (frecuente en Conceptuales/Procedimentales, que suelen tener muchos más
-  // elementos que Actitudinales), la respuesta con los elementos elegidos de
-  // las 3 categorías puede necesitar más espacio -- con 4096 se vio un caso
-  // real donde solo Actitudinales (la lista más corta) volvía con contenido.
+  // Revertido a 4096 (se probó subir a 8192, pero en la cuenta de Groq usada
+  // en producción el límite es 8000 tokens/minuto, así que pedir 8192 de una
+  // vez hacía fallar los 3 modelos de Groq con 413 "Request too large" antes
+  // de intentar nada -- la causa real de las categorías incompletas resultó
+  // ser un bug de _fusionarLineasPartidas(), no falta de espacio de respuesta).
   let resultado = null;
   let ultimoError = null;
   try {
     if (!resultado && groqKey) {
-      try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 8192); }
+      try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 4096); }
       catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && geminiKey) {
-      try { resultado = await _llamarGemini(prompt, 8192); }
+      try { resultado = await _llamarGemini(prompt, 4096); }
       catch (e) { console.warn('[ContenidosIA] Gemini falló:', e.message); ultimoError = e.message; }
     }
     if (!resultado && openrouterKey) {
-      try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 8192, 60000); }
+      try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 4096, 60000); }
       catch (e) { console.warn('[ContenidosIA] OpenRouter falló:', e.message); ultimoError = e.message; }
     }
   } finally {

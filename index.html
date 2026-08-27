@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.04" />
+  <link rel="stylesheet" href="styles.css?v=18.05" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.04" />
+  <link rel="stylesheet" href="auth.css?v=18.05" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3382,6 +3382,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#D32F2F;">v18.05<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido de raíz: "Preguntarle a la IA los contenidos" con listas largas</div>
+              <ul class="about-ver-items">
+                <li>Se revierte el aumento de espacio de respuesta de la versión anterior: causaba que Groq fallara de inmediato por exceder su límite de tokens por minuto.</li>
+                <li>Se encontró la causa real con el registro de diagnóstico: al unir líneas partidas, una palabra suelta que empieza con mayúscula (ej. "Continua" completando "Actualización Continua") se trataba como un contenido nuevo en vez de la continuación. Ahora una línea de una sola palabra siempre se trata como continuación, sin importar su mayúscula.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8378,9 +8393,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.04"></script>
+  <script src="app.js?v=18.05"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.04"></script>
+  <script src="auth.js?v=18.05"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
