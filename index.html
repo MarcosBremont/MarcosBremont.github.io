@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=17.99" />
+  <link rel="stylesheet" href="styles.css?v=18.00" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=17.99" />
+  <link rel="stylesheet" href="auth.css?v=18.00" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -1138,7 +1138,7 @@
                     <span class="material-icons" style="font-size:14px;vertical-align:middle;">lightbulb</span>
                     Conceptuales
                   </label>
-                  <textarea id="contenidos-conceptuales" rows="3"
+                  <textarea id="contenidos-conceptuales" rows="3" onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Ej: Estructura organizacional.&#10;Niveles y funciones de directivos en una organización.&#10;Funciones del analista de sistemas."></textarea>
                 </div>
                 <div>
@@ -1146,7 +1146,7 @@
                     <span class="material-icons" style="font-size:14px;vertical-align:middle;">build</span>
                     Procedimentales
                   </label>
-                  <textarea id="contenidos-procedimentales" rows="3"
+                  <textarea id="contenidos-procedimentales" rows="3" onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Ej: Identificación de la estructura interna y los procesos de una organización.&#10;Relación de los niveles directivos y su función."></textarea>
                 </div>
                 <div>
@@ -1154,7 +1154,7 @@
                     <span class="material-icons" style="font-size:14px;vertical-align:middle;">favorite</span>
                     Actitudinales
                   </label>
-                  <textarea id="contenidos-actitudinales" rows="3"
+                  <textarea id="contenidos-actitudinales" rows="3" onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Ej: Valoración de normas de seguridad y prevención de riesgos laborales.&#10;Disposición al desarrollo de la capacidad de análisis y de síntesis."></textarea>
                 </div>
               </div>
@@ -1170,21 +1170,21 @@
                   <label for="contenidos-mf-conceptuales" style="font-size:0.82rem;font-weight:600;color:#1565C0;">
                     Todos los Conceptuales del Módulo
                   </label>
-                  <textarea id="contenidos-mf-conceptuales" rows="6"
+                  <textarea id="contenidos-mf-conceptuales" rows="6" onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Pega aquí, uno por línea, TODOS los contenidos conceptuales del Módulo Formativo completo (de todos los RA)."></textarea>
                 </div>
                 <div>
                   <label for="contenidos-mf-procedimentales" style="font-size:0.82rem;font-weight:600;color:#E65100;">
                     Todos los Procedimentales del Módulo
                   </label>
-                  <textarea id="contenidos-mf-procedimentales" rows="6"
+                  <textarea id="contenidos-mf-procedimentales" rows="6" onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Pega aquí, uno por línea, TODOS los contenidos procedimentales del Módulo Formativo completo (de todos los RA)."></textarea>
                 </div>
                 <div>
                   <label for="contenidos-mf-actitudinales" style="font-size:0.82rem;font-weight:600;color:#2E7D32;">
                     Todos los Actitudinales del Módulo
                   </label>
-                  <textarea id="contenidos-mf-actitudinales" rows="6"
+                  <textarea id="contenidos-mf-actitudinales" rows="6" onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Pega aquí, uno por línea, TODOS los contenidos actitudinales del Módulo Formativo completo (de todos los RA)."></textarea>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1599,15 +1599,15 @@
 
           <div class="form-group form-group--full">
             <label for="ac-contenidos-conceptuales">Contenidos Conceptuales</label>
-            <textarea id="ac-contenidos-conceptuales" rows="3"></textarea>
+            <textarea id="ac-contenidos-conceptuales" rows="3" onpaste="_autoformatearContenidoPegado(this)"></textarea>
           </div>
           <div class="form-group form-group--full">
             <label for="ac-contenidos-procedimentales">Contenidos Procedimentales</label>
-            <textarea id="ac-contenidos-procedimentales" rows="3"></textarea>
+            <textarea id="ac-contenidos-procedimentales" rows="3" onpaste="_autoformatearContenidoPegado(this)"></textarea>
           </div>
           <div class="form-group form-group--full">
             <label for="ac-contenidos-actitudinales">Contenidos Actitudinales</label>
-            <textarea id="ac-contenidos-actitudinales" rows="3"></textarea>
+            <textarea id="ac-contenidos-actitudinales" rows="3" onpaste="_autoformatearContenidoPegado(this)"></textarea>
           </div>
           <div class="form-group form-group--full">
             <label for="ac-recursos">Recursos Didácticos Disponibles</label>
@@ -3382,6 +3382,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v18.00<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Los campos de Contenidos ahora unen automáticamente las líneas partidas al pegar</div>
+              <ul class="about-ver-items">
+                <li>Al pegar Contenidos Conceptuales, Procedimentales o Actitudinales copiados de un PDF/Word del currículo (que suelen traer un salto de línea cada pocas palabras por el ancho de la columna), el sistema ahora los une automáticamente en una línea por contenido -- igual que ya pasaba con la Descripción del RA. Las líneas con guion ("- DHTML.") se respetan como sub-elementos separados. Aplica en los campos de Contenidos del Paso 2, en el nuevo asistente "Preguntarle a la IA los contenidos", y en Modo Académico.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8308,9 +8322,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.99"></script>
+  <script src="app.js?v=18.00"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.99"></script>
+  <script src="auth.js?v=18.00"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

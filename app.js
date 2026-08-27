@@ -48,6 +48,41 @@ function _autoformatearCriteriosPegados(textarea) {
   }, 0);
 }
 
+/** Muchas fuentes (PDF, Word) parten el texto de un contenido en varias líneas
+ *  al copiarlo, por el ancho de columna del documento original -- un contenido
+ *  que en realidad es una sola oración queda partido en 3-4 líneas. Fusiona
+ *  esas líneas partidas en una sola por contenido: una línea nueva NO se
+ *  fusiona con la anterior a menos que la anterior no haya terminado todavía
+ *  en ".", ":" o ";". Las líneas que ya vienen con guion/viñeta ("- DHTML.")
+ *  se tratan como sub-elementos propios y nunca se fusionan ni con la línea
+ *  anterior ni con la siguiente. */
+function _fusionarLineasPartidas(texto) {
+  const lineas = String(texto || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const resultado = [];
+  let actual = '';
+  lineas.forEach(linea => {
+    if (/^[-•]\s*/.test(linea)) {
+      if (actual) { resultado.push(actual); actual = ''; }
+      resultado.push(linea);
+      return;
+    }
+    actual = actual ? actual + ' ' + linea : linea;
+    if (/[.:;]\s*$/.test(actual)) {
+      resultado.push(actual);
+      actual = '';
+    }
+  });
+  if (actual) resultado.push(actual);
+  return resultado.join('\n');
+}
+
+/** Igual que _autoformatearCriteriosPegados, pero para los campos de
+ *  Contenidos (Conceptuales/Procedimentales/Actitudinales) -- ver
+ *  _fusionarLineasPartidas() para la lógica de fusión. */
+function _autoformatearContenidoPegado(textarea) {
+  setTimeout(() => { textarea.value = _fusionarLineasPartidas(textarea.value); }, 0);
+}
+
 /** Arma, por cada EC, a cuáles criterios se refiere (según ec.contraste, un
  *  array de códigos "CE.n" asignado por la IA) y el texto resuelto de esos
  *  criterios. Función pura, reutilizada por Vista Previa, la exportación con
