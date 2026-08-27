@@ -9798,9 +9798,12 @@ async function _generarContenidosConIA() {
     return;
   }
 
-  const claudeKey = getClaudeKey(), groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
-  if (!claudeKey && !groqKey && !geminiKey && !openrouterKey) {
-    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes. Completa los contenidos manualmente.', 'error');
+  // Claude queda excluido a propósito de este asistente (no se llama en
+  // absoluto, ni siquiera como primer intento) -- pedido explícito del dueño
+  // tras fallar repetidamente por falta de créditos en su cuenta de Anthropic.
+  const groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
+  if (!groqKey && !geminiKey && !openrouterKey) {
+    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Groq, Gemini u OpenRouter). Completa los contenidos manualmente.', 'error');
     return;
   }
 
@@ -9812,10 +9815,6 @@ async function _generarContenidosConIA() {
   let resultado = null;
   let ultimoError = null;
   try {
-    if (claudeKey) {
-      try { resultado = await _llamarClaude(prompt, 4096); }
-      catch (e) { console.warn('[ContenidosIA] Claude falló:', e.message); ultimoError = e.message; }
-    }
     if (!resultado && groqKey) {
       try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 4096); }
       catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); ultimoError = e.message; }
