@@ -5773,35 +5773,35 @@ async function _getPlantillaDiariaCentro() {
 }
 
 /** Obtiene la plantilla de reportes de psicología del centro del usuario actual */
+// No se envuelve en try/catch: un `return null` significa "el centro no tiene
+// plantilla configurada" (caso normal), mientras que un error de red/permisos
+// de Firestore debe PROPAGARSE como excepción -- así quien llama puede
+// distinguir "no hay plantilla" de "no se pudo conectar" y avisarle al
+// docente lo que corresponde en cada caso, en vez de un mensaje genérico.
 async function _getPlantillaReportePsicologiaCentro() {
   if (!window.currentUser) return null;
-  try {
-    let centroId = null;
-    const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
-    if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
-    if (!centroId) {
-      const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
-      if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
-    }
-    if (centroId) {
-      const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
-      if (centroDoc.exists) {
-        const centro = centroDoc.data();
-        const result = await _cargarPlantillaCentroChunked(centroId, 'psicologia');
-        if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
-      }
-    }
-    const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_psicologia', '==', true).limit(1).get();
-    if (!snap.empty) {
-      const centro = snap.docs[0].data();
-      const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'psicologia');
-      if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
-    }
-    return null;
-  } catch (e) {
-    console.warn('[PlantillaPsicologia] Error obteniendo centro:', e);
-    return null;
+  let centroId = null;
+  const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+  if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+  if (!centroId) {
+    const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
   }
+  if (centroId) {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (centroDoc.exists) {
+      const centro = centroDoc.data();
+      const result = await _cargarPlantillaCentroChunked(centroId, 'psicologia');
+      if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
+    }
+  }
+  const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_psicologia', '==', true).limit(1).get();
+  if (!snap.empty) {
+    const centro = snap.docs[0].data();
+    const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'psicologia');
+    if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+  }
+  return null;
 }
 
 /** Exporta un reporte individual de Psicología a Word usando la plantilla del centro */
@@ -34881,6 +34881,9 @@ function descargarReporteDocx(estId, id) {
     link.click();
     URL.revokeObjectURL(link.href);
     mostrarToast('Reporte exportado en Word', 'success');
+  }).catch(e => {
+    console.warn('[PlantillaPsicologia] Error generando el docx:', e);
+    mostrarToast('No se pudo generar el Word: revisa tu conexión e inténtalo de nuevo.', 'error');
   });
 }
 
@@ -34905,7 +34908,7 @@ function descargarReportePsicologiaGuardado(estId, id) {
 
   _generarBlobReportePsicologiaDocx(rep).then(generado => {
     if (!generado) {
-      mostrarToast('No se pudo generar el Word del reporte.', 'error');
+      mostrarToast('No hay plantilla de reportes de Psicología cargada en el centro.', 'error');
       return;
     }
     const link = document.createElement('a');
@@ -34914,6 +34917,9 @@ function descargarReportePsicologiaGuardado(estId, id) {
     link.click();
     URL.revokeObjectURL(link.href);
     mostrarToast('Reporte exportado en Word', 'success');
+  }).catch(e => {
+    console.warn('[PlantillaPsicologia] Error generando el docx:', e);
+    mostrarToast('No se pudo generar el Word: revisa tu conexión e inténtalo de nuevo.', 'error');
   });
 }
 
