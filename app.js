@@ -21932,6 +21932,119 @@ function _confirmarCopiarDatosGenerales(idx) {
   window._copiarDGItems = null;
 }
 
+/** Abre modal para copiar SOLO Cantidad de RA, Horas por Semana, Días de Clase
+ *  y la tabla de ponderación desde otra planificación guardada. A diferencia
+ *  de "Copiar de otra planificación" (que también trae Módulo Formativo,
+ *  Familia Profesional, Docente, etc.), esto es para lo que normalmente NO
+ *  cambia de un módulo a otro -- mismo horario/curso, misma cantidad de RA
+ *  que se pondera igual -- sin arriesgar sobreescribir los datos específicos
+ *  del módulo que se está planificando ahora. */
+function abrirModalCopiarPonderacionHorario() {
+  const biblio = cargarBiblioteca();
+  const items = biblio.items || [];
+
+  if (items.length === 0) {
+    mostrarToast('No hay planificaciones guardadas en la biblioteca.', 'error');
+    return;
+  }
+
+  let planIdACurso = {};
+  try {
+    const cal = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}');
+    Object.values(cal.cursos || {}).forEach(curso => {
+      (curso.planIds || []).forEach(pid => { planIdACurso[pid] = curso.nombre; });
+    });
+  } catch (e) {}
+
+  const listaHTML = items.map((item, idx) => {
+    const dg = item.planificacion?.datosGenerales || {};
+    const modulo = escapeHTML(dg.moduloFormativo || dg.codigoModulo || '(sin nombre)');
+    const docente = dg.nombreDocente ? ` · ${escapeHTML(dg.nombreDocente)}` : '';
+    const fecha = escapeHTML(item.fechaGuardadoLabel || '');
+    const cursoNombre = planIdACurso[item.id];
+    const cursoTag = cursoNombre
+      ? `<span style="display:inline-block;margin-top:4px;padding:2px 8px;background:#E8F5E9;color:#2E7D32;border-radius:12px;font-size:0.75rem;font-weight:600;">
+           <span class="material-icons" style="font-size:0.75rem;vertical-align:middle;">school</span> ${escapeHTML(cursoNombre)}
+         </span>`
+      : `<span style="display:inline-block;margin-top:4px;padding:2px 8px;background:#F5F5F5;color:#9E9E9E;border-radius:12px;font-size:0.75rem;">Sin curso asignado</span>`;
+    const resumen = [
+      dg.cantidadRA ? `${dg.cantidadRA} RA` : '',
+      dg.horasSemana ? `${dg.horasSemana} h/semana` : ''
+    ].filter(Boolean).join(' · ');
+    const resumenTag = resumen
+      ? `<div style="font-size:0.78rem;color:#455A64;margin-top:4px;"><span style="font-weight:700;color:#00695C;">Horario:</span> ${escapeHTML(resumen)}</div>`
+      : '';
+    return `
+      <div onclick="_confirmarCopiarPonderacionHorario(${idx})" style="
+        padding:12px 16px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;
+        margin-bottom:8px;transition:border-color .15s,background .15s;"
+        onmouseover="this.style.borderColor='#00897B';this.style.background='#E0F2F1';"
+        onmouseout="this.style.borderColor='#E0E0E0';this.style.background='';">
+        <div style="font-weight:700;color:#1A237E;font-size:0.9rem;">${modulo}${docente}</div>
+        <div style="margin-top:2px;">${cursoTag}</div>
+        ${resumenTag}
+        <div style="font-size:0.78rem;color:#757575;margin-top:4px;">${fecha}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('modal-title').textContent = 'Copiar ponderación y horario';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:0.85rem;color:#555;margin-bottom:12px;">
+      Selecciona una planificación guardada. Se copiarán SOLO: Cantidad de RA del Módulo, Horas por Semana,
+      Días de Clase por Semana y la tabla de ponderación -- el resto de los Datos Generales (Módulo Formativo,
+      Familia Profesional, Docente, etc.) no se toca.
+    </p>
+    <div style="max-height:400px;overflow-y:auto;">${listaHTML}</div>`;
+  _usarFooterDinamico(`<button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>`);
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  window._copiarPonderacionItems = items;
+}
+
+function _confirmarCopiarPonderacionHorario(idx) {
+  const item = (window._copiarPonderacionItems || [])[idx];
+  if (!item) return;
+  const dg = item.planificacion?.datosGenerales || {};
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+
+  setVal('cantidad-ra', dg.cantidadRA);
+  setVal('horas-semana', dg.horasSemana);
+
+  // Repoblar la tabla de ponderación (priorización) -- el listener de "change"
+  // en #cantidad-ra no se dispara al asignar .value por JS, así que sin esto
+  // la tabla se quedaba oculta aunque "Cantidad de RA" ya mostrara el valor copiado.
+  _renderTablaPriorizacion(parseInt(dg.cantidadRA) || 0, dg.priorizacion);
+
+  // Copiar días de clase
+  if (dg.diasClase) {
+    Object.entries(dg.diasClase).forEach(([dia, cfg]) => {
+      const checkbox = document.getElementById('dia-' + dia);
+      if (!checkbox) return;
+      checkbox.checked = cfg.activo;
+      const wrap = document.getElementById('horas-' + dia + '-wrap');
+      const horasInput = document.getElementById('horas-' + dia);
+      const card = document.getElementById('dia-card-' + dia);
+      if (cfg.activo) {
+        if (wrap) wrap.classList.remove('hidden');
+        if (horasInput) horasInput.value = cfg.horas;
+        if (card) card.classList.add('seleccionado');
+      } else {
+        if (wrap) wrap.classList.add('hidden');
+        if (card) card.classList.remove('seleccionado');
+      }
+    });
+  }
+
+  cerrarModalBtn();
+  mostrarToast('Ponderación y horario copiados correctamente ✓', 'success');
+  window._copiarPonderacionItems = null;
+}
+
 // ── Importar Currículo (PDF), sin IA ──────────────────────────────
 // Sube un PDF de currículo oficial, extrae su texto en el navegador con pdf.js
 // y ubica el módulo formativo por su CÓDIGO exacto (ej. "INCO-MF034_3") con

@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=17.94" />
+  <link rel="stylesheet" href="styles.css?v=17.95" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=17.94" />
+  <link rel="stylesheet" href="auth.css?v=17.95" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -813,6 +813,10 @@
           <button class="btn-secundario" onclick="abrirModalCopiarDatosGenerales()" title="Copiar datos generales de otra planificación guardada" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
             <span class="material-icons" style="font-size:1rem;">content_copy</span>
             Copiar de otra planificación
+          </button>
+          <button class="btn-secundario" onclick="abrirModalCopiarPonderacionHorario()" title="Copiar solo Cantidad de RA, Horas por Semana, Días de Clase y la tabla de ponderación de otra planificación guardada" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
+            <span class="material-icons" style="font-size:1rem;">bar_chart</span>
+            Copiar ponderación y horario
           </button>
           <button class="btn-secundario" onclick="_abrirImportCurriculo()" title="Sube el PDF del currículo oficial y extrae los datos del módulo por su código, sin IA" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;padding:6px 14px;">
             <span class="material-icons" style="font-size:1rem;">upload_file</span>
@@ -3375,6 +3379,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v17.95<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: botón "Copiar ponderación y horario" en Datos Generales</div>
+              <ul class="about-ver-items">
+                <li>Junto a "Copiar de otra planificación", nuevo botón "Copiar ponderación y horario": trae SOLO la Cantidad de RA del Módulo, Horas por Semana, los Días de Clase y la tabla de Priorización/Ponderación de otra planificación guardada, sin tocar Módulo Formativo, Familia Profesional, Docente ni el resto de los datos que sí cambian de un módulo a otro.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8231,9 +8249,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.94"></script>
+  <script src="app.js?v=17.95"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.94"></script>
+  <script src="auth.js?v=17.95"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
