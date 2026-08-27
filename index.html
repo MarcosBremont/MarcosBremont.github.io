@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.07" />
+  <link rel="stylesheet" href="styles.css?v=18.08" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.07" />
+  <link rel="stylesheet" href="auth.css?v=18.08" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -1114,17 +1114,13 @@
               placeholder="Ej: Computadoras con acceso a internet, proyector, pizarrón digital, plataforma Moodle, herramientas de desarrollo VS Code..."></textarea>
           </div>
 
-          <!-- Contenidos (opcional, colapsable) -->
+          <!-- Contenidos (obligatorio, siempre visible) -->
           <div class="form-group form-group--full">
-            <div
-              onclick="document.getElementById('contenidos-wrap').classList.toggle('hidden');this.querySelector('.material-icons:last-child').textContent=document.getElementById('contenidos-wrap').classList.contains('hidden')?'expand_more':'expand_less';"
-              style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 0;user-select:none;">
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 0;">
               <span class="material-icons" style="font-size:20px;color:#7C4DFF;">menu_book</span>
-              <strong style="font-size:0.88rem;flex:1;">Contenidos del RA</strong>
-              <span class="label-optional">(opcional — mejora la generación con IA)</span>
-              <span class="material-icons" style="font-size:20px;color:#9E9E9E;">expand_more</span>
+              <strong style="font-size:0.88rem;flex:1;">Contenidos del RA *</strong>
             </div>
-            <div id="contenidos-wrap" class="hidden"
+            <div id="contenidos-wrap"
               style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
 
               <div id="contenidos-manual-wrap" style="display:flex;flex-direction:column;gap:12px;">
@@ -1141,25 +1137,25 @@
                 <div>
                   <label for="contenidos-conceptuales" style="font-size:0.82rem;font-weight:600;color:#1565C0;">
                     <span class="material-icons" style="font-size:14px;vertical-align:middle;">lightbulb</span>
-                    Conceptuales
+                    Conceptuales *
                   </label>
-                  <textarea id="contenidos-conceptuales" rows="3" onpaste="_autoformatearContenidoPegado(this)"
+                  <textarea id="contenidos-conceptuales" rows="3" required onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Ej: Estructura organizacional.&#10;Niveles y funciones de directivos en una organización.&#10;Funciones del analista de sistemas."></textarea>
                 </div>
                 <div>
                   <label for="contenidos-procedimentales" style="font-size:0.82rem;font-weight:600;color:#E65100;">
                     <span class="material-icons" style="font-size:14px;vertical-align:middle;">build</span>
-                    Procedimentales
+                    Procedimentales *
                   </label>
-                  <textarea id="contenidos-procedimentales" rows="3" onpaste="_autoformatearContenidoPegado(this)"
+                  <textarea id="contenidos-procedimentales" rows="3" required onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Ej: Identificación de la estructura interna y los procesos de una organización.&#10;Relación de los niveles directivos y su función."></textarea>
                 </div>
                 <div>
                   <label for="contenidos-actitudinales" style="font-size:0.82rem;font-weight:600;color:#2E7D32;">
                     <span class="material-icons" style="font-size:14px;vertical-align:middle;">favorite</span>
-                    Actitudinales
+                    Actitudinales *
                   </label>
-                  <textarea id="contenidos-actitudinales" rows="3" onpaste="_autoformatearContenidoPegado(this)"
+                  <textarea id="contenidos-actitudinales" rows="3" required onpaste="_autoformatearContenidoPegado(this)"
                     placeholder="Ej: Valoración de normas de seguridad y prevención de riesgos laborales.&#10;Disposición al desarrollo de la capacidad de análisis y de síntesis."></textarea>
                 </div>
               </div>
@@ -3387,6 +3383,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#7C4DFF;">v18.08<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Contenidos del RA ahora es obligatorio y siempre visible</div>
+              <ul class="about-ver-items">
+                <li>La sección "Contenidos del RA" (Conceptuales, Procedimentales, Actitudinales) ya no está contraída por defecto ni es opcional -- se muestra siempre abierta y ahora es obligatorio completarla para avanzar del Paso 2.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8426,9 +8436,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.07"></script>
+  <script src="app.js?v=18.08"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.07"></script>
+  <script src="auth.js?v=18.08"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

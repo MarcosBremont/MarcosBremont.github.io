@@ -9044,6 +9044,20 @@ function validarPaso2() {
 
 
 
+  // Contenidos del RA: antes opcionales, ahora obligatorios.
+  const camposContenidos = ['contenidos-conceptuales', 'contenidos-procedimentales', 'contenidos-actitudinales'];
+  let faltaContenido = false;
+  camposContenidos.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.value.trim()) { el.classList.add('error'); faltaContenido = true; }
+    else el.classList.remove('error');
+  });
+  if (faltaContenido) {
+    mostrarToast('Completa los Contenidos Conceptuales, Procedimentales y Actitudinales del RA', 'error');
+    return false;
+  }
+
   // Verificar que ya se generó la planificación
 
 
