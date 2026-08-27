@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.00" />
+  <link rel="stylesheet" href="styles.css?v=18.01" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.00" />
+  <link rel="stylesheet" href="auth.css?v=18.01" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3382,6 +3382,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.01<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Arreglo de fondo: los cambios ahora llegan de inmediato a todos los dispositivos</div>
+              <ul class="about-ver-items">
+                <li>Se encontró la causa raíz de que algunos cambios tardaran minutos (o no llegaran hasta cerrar y reabrir la app) en dispositivos ya usados antes: index.html -- a diferencia de app.js/styles.css, que sí tienen protección contra caché -- podía quedar guardado viejo en el navegador con referencias a versiones anteriores de esos archivos. Ahora index.html siempre se pide directo al servidor, igual que ya pasaba con el número de versión.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8322,9 +8336,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.00"></script>
+  <script src="app.js?v=18.01"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.00"></script>
+  <script src="auth.js?v=18.01"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -1,5 +1,5 @@
 // Debe coincidir con el campo "sw" de version.json (ver _instrucciones_ia ahi mismo).
-const CACHE_NAME = 'tinclass-v154';
+const CACHE_NAME = 'tinclass-v155';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -83,15 +83,27 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Navegación y assets locales → network-first con fallback a cache
+  // index.html / la navegación misma NUNCA debe salir de la caché HTTP del
+  // navegador (ni de un CDN intermedio) -- si queda una copia vieja de
+  // index.html, sus <script src="app.js?v=X.XX"> quedan apuntando a
+  // versiones viejas aunque esos archivos SÍ tengan su propio cache-busting.
+  // Visto en producción: un usuario seguía en v17.99 varios minutos después
+  // de publicar v18.00. Mismo tratamiento que version.json, con fallback a
+  // caché local solo si de verdad no hay red.
+  if (url.pathname === '/index.html' || request.mode === 'navigate') {
+    event.respondWith(networkFirstWithCacheFallback(request, true));
+    return;
+  }
+
+  // Resto de assets locales → network-first con fallback a cache
   event.respondWith(networkFirstWithCacheFallback(request));
 });
 
 // ── Estrategias ──────────────────────────────────────────────────────────────
-async function networkFirstWithCacheFallback(request) {
+async function networkFirstWithCacheFallback(request, noStore = false) {
   const cache = await caches.open(CACHE_NAME);
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetch(request, noStore ? { cache: 'no-store' } : undefined);
     if (networkResponse.ok) {
       cache.put(request, networkResponse.clone());
     }
