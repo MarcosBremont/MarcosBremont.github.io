@@ -9862,36 +9862,77 @@ Devuelve EXCLUSIVAMENTE un JSON con esta única clave, sin markdown ni texto adi
 {"elementos": ["elemento exacto de la lista", "..."]}`;
 }
 
-/** Filtra UNA categoría con la cascada Groq -> Gemini -> OpenRouter (Claude
- *  excluido a propósito, ver _generarContenidosConIA). Devuelve
- *  {elementos: string[]|null, error: string|null} -- elementos es null solo
- *  si NINGÚN proveedor respondió (fallo real), nunca por una lista vacía. */
+/** Filtra UNA categoría con la cascada OpenRouter -> Gemini -> Groq (Claude
+ *  excluido a propósito, ver _generarContenidosConIA). Groq va AL FINAL a
+ *  propósito: la cuenta de Groq en uso tiene un límite real de 8000
+ *  tokens/minuto que, con 3 llamadas seguidas de este asistente, causaba
+ *  429/413 y categorías vacías de forma intermitente (confirmado con los
+ *  logs de producción de varias rondas de reportes). OpenRouter usa una
+ *  cuenta/cupo totalmente distinto, así que se prueba primero.
+ *
+ *  Devuelve {elementos: string[]|null, error: string|null} -- elementos es
+ *  null solo si NINGÚN proveedor respondió (fallo real), nunca por una
+ *  lista vacía. */
 async function _filtrarCategoriaConIA(ra, nombreCategoria, lista, groqKey, geminiKey, openrouterKey) {
   const prompt = _construirPromptContenidosCategoria(ra, nombreCategoria, lista);
   let resultado = null;
   let ultimoError = null;
+  const t0 = Date.now();
+  console.log(`[ContenidosIA] ▶ Iniciando filtrado de "${nombreCategoria}" (lista de ${lista.length} caracteres, claves disponibles: openrouter=${!!openrouterKey} gemini=${!!geminiKey} groq=${!!groqKey})`);
 
-  if (groqKey) {
-    try { resultado = await _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096); }
-    catch (e) { console.warn(`[ContenidosIA] Groq falló (${nombreCategoria}):`, e.message); ultimoError = e.message; }
+  if (openrouterKey) {
+    console.log(`[ContenidosIA]   → Intentando OpenRouter para "${nombreCategoria}"...`);
+    try {
+      resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000);
+      console.log(`[ContenidosIA]   ✔ OpenRouter respondió para "${nombreCategoria}" en ${Date.now() - t0}ms. Modelo usado:`, window._ultimoModeloOpenRouterExitoso || '(no registrado)');
+    } catch (e) {
+      console.warn(`[ContenidosIA]   ✘ OpenRouter falló para "${nombreCategoria}":`, e.message);
+      ultimoError = e.message;
+    }
+  } else {
+    console.log(`[ContenidosIA]   (sin clave de OpenRouter, se omite)`);
   }
+
   if (!resultado && geminiKey) {
-    try { resultado = await _llamarGemini(prompt, 4096); }
-    catch (e) { console.warn(`[ContenidosIA] Gemini falló (${nombreCategoria}):`, e.message); ultimoError = e.message; }
-  }
-  if (!resultado && openrouterKey) {
-    try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000); }
-    catch (e) { console.warn(`[ContenidosIA] OpenRouter falló (${nombreCategoria}):`, e.message); ultimoError = e.message; }
+    console.log(`[ContenidosIA]   → Intentando Gemini para "${nombreCategoria}"...`);
+    try {
+      resultado = await _llamarGemini(prompt, 4096);
+      console.log(`[ContenidosIA]   ✔ Gemini respondió para "${nombreCategoria}" en ${Date.now() - t0}ms`);
+    } catch (e) {
+      console.warn(`[ContenidosIA]   ✘ Gemini falló para "${nombreCategoria}":`, e.message);
+      ultimoError = e.message;
+    }
+  } else if (!resultado) {
+    console.log(`[ContenidosIA]   (sin clave de Gemini, se omite)`);
   }
 
-  console.log(`[ContenidosIA] Resultado crudo de la IA (${nombreCategoria}):`, JSON.stringify(resultado));
+  if (!resultado && groqKey) {
+    console.log(`[ContenidosIA]   → Intentando Groq para "${nombreCategoria}" (último recurso -- cuenta con límite bajo conocido)...`);
+    try {
+      resultado = await _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096);
+      console.log(`[ContenidosIA]   ✔ Groq respondió para "${nombreCategoria}" en ${Date.now() - t0}ms. Modelo usado:`, window._ultimoModeloGroqExitoso || '(no registrado)');
+    } catch (e) {
+      console.warn(`[ContenidosIA]   ✘ Groq falló para "${nombreCategoria}":`, e.message);
+      ultimoError = e.message;
+    }
+  } else if (!resultado) {
+    console.log(`[ContenidosIA]   (sin clave de Groq, se omite)`);
+  }
+
+  console.log(`[ContenidosIA] ◀ Resultado crudo de la IA (${nombreCategoria}), ${Date.now() - t0}ms total:`, JSON.stringify(resultado));
   const elementos = resultado && Array.isArray(resultado.elementos) ? resultado.elementos : null;
+  if (resultado && !Array.isArray(resultado.elementos)) {
+    console.warn(`[ContenidosIA]   ⚠ "${nombreCategoria}": el proveedor respondió pero sin la clave "elementos" como arreglo -- forma real recibida:`, resultado);
+  }
   return { elementos, error: ultimoError };
 }
 
 async function _generarContenidosConIA() {
+  console.log('[ContenidosIA] ══════ Generar con IA: inicio ══════');
   const ra = document.getElementById('descripcion-ra')?.value?.trim() || '';
+  console.log('[ContenidosIA] Descripción del RA (' + ra.length + ' caracteres):', ra.substring(0, 200) + (ra.length > 200 ? '…' : ''));
   if (!ra) {
+    console.warn('[ContenidosIA] Abortado: no hay Descripción del RA.');
     mostrarToast('Escribe primero la Descripción del Resultado de Aprendizaje (arriba) para poder filtrar los contenidos.', 'error');
     return;
   }
@@ -9899,7 +9940,9 @@ async function _generarContenidosConIA() {
   const conceptuales = document.getElementById('contenidos-mf-conceptuales')?.value?.trim() || '';
   const procedimentales = document.getElementById('contenidos-mf-procedimentales')?.value?.trim() || '';
   const actitudinales = document.getElementById('contenidos-mf-actitudinales')?.value?.trim() || '';
+  console.log('[ContenidosIA] Listas del Módulo pegadas (caracteres): conceptuales=' + conceptuales.length + ' procedimentales=' + procedimentales.length + ' actitudinales=' + actitudinales.length);
   if (!conceptuales && !procedimentales && !actitudinales) {
+    console.warn('[ContenidosIA] Abortado: las 3 listas del Módulo están vacías.');
     mostrarToast('Pega al menos una lista de contenidos del Módulo Formativo.', 'error');
     return;
   }
@@ -9908,7 +9951,9 @@ async function _generarContenidosConIA() {
   // absoluto, ni siquiera como primer intento) -- pedido explícito del dueño
   // tras fallar repetidamente por falta de créditos en su cuenta de Anthropic.
   const groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
+  console.log('[ContenidosIA] Claves configuradas: openrouter=' + !!openrouterKey + ' gemini=' + !!geminiKey + ' groq=' + !!groqKey + ' (orden de intento: OpenRouter -> Gemini -> Groq)');
   if (!groqKey && !geminiKey && !openrouterKey) {
+    console.warn('[ContenidosIA] Abortado: no hay ninguna clave de IA configurada.');
     mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Groq, Gemini u OpenRouter). Completa los contenidos manualmente.', 'error');
     return;
   }
@@ -9918,9 +9963,9 @@ async function _generarContenidosConIA() {
 
   // Una llamada independiente por categoría (ver _construirPromptContenidosCategoria
   // para el porqué) -- secuenciales, no en paralelo: 3 llamadas simultáneas a la
-  // misma clave de Groq compiten por el mismo límite de tokens/minuto de la
-  // cuenta y pueden hacer fallar 2 de las 3 por rate limit aunque individualmente
-  // cada una quepa de sobra.
+  // misma clave compiten por el mismo límite de tokens/minuto de la cuenta y
+  // pueden hacer fallar 2 de las 3 por rate limit aunque individualmente cada
+  // una quepa de sobra.
   const categorias = [
     { key: 'conceptuales', id: 'contenidos-conceptuales', label: 'Conceptuales', lista: conceptuales },
     { key: 'procedimentales', id: 'contenidos-procedimentales', label: 'Procedimentales', lista: procedimentales },
@@ -9928,24 +9973,32 @@ async function _generarContenidosConIA() {
   ];
 
   const categoriasSinRespuesta = [];
+  const resumenPorCategoria = [];
   let algunaSeGeneroConExito = false;
   let ultimoErrorGlobal = null;
   try {
     for (const cat of categorias) {
-      if (!cat.lista) continue; // nada pegado en esta categoría -- no hay nada que pedirle a la IA
+      if (!cat.lista) {
+        console.log(`[ContenidosIA] "${cat.label}": sin lista pegada, se omite.`);
+        continue;
+      }
       const { elementos, error } = await _filtrarCategoriaConIA(ra, cat.label, cat.lista, groqKey, geminiKey, openrouterKey);
       if (elementos === null) {
         categoriasSinRespuesta.push(cat.label);
+        resumenPorCategoria.push(`${cat.label}: SIN RESPUESTA (${error || 'sin detalle'})`);
         if (error) ultimoErrorGlobal = error;
         continue;
       }
       algunaSeGeneroConExito = true;
+      resumenPorCategoria.push(`${cat.label}: ${elementos.length} elemento(s)`);
       const el = document.getElementById(cat.id);
       if (el) el.value = elementos.filter(v => typeof v === 'string' && v.trim()).join('\n');
     }
   } finally {
     if (btn) { btn.disabled = false; if (btn.dataset._origText) btn.innerHTML = btn.dataset._origText; }
   }
+
+  console.log('[ContenidosIA] ══════ Generar con IA: resumen final ══════\n' + resumenPorCategoria.join('\n'));
 
   if (!algunaSeGeneroConExito) {
     // Ninguna categoría con lista pegada logró respuesta de ningún proveedor --
