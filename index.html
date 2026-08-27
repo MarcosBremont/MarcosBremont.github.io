@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=17.93" />
+  <link rel="stylesheet" href="styles.css?v=17.94" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=17.93" />
+  <link rel="stylesheet" href="auth.css?v=17.94" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -1119,30 +1119,77 @@
             </div>
             <div id="contenidos-wrap" class="hidden"
               style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
-              <div>
-                <label for="contenidos-conceptuales" style="font-size:0.82rem;font-weight:600;color:#1565C0;">
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">lightbulb</span>
-                  Conceptuales
-                </label>
-                <textarea id="contenidos-conceptuales" rows="3"
-                  placeholder="Ej: Estructura organizacional.&#10;Niveles y funciones de directivos en una organización.&#10;Funciones del analista de sistemas."></textarea>
+
+              <div id="contenidos-manual-wrap" style="display:flex;flex-direction:column;gap:12px;">
+                <button type="button" onclick="_abrirAsistenteContenidosIA()"
+                  style="align-self:flex-start;background:#EDE7F6;color:#4527A0;border:1px solid #B39DDB;border-radius:8px;padding:6px 12px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                  <span class="material-icons" style="font-size:16px;">auto_awesome</span>
+                  Preguntarle a la IA los contenidos
+                </button>
+                <div>
+                  <label for="contenidos-conceptuales" style="font-size:0.82rem;font-weight:600;color:#1565C0;">
+                    <span class="material-icons" style="font-size:14px;vertical-align:middle;">lightbulb</span>
+                    Conceptuales
+                  </label>
+                  <textarea id="contenidos-conceptuales" rows="3"
+                    placeholder="Ej: Estructura organizacional.&#10;Niveles y funciones de directivos en una organización.&#10;Funciones del analista de sistemas."></textarea>
+                </div>
+                <div>
+                  <label for="contenidos-procedimentales" style="font-size:0.82rem;font-weight:600;color:#E65100;">
+                    <span class="material-icons" style="font-size:14px;vertical-align:middle;">build</span>
+                    Procedimentales
+                  </label>
+                  <textarea id="contenidos-procedimentales" rows="3"
+                    placeholder="Ej: Identificación de la estructura interna y los procesos de una organización.&#10;Relación de los niveles directivos y su función."></textarea>
+                </div>
+                <div>
+                  <label for="contenidos-actitudinales" style="font-size:0.82rem;font-weight:600;color:#2E7D32;">
+                    <span class="material-icons" style="font-size:14px;vertical-align:middle;">favorite</span>
+                    Actitudinales
+                  </label>
+                  <textarea id="contenidos-actitudinales" rows="3"
+                    placeholder="Ej: Valoración de normas de seguridad y prevención de riesgos laborales.&#10;Disposición al desarrollo de la capacidad de análisis y de síntesis."></textarea>
+                </div>
               </div>
-              <div>
-                <label for="contenidos-procedimentales" style="font-size:0.82rem;font-weight:600;color:#E65100;">
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">build</span>
-                  Procedimentales
-                </label>
-                <textarea id="contenidos-procedimentales" rows="3"
-                  placeholder="Ej: Identificación de la estructura interna y los procesos de una organización.&#10;Relación de los niveles directivos y su función."></textarea>
+
+              <div id="contenidos-ia-wrap" class="hidden"
+                style="display:flex;flex-direction:column;gap:12px;background:#F3E5F5;border:1px solid #CE93D8;border-radius:10px;padding:14px;">
+                <div style="font-size:0.82rem;color:#4527A0;line-height:1.4;">
+                  <strong>Pega aquí TODOS los contenidos del Módulo Formativo</strong> (no solo los de este RA).
+                  La IA seleccionará, de esas listas completas, los que correspondan al RA que escribiste arriba
+                  en "Descripción del Resultado de Aprendizaje".
+                </div>
+                <div>
+                  <label for="contenidos-mf-conceptuales" style="font-size:0.82rem;font-weight:600;color:#1565C0;">
+                    Todos los Conceptuales del Módulo
+                  </label>
+                  <textarea id="contenidos-mf-conceptuales" rows="6"
+                    placeholder="Pega aquí, uno por línea, TODOS los contenidos conceptuales del Módulo Formativo completo (de todos los RA)."></textarea>
+                </div>
+                <div>
+                  <label for="contenidos-mf-procedimentales" style="font-size:0.82rem;font-weight:600;color:#E65100;">
+                    Todos los Procedimentales del Módulo
+                  </label>
+                  <textarea id="contenidos-mf-procedimentales" rows="6"
+                    placeholder="Pega aquí, uno por línea, TODOS los contenidos procedimentales del Módulo Formativo completo (de todos los RA)."></textarea>
+                </div>
+                <div>
+                  <label for="contenidos-mf-actitudinales" style="font-size:0.82rem;font-weight:600;color:#2E7D32;">
+                    Todos los Actitudinales del Módulo
+                  </label>
+                  <textarea id="contenidos-mf-actitudinales" rows="6"
+                    placeholder="Pega aquí, uno por línea, TODOS los contenidos actitudinales del Módulo Formativo completo (de todos los RA)."></textarea>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" id="btn-generar-contenidos-ia" onclick="_generarContenidosConIA()"
+                    style="background:#7C4DFF;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                    <span class="material-icons" style="font-size:16px;">auto_awesome</span> Generar con IA
+                  </button>
+                  <button type="button" onclick="_cancelarAsistenteContenidosIA()" class="btn-secundario"
+                    style="padding:8px 16px;font-size:0.85rem;">Cancelar</button>
+                </div>
               </div>
-              <div>
-                <label for="contenidos-actitudinales" style="font-size:0.82rem;font-weight:600;color:#2E7D32;">
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle;">favorite</span>
-                  Actitudinales
-                </label>
-                <textarea id="contenidos-actitudinales" rows="3"
-                  placeholder="Ej: Valoración de normas de seguridad y prevención de riesgos laborales.&#10;Disposición al desarrollo de la capacidad de análisis y de síntesis."></textarea>
-              </div>
+
             </div>
           </div>
         </div>
@@ -3328,6 +3375,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4527A0;">v17.94<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "Preguntarle a la IA los contenidos" en Resultado de Aprendizaje</div>
+              <ul class="about-ver-items">
+                <li>En "Contenidos del RA" (Paso 2), nuevo botón "Preguntarle a la IA los contenidos": pega ahí las listas completas de Contenidos Conceptuales, Procedimentales y Actitudinales de todo el Módulo Formativo, y la IA selecciona automáticamente solo los que corresponden al RA que ya escribiste, dejándolos listos en los campos de Conceptuales, Procedimentales y Actitudinales.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8170,9 +8231,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=17.93"></script>
+  <script src="app.js?v=17.94"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=17.93"></script>
+  <script src="auth.js?v=17.94"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

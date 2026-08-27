@@ -9746,6 +9746,108 @@ function cambiarNivelBloomManual(nivel) {
   guardarBorrador();
 }
 
+// ── Asistente de IA para filtrar Contenidos del Módulo por RA ──────────────
+// El docente pega las listas COMPLETAS de contenidos del Módulo Formativo
+// (las de todos los RA juntos, tal como suelen venir del currículo) y la IA
+// selecciona solo los que corresponden al RA que ya escribió arriba, dejando
+// el resultado en los mismos 3 campos que usa el resto del sistema
+// (contenidos-conceptuales/procedimentales/actitudinales), sin tocar nada de
+// cómo esos campos se usan en la generación de EC ni en las exportaciones.
+function _abrirAsistenteContenidosIA() {
+  document.getElementById('contenidos-manual-wrap')?.classList.add('hidden');
+  document.getElementById('contenidos-ia-wrap')?.classList.remove('hidden');
+}
+
+function _cancelarAsistenteContenidosIA() {
+  document.getElementById('contenidos-ia-wrap')?.classList.add('hidden');
+  document.getElementById('contenidos-manual-wrap')?.classList.remove('hidden');
+}
+
+function _construirPromptContenidosIA(ra, conceptuales, procedimentales, actitudinales) {
+  return `Actúa como un experto en diseño curricular de Educación Técnico-Profesional (ETP). Analiza el siguiente Resultado de Aprendizaje (RA) e identifica únicamente qué contenidos de las listas adjuntas se corresponden con él.
+
+- Resultado de Aprendizaje (RA): ${ra}
+
+- Lista de Contenidos Conceptuales:
+${conceptuales || '(sin elementos)'}
+
+- Lista de Contenidos Procedimentales:
+${procedimentales || '(sin elementos)'}
+
+- Lista de Contenidos Actitudinales:
+${actitudinales || '(sin elementos)'}
+
+Regla estricta: NO incluyas justificaciones, introducciones, ni explicaciones de ningún tipo. Selecciona ÚNICAMENTE elementos que aparezcan tal cual (texto exacto, sin reformular ni resumir) en las listas de arriba. Si una lista no tiene ningún elemento relacionado con el RA, devuelve un arreglo vacío para esa categoría.
+
+Devuelve EXCLUSIVAMENTE un JSON con este formato exacto, sin markdown ni texto adicional:
+{"conceptuales": ["elemento exacto de la lista", "..."], "procedimentales": ["elemento exacto de la lista", "..."], "actitudinales": ["elemento exacto de la lista", "..."]}`;
+}
+
+async function _generarContenidosConIA() {
+  const ra = document.getElementById('descripcion-ra')?.value?.trim() || '';
+  if (!ra) {
+    mostrarToast('Escribe primero la Descripción del Resultado de Aprendizaje (arriba) para poder filtrar los contenidos.', 'error');
+    return;
+  }
+
+  const conceptuales = document.getElementById('contenidos-mf-conceptuales')?.value?.trim() || '';
+  const procedimentales = document.getElementById('contenidos-mf-procedimentales')?.value?.trim() || '';
+  const actitudinales = document.getElementById('contenidos-mf-actitudinales')?.value?.trim() || '';
+  if (!conceptuales && !procedimentales && !actitudinales) {
+    mostrarToast('Pega al menos una lista de contenidos del Módulo Formativo.', 'error');
+    return;
+  }
+
+  const claudeKey = getClaudeKey(), groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
+  if (!claudeKey && !groqKey && !geminiKey && !openrouterKey) {
+    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes. Completa los contenidos manualmente.', 'error');
+    return;
+  }
+
+  const prompt = _construirPromptContenidosIA(ra, conceptuales, procedimentales, actitudinales);
+
+  const btn = document.getElementById('btn-generar-contenidos-ia');
+  if (btn) { btn.disabled = true; btn.dataset._origText = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Analizando...'; }
+
+  let resultado = null;
+  try {
+    if (claudeKey) {
+      try { resultado = await _llamarClaude(prompt, 4096); }
+      catch (e) { console.warn('[ContenidosIA] Claude falló:', e.message); }
+    }
+    if (!resultado && groqKey) {
+      try { resultado = await _llamarGroqConFallback(prompt, 'Filtrando contenidos con IA', 4096); }
+      catch (e) { console.warn('[ContenidosIA] Groq falló:', e.message); }
+    }
+    if (!resultado && geminiKey) {
+      try { resultado = await _llamarGemini(prompt, 4096); }
+      catch (e) { console.warn('[ContenidosIA] Gemini falló:', e.message); }
+    }
+    if (!resultado && openrouterKey) {
+      try { resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Filtrando contenidos con IA', 4096, 60000); }
+      catch (e) { console.warn('[ContenidosIA] OpenRouter falló:', e.message); }
+    }
+  } finally {
+    if (btn) { btn.disabled = false; if (btn.dataset._origText) btn.innerHTML = btn.dataset._origText; }
+  }
+
+  if (!resultado) {
+    mostrarToast('No se pudo contactar ninguna IA configurada. Intenta de nuevo o completa los contenidos manualmente.', 'error');
+    return;
+  }
+
+  const setListVal = (id, arr) => {
+    const el = document.getElementById(id);
+    if (el) el.value = (Array.isArray(arr) ? arr : []).filter(v => typeof v === 'string' && v.trim()).join('\n');
+  };
+  setListVal('contenidos-conceptuales', resultado.conceptuales);
+  setListVal('contenidos-procedimentales', resultado.procedimentales);
+  setListVal('contenidos-actitudinales', resultado.actitudinales);
+
+  _cancelarAsistenteContenidosIA();
+  mostrarToast('Contenidos del RA generados con IA ✓', 'success');
+}
+
 
 
 
