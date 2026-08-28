@@ -3382,6 +3382,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v18.13<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" no detectaba RA con códigos de catálogo nacional (ej. RA0090)</div>
+              <ul class="about-ver-items">
+                <li>Al cargar un PDF con RA numerados con código de catálogo nacional DETP/INFOTEP (4 dígitos, ej. "RA0090"), el sistema los descartaba todos porque exigía que el número del RA empezara con el número secuencial del módulo (ej. módulo 5 solo aceptaba "RA5.x") -- una suposición válida para currículos con numeración relativa al módulo, pero no para catálogos globales. El módulo se ubicaba bien, pero el resultado quedaba en "no tiene RA reconocibles". Ahora, si esa validación no deja ningún RA, se usa la lista completa encontrada dentro de los límites ya confiables del módulo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#AD1457;">v18.12<span class="about-ver-fecha">Ago
                   2026</span>
               </div>

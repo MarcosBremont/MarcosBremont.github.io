@@ -22814,9 +22814,18 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // `posicionesRA` para el cálculo de límites de abajo, porque SÍ sirve como
   // frontera válida (la descripción del último RA correcto debe parar ahí,
   // sea o no del mismo módulo).
-  const posicionesRAModulo = ubicacion.numeroModulo
+  // Esta defensa asume que el RA se numera RELATIVO al módulo (ej. módulo 5 =>
+  // "RA5.1", "RA5.2"...) -- pero algunos currículos (ej. catálogo nacional
+  // DETP/INFOTEP) usan códigos de RA GLOBALES de 4 dígitos ("RA0090",
+  // "RA0091"...) sin ninguna relación con el número secuencial del módulo, y
+  // ahí el filtro descartaría TODOS los RA reales aunque el módulo se haya
+  // ubicado bien. Si el filtro estricto no deja nada, se cae de vuelta a la
+  // lista completa: el recorte de límites de _ubicarModulo ya es confiable
+  // por sí solo (coincidencia exacta de código o puntaje por nombre).
+  const posicionesRAFiltradas = ubicacion.numeroModulo
     ? posicionesRA.filter(ra => ra.numero.split('.')[0] === ubicacion.numeroModulo)
     : posicionesRA;
+  const posicionesRAModulo = posicionesRAFiltradas.length ? posicionesRAFiltradas : posicionesRA;
   if (!posicionesRAModulo.length) return null;
 
   const regexCE = /CE\s*(\d+\.\d+)\.(\d+)[:.\-]?\s*/g;
