@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.13" />
+  <link rel="stylesheet" href="styles.css?v=18.14" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.13" />
+  <link rel="stylesheet" href="auth.css?v=18.14" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3378,6 +3378,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#EF6C00;">v18.14<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" mezclaba la descripción del RA con los Criterios de Evaluación</div>
+              <ul class="about-ver-items">
+                <li>Con RA de catálogo nacional (ej. "RA0090", ver v18.13) la separación de columnas RA/Criterios fallaba en silencio porque exigía que el RA llevara punto decimal y el Criterio 3 números ("CE3.10.1") -- este currículo usa "RA0090" (sin decimal) y "CE1.1" (2 números). Al fallar la separación, el texto de ambas columnas quedaba intercalado línea por línea dentro de la descripción del RA, y los criterios salían en 0.</li>
+                <li>Además, en estos documentos el prefijo del Criterio ("CE1.x", "CE2.x"...) no es el número del RA sino su posición dentro de la tabla del módulo (1er RA de la tabla = CE1.x, 2do = CE2.x...) -- el sistema ahora reconoce ese patrón y empareja los criterios por posición cuando el emparejamiento por número propio del RA no encuentra nada.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8503,9 +8518,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.13"></script>
+  <script src="app.js?v=18.14"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.13"></script>
+  <script src="auth.js?v=18.14"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

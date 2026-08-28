@@ -22571,8 +22571,17 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   });
   if (!itemsRelevantes.length) return null;
 
-  const esRA = s => /RAE?\s*\d+\.\d+/.test(s);
-  const esCE = s => /CE\s*\d+\.\d+\.\d+/.test(s);
+  // La parte decimal del RA es OPCIONAL (ver regexRA más abajo: un catálogo
+  // nacional de RA usa códigos globales de 4 dígitos como "RA0090", sin
+  // ningún punto) -- exigirla aquí hacía que xRA quedara vacío en esos
+  // documentos, _reconstruirColumnasTabla devolvía null sin más, y el
+  // llamador caía al texto lineal (que mezcla ambas columnas línea por
+  // línea). Lo mismo para CE: además del formato de 3 niveles ("CE3.10.1"),
+  // se vio en un documento real un formato de 2 niveles ("CE1.1"..."CE1.11")
+  // donde el primer número es simplemente la posición ordinal del RA dentro
+  // de la tabla del módulo, no relacionado con el número propio del RA.
+  const esRA = s => /RAE?\s*\d+(?:\.\d+)?/.test(s);
+  const esCE = s => /CE\s*\d+\.\d+(?:\.\d+)?/.test(s);
   const xRA = itemsRelevantes.filter(it => esRA(it.str)).map(it => it.x);
   const xCE = itemsRelevantes.filter(it => esCE(it.str)).map(it => it.x);
   if (!xRA.length || !xCE.length) return null;
@@ -22828,10 +22837,22 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const posicionesRAModulo = posicionesRAFiltradas.length ? posicionesRAFiltradas : posicionesRA;
   if (!posicionesRAModulo.length) return null;
 
-  const regexCE = /CE\s*(\d+\.\d+)\.(\d+)[:.\-]?\s*/g;
+  // Dos formatos vistos en documentos reales: de 3 niveles ("CE3.10.1", RA
+  // module-relativo -- el 1er y 2do número identifican el RA "3.10", el 3ro
+  // es el criterio dentro de ese RA) y de 2 niveles ("CE1.1"..."CE1.11", RA
+  // de catálogo nacional -- ahí el 1er número NO es el número propio del RA
+  // sino su posición ORDINAL dentro de la tabla del módulo, ver más abajo).
+  const regexCE = /CE\s*(\d+)\.(\d+)(?:\.(\d+))?[:.\-]?\s*/g;
   const posicionesCE = [];
   while ((m = regexCE.exec(textoCE)) !== null) {
-    posicionesCE.push({ numeroRA: m[1], numeroCE: `${m[1]}.${m[2]}`, indice: m.index, finMarcador: m.index + m[0].length });
+    const esTresNiveles = m[3] !== undefined;
+    posicionesCE.push({
+      numeroRA: esTresNiveles ? `${m[1]}.${m[2]}` : m[1],
+      ordinalRA: esTresNiveles ? null : m[1],
+      numeroCE: esTresNiveles ? `${m[1]}.${m[2]}.${m[3]}` : `${m[1]}.${m[2]}`,
+      indice: m.index,
+      finMarcador: m.index + m[0].length
+    });
   }
 
   // Si las columnas se separaron, cada bloque solo compite con marcadores de
@@ -22852,15 +22873,29 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     return todos.length ? Math.min(...todos) : textoCE.length;
   };
 
-  const ras = posicionesRAModulo.map(ra => {
+  // El emparejamiento "tradicional" (por número propio del RA) solo tiene
+  // sentido si al menos un RA del módulo lo logra -- en un catálogo nacional
+  // (RA0090, RA0091...) NINGÚN RA lo va a lograr nunca, porque el prefijo del
+  // CE ("CE1.x", "CE2.x"...) es la posición ORDINAL del RA dentro de la
+  // tabla, no su código de catálogo. Confirmado en un documento real: el 2do
+  // RA de la tabla (numero de catálogo distinto) traía sus criterios como
+  // "CE2.x". Si el emparejamiento tradicional no rinde nada para NINGÚN RA
+  // del módulo, se usa la posición ordinal como respaldo para todos.
+  const emparejarPorNumeroPropio = ra => posicionesCE.filter(ce =>
+    ce.numeroRA === ra.numero || (!ra.numero.includes('.') && ce.numeroRA === ra.numero + '.1'));
+  const hayEmparejamientoPorNumeroPropio = posicionesRAModulo.some(ra => emparejarPorNumeroPropio(ra).length > 0);
+
+  const ras = posicionesRAModulo.map((ra, idxRA) => {
     const descripcion = textoRA.substring(ra.finMarcador, finDeBloqueRA(ra.indice)).replace(/\s+/g, ' ').trim();
     // Un RA sin parte decimal (ej. "RA4", ver arriba) puede tener sus
     // criterios codificados igual como si fuera ".1" (ej. "CE4.1.1..."),
     // visto en un documento real -- se acepta esa variante además del match
     // exacto, sin afectar los RA que sí llevan decimal (ej. "RA3.1" solo
     // acepta "CE3.1.X", nunca "CE3.1.1.X" ni nada distinto).
-    const criteriosEvaluacion = posicionesCE
-      .filter(ce => ce.numeroRA === ra.numero || (!ra.numero.includes('.') && ce.numeroRA === ra.numero + '.1'))
+    const ordinal = String(idxRA + 1);
+    const criteriosEvaluacion = (hayEmparejamientoPorNumeroPropio
+        ? emparejarPorNumeroPropio(ra)
+        : posicionesCE.filter(ce => ce.ordinalRA === ordinal))
       .map(ce => {
         const texto = textoCE.substring(ce.finMarcador, finDeBloqueCE(ce.indice)).replace(/\s+/g, ' ').trim();
         return `CE${ce.numeroCE} ${texto}`.trim();
