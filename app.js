@@ -5829,7 +5829,20 @@ async function _guardarPlantillaCentroChunked(centroId, tipo, base64, nombre) {
     flagUpdate[cfg.base64] = firebase.firestore.FieldValue.delete();
     flagUpdate[cfg.nombre] = nombre || '';
   }
-  await db.collection(CENTROS_COLLECTION).doc(centroId).update(flagUpdate).catch(() => {});
+  // set(..., {merge:true}) en vez de update(): update() exige que el documento
+  // del centro YA exista, y si esta subida de plantilla ocurre justo al crear
+  // el centro (antes de que ese doc termine de persistirse), update() fallaba
+  // y quedaba en silencio por el catch vacío -- los chunks sí se guardaban bien
+  // (por eso el panel de Superadmin mostraba "Plantilla cargada"), pero el flag
+  // tienePlantilla_<tipo> nunca quedaba puesto, así que la exportación (que sí
+  // depende del flag para el fallback sin centro asignado) reportaba "no hay
+  // plantilla" pese a que la plantilla sí estaba guardada. set+merge crea el
+  // documento si hace falta, así que no puede fallar por esa carrera.
+  try {
+    await db.collection(CENTROS_COLLECTION).doc(centroId).set(flagUpdate, { merge: true });
+  } catch (e) {
+    console.warn('[PlantillaCentro] No se pudo actualizar el flag tienePlantilla_' + tipo + ' del centro ' + centroId + ':', e.message);
+  }
 }
 
 /** Carga una plantilla guardada en chunks; si el centro nunca re-subio su

@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.11" />
+  <link rel="stylesheet" href="styles.css?v=18.12" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.11" />
+  <link rel="stylesheet" href="auth.css?v=18.12" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3378,6 +3378,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v18.12<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Plantilla cargada" en Superadmin pero "no hay plantilla" al exportar</div>
+              <ul class="about-ver-items">
+                <li>Al subir una plantilla Word de un centro (Planificación, Diaria, Reportes de Psicología o Impacto/Vinculación), el sistema intentaba marcar internamente "este centro ya tiene esta plantilla" con una operación que exigía que el documento del centro ya existiera -- si la plantilla se subía justo al crear el centro, esa marca fallaba en silencio. El archivo sí quedaba guardado (por eso Superadmin mostraba "Plantilla cargada" y el botón Descargar funcionaba), pero exportar un reporte con esa plantilla fallaba con "no hay plantilla cargada en el centro". Ahora esa marca se guarda de forma que no puede fallar por esa causa.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8475,9 +8489,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.11"></script>
+  <script src="app.js?v=18.12"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.11"></script>
+  <script src="auth.js?v=18.12"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
