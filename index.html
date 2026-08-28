@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.15" />
+  <link rel="stylesheet" href="styles.css?v=18.16" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.15" />
+  <link rel="stylesheet" href="auth.css?v=18.16" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3378,6 +3378,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.16<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: a veces desaparecía el botón "Guardar examen"</div>
+              <ul class="about-ver-items">
+                <li>Al cargar la app, un código "parche" buscaba el primer elemento con clase <code>modal-footer</code> en todo el documento y, si no tenía id, le asignaba <code>id="modal-footer"</code> -- pero ese id ya estaba fijo de antes en el HTML del modal genérico de instrumento, y el editor de "Nuevo Examen" (que vive más arriba en el HTML) también usa esa misma clase sin id propio. El parche terminaba duplicando el id en el footer del examen, y el navegador le entregaba ESE footer a cualquier función que buscara <code>getElementById('modal-footer')</code> -- así que cerrar cualquier modal de instrumento en la sesión (algo común, pasa varias veces) le ponía <code>display:none</code> al botón "Guardar examen" o le sobrescribía el contenido con botones de otro modal. Se quitó el parche: el id ya viene fijo en el HTML y no hacía falta.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8532,9 +8546,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.15"></script>
+  <script src="app.js?v=18.16"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.15"></script>
+  <script src="auth.js?v=18.16"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

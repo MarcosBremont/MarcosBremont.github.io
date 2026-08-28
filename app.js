@@ -21809,15 +21809,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // Patch the modal footer to have an id (needed for dynamic buttons)
-
-
-
-  const modalFooter = document.querySelector('.modal-footer');
-
-
-
-  if (modalFooter && !modalFooter.id) modalFooter.id = 'modal-footer';
+  // NOTA: este bloque ANTES hacía document.querySelector('.modal-footer') y le
+  // asignaba id="modal-footer" si no tenía uno -- pensado como "parche" para
+  // el footer del modal genérico de instrumento (#modal-overlay), que YA
+  // trae ese id fijo en el HTML (index.html, "MODAL DE INSTRUMENTO"). Pero
+  // querySelector('.modal-footer') agarra el PRIMER ".modal-footer" del
+  // documento en orden de aparición -- y el editor de "Nuevo Examen" (que se
+  // agregó después, pero su <div> vive ANTES en el HTML) también usa esa
+  // misma clase, sin id propio. El resultado: el parche le pegaba
+  // id="modal-footer" DUPLICADO al footer del examen (en vez de no hacer
+  // nada, que es lo que debía pasar porque el real ya tenía su id) y
+  // getElementById('modal-footer') -- usado por cerrarModalBtn(),
+  // _usarFooterDinamico(), etc. para el modal de instrumento -- terminaba
+  // devolviendo el footer del examen por ser el primero en el DOM con ese
+  // id. Cerrar CUALQUIER modal de instrumento en la sesión dejaba el botón
+  // "Guardar examen" con display:none, o su contenido reemplazado por botones
+  // de otro modal -- eso explicaba el reporte real "a veces no sale". El
+  // parche no hace falta (el id ya está fijo en el HTML) y solo causaba daño,
+  // así que se quita.
 
   // Botón "Planificaciones" en el header (deshabilitado, ver nota arriba)
   if (false && !document.getElementById('btn-planificaciones')) {
@@ -30874,8 +30883,10 @@ function _arrancarApp() {
 
 document.addEventListener('DOMContentLoaded', () => {
   actualizarBtnConfigIA();
-  const mf = document.querySelector('.modal-footer');
-  if (mf && !mf.id) mf.id = 'modal-footer';
+  // (el parche de id="modal-footer" que vivía aquí se quitó -- ver la nota
+  // larga en el otro listener DOMContentLoaded, más arriba en este archivo:
+  // el id ya viene fijo en el HTML del modal de instrumento, y este parche
+  // se lo terminaba robando al footer del editor de examen)
   // Aplicar preferencias de apariencia antes de mostrar
   _aplicarPreferencias();
   // Si Firebase no está configurado (firebase-config sin datos reales), arrancar directamente
