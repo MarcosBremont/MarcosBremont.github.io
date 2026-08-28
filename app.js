@@ -9862,68 +9862,69 @@ Devuelve EXCLUSIVAMENTE un JSON con esta única clave, sin markdown ni texto adi
 {"elementos": ["elemento exacto de la lista", "..."]}`;
 }
 
-/** Filtra UNA categoría con la cascada OpenRouter -> Gemini -> Groq (Claude
- *  excluido a propósito, ver _generarContenidosConIA). Groq va AL FINAL a
- *  propósito: la cuenta de Groq en uso tiene un límite real de 8000
- *  tokens/minuto que, con 3 llamadas seguidas de este asistente, causaba
- *  429/413 y categorías vacías de forma intermitente (confirmado con los
- *  logs de producción de varias rondas de reportes). OpenRouter usa una
- *  cuenta/cupo totalmente distinto, así que se prueba primero.
+/** Filtra UNA categoría con la cascada Gemini -> OpenRouter -> Groq (Claude
+ *  excluido a propósito, ver _generarContenidosConIA).
+ *
+ *  Orden actualizado tras ver logs reales de producción: los modelos
+ *  gratuitos de OpenRouter (NVIDIA Nemotron) respondían SIN error pero con
+ *  "elementos":[] en las 3 categorías -- pese a listas con contenido real
+ *  (800-1800 caracteres) y un RA específico -- además de tardar hasta 70s
+ *  por llamada. Gemini suele ser más rápido y confiable para esta tarea de
+ *  extracción estructurada, así que pasa a probarse primero. Groq sigue de
+ *  último por su límite real de 8000 tokens/minuto (ver commits previos).
+ *
+ *  Además, un arreglo vacío YA NO se acepta a la primera: un proveedor
+ *  puede responder "sin error" pero fallar en la tarea (modelo débil, no
+ *  entendió las instrucciones, etc.), así que si el resultado viene vacío
+ *  se sigue intentando con el siguiente proveedor disponible por si
+ *  encuentra algo -- el vacío solo se acepta como respuesta final si TODOS
+ *  los proveedores configurados coinciden en no encontrar nada.
  *
  *  Devuelve {elementos: string[]|null, error: string|null} -- elementos es
- *  null solo si NINGÚN proveedor respondió (fallo real), nunca por una
- *  lista vacía. */
+ *  null solo si NINGÚN proveedor respondió en absoluto (fallo real). */
 async function _filtrarCategoriaConIA(ra, nombreCategoria, lista, groqKey, geminiKey, openrouterKey) {
   const prompt = _construirPromptContenidosCategoria(ra, nombreCategoria, lista);
-  let resultado = null;
-  let ultimoError = null;
   const t0 = Date.now();
-  console.log(`[ContenidosIA] ▶ Iniciando filtrado de "${nombreCategoria}" (lista de ${lista.length} caracteres, claves disponibles: openrouter=${!!openrouterKey} gemini=${!!geminiKey} groq=${!!groqKey})`);
+  console.log(`[ContenidosIA] ▶ Iniciando filtrado de "${nombreCategoria}" (lista de ${lista.length} caracteres, claves disponibles: gemini=${!!geminiKey} openrouter=${!!openrouterKey} groq=${!!groqKey})`);
 
-  if (openrouterKey) {
-    console.log(`[ContenidosIA]   → Intentando OpenRouter para "${nombreCategoria}"...`);
+  const intentos = [
+    { nombre: 'Gemini', key: geminiKey, llamar: () => _llamarGemini(prompt, 4096) },
+    { nombre: 'OpenRouter', key: openrouterKey, llamar: () => _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000) },
+    { nombre: 'Groq', key: groqKey, llamar: () => _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096) }
+  ];
+
+  let elementosEncontrados = null; // el primer resultado NO vacío que se obtenga
+  let ultimoResultadoVacio = null; // por si TODOS los proveedores coinciden en "nada" -- respuesta final válida
+  let ultimoError = null;
+
+  for (const intento of intentos) {
+    if (elementosEncontrados) break; // ya se encontró contenido real, no seguir gastando llamadas
+    if (!intento.key) { console.log(`[ContenidosIA]   (sin clave de ${intento.nombre}, se omite)`); continue; }
+    console.log(`[ContenidosIA]   → Intentando ${intento.nombre} para "${nombreCategoria}"...`);
+    const tIntento = Date.now();
     try {
-      resultado = await _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000);
-      console.log(`[ContenidosIA]   ✔ OpenRouter respondió para "${nombreCategoria}" en ${Date.now() - t0}ms. Modelo usado:`, window._ultimoModeloOpenRouterExitoso || '(no registrado)');
+      const resultado = await intento.llamar();
+      const ms = Date.now() - tIntento;
+      console.log(`[ContenidosIA]   ✔ ${intento.nombre} respondió para "${nombreCategoria}" en ${ms}ms:`, JSON.stringify(resultado));
+      const elementos = resultado && Array.isArray(resultado.elementos) ? resultado.elementos : null;
+      if (elementos === null) {
+        console.warn(`[ContenidosIA]   ⚠ "${nombreCategoria}": ${intento.nombre} respondió pero sin la clave "elementos" como arreglo -- forma real recibida:`, resultado);
+        continue;
+      }
+      if (elementos.length > 0) {
+        elementosEncontrados = elementos;
+      } else {
+        ultimoResultadoVacio = elementos;
+        console.log(`[ContenidosIA]   (${intento.nombre} no encontró elementos para "${nombreCategoria}"; se intentará el siguiente proveedor disponible por si acierta)`);
+      }
     } catch (e) {
-      console.warn(`[ContenidosIA]   ✘ OpenRouter falló para "${nombreCategoria}":`, e.message);
+      console.warn(`[ContenidosIA]   ✘ ${intento.nombre} falló para "${nombreCategoria}":`, e.message);
       ultimoError = e.message;
     }
-  } else {
-    console.log(`[ContenidosIA]   (sin clave de OpenRouter, se omite)`);
   }
 
-  if (!resultado && geminiKey) {
-    console.log(`[ContenidosIA]   → Intentando Gemini para "${nombreCategoria}"...`);
-    try {
-      resultado = await _llamarGemini(prompt, 4096);
-      console.log(`[ContenidosIA]   ✔ Gemini respondió para "${nombreCategoria}" en ${Date.now() - t0}ms`);
-    } catch (e) {
-      console.warn(`[ContenidosIA]   ✘ Gemini falló para "${nombreCategoria}":`, e.message);
-      ultimoError = e.message;
-    }
-  } else if (!resultado) {
-    console.log(`[ContenidosIA]   (sin clave de Gemini, se omite)`);
-  }
-
-  if (!resultado && groqKey) {
-    console.log(`[ContenidosIA]   → Intentando Groq para "${nombreCategoria}" (último recurso -- cuenta con límite bajo conocido)...`);
-    try {
-      resultado = await _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096);
-      console.log(`[ContenidosIA]   ✔ Groq respondió para "${nombreCategoria}" en ${Date.now() - t0}ms. Modelo usado:`, window._ultimoModeloGroqExitoso || '(no registrado)');
-    } catch (e) {
-      console.warn(`[ContenidosIA]   ✘ Groq falló para "${nombreCategoria}":`, e.message);
-      ultimoError = e.message;
-    }
-  } else if (!resultado) {
-    console.log(`[ContenidosIA]   (sin clave de Groq, se omite)`);
-  }
-
-  console.log(`[ContenidosIA] ◀ Resultado crudo de la IA (${nombreCategoria}), ${Date.now() - t0}ms total:`, JSON.stringify(resultado));
-  const elementos = resultado && Array.isArray(resultado.elementos) ? resultado.elementos : null;
-  if (resultado && !Array.isArray(resultado.elementos)) {
-    console.warn(`[ContenidosIA]   ⚠ "${nombreCategoria}": el proveedor respondió pero sin la clave "elementos" como arreglo -- forma real recibida:`, resultado);
-  }
+  const elementos = elementosEncontrados || ultimoResultadoVacio;
+  console.log(`[ContenidosIA] ◀ "${nombreCategoria}" resuelto en ${Date.now() - t0}ms total. Elementos finales:`, JSON.stringify(elementos));
   return { elementos, error: ultimoError };
 }
 
@@ -9951,7 +9952,7 @@ async function _generarContenidosConIA() {
   // absoluto, ni siquiera como primer intento) -- pedido explícito del dueño
   // tras fallar repetidamente por falta de créditos en su cuenta de Anthropic.
   const groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
-  console.log('[ContenidosIA] Claves configuradas: openrouter=' + !!openrouterKey + ' gemini=' + !!geminiKey + ' groq=' + !!groqKey + ' (orden de intento: OpenRouter -> Gemini -> Groq)');
+  console.log('[ContenidosIA] Claves configuradas: gemini=' + !!geminiKey + ' openrouter=' + !!openrouterKey + ' groq=' + !!groqKey + ' (orden de intento: Gemini -> OpenRouter -> Groq, escalando si un proveedor responde vacío)');
   if (!groqKey && !geminiKey && !openrouterKey) {
     console.warn('[ContenidosIA] Abortado: no hay ninguna clave de IA configurada.');
     mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Groq, Gemini u OpenRouter). Completa los contenidos manualmente.', 'error');

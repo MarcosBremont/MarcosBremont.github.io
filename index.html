@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.10" />
+  <link rel="stylesheet" href="styles.css?v=18.11" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.10" />
+  <link rel="stylesheet" href="auth.css?v=18.11" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3378,6 +3378,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v18.11<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Preguntarle a la IA los contenidos": ya no acepta un vacío a la primera</div>
+              <ul class="about-ver-items">
+                <li>Con los logs nuevos se vio la causa real: los modelos gratuitos de OpenRouter respondían sin error pero con la categoría vacía, incluso con listas de contenido real -- y el sistema aceptaba ese vacío como respuesta final. Ahora, si un proveedor responde vacío, se sigue intentando con el siguiente automáticamente; el vacío solo se acepta si TODOS los proveedores disponibles coinciden en no encontrar nada.</li>
+                <li>El orden de proveedores cambia a Gemini → OpenRouter → Groq (Gemini suele ser más rápido y confiable para esta tarea).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8460,9 +8475,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.10"></script>
+  <script src="app.js?v=18.11"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.10"></script>
+  <script src="auth.js?v=18.11"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
