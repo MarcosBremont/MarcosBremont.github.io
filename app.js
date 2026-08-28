@@ -22508,10 +22508,18 @@ function _recortarTextoModulo(textoCompleto, moduloBuscado) {
  *    código completo (ej. "INCO"), que identifica el sector/familia amplia
  *    (Informática y Comunicaciones), no el título específico. */
 function _parsearDatosGeneralesLocal(encabezado) {
-  const matchCodigoTitulo = /\b([A-Z]{2,8}\d{2,4}_\d)\b\s+Familia\s+Profesional/i.exec(encabezado);
+  // El código completo del título no siempre pega las letras directo a los
+  // dígitos (ej. "INCO002_3") -- se vio un documento real con guion antes del
+  // número secuencial ("HOYT-05_3", familia HOYT = Hostelería y Turismo). El
+  // patrón se comparte entre el match del código y el lookahead que acota el
+  // nombre del Bachillerato para que ambos reconozcan la misma variante --
+  // si no, el nombre capturado se "traga" el código hasta la siguiente
+  // referencia a "Familia Profesional".
+  const patronCodigoTitulo = '[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,6})?\\d{0,4}_\\d';
+  const matchCodigoTitulo = new RegExp('\\b(' + patronCodigoTitulo + ')\\b\\s+Familia\\s+Profesional', 'i').exec(encabezado);
   const codigoTitulo = matchCodigoTitulo ? matchCodigoTitulo[1] : '';
   const codigoFP = codigoTitulo ? (/^[A-Za-z]+/.exec(codigoTitulo)?.[0] || '') : '';
-  const matchBachillerato = /BACHILLERATO\s+T[EÉ]CNICO\s+EN\s+(.+?)(?=\s+[A-Z]{2,8}\d{2,4}_\d\b|\s+Familia\s+Profesional|\n|$)/i.exec(encabezado);
+  const matchBachillerato = new RegExp('BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+(.+?)(?=\\s+' + patronCodigoTitulo + '\\b|\\s+Familia\\s+Profesional|\\n|$)', 'i').exec(encabezado);
   const matchFamilia = /Familia\s+Profesional\s+([^\n]{2,80}?)(?=\s{2,}|\n|$)/i.exec(encabezado);
   const matchOrdenanza = /Ordenanza\s*[:.\-]?\s*([^\n]{2,60})/i.exec(encabezado);
   return {

@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.14" />
+  <link rel="stylesheet" href="styles.css?v=18.15" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.14" />
+  <link rel="stylesheet" href="auth.css?v=18.15" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3378,6 +3378,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#0277BD;">v18.15<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" no detectaba el Código del Título ni el Código FP de la portada</div>
+              <ul class="about-ver-items">
+                <li>El código completo del título (portada del PDF) se buscaba con un patrón que exige las letras pegadas directo a los dígitos (ej. "INCO002_3") -- un documento real trae guion antes del número secuencial ("HOYT-05_3"), y ese patrón no lo reconocía: "Código del Título" y "Código FP" quedaban vacíos. Ahora el patrón acepta ambas variantes.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8518,9 +8532,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.14"></script>
+  <script src="app.js?v=18.15"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.14"></script>
+  <script src="auth.js?v=18.15"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
