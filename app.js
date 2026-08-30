@@ -26799,12 +26799,24 @@ function _renderPreguntaEditorItem(p, idx) {
     const letras = ['A', 'B', 'C', 'D'];
     extraHtml = '<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
       letras.map((l, i) => `<div style="display:flex;align-items:center;gap:6px;">
+        <input type="radio" name="ex-ed-correcta-${idx}" title="Marcar como respuesta correcta" ${p.respuestaCorrecta === l ? 'checked' : ''}
+          style="flex-shrink:0;cursor:pointer;accent-color:#2E7D32;" onchange="_examenEditor.preguntas[${idx}].respuestaCorrecta='${l}';">
         <span style="font-size:.73rem;font-weight:700;color:#1565C0;min-width:14px;">${l}.</span>
         <input type="text" value="${_eHtml((p.opciones || [])[i] || '')}" placeholder="Opción ${l}..." style="flex:1;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.8rem;outline:none;font-family:inherit;"
           oninput="_examenEditor.preguntas[${idx}].opciones[${i}]=this.value">
-      </div>`).join('') + '</div>';
+      </div>`).join('') + '</div>' +
+      `<div style="margin-top:5px;font-size:.7rem;color:#9E9E9E;">Marca con el círculo cuál opción es la correcta, para que el sistema pueda calificarla sola.</div>`;
   } else if (p.tipo === 'vf') {
-    extraHtml = '<div style="margin-top:6px;font-size:.73rem;color:#9E9E9E;font-style:italic;">Las opciones son automáticas: Verdadero / Falso</div>';
+    extraHtml = `<div style="margin-top:8px;display:flex;gap:14px;align-items:center;">
+        <label style="display:flex;align-items:center;gap:5px;font-size:.8rem;color:#424242;cursor:pointer;">
+          <input type="radio" name="ex-ed-vf-${idx}" ${p.respuestaCorrecta === 'V' ? 'checked' : ''} style="accent-color:#2E7D32;cursor:pointer;"
+            onchange="_examenEditor.preguntas[${idx}].respuestaCorrecta='V';"> Verdadero es la correcta
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:.8rem;color:#424242;cursor:pointer;">
+          <input type="radio" name="ex-ed-vf-${idx}" ${p.respuestaCorrecta === 'F' ? 'checked' : ''} style="accent-color:#2E7D32;cursor:pointer;"
+            onchange="_examenEditor.preguntas[${idx}].respuestaCorrecta='F';"> Falso es la correcta
+        </label>
+      </div>`;
   }
 
   return `<div style="background:#FAFAFA;border:1.5px solid #E8EDF2;border-radius:9px;padding:13px 14px;margin-bottom:10px;">
@@ -26836,7 +26848,7 @@ function _renderPreguntaEditorItem(p, idx) {
 function _addPreguntaExamen(tipo) {
   if (!_examenEditor) return;
   const id = 'p' + Date.now() + '_' + Math.floor(Math.random() * 9999);
-  _examenEditor.preguntas.push({ id, tipo, enunciado: '', imagen: '', opciones: tipo === 'mc' ? ['', '', '', ''] : [], puntos: 1 });
+  _examenEditor.preguntas.push({ id, tipo, enunciado: '', imagen: '', opciones: tipo === 'mc' ? ['', '', '', ''] : [], puntos: 1, respuestaCorrecta: '' });
   _renderEditorExamen();
   setTimeout(() => {
     const cont = document.getElementById('examenes-editor-body');
@@ -26872,6 +26884,22 @@ async function guardarExamen() {
 
   const sinEnunciado = ex.preguntas.findIndex(p => !p.enunciado.trim());
   if (sinEnunciado !== -1) { mostrarToast('La pregunta P' + (sinEnunciado + 1) + ' no tiene enunciado', 'error'); return; }
+
+  // Aviso (no bloqueo) si falta marcar la respuesta correcta: sin ella, esa
+  // pregunta de Sel. múltiple o Verdadero/Falso nunca se puede calificar sola
+  // -- verResultadosExamen() solo mostraba lo que el estudiante contestó, sin
+  // comparar contra nada. No se bloquea el guardado para no dejar sin editar
+  // los exámenes ya creados antes de este cambio.
+  const numsSinRespuestaCorrecta = ex.preguntas
+    .map((p, i) => ((p.tipo === 'mc' || p.tipo === 'vf') && !p.respuestaCorrecta) ? i + 1 : null)
+    .filter(n => n !== null);
+  if (numsSinRespuestaCorrecta.length > 0) {
+    const continuar = confirm(
+      'La(s) pregunta(s) P' + numsSinRespuestaCorrecta.join(', P') + ' no tienen marcada la respuesta correcta -- ' +
+      'el sistema no va a poder calificarlas solas, solo mostrar lo que respondió cada estudiante.\n\n¿Guardar de todas formas?'
+    );
+    if (!continuar) return;
+  }
 
   const btn = document.getElementById('examenes-editor-guardar');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
@@ -26971,10 +26999,21 @@ async function verResultadosExamen(examenId) {
     const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0' };
     const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100' };
 
+    // Solo las preguntas mc/vf con respuesta correcta marcada se pueden
+    // calificar solas -- las "abierta" siempre quedan a revisión manual del
+    // docente, y una mc/vf sin respuesta correcta (exámenes creados antes de
+    // que existiera este campo) tampoco entra en el puntaje automático.
+    const preguntasCalificables = preguntas.filter(p => (p.tipo === 'mc' || p.tipo === 'vf') && p.respuestaCorrecta);
+    const puntosPosiblesAuto = preguntasCalificables.reduce((s, p) => s + (p.puntos || 1), 0);
+    const hayPreguntasManuales = preguntas.length > preguntasCalificables.length;
+    const vfLabel = v => v === 'V' ? 'Verdadero' : (v === 'F' ? 'Falso' : v);
+
     const tarjetas = respuestas.map((r, ri) => {
       const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
       const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') + ' · ' + fechaObj.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
       const respondidas = preguntas.filter(p => (r.respuestas || {})[p.id]).length;
+      const puntosObtenidos = preguntasCalificables.reduce((s, p) =>
+        s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0);
       const nSalidas = r.salidasCount || 0;
       const avisoSalidas = nSalidas > 0
         ? `<span title="Salió de la pantalla del examen ${nSalidas} vez${nSalidas > 1 ? 'es' : ''} (cambio de pestaña/app o minimizó)" style="display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:700;color:#B71C1C;background:#FFEBEE;padding:2px 8px;border-radius:20px;margin-top:3px;">
@@ -26986,9 +27025,21 @@ async function verResultadosExamen(examenId) {
       const detalle = preguntas.map((p, pi) => {
         const resp = (r.respuestas || {})[p.id] || '';
         const badge = `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:20px;background:${tipoBg[p.tipo] || '#F5F5F5'};color:${tipoCol[p.tipo] || '#616161'};">${tipoLabel[p.tipo] || p.tipo}</span>`;
+        const calificable = (p.tipo === 'mc' || p.tipo === 'vf') && p.respuestaCorrecta;
+        const esCorrecta = calificable && resp === p.respuestaCorrecta;
+        const iconoResultado = calificable
+          ? (esCorrecta
+              ? '<span class="material-icons" style="font-size:16px;color:#2E7D32;">check_circle</span>'
+              : '<span class="material-icons" style="font-size:16px;color:#C62828;">cancel</span>')
+          : '';
+        const respTexto = p.tipo === 'vf' ? vfLabel(resp) : resp;
         const respHtml = resp
-          ? `<span style="font-size:.88rem;color:#1A1A2E;font-weight:500;">${_eHtml(resp)}</span>`
+          ? `<span style="font-size:.88rem;color:#1A1A2E;font-weight:500;">${_eHtml(respTexto)}</span>`
           : `<span style="font-size:.83rem;color:#BDBDBD;font-style:italic;">Sin respuesta</span>`;
+        const notaCorrecta = (calificable && !esCorrecta)
+          ? `<div style="font-size:.74rem;color:#2E7D32;margin-top:4px;">Respuesta correcta: ${_eHtml(vfLabel(p.respuestaCorrecta))}</div>`
+          : '';
+        const colorBorde = !resp ? '#E0E0E0' : (calificable ? (esCorrecta ? '#2E7D32' : '#C62828') : '#1565C0');
         return `<div style="padding:10px 0;border-bottom:1px solid #F0F4F8;display:flex;gap:10px;align-items:flex-start;">
           <span style="font-size:.7rem;font-weight:700;background:#1565C0;color:#fff;padding:3px 7px;border-radius:4px;flex-shrink:0;margin-top:2px;">P${pi + 1}</span>
           <div style="flex:1;min-width:0;">
@@ -26996,9 +27047,11 @@ async function verResultadosExamen(examenId) {
               ${badge}
               <span style="font-size:.8rem;color:#424242;line-height:1.4;">${_eHtml(p.enunciado)}</span>
             </div>
-            <div style="background:#F8FAFC;border-left:3px solid ${resp ? '#1565C0' : '#E0E0E0'};padding:6px 10px;border-radius:0 6px 6px 0;">
+            <div style="background:#F8FAFC;border-left:3px solid ${colorBorde};padding:6px 10px;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;">
               ${respHtml}
+              ${iconoResultado}
             </div>
+            ${notaCorrecta}
           </div>
         </div>`;
       }).join('');
@@ -27012,6 +27065,7 @@ async function verResultadosExamen(examenId) {
             ${avisoSalidas}
           </div>
           <div style="text-align:right;flex-shrink:0;">
+            ${puntosPosiblesAuto > 0 ? `<div style="font-size:.85rem;font-weight:700;color:#1565C0;">${puntosObtenidos}/${puntosPosiblesAuto} pts</div>` : ''}
             <div style="font-size:.75rem;font-weight:600;color:${respondidas === preguntas.length ? '#2E7D32' : '#E65100'};">${respondidas}/${preguntas.length} resp.</div>
             <span class="material-icons res-chevron" style="font-size:18px;color:#9E9E9E;margin-top:2px;display:block;transition:transform .2s;">expand_more</span>
           </div>
@@ -27023,10 +27077,12 @@ async function verResultadosExamen(examenId) {
     }).join('');
 
     body.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.83rem;color:#1565C0;font-weight:600;">
+      <div style="display:flex;align-items:center;gap:10px;background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:.83rem;color:#1565C0;font-weight:600;">
         <span class="material-icons" style="font-size:18px;">people</span>
         ${respuestas.length} estudiante${respuestas.length !== 1 ? 's' : ''} respondieron · ${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}
+        ${puntosPosiblesAuto > 0 ? ` · ${puntosPosiblesAuto} pts calificables solas` : ''}
       </div>
+      ${hayPreguntasManuales ? `<div style="font-size:.76rem;color:#E65100;margin-bottom:16px;">Este examen tiene preguntas abiertas o sin respuesta correcta marcada -- esas quedan fuera del puntaje automático y hay que revisarlas a mano.</div>` : '<div style="margin-bottom:16px;"></div>'}
       ${tarjetas}`;
   } catch (e) {
     body.innerHTML = '<div style="color:#C62828;padding:16px;font-size:.83rem;">Error al cargar: ' + e.message + '</div>';

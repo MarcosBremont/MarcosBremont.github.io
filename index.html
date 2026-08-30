@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.16" />
+  <link rel="stylesheet" href="styles.css?v=18.17" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.16" />
+  <link rel="stylesheet" href="auth.css?v=18.17" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3378,6 +3378,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00838F;">v18.17<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: marcar la respuesta correcta en Exámenes, con calificación automática</div>
+              <ul class="about-ver-items">
+                <li>Las preguntas de Selección múltiple y Verdadero/Falso no tenían ninguna forma de indicar cuál era la respuesta correcta -- el docente solo veía lo que cada estudiante contestó, sin poder saber si acertó, y tenía que revisar y sumar los puntos a mano. Ahora el editor deja marcar con un círculo cuál opción (o cuál de Verdadero/Falso) es la correcta, y la pantalla de Resultados calcula el puntaje de cada estudiante sola, marcando cada respuesta en verde o rojo. Las preguntas de respuesta abierta siguen revisándose a mano, como corresponde.</li>
+                <li>De paso se corrigió un bug relacionado: si el docente dejaba una opción de Selección múltiple vacía (ej. la C), el examen del estudiante reordenaba las letras de las opciones restantes -- la D pasaba a mostrarse como "C". Eso ya desincronizaba la letra marcada como correcta con la que veía el estudiante; ahora cada opción conserva siempre su letra original (A, B, C o D) esté vacía o no otra.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8546,9 +8561,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.16"></script>
+  <script src="app.js?v=18.17"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.16"></script>
+  <script src="auth.js?v=18.17"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

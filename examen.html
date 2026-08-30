@@ -286,8 +286,14 @@
 
     if (p.tipo === 'mc') {
       var letras = ['A', 'B', 'C', 'D'];
+      // No filtrar antes de mapear: la letra tiene que ser la posición ORIGINAL
+      // de la opción (A=0, B=1, C=2, D=3), la misma que usa el editor del
+      // docente para guardar cuál es la correcta. Filtrar primero reindexaba
+      // -- si el docente dejaba la opción C vacía, la D se mostraba acá como
+      // "C" y la calificación automática comparaba contra la letra equivocada.
       bodyHtml = '<div class="mc-options">' +
-        (p.opciones || []).filter(function(o) { return o && o.trim(); }).map(function(op, i) {
+        (p.opciones || []).map(function(op, i) {
+          if (!op || !op.trim()) return '';
           return '<label class="mc-opt" onclick="selMC(this)">' +
             '<input type="radio" name="p_' + p.id + '" value="' + letras[i] + '">' +
             '<span class="opt-lbl"><span class="opt-key">' + letras[i] + '.</span>' + esc(op) + '</span>' +
