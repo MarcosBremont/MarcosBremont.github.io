@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.34" />
+  <link rel="stylesheet" href="styles.css?v=18.35" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.34" />
+  <link rel="stylesheet" href="auth.css?v=18.35" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3480,6 +3480,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v18.35<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: un RA que cruza un salto de página quedaba con el pie de página pegado en medio</div>
+              <ul class="about-ver-items">
+                <li>Cuando la descripción de un RA sigue en la página siguiente, el sistema quita el pie de página repetido ("&lt;código&gt; BACHILLERATO TÉCNICO EN &lt;título&gt;") para reconectar el texto -- pero ese patrón solo reconocía el código institucional pegado directo a los dígitos (ej. "INCO002_3"). Un documento real trae el código con guion y pegado sin espacio a "BACHILLERATO" ("HOYT-06_3-BACHILLERATO..."), así que ese fragmento no se quitaba y quedaba incrustado en medio de la descripción del RA.</li>
+                <li>Ahora también tolera el guion (mismo formato ya soportado en otros lugares del sistema) y de paso se lleva el número de página que suele quedar pegado justo después del título.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8900,9 +8915,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.34"></script>
+  <script src="app.js?v=18.35"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.34"></script>
+  <script src="auth.js?v=18.35"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

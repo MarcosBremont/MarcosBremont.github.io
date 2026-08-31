@@ -22781,8 +22781,19 @@ function _quitarPieDePagina(texto, nombreBachillerato) {
   const tituloEscapado = titulo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
   // El código del título (ej. "INCO002_3") suele ir pegado justo ANTES de
   // "BACHILLERATO" en el pie de página -- opcional, para no dejarlo suelto
-  // si se quita el resto.
-  const regexPie = new RegExp('(?:[A-Za-z]{2,10}\\d{2,4}_\\d\\s+)?BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+' + tituloEscapado, 'gi');
+  // si se quita el resto. El patrón del código tolera guion antes del número
+  // (ej. "HOYT-06_3", visto en un documento real -- mismo formato que
+  // _parsearDatosGeneralesLocal ya tolera para el código de portada), y el
+  // separador antes de "BACHILLERATO" tolera un guion pegado además del
+  // espacio normal (ese mismo documento trae "HOYT-06_3-BACHILLERATO..."
+  // sin espacio) -- sin esto, el código con guion no calzaba con el patrón
+  // viejo (que solo aceptaba letras pegadas directo a los dígitos) y ese
+  // fragmento quedaba pegado en medio de la descripción del RA que cruzaba
+  // el salto de página. El número de página también suele quedar pegado
+  // justo DESPUÉS del título (ej. "...EVENTOS 23" antes de que siga el resto
+  // del texto) -- se lleva también un número corto (1-3 dígitos) ahí, para
+  // no dejar un número suelto en medio de una oración.
+  const regexPie = new RegExp('(?:[A-Za-z]{2,10}(?:-[A-Za-z0-9]{1,6})?\\d{0,4}_\\d\\s*-?\\s*)?BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+' + tituloEscapado + '(?:\\s+\\d{1,3}\\b)?', 'gi');
   return texto.replace(regexPie, ' ');
 }
 
