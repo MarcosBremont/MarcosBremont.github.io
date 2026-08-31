@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.23" />
+  <link rel="stylesheet" href="styles.css?v=18.24" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.23" />
+  <link rel="stylesheet" href="auth.css?v=18.24" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3138,7 +3138,10 @@
         <button class="modal-close" onclick="cerrarResultadosExamen()"><span class="material-icons">close</span></button>
       </div>
       <div class="modal-body" id="examenes-resultados-body" style="overflow-y:auto;flex:1;padding:18px 20px;"></div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button onclick="exportarInformeExamenExcel()" style="background:#E8F5E9;color:#2E7D32;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">grid_on</span>Exportar a Excel
+        </button>
         <button class="btn-secundario" onclick="cerrarResultadosExamen()">Cerrar</button>
       </div>
     </div>
@@ -3425,6 +3428,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v18.24<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: exportar el informe de examen a Excel</div>
+              <ul class="about-ver-items">
+                <li>El modal de Informes de cada examen tiene ahora un botón "Exportar a Excel" que descarga una fila por estudiante con Nombre, Número/Cédula, Precisión (% de aciertos), Puntuación (puntos obtenidos/posibles) y Estado -- "Completado" si llegó al 70% de precisión, "Necesita apoyo" si no, el mismo umbral de aprobación que ya usa el resto del sistema. El archivo se abre directo en Excel, con la fila de encabezado y el título del examen resaltados.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8695,9 +8712,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.23"></script>
+  <script src="app.js?v=18.24"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.23"></script>
+  <script src="auth.js?v=18.24"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

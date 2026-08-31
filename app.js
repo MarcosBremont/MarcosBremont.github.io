@@ -26581,6 +26581,9 @@ async function _llamarIATextoLibre(prompt, maxTokens, customSysMsg, prefill) {
 
 let _examenesCache = [];
 let _examenEditor = null;
+// Datos del último informe abierto (ver verResultadosExamen), para que
+// exportarInformeExamenExcel() no tenga que volver a leer Firestore.
+let _examenInformeActual = null;
 
 function abrirExamenes() {
   _mostrarPanel('panel-examenes');
@@ -27234,6 +27237,7 @@ async function verResultadosExamen(examenId) {
   if (tEl) tEl.textContent = ex.titulo || 'Resultados';
   body.innerHTML = '<div style="text-align:center;padding:32px;color:#9E9E9E;"><span class="material-icons spin" style="font-size:36px;display:block;">hourglass_top</span><p style="margin-top:8px;font-size:.83rem;">Cargando respuestas...</p></div>';
   overlay.classList.remove('hidden');
+  _examenInformeActual = null;
   try {
     const snap = await db.collection('examenes').doc(examenId).collection('respuestas')
       .orderBy('fechaEnvio', 'desc').get();
@@ -27256,6 +27260,7 @@ async function verResultadosExamen(examenId) {
     const hayPreguntasManuales = preguntas.length > preguntasCalificables.length;
     const vfLabel = v => v === 'V' ? 'Verdadero' : (v === 'F' ? 'Falso' : v);
 
+    _examenInformeActual = { ex, respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto };
     const informeHtml = _construirInformeExamen(respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto);
 
     const tarjetas = respuestas.map((r, ri) => {
@@ -27463,6 +27468,74 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
     <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;">Desempeño por pregunta</div>
     <div style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">De menor a mayor porcentaje de aciertos -- las primeras son las que más le costaron al curso.</div>
     <div>${preguntasHtml}</div>`;
+}
+
+/** Exporta a Excel (mismo truco de HTML con extensión .xls que ya usa
+ *  exportarAlumnosCSV -- Excel lo abre y lo formatea como tabla real, sin
+ *  necesitar ninguna librería de .xlsx) una fila por estudiante con Nombre,
+ *  Precisión (% de aciertos en las preguntas calificables), Puntuación
+ *  (puntos obtenidos/posibles) y Estado: "Completado" si llegó al 70% (el
+ *  mismo umbral de aprobación que ya usa el resto del sistema, ver
+ *  _construirInformeExamen), "Necesita apoyo" si no. Usa los datos que ya
+ *  cargó verResultadosExamen() -- no vuelve a leer Firestore. */
+function exportarInformeExamenExcel() {
+  const info = _examenInformeActual;
+  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
+  const { ex, respuestas, preguntasCalificables, puntosPosiblesAuto } = info;
+  if (!respuestas.length) { mostrarToast('Este examen todavía no tiene respuestas para exportar', 'error'); return; }
+  if (puntosPosiblesAuto === 0) {
+    mostrarToast('Este examen no tiene preguntas calificables -- marca la respuesta correcta primero', 'error');
+    return;
+  }
+
+  const thStyle = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #78909C;text-align:center;white-space:nowrap;';
+  const tdStyle = 'padding:5px 8px;border:1px solid #CFD8DC;';
+
+  const filas = respuestas.map(r => {
+    const puntos = preguntasCalificables.reduce((s, p) =>
+      s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0);
+    const precision = Math.round(puntos / puntosPosiblesAuto * 100);
+    const completado = precision >= 70;
+    const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
+    const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') : '';
+    return '<tr>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(r.estudianteNombre || '') + '</td>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(r.estudianteNumero || '') + '</td>'
+      + '<td style="' + tdStyle + 'text-align:center;">' + precision + '%</td>'
+      + '<td style="' + tdStyle + 'text-align:center;">' + puntos + '/' + puntosPosiblesAuto + '</td>'
+      + '<td style="' + tdStyle + 'text-align:center;font-weight:bold;color:' + (completado ? '#2E7D32' : '#C62828') + ';">'
+        + (completado ? 'Completado' : 'Necesita apoyo') + '</td>'
+      + '<td style="' + tdStyle + '">' + fechaStr + '</td>'
+      + '</tr>';
+  }).join('');
+
+  const totalCols = 6;
+  const banner = '<tr><td colspan="' + totalCols + '" style="background:#0D47A1;color:#ffffff;font-weight:bold;padding:8px;font-size:13px;">'
+    + escapeHTML((ex.titulo || 'Examen') + (ex.curso ? ' — ' + ex.curso : '') + ' · Estado: Completado (precisión ≥70%) / Necesita apoyo (menos de 70%)')
+    + '</td></tr>';
+
+  const headerRow = '<tr>'
+    + '<th style="' + thStyle + '">Nombre</th>'
+    + '<th style="' + thStyle + '">Número/Cédula</th>'
+    + '<th style="' + thStyle + '">Precisión</th>'
+    + '<th style="' + thStyle + '">Puntuación</th>'
+    + '<th style="' + thStyle + '">Estado</th>'
+    + '<th style="' + thStyle + '">Fecha</th>'
+    + '</tr>';
+
+  const bodyHTML = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;">'
+    + banner + headerRow + filas + '</table>';
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
+
+  const filename = 'informe-' + (ex.titulo || 'examen').replace(/\s+/g, '_') + '.xls';
+  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Informe exportado', 'success');
 }
 
 function _toggleResDetalle(id, header) {
