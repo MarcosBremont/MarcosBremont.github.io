@@ -22762,7 +22762,31 @@ function _quitarPieDePagina(texto, nombreBachillerato) {
  *  corta las descripciones cuando el orden de lectura las mezcla. */
 function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const ubicacion = _ubicarModulo(textoCompleto, moduloBuscado);
-  if (!ubicacion) return null;
+  if (!ubicacion) {
+    // Diagnóstico (no cambia el resultado, solo deja un registro en consola):
+    // qué "MÓDULO N" reconoció el sistema en este documento y qué hay justo
+    // después de cada uno (donde debería estar "Código: ..."), para poder
+    // comparar contra lo que el docente ve al abrir el PDF -- sin esto, un
+    // "no se encontró" no dice si el problema es que pdf.js no reconoció el
+    // encabezado, o que sí lo reconoció pero con un código distinto al
+    // esperado.
+    try {
+      const regexDiag = /m[oó]dulo\s+(\d+)\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo\s+\d+|\n|$)/gi;
+      const encontrados = [];
+      let mDiag;
+      while ((mDiag = regexDiag.exec(textoCompleto)) !== null) {
+        encontrados.push({
+          numero: mDiag[1],
+          nombre: mDiag[2].slice(0, 60),
+          textoSiguiente: textoCompleto.substring(mDiag.index, mDiag.index + 150)
+        });
+      }
+      console.warn('[Currículo] No se pudo ubicar "' + moduloBuscado + '". Módulos detectados en el documento (' + encontrados.length + '):', encontrados);
+    } catch (e) {
+      console.warn('[Currículo] Error armando diagnóstico de módulos:', e.message);
+    }
+    return null;
+  }
   let textoModulo = textoCompleto.substring(ubicacion.idxInicio, ubicacion.idxFin);
 
   // Datos generales del Bachillerato (portada) -- se calculan aquí (no solo
