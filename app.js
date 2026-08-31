@@ -22968,13 +22968,23 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // DETP/INFOTEP) usan códigos de RA GLOBALES de 4 dígitos ("RA0090",
   // "RA0091"...) sin ninguna relación con el número secuencial del módulo, y
   // ahí el filtro descartaría TODOS los RA reales aunque el módulo se haya
-  // ubicado bien. Si el filtro estricto no deja nada, se cae de vuelta a la
-  // lista completa: el recorte de límites de _ubicarModulo ya es confiable
-  // por sí solo (coincidencia exacta de código o puntaje por nombre).
+  // ubicado bien -- ese caso ya lo cubre el "si queda vacío, usar todo" de
+  // abajo. Pero hay un caso más sutil, visto en un documento real: un RA
+  // "RAXX1".."RAXX7" (numeración ordinal de la tabla, sin relación con el
+  // módulo -- ver regexRA) puede tener UNO de sus números coincidir por pura
+  // casualidad con el número del módulo (ej. módulo 3 y existe un "RAXX3")
+  // -- ahí el filtro NO queda vacío, deja pasar solo ese RA "coincidencia" y
+  // descarta los otros 6 reales, sin que el respaldo de "vacío -> usar todo"
+  // se active. Por eso el respaldo no es "¿quedó vacío?" sino "¿el filtro
+  // dejó menos de la mitad?": una fuga real de un módulo vecino (el caso que
+  // este filtro sí debe atrapar) normalmente son 1 o 2 RA sueltos que se
+  // "pegaron" en el borde, nunca la mayoría de la lista.
   const posicionesRAFiltradas = ubicacion.numeroModulo
     ? posicionesRA.filter(ra => ra.numero.split('.')[0] === ubicacion.numeroModulo)
     : posicionesRA;
-  const posicionesRAModulo = posicionesRAFiltradas.length ? posicionesRAFiltradas : posicionesRA;
+  const posicionesRAModulo = posicionesRAFiltradas.length >= posicionesRA.length / 2
+    ? posicionesRAFiltradas
+    : posicionesRA;
   if (!posicionesRAModulo.length) return null;
 
   // Dos formatos vistos en documentos reales: de 3 niveles ("CE3.10.1", RA
@@ -23024,6 +23034,14 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const emparejarPorNumeroPropio = ra => posicionesCE.filter(ce =>
     ce.numeroRA === ra.numero || (!ra.numero.includes('.') && ce.numeroRA === ra.numero + '.1'));
   const hayEmparejamientoPorNumeroPropio = posicionesRAModulo.some(ra => emparejarPorNumeroPropio(ra).length > 0);
+
+  // Diagnóstico (no cambia el resultado): deja en consola el texto de la
+  // columna de RA ya reconstruida, tal como va a leerse para armar cada
+  // descripción -- se agrega después de encontrar, en un documento real, una
+  // descripción de RA con palabras de menos (ej. "el", "y las") pese a que
+  // el PDF sí las tiene. Con esto, la próxima vez que pase, alcanza con
+  // pedir la consola en vez de otra ronda de capturas de pantalla.
+  console.log('[Currículo] Texto de la columna RA (columnas separadas: ' + columnasSeparadas + '):', textoRA.slice(0, 4000));
 
   const ras = posicionesRAModulo.map((ra, idxRA) => {
     const descripcion = textoRA.substring(ra.finMarcador, finDeBloqueRA(ra.indice)).replace(/\s+/g, ' ').trim();

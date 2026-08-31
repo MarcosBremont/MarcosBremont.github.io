@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.32" />
+  <link rel="stylesheet" href="styles.css?v=18.33" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.32" />
+  <link rel="stylesheet" href="auth.css?v=18.33" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3480,6 +3480,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#EF6C00;">v18.33<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" solo mostraba 1 de 7 RA cuando la numeración era ordinal ("RAXX1".."RAXX7")</div>
+              <ul class="about-ver-items">
+                <li>Con el "RAXX" del arreglo anterior ya reconocido, un documento real con RAXX1 a RAXX7 solo mostraba el RAXX3 -- porque el filtro que descarta RA de otros módulos asume que el número del RA está relacionado con el número del módulo, y en este caso el "3" de "RAXX3" coincidía por pura casualidad con el módulo 3 (siendo en realidad solo la posición ordinal del RA en la tabla), así que el filtro dejaba pasar solo ese uno y descartaba los otros 6 reales.</li>
+                <li>Ahora el filtro solo se aplica si deja al menos la mitad de los RA encontrados -- una fuga real de un módulo vecino (lo que el filtro debe atrapar) normalmente son 1 o 2 RA sueltos, nunca la mayoría de la lista. Si descarta más de la mitad, se usa la lista completa. Probado contra este caso, contra una fuga real de otro módulo (sigue descartándose) y contra el catálogo nacional de RA (RA0090) para no romper ninguno de los dos.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8870,9 +8885,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.32"></script>
+  <script src="app.js?v=18.33"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.32"></script>
+  <script src="auth.js?v=18.33"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
