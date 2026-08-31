@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.21" />
+  <link rel="stylesheet" href="styles.css?v=18.22" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.21" />
+  <link rel="stylesheet" href="auth.css?v=18.22" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3425,6 +3425,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6D4C41;">v18.22<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido de nuevo: el código de examen seguía sin generarse (esta vez sí)</div>
+              <ul class="about-ver-items">
+                <li>El fix de v18.21 seguía fallando: para verificar que un código no estuviera en uso se hacía un <code>get</code> sobre ese id, pero las reglas de Firestore niegan CUALQUIER lectura de un examen que no existe (la condición de la regla depende de datos que, si el documento no existe, simplemente no están ahí) -- así que la verificación fallaba siempre, para cualquier código, sin importar si estaba libre o no, y el examen terminaba creándose igual pero sin código corto.</li>
+                <li>Se cambió el enfoque: en vez de verificar antes con una lectura, ahora se crea el examen directo con el código como id -- eso sí lo permiten las reglas (la creación se evalúa contra los datos que se están escribiendo, no contra los que ya existen). Si por una coincidencia real el código ya lo usa OTRO docente, Firestore rechaza esa escritura (por no ser el dueño) y el sistema lo detecta y prueba con otro código automáticamente.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8666,9 +8681,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.21"></script>
+  <script src="app.js?v=18.22"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.21"></script>
+  <script src="auth.js?v=18.22"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -27007,40 +27007,53 @@ function _confirmarImportarPreguntas() {
   mostrarToast(n + ' pregunta' + (n !== 1 ? 's' : '') + ' importada' + (n !== 1 ? 's' : '') + ' -- revisa tipos y marca las respuestas correctas', 'success');
 }
 
-/** Genera un código corto (6 caracteres, sin 0/O/1/I/L para no confundirlos
- *  al leerlo o escribirlo a mano) para que el estudiante entre al examen sin
- *  tener que escribir la URL completa con el id de Firestore.
- *
- *  Este código se usa DIRECTAMENTE como id real del documento en Firestore
- *  (ver guardarExamen: db.collection('examenes').doc(codigo).set(...) en vez
- *  de .add()) -- no como un campo aparte que hay que buscar. La primera
- *  versión de esto guardaba el código en un campo `codigo` y lo buscaba con
- *  `.where('codigo','==',...)`, pero esa es una consulta de LISTA, y las
- *  reglas de Firestore de este proyecto solo permiten lecturas directas por
- *  id (get) a un estudiante anónimo, no consultas -- fallaba con
- *  "Missing or insufficient permissions" en producción. Usar el código como
- *  id evita el problema por completo: buscar el examen pasa a ser el mismo
- *  `.doc(id).get()` que ya funciona hoy con el enlace largo.
- *
- *  Verifica que el id no choque con uno ya existente antes de devolverlo --
- *  con este alfabeto de 32 símbolos hay 32^6 (~1073 millones) combinaciones
- *  posibles, así que un choque real es prácticamente imposible, pero se
- *  revisa igual (con un `get` por id, no una consulta -- eso si es seguro
- *  llamarlo aunque el examen que choque sea de OTRO docente, porque una
- *  denegación de permiso en el `get` de chequeo también indica "no lo puedo
- *  usar", así que se reintenta con otro código). */
-async function _generarCodigoExamenUnico() {
+/** Genera un candidato de código corto (6 caracteres, sin 0/O/1/I/L para no
+ *  confundirlos al leerlo o escribirlo a mano). No verifica disponibilidad
+ *  contra Firestore -- ver _crearExamenConCodigo() para por qué esa
+ *  verificación previa NO se puede hacer con un `get` bajo las reglas de
+ *  este proyecto. */
+function _codigoExamenCandidato() {
   const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  for (let intento = 0; intento < 8; intento++) {
-    let codigo = '';
-    for (let i = 0; i < 6; i++) codigo += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+  let codigo = '';
+  for (let i = 0; i < 6; i++) codigo += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+  return codigo;
+}
+
+/** Crea el examen usando un código corto de 6 caracteres como id real del
+ *  documento (en vez del id largo autogenerado por .add()), para que el
+ *  estudiante pueda escribirlo a mano -- ver abrirCompartirExamen().
+ *
+ *  Se intentó primero VERIFICAR el código con un `.doc(codigo).get()` antes
+ *  de crear (ver historial de este archivo) -- pero eso fallaba SIEMPRE con
+ *  "Missing or insufficient permissions", incluso para códigos que nunca se
+ *  habían usado. Causa real: en las reglas de Firestore de este proyecto,
+ *  el permiso de LECTURA de /examenes/{id} depende de resource.data (dueño
+ *  del examen, o activo==true) -- y cuando el documento NO EXISTE, Firestore
+ *  no tiene resource.data para evaluar esa condición, así que la deniega
+ *  siempre, sin importar quién pregunte. Un `get` nunca puede confirmar
+ *  "está libre" bajo esta regla.
+ *
+ *  La CREACIÓN sí funciona: `allow create` se evalúa contra
+ *  request.resource.data (los datos que se están escribiendo), no contra
+ *  datos existentes, así que no tiene este problema. Y si el código
+ *  choca con un examen de OTRO docente, Firestore trata ese `.set()` como
+ *  "update" de un documento ajeno (regla que sí exige ser el dueño) y lo
+ *  rechaza -- perfecto para detectar la colisión: se atrapa ese error y se
+ *  reintenta con otro código, en vez de tener que verificar antes. */
+async function _crearExamenConCodigo(data) {
+  for (let intento = 0; intento < 5; intento++) {
+    const codigo = _codigoExamenCandidato();
     try {
-      const existe = await db.collection('examenes').doc(codigo).get();
-      if (!existe.exists) return codigo;
+      await db.collection('examenes').doc(codigo).set(data);
+      return codigo;
     } catch (e) {
-      console.warn('[Examenes] No se pudo verificar disponibilidad del código, se intenta con otro:', e.message);
+      console.warn('[Examenes] Código no disponible, se reintenta con otro:', e.message);
     }
   }
+  // Prácticamente nunca debería llegar hasta acá (32^6 ~1073 millones de
+  // combinaciones) -- si pasa, se cae al id largo de siempre en vez de
+  // bloquear la creación del examen.
+  await db.collection('examenes').add(data);
   return null;
 }
 
@@ -27099,13 +27112,7 @@ async function guardarExamen() {
     } else {
       data.activo = true;
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      // El código generado se usa DIRECTO como id del documento (ver
-      // _generarCodigoExamenUnico) -- si por algún motivo no se pudo generar
-      // (ej. sin conexión momentánea), se cae al id autogenerado de siempre
-      // en vez de bloquear la creación del examen.
-      const codigo = await _generarCodigoExamenUnico();
-      if (codigo) await db.collection('examenes').doc(codigo).set(data);
-      else await db.collection('examenes').add(data);
+      await _crearExamenConCodigo(data);
       registrarCambio('Examen creado: "' + ex.titulo + '"');
       mostrarToast('Examen creado y activado', 'success');
 
@@ -27155,7 +27162,7 @@ async function toggleActivarExamen(examenId, nuevoEstado) {
  *  se comparte digital (WhatsApp, classroom, etc.).
  *
  *  El "código corto" es literalmente el id del documento cuando ese id lo
- *  generó _generarCodigoExamenUnico() (6 caracteres) -- ver guardarExamen().
+ *  generó _crearExamenConCodigo() (6 caracteres) -- ver guardarExamen().
  *  Un examen de antes de este cambio tiene el id largo autogenerado por
  *  Firestore (20 caracteres) y no se le puede acortar después sin recrear el
  *  documento entero, así que para esos casos no se muestra código, solo el
