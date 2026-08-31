@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.30" />
+  <link rel="stylesheet" href="styles.css?v=18.31" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.30" />
+  <link rel="stylesheet" href="auth.css?v=18.31" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3480,6 +3480,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v18.31<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" no encontraba el código en PDFs con una fuente dañada</div>
+              <ul class="about-ver-items">
+                <li>Causa real, confirmada con un registro de diagnóstico en un documento real: algunos currículos traen una fuente TrueType con el programa de hinting dañado (se ve en la consola como "TT: undefined function"), y eso hace que pdf.js extraiga el código del módulo con un espacio suelto metido entre cada carácter -- "Código: AFYD-MF015_3" salía como "Código: AFYD - MF015 _ 3". La búsqueda exigía el código como un bloque sin espacios, así que nunca hacía match aunque el código estuviera bien escrito.</li>
+                <li>Ahora la búsqueda tolera esos espacios sueltos y reconstruye el código real a partir del texto ya extraído, tanto para ubicar el módulo como para mostrar su código en el resultado. Probado contra el texto real de un documento con este problema y contra currículos normales (sin la fuente dañada), para no romper el caso que ya funcionaba.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8840,9 +8855,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.30"></script>
+  <script src="app.js?v=18.31"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.30"></script>
+  <script src="auth.js?v=18.31"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

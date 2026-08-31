@@ -22437,6 +22437,39 @@ function _extraerEncabezadoDocumento(textoCompleto) {
   return textoCompleto.substring(0, Math.min(limite, MAX_CHARS_ENCABEZADO)).trim();
 }
 
+// Algunos currículos traen una fuente TrueType dañada que hace que pdf.js
+// extraiga el código del módulo con un espacio suelto metido entre cada
+// caracter -- confirmado con un documento real: "Código:   AFYD - MF015 _ 3"
+// en vez de "Código: AFYD-MF015_3" (ver diagnóstico de _extraerCurriculoLocal
+// más abajo, que fue justo lo que reveló esto). Este patrón captura una
+// ventana generosa después de "Código:", tolerando espacios sueltos entre
+// caracteres -- deliberadamente ANCHO (no intenta adivinar dónde termina el
+// código exacto): eso lo hace _limpiarCodigoLaxo() de forma mucho más
+// confiable, re-extrayendo la forma real de un código desde el texto ya sin
+// espacios, en vez de contar espacios para decidir dónde cortar (un documento
+// SIN el daño de fuente también separa "Código: XXX" de la palabra siguiente
+// con un solo espacio, así que contar espacios no alcanza para distinguir
+// "espacio salpicado dentro del código" de "espacio real antes de la
+// siguiente palabra" -- probado y visto fallar en un caso real).
+const _PATRON_CODIGO_LAXO = '[A-Za-z0-9_\\-](?:[ ]?[A-Za-z0-9_\\-]){1,40}';
+
+/** Limpia un código capturado con _PATRON_CODIGO_LAXO: quita los espacios
+ *  sueltos salpicados dentro (fuente dañada) y devuelve solo el PREFIJO que
+ *  de verdad tiene forma de código de módulo (letras + opcional "-XXXX" +
+ *  2-4 dígitos + "_" + 1 dígito) -- sin exigir que el string completo sea
+ *  exactamente esa forma, porque la ventana de arriba es deliberadamente
+ *  generosa y puede traer pegada la palabra siguiente (ej. "...AFYD-MF015_3
+ *  Duración" -- sin daño de fuente igual queda "AFYD-MF015_3Duracion" tras
+ *  quitar espacios). Al no anclar el final del patrón, el regex se queda
+ *  con el prefijo válido y descarta lo demás, en vez de rechazar todo el
+ *  bloque por la cola sobrante. Si ni el prefijo tiene esa forma, devuelve
+ *  '' (no era un código real después de "Código:"). */
+function _limpiarCodigoLaxo(capturado) {
+  const sinEspacios = (capturado || '').replace(/\s+/g, '');
+  const m = /^[A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d/i.exec(sinEspacios);
+  return m ? m[0] : '';
+}
+
 /** Ubica en el texto completo del currículo la sección del módulo formativo
  *  buscado (desde su encabezado "MÓDULO N: ..." hasta el siguiente, o fin de
  *  documento) y devuelve sus índices de caracter {idxInicio, idxFin}, sin
@@ -22480,8 +22513,9 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
       const siguienteEnc = encabezados[idxEnc + 1];
       const finVentana = siguienteEnc ? Math.min(siguienteEnc.indice, enc.indice + 200) : enc.indice + 200;
       const ventana = textoCompleto.substring(enc.indice, finVentana);
-      const matchCodigo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z0-9_\-]{4,})/i.exec(ventana);
-      if (matchCodigo && _norm(matchCodigo[1]).replace(/[\s_\-]+/g, '') === buscadoCodigoNorm) {
+      const matchCodigo = new RegExp('c[oó]digo\\s*[:.\\-]?\\s*(' + _PATRON_CODIGO_LAXO + ')', 'i').exec(ventana);
+      const codigoEncontrado = matchCodigo ? _limpiarCodigoLaxo(matchCodigo[1]) : '';
+      if (codigoEncontrado && _norm(codigoEncontrado).replace(/[\s_\-]+/g, '') === buscadoCodigoNorm) {
         const idxInicio = enc.indice;
         const idxFin = siguienteEnc ? siguienteEnc.indice : textoCompleto.length;
         return { idxInicio, idxFin: Math.min(idxFin, idxInicio + MAX_CHARS), numeroModulo: enc.numero };
@@ -22710,10 +22744,12 @@ function _indiceCorteExtra(texto, codigoModuloNorm) {
   if (matchContenidos) corte = Math.min(corte, matchContenidos.index);
 
   if (codigoModuloNorm) {
-    const regexOtroCodigo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/gi;
+    const regexOtroCodigo = new RegExp('c[oó]digo\\s*[:.\\-]?\\s*(' + _PATRON_CODIGO_LAXO + ')', 'gi');
     let mCod;
     while ((mCod = regexOtroCodigo.exec(texto)) !== null) {
-      if (mCod[1].toLowerCase().replace(/[\s_\-]+/g, '') !== codigoModuloNorm) {
+      const codigoLimpio = _limpiarCodigoLaxo(mCod[1]);
+      if (!codigoLimpio) continue; // el patrón laxo no capturó forma de código real, ignorar
+      if (codigoLimpio.toLowerCase().replace(/[_\-]+/g, '') !== codigoModuloNorm) {
         corte = Math.min(corte, mCod.index);
         break;
       }
@@ -22810,8 +22846,8 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // sentido de PROGRAMACIÓN ("código fuente", "código HTML", "código
   // limpio"), y un patrón genérico tomaría esas menciones como si fueran el
   // código de otro módulo.
-  const matchCodigoModulo = /c[oó]digo\s*[:.\-]?\s*([A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d)\b/i.exec(textoModulo);
-  const codigoModulo = matchCodigoModulo ? matchCodigoModulo[1].trim() : '';
+  const matchCodigoModulo = new RegExp('c[oó]digo\\s*[:.\\-]?\\s*(' + _PATRON_CODIGO_LAXO + ')', 'i').exec(textoModulo);
+  const codigoModulo = matchCodigoModulo ? _limpiarCodigoLaxo(matchCodigoModulo[1]) : '';
 
   // Defensa adicional a la de _ubicarModulo (ver _indiceCorteExtra): recorta
   // textoModulo si aparece contenido que NO es de la tabla de RA/Criterios de
