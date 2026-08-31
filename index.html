@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.18" />
+  <link rel="stylesheet" href="styles.css?v=18.19" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.18" />
+  <link rel="stylesheet" href="auth.css?v=18.19" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3080,6 +3080,39 @@
     </div>
   </div>
 
+  <!-- ===== OVERLAY: IMPORTAR PREGUNTAS DE UN TEXTO PEGADO ===== -->
+  <div id="examenes-importar-overlay" class="modal-overlay hidden">
+    <div class="modal-box" style="max-width:640px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">content_paste</span>
+          Importar preguntas
+        </h3>
+        <button class="modal-close" onclick="cerrarImportarPreguntas()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="overflow-y:auto;flex:1;padding:18px 20px;">
+        <p style="font-size:.83rem;color:#546E7A;margin-bottom:10px;line-height:1.5;">
+          Pega aquí el texto de una evaluación ya hecha (por ejemplo, la que generaste con IA en Word) y el sistema
+          reconoce preguntas numeradas ("1.", "2)"...) con sus opciones marcadas con letra ("A)", "B."...). Las preguntas
+          sin opciones se importan como respuesta abierta. Ninguna respuesta correcta se marca sola -- eso se hace después,
+          en cada pregunta.
+        </p>
+        <textarea id="ex-importar-texto" rows="10" placeholder="1. ¿Qué es una base de datos?&#10;A) Un programa para editar imágenes.&#10;B) Un conjunto organizado de datos relacionados.&#10;C) Un sistema operativo.&#10;D) Un navegador web.&#10;&#10;2. ..."
+          style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:.83rem;outline:none;font-family:inherit;resize:vertical;" oninput="document.getElementById('ex-importar-preview').innerHTML='';document.getElementById('ex-importar-confirmar').disabled=true;"></textarea>
+        <div style="margin-top:10px;">
+          <button type="button" onclick="_analizarTextoImportado()" style="background:#E3F2FD;color:#1565C0;border:none;padding:8px 16px;border-radius:7px;font-size:.83rem;font-weight:600;cursor:pointer;">
+            <span class="material-icons" style="font-size:15px;vertical-align:middle;margin-right:4px;">search</span>Analizar texto
+          </button>
+        </div>
+        <div id="ex-importar-preview" style="margin-top:14px;"></div>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn-secundario" onclick="cerrarImportarPreguntas()">Cancelar</button>
+        <button id="ex-importar-confirmar" onclick="_confirmarImportarPreguntas()" disabled style="background:#2E7D32;color:#fff;border:none;padding:9px 22px;border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;opacity:.5;">Agregar al examen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== OVERLAY: RESULTADOS DE EXAMEN ===== -->
   <div id="examenes-resultados-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='examenes-resultados-overlay')cerrarResultadosExamen()">
     <div class="modal-box" style="max-width:960px;width:97%;max-height:90vh;display:flex;flex-direction:column;">
@@ -3378,6 +3411,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#5E35B1;">v18.19<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: importar preguntas pegando el texto de una evaluación ya hecha</div>
+              <ul class="about-ver-items">
+                <li>Al crear o editar un examen, el botón "Importar preguntas" abre un cuadro para pegar el texto de una evaluación ya redactada (por ejemplo, una generada con IA en Word) -- el sistema reconoce preguntas numeradas ("1.", "2)"...) con sus opciones marcadas con letra ("A)", "B."...), muestra una vista previa de lo que entendió, y las agrega al examen de un golpe en vez de tener que crear cada pregunta y cada opción una por una. Las preguntas sin opciones se importan como respuesta abierta, y las de exactamente dos opciones "Verdadero"/"Falso" se reconocen como V/F. Ninguna respuesta correcta se marca sola -- eso se sigue haciendo pregunta por pregunta después de importar.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8575,9 +8622,9 @@
   <script src="error-reporter.js?v=17.85"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.18"></script>
+  <script src="app.js?v=18.19"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.18"></script>
+  <script src="auth.js?v=18.19"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

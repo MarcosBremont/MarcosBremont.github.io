@@ -26803,6 +26803,9 @@ function _renderEditorExamen() {
         <button type="button" onclick="_addPreguntaExamen('mc')" style="background:#E3F2FD;color:#1565C0;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Sel. múltiple</button>
         <button type="button" onclick="_addPreguntaExamen('vf')" style="background:#E8F5E9;color:#2E7D32;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Verdadero/Falso</button>
         <button type="button" onclick="_addPreguntaExamen('abierta')" style="background:#FFF3E0;color:#E65100;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Resp. abierta</button>
+        <button type="button" onclick="abrirImportarPreguntas()" style="background:#EDE7F6;color:#5E35B1;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:14px;">content_paste</span>Importar preguntas
+        </button>
       </div>
     </div>
     <div id="ex-ed-preguntas">
@@ -26894,6 +26897,114 @@ function _moverPreguntaExamen(idx, dir) {
   if (ni < 0 || ni >= arr.length) return;
   [arr[idx], arr[ni]] = [arr[ni], arr[idx]];
   _renderEditorExamen();
+}
+
+// ── Importar preguntas desde texto pegado (ej. un examen ya hecho con IA) ──
+
+let _importPreguntasParsed = [];
+
+function abrirImportarPreguntas() {
+  if (!_examenEditor) return;
+  const ta = document.getElementById('ex-importar-texto');
+  if (ta) ta.value = '';
+  const preview = document.getElementById('ex-importar-preview');
+  if (preview) preview.innerHTML = '';
+  _importPreguntasParsed = [];
+  const btn = document.getElementById('ex-importar-confirmar');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  document.getElementById('examenes-importar-overlay').classList.remove('hidden');
+}
+
+function cerrarImportarPreguntas() {
+  document.getElementById('examenes-importar-overlay').classList.add('hidden');
+}
+
+/** Analiza texto pegado con preguntas numeradas ("1.", "2)"...) y opciones
+ *  marcadas con letra ("A)", "B."...) y devuelve un array de preguntas en el
+ *  mismo formato que usa el editor. Best-effort: una pregunta sin opciones
+ *  detectadas se importa como "Resp. abierta" en vez de descartarla, y una
+ *  con exactamente 2 opciones "Verdadero"/"Falso" se reconoce como V/F. No
+ *  intenta adivinar la respuesta correcta -- eso el docente lo marca en cada
+ *  pregunta después de importar, igual que si la hubiera creado a mano. */
+function _parsearPreguntasTexto(texto) {
+  const lineas = (texto || '').split(/\r?\n/);
+  const bloques = [];
+  let actual = null;
+
+  const regexPregunta = /^\s*(\d{1,3})[.\)]\s+(.+)$/;
+  const regexOpcion = /^[\s•·o○▪\-]*([A-Da-d])[.\)]\s+(.+)$/;
+
+  lineas.forEach(linea => {
+    const mP = regexPregunta.exec(linea);
+    if (mP) {
+      if (actual) bloques.push(actual);
+      actual = { enunciado: mP[2].trim(), opciones: [] };
+      return;
+    }
+    const mO = regexOpcion.exec(linea);
+    if (mO && actual && actual.opciones.length < 4) {
+      actual.opciones.push(mO[2].trim());
+      return;
+    }
+    // Una línea que no es ni "N." ni "letra)" -- si la pregunta actual
+    // todavía no tiene opciones, es la continuación del enunciado (preguntas
+    // largas que ocupan más de una línea antes de llegar a las opciones).
+    const t = linea.trim();
+    if (actual && !actual.opciones.length && t) actual.enunciado += ' ' + t;
+  });
+  if (actual) bloques.push(actual);
+
+  return bloques
+    .filter(b => b.enunciado)
+    .map((b, i) => {
+      const opciones = b.opciones.filter(o => o);
+      const base = { id: 'p' + Date.now() + '_' + i + '_' + Math.floor(Math.random() * 9999), enunciado: b.enunciado, imagen: '', puntos: 1, respuestaCorrecta: '' };
+      const esVF = opciones.length === 2 && opciones.every(o => /^(verdadero|falso)\.?$/i.test(o.trim()));
+      if (esVF) return { ...base, tipo: 'vf', opciones: [] };
+      if (opciones.length >= 2) return { ...base, tipo: 'mc', opciones: opciones.slice(0, 4) };
+      return { ...base, tipo: 'abierta', opciones: [] };
+    });
+}
+
+function _analizarTextoImportado() {
+  const ta = document.getElementById('ex-importar-texto');
+  const preview = document.getElementById('ex-importar-preview');
+  const btn = document.getElementById('ex-importar-confirmar');
+  if (!ta || !preview) return;
+  _importPreguntasParsed = _parsearPreguntasTexto(ta.value);
+
+  if (!_importPreguntasParsed.length) {
+    preview.innerHTML = '<div style="font-size:.83rem;color:#C62828;padding:10px 12px;background:#FFEBEE;border-radius:8px;">No se reconoció ninguna pregunta. Verifica que cada pregunta empiece con un número seguido de "." o ")" (ej. "1. ¿Qué es...?").</div>';
+    if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+    return;
+  }
+
+  const tipoLabel = { mc: 'Sel. múltiple', vf: 'V/F', abierta: 'Abierta' };
+  const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0' };
+  const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100' };
+  const filas = _importPreguntasParsed.map((p, i) => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #F0F4F8;">
+      <span style="font-size:.68rem;font-weight:700;background:${tipoBg[p.tipo]};color:${tipoCol[p.tipo]};padding:2px 7px;border-radius:20px;flex-shrink:0;margin-top:1px;">P${i + 1} · ${tipoLabel[p.tipo]}</span>
+      <span style="font-size:.82rem;color:#424242;line-height:1.4;">${_eHtml(p.enunciado)}${p.tipo === 'mc' ? ` <span style="color:#9E9E9E;">(${p.opciones.length} opciones)</span>` : ''}</span>
+    </div>`).join('');
+  preview.innerHTML = `
+    <div style="font-size:.83rem;font-weight:600;color:#2E7D32;margin-bottom:6px;">Se reconocieron ${_importPreguntasParsed.length} pregunta${_importPreguntasParsed.length !== 1 ? 's' : ''}:</div>
+    <div style="max-height:260px;overflow-y:auto;border:1px solid #E8EDF2;border-radius:8px;padding:4px 12px;">${filas}</div>`;
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+function _confirmarImportarPreguntas() {
+  if (!_examenEditor || !_importPreguntasParsed.length) return;
+  _examenEditor.preguntas.push(..._importPreguntasParsed);
+  const n = _importPreguntasParsed.length;
+  _importPreguntasParsed = [];
+  cerrarImportarPreguntas();
+  _renderEditorExamen();
+  setTimeout(() => {
+    const cont = document.getElementById('examenes-editor-body');
+    if (cont) cont.scrollTop = cont.scrollHeight;
+  }, 60);
+  mostrarToast(n + ' pregunta' + (n !== 1 ? 's' : '') + ' importada' + (n !== 1 ? 's' : '') + ' -- revisa tipos y marca las respuestas correctas', 'success');
 }
 
 async function guardarExamen() {
