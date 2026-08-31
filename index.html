@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.33" />
+  <link rel="stylesheet" href="styles.css?v=18.34" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.33" />
+  <link rel="stylesheet" href="auth.css?v=18.34" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3480,6 +3480,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v18.34<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" solo traía los criterios del primer RA (RAXX1..RAXX7)</div>
+              <ul class="about-ver-items">
+                <li>Con los 7 RA ya detectados (arreglo anterior), un documento real trae sus criterios como "CE1.2.1", "CE1.3.1"... -- el número del MEDIO es la posición ordinal del RA (2do, 3ro...), un tercer formato que el sistema no reconocía. Encima, RAXX1 coincidía por pura casualidad con la regla ya existente para RA sin decimal ("1"+".1"="1.1" calzaba con "CE1.1.x"), así que el sistema daba por buena esa interpretación para todo el módulo y dejaba a RAXX2 a RAXX7 con 0 criterios reales, no por falta de datos.</li>
+                <li>Ahora el sistema prueba las tres formas de emparejar Criterios con RA que ya conoce (por número propio del RA, por posición ordinal de 2 niveles, y esta nueva de 3 niveles con el número del medio) y usa la que le encuentre criterios a más RA del módulo, en vez de conformarse con la primera que rinda algo. Probado contra los tres formatos para confirmar que ninguno se rompe.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8885,9 +8900,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.33"></script>
+  <script src="app.js?v=18.34"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.33"></script>
+  <script src="auth.js?v=18.34"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

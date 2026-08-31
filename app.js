@@ -22987,11 +22987,19 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     : posicionesRA;
   if (!posicionesRAModulo.length) return null;
 
-  // Dos formatos vistos en documentos reales: de 3 niveles ("CE3.10.1", RA
-  // module-relativo -- el 1er y 2do número identifican el RA "3.10", el 3ro
-  // es el criterio dentro de ese RA) y de 2 niveles ("CE1.1"..."CE1.11", RA
-  // de catálogo nacional -- ahí el 1er número NO es el número propio del RA
-  // sino su posición ORDINAL dentro de la tabla del módulo, ver más abajo).
+  // Tres formatos vistos en documentos reales:
+  // - 3 niveles, RA module-relativo ("CE3.10.1"): el 1er y 2do número
+  //   identifican el RA "3.10", el 3ro es el criterio dentro de ese RA.
+  // - 2 niveles, RA de catálogo nacional ("CE1.1".."CE1.11"): el 1er número
+  //   NO es el número propio del RA sino su posición ORDINAL dentro de la
+  //   tabla del módulo (ver RA0090 más abajo).
+  // - 3 niveles con el 1er número CONSTANTE ("CE1.2.1", "CE1.3.1"...): visto
+  //   en un documento real con RA "RAXX1".."RAXX7" -- acá el número del
+  //   MEDIO ("2", "3"...) es la posición ordinal del RA, no una decimal
+  //   propia (el 1er número siempre es "1", no aporta nada). Se guardan los
+  //   tres candidatos de asociación por CE; más abajo se elige por votación
+  //   cuál de los tres interpreta mejor TODO el módulo, en vez de asumir
+  //   siempre el mismo formato.
   const regexCE = /CE\s*(\d+)\.(\d+)(?:\.(\d+))?[:.\-]?\s*/g;
   const posicionesCE = [];
   while ((m = regexCE.exec(textoCE)) !== null) {
@@ -22999,6 +23007,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     posicionesCE.push({
       numeroRA: esTresNiveles ? `${m[1]}.${m[2]}` : m[1],
       ordinalRA: esTresNiveles ? null : m[1],
+      ordinalMedio: esTresNiveles ? m[2] : null,
       numeroCE: esTresNiveles ? `${m[1]}.${m[2]}.${m[3]}` : `${m[1]}.${m[2]}`,
       indice: m.index,
       finMarcador: m.index + m[0].length
@@ -23023,17 +23032,31 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     return todos.length ? Math.min(...todos) : textoCE.length;
   };
 
-  // El emparejamiento "tradicional" (por número propio del RA) solo tiene
-  // sentido si al menos un RA del módulo lo logra -- en un catálogo nacional
-  // (RA0090, RA0091...) NINGÚN RA lo va a lograr nunca, porque el prefijo del
-  // CE ("CE1.x", "CE2.x"...) es la posición ORDINAL del RA dentro de la
-  // tabla, no su código de catálogo. Confirmado en un documento real: el 2do
-  // RA de la tabla (numero de catálogo distinto) traía sus criterios como
-  // "CE2.x". Si el emparejamiento tradicional no rinde nada para NINGÚN RA
-  // del módulo, se usa la posición ordinal como respaldo para todos.
+  // Cuál de los tres formatos de CE aplica a este módulo se decide por
+  // VOTACIÓN, no por "si el primero rinde algo, usarlo siempre" -- esto
+  // último se probó y falló en un documento real: con RA "RAXX1".."RAXX7",
+  // el "emparejamiento tradicional" (por número propio del RA) coincidía por
+  // pura casualidad para RAXX1 (su regla especial "sin decimal -> +'.1'"
+  // hace que "1"+".1"="1.1" calce con "CE1.1.x", que en este documento en
+  // realidad es "CE<constante 1>.<ordinal del RA>.<criterio>") -- eso hacía
+  // que se diera por buena esa estrategia para TODO el módulo, dejando a
+  // RAXX2..RAXX7 sin ningún criterio (0 de verdad, no por falta de datos).
+  // Se cuenta, para cada una de las tres estrategias, a cuántos RA del
+  // módulo le encuentra al menos un criterio, y se usa la que cubra más --
+  // en empate gana "número propio" (la interpretación más específica/
+  // intencional cuando de verdad aplica).
   const emparejarPorNumeroPropio = ra => posicionesCE.filter(ce =>
     ce.numeroRA === ra.numero || (!ra.numero.includes('.') && ce.numeroRA === ra.numero + '.1'));
-  const hayEmparejamientoPorNumeroPropio = posicionesRAModulo.some(ra => emparejarPorNumeroPropio(ra).length > 0);
+  const emparejarPorOrdinalDosNiveles = ordinal => posicionesCE.filter(ce => ce.ordinalRA === ordinal);
+  const emparejarPorOrdinalMedio = ordinal => posicionesCE.filter(ce => ce.ordinalMedio === ordinal);
+
+  const contarCobertura = fn => posicionesRAModulo.filter((ra, i) => fn(ra, String(i + 1)).length > 0).length;
+  const estrategias = [
+    { emparejar: (ra) => emparejarPorNumeroPropio(ra), cobertura: contarCobertura((ra) => emparejarPorNumeroPropio(ra)) },
+    { emparejar: (ra, ordinal) => emparejarPorOrdinalDosNiveles(ordinal), cobertura: contarCobertura((ra, ordinal) => emparejarPorOrdinalDosNiveles(ordinal)) },
+    { emparejar: (ra, ordinal) => emparejarPorOrdinalMedio(ordinal), cobertura: contarCobertura((ra, ordinal) => emparejarPorOrdinalMedio(ordinal)) }
+  ];
+  const mejorEstrategia = estrategias.reduce((mejor, actual) => actual.cobertura > mejor.cobertura ? actual : mejor, estrategias[0]);
 
   // Diagnóstico (no cambia el resultado): deja en consola el texto de la
   // columna de RA ya reconstruida, tal como va a leerse para armar cada
@@ -23051,9 +23074,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
     // exacto, sin afectar los RA que sí llevan decimal (ej. "RA3.1" solo
     // acepta "CE3.1.X", nunca "CE3.1.1.X" ni nada distinto).
     const ordinal = String(idxRA + 1);
-    const criteriosEvaluacion = (hayEmparejamientoPorNumeroPropio
-        ? emparejarPorNumeroPropio(ra)
-        : posicionesCE.filter(ce => ce.ordinalRA === ordinal))
+    const criteriosEvaluacion = mejorEstrategia.emparejar(ra, ordinal)
       .map(ce => {
         const texto = textoCE.substring(ce.finMarcador, finDeBloqueCE(ce.indice)).replace(/\s+/g, ' ').trim();
         return `CE${ce.numeroCE} ${texto}`.trim();
