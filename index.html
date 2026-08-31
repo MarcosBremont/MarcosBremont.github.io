@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.19" />
+  <link rel="stylesheet" href="styles.css?v=18.20" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.19" />
+  <link rel="stylesheet" href="auth.css?v=18.20" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3113,6 +3113,20 @@
     </div>
   </div>
 
+  <!-- ===== OVERLAY: COMPARTIR EXAMEN (código corto + QR + enlace) ===== -->
+  <div id="examenes-compartir-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='examenes-compartir-overlay')cerrarCompartirExamen()">
+    <div class="modal-box" style="max-width:420px;width:94%;max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">qr_code_2</span>
+          Compartir examen
+        </h3>
+        <button class="modal-close" onclick="cerrarCompartirExamen()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" id="examenes-compartir-body" style="overflow-y:auto;flex:1;padding:20px;"></div>
+    </div>
+  </div>
+
   <!-- ===== OVERLAY: RESULTADOS DE EXAMEN ===== -->
   <div id="examenes-resultados-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='examenes-resultados-overlay')cerrarResultadosExamen()">
     <div class="modal-box" style="max-width:960px;width:97%;max-height:90vh;display:flex;flex-direction:column;">
@@ -3411,6 +3425,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v18.20<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: código corto y QR para entrar al examen, sin escribir la URL completa</div>
+              <ul class="about-ver-items">
+                <li>El botón "Compartir" de cada examen (antes "Enlace") ahora muestra un código de 6 caracteres fácil de leer en voz alta o escribir en la pizarra, y un código QR para escanear con el celular -- ya no hace falta que el estudiante escriba a mano la URL completa con el id de Firestore. Al entrar a <code>examen.html</code> sin nada más en la dirección, se le pide ese código y el sistema lo resuelve solo. El enlace completo sigue disponible para compartir digital (WhatsApp, classroom, etc.). Los exámenes creados antes de este cambio reciben su código automáticamente la primera vez que se abre "Compartir" o se guardan de nuevo.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8620,11 +8648,13 @@
       .catch(() => {});
   </script>
   <script src="error-reporter.js?v=17.85"></script>
+  <!-- Generación de códigos QR (enlace de Exámenes) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.19"></script>
+  <script src="app.js?v=18.20"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.19"></script>
+  <script src="auth.js?v=18.20"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

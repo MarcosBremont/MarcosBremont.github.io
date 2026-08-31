@@ -142,6 +142,19 @@
   <p id="err-msg">Este examen no existe o ha sido desactivado.</p>
 </div>
 
+<!-- Estado: pedir código (cuando se entra sin ?id= en la URL) -->
+<div id="st-codigo" class="state-center hidden">
+  <span class="material-icons ico" style="color:#1565C0;">key</span>
+  <h2>Ingresa el código de tu examen</h2>
+  <p>Tu docente te dio un código de 6 caracteres.</p>
+  <input type="text" id="codigo-input" maxlength="6" placeholder="EJ8K4M" autocomplete="off"
+    style="margin-top:16px;width:220px;text-align:center;letter-spacing:.3em;text-transform:uppercase;font-size:1.3rem;font-weight:700;padding:12px 10px;border:1.5px solid #CFD8DC;border-radius:8px;outline:none;font-family:'Inter',sans-serif;color:#1A1A2E;">
+  <p id="codigo-error" class="hidden" style="color:#C62828;margin-top:10px;font-size:.82rem;"></p>
+  <button class="btn-enviar" style="margin-top:18px;" onclick="buscarPorCodigo()">
+    <span class="material-icons">arrow_forward</span> Continuar
+  </button>
+</div>
+
 <!-- Contenido del examen -->
 <div id="st-exam" class="hidden">
   <div class="ex-header">
@@ -242,9 +255,50 @@
   (function init() {
     var params = new URLSearchParams(window.location.search);
     examId = params.get('id');
-    if (!examId) { mostrarError('Enlace inválido', 'No se especificó un examen. Verifica que el enlace sea correcto.'); return; }
-    cargarExamen(examId);
+    if (examId) { cargarExamen(examId); return; }
+    // Sin ?id= en la URL: en vez de un enlace largo con el id de Firestore,
+    // el docente también puede compartir solo un código corto de 6
+    // caracteres -- se pide acá y se resuelve contra Firestore.
+    document.getElementById('st-loading').classList.add('hidden');
+    document.getElementById('st-codigo').classList.remove('hidden');
+    var input = document.getElementById('codigo-input');
+    if (input) {
+      input.focus();
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarPorCodigo(); });
+    }
   })();
+
+  async function buscarPorCodigo() {
+    var input = document.getElementById('codigo-input');
+    var errEl = document.getElementById('codigo-error');
+    var codigo = ((input && input.value) || '').trim().toUpperCase();
+    if (errEl) errEl.classList.add('hidden');
+    if (codigo.length !== 6) {
+      if (errEl) { errEl.textContent = 'El código tiene 6 caracteres.'; errEl.classList.remove('hidden'); }
+      return;
+    }
+    document.getElementById('st-codigo').classList.add('hidden');
+    document.getElementById('st-loading').classList.remove('hidden');
+    try {
+      var snap = await db.collection('examenes').where('codigo', '==', codigo).limit(1).get();
+      if (snap.empty) {
+        document.getElementById('st-loading').classList.add('hidden');
+        document.getElementById('st-codigo').classList.remove('hidden');
+        if (errEl) { errEl.textContent = 'No se encontró ningún examen con ese código. Verifica que esté bien escrito.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      examId = snap.docs[0].id;
+      // Deja el id en la URL -- si el estudiante recarga la página no vuelve
+      // a pedirle el código.
+      history.replaceState(null, '', window.location.pathname + '?id=' + examId);
+      cargarExamen(examId);
+    } catch (e) {
+      console.error(e);
+      document.getElementById('st-loading').classList.add('hidden');
+      document.getElementById('st-codigo').classList.remove('hidden');
+      if (errEl) { errEl.textContent = 'Error de conexión. Intenta de nuevo.'; errEl.classList.remove('hidden'); }
+    }
+  }
 
   async function cargarExamen(id) {
     try {

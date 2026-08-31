@@ -26635,7 +26635,7 @@ function renderizarExamenes() {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <button onclick="verResultadosExamen('${ex.id}')" style="${bS}background:#F3E5F5;color:#6A1B9A;"><span class="material-icons" style="font-size:15px;">bar_chart</span>Resultados</button>
-        <button onclick="copiarLinkExamen('${ex.id}')" style="${bS}background:#E3F2FD;color:#1565C0;"><span class="material-icons" style="font-size:15px;">link</span>Enlace</button>
+        <button onclick="abrirCompartirExamen('${ex.id}')" style="${bS}background:#E3F2FD;color:#1565C0;"><span class="material-icons" style="font-size:15px;">qr_code_2</span>Compartir</button>
         <button onclick="imprimirExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;"><span class="material-icons" style="font-size:15px;">print</span>Imprimir</button>
         <button onclick="duplicarExamen('${ex.id}')" style="${bS}background:#E8F5E9;color:#2E7D32;"><span class="material-icons" style="font-size:15px;">content_copy</span>Duplicar</button>
         <button onclick="abrirEditorExamen('${ex.id}')" style="${bS}background:#F5F5F5;color:#424242;"><span class="material-icons" style="font-size:15px;">edit</span></button>
@@ -27007,6 +27007,30 @@ function _confirmarImportarPreguntas() {
   mostrarToast(n + ' pregunta' + (n !== 1 ? 's' : '') + ' importada' + (n !== 1 ? 's' : '') + ' -- revisa tipos y marca las respuestas correctas', 'success');
 }
 
+/** Genera un código corto (6 caracteres, sin 0/O/1/I/L para no confundirlos
+ *  al leerlo o escribirlo a mano) para que el estudiante entre al examen sin
+ *  tener que escribir la URL completa con el id de Firestore. Verifica que
+ *  no choque con uno ya existente antes de devolverlo -- con este alfabeto
+ *  de 32 símbolos hay 32^6 (~1073 millones) combinaciones posibles, así que
+ *  un choque real es prácticamente imposible, pero se revisa igual. */
+async function _generarCodigoExamenUnico() {
+  const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  for (let intento = 0; intento < 8; intento++) {
+    let codigo = '';
+    for (let i = 0; i < 6; i++) codigo += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+    try {
+      const existe = await db.collection('examenes').where('codigo', '==', codigo).limit(1).get();
+      if (existe.empty) return codigo;
+    } catch (e) {
+      // Si la consulta falla (ej. sin índice todavía), no bloquea el guardado
+      // del examen -- se devuelve el código sin verificar de nuevo.
+      console.warn('[Examenes] No se pudo verificar unicidad del código:', e.message);
+      return codigo;
+    }
+  }
+  return null;
+}
+
 async function guardarExamen() {
   if (!_examenEditor || !window.currentUser) return;
   const ex = _examenEditor;
@@ -27049,12 +27073,17 @@ async function guardarExamen() {
       docenteEmail: window.currentUser.email || ''
     };
     if (ex.id) {
+      // Backfill: exámenes creados antes de que existiera el código corto no
+      // lo tienen -- se le asigna uno la primera vez que se vuelve a guardar,
+      // en vez de dejarlo sin código para siempre.
+      if (!ex.codigo) data.codigo = await _generarCodigoExamenUnico();
       await db.collection('examenes').doc(ex.id).update(data);
       registrarCambio('Examen actualizado: "' + ex.titulo + '"');
       mostrarToast('Examen actualizado', 'success');
     } else {
       data.activo = true;
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.codigo = await _generarCodigoExamenUnico();
       await db.collection('examenes').add(data);
       registrarCambio('Examen creado: "' + ex.titulo + '"');
       mostrarToast('Examen creado y activado', 'success');
@@ -27099,14 +27128,75 @@ async function toggleActivarExamen(examenId, nuevoEstado) {
   }
 }
 
-function copiarLinkExamen(examenId) {
+/** Muestra el modal para compartir un examen: código corto de 6 caracteres
+ *  (para que el estudiante lo escriba a mano en vez de copiar la URL entera
+ *  con el id de Firestore), un QR que abre el enlace directo, y el enlace
+ *  completo por si se comparte digital (WhatsApp, classroom, etc.). Si el
+ *  examen es de antes de que existiera el código corto, lo genera y lo
+ *  guarda en ese momento (backfill perezoso). */
+async function abrirCompartirExamen(examenId) {
+  const ex = _examenesCache.find(e => e.id === examenId);
+  if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
+
+  if (!ex.codigo) {
+    const codigo = await _generarCodigoExamenUnico();
+    if (codigo) {
+      try {
+        await db.collection('examenes').doc(examenId).update({ codigo });
+        ex.codigo = codigo;
+      } catch (e) {
+        console.warn('[Examenes] No se pudo guardar el código nuevo:', e.message);
+      }
+    }
+  }
+
   const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
   const url = base + 'examen.html?id=' + examenId;
+
+  const overlay = document.getElementById('examenes-compartir-overlay');
+  const body = document.getElementById('examenes-compartir-body');
+  if (!overlay || !body) return;
+
+  body.innerHTML = `
+    ${ex.codigo ? `
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:.78rem;color:#546E7A;font-weight:600;margin-bottom:8px;">Código para entrar al examen</div>
+      <div style="font-size:2.1rem;font-weight:800;letter-spacing:.25em;color:#1565C0;background:#E3F2FD;border-radius:10px;padding:14px 8px;font-family:'Courier New',monospace;">${_eHtml(ex.codigo)}</div>
+      <button onclick="_copiarTextoExamen('${ex.codigo}','Código')" style="margin-top:8px;background:#F5F5F5;color:#424242;border:none;padding:6px 14px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">
+        <span class="material-icons" style="font-size:13px;vertical-align:middle;margin-right:3px;">content_copy</span>Copiar código
+      </button>
+      <p style="font-size:.76rem;color:#9E9E9E;margin-top:8px;">El estudiante entra a <strong>examen.html</strong> (sin nada más en la URL) y escribe este código -- no necesita el enlace completo.</p>
+    </div>
+    <div style="text-align:center;margin-bottom:18px;">
+      <canvas id="ex-compartir-qr"></canvas>
+      <p style="font-size:.76rem;color:#9E9E9E;margin-top:6px;">O escanea este código QR: abre el examen directo, sin escribir nada.</p>
+    </div>` : `<div style="font-size:.83rem;color:#C62828;margin-bottom:14px;background:#FFEBEE;border-radius:8px;padding:10px 12px;">No se pudo generar el código corto (revisa tu conexión). Comparte el enlace completo de abajo mientras tanto.</div>`}
+    <div>
+      <div style="font-size:.78rem;color:#546E7A;font-weight:600;margin-bottom:6px;">Enlace completo</div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" readonly value="${_eHtml(url)}" style="flex:1;min-width:0;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.76rem;color:#616161;background:#FAFAFA;" onclick="this.select()">
+        <button onclick="_copiarTextoExamen('${url}','Enlace')" style="background:#1565C0;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">Copiar</button>
+      </div>
+    </div>`;
+
+  overlay.classList.remove('hidden');
+
+  if (ex.codigo && window.QRCode) {
+    const canvas = document.getElementById('ex-compartir-qr');
+    if (canvas) QRCode.toCanvas(canvas, url, { width: 180, margin: 1, color: { dark: '#1A1A2E', light: '#FFFFFF' } }, err => { if (err) console.warn('[Examenes] QR:', err); });
+  }
+}
+
+function cerrarCompartirExamen() {
+  document.getElementById('examenes-compartir-overlay').classList.add('hidden');
+}
+
+function _copiarTextoExamen(texto, etiqueta) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => mostrarToast('Enlace copiado al portapapeles', 'success'))
-      .catch(() => prompt('Copia este enlace:', url));
+    navigator.clipboard.writeText(texto).then(() => mostrarToast(etiqueta + ' copiado', 'success'))
+      .catch(() => prompt('Copia esto:', texto));
   } else {
-    prompt('Copia este enlace:', url);
+    prompt('Copia esto:', texto);
   }
 }
 
