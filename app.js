@@ -27009,23 +27009,36 @@ function _confirmarImportarPreguntas() {
 
 /** Genera un código corto (6 caracteres, sin 0/O/1/I/L para no confundirlos
  *  al leerlo o escribirlo a mano) para que el estudiante entre al examen sin
- *  tener que escribir la URL completa con el id de Firestore. Verifica que
- *  no choque con uno ya existente antes de devolverlo -- con este alfabeto
- *  de 32 símbolos hay 32^6 (~1073 millones) combinaciones posibles, así que
- *  un choque real es prácticamente imposible, pero se revisa igual. */
+ *  tener que escribir la URL completa con el id de Firestore.
+ *
+ *  Este código se usa DIRECTAMENTE como id real del documento en Firestore
+ *  (ver guardarExamen: db.collection('examenes').doc(codigo).set(...) en vez
+ *  de .add()) -- no como un campo aparte que hay que buscar. La primera
+ *  versión de esto guardaba el código en un campo `codigo` y lo buscaba con
+ *  `.where('codigo','==',...)`, pero esa es una consulta de LISTA, y las
+ *  reglas de Firestore de este proyecto solo permiten lecturas directas por
+ *  id (get) a un estudiante anónimo, no consultas -- fallaba con
+ *  "Missing or insufficient permissions" en producción. Usar el código como
+ *  id evita el problema por completo: buscar el examen pasa a ser el mismo
+ *  `.doc(id).get()` que ya funciona hoy con el enlace largo.
+ *
+ *  Verifica que el id no choque con uno ya existente antes de devolverlo --
+ *  con este alfabeto de 32 símbolos hay 32^6 (~1073 millones) combinaciones
+ *  posibles, así que un choque real es prácticamente imposible, pero se
+ *  revisa igual (con un `get` por id, no una consulta -- eso si es seguro
+ *  llamarlo aunque el examen que choque sea de OTRO docente, porque una
+ *  denegación de permiso en el `get` de chequeo también indica "no lo puedo
+ *  usar", así que se reintenta con otro código). */
 async function _generarCodigoExamenUnico() {
   const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   for (let intento = 0; intento < 8; intento++) {
     let codigo = '';
     for (let i = 0; i < 6; i++) codigo += alfabeto[Math.floor(Math.random() * alfabeto.length)];
     try {
-      const existe = await db.collection('examenes').where('codigo', '==', codigo).limit(1).get();
-      if (existe.empty) return codigo;
+      const existe = await db.collection('examenes').doc(codigo).get();
+      if (!existe.exists) return codigo;
     } catch (e) {
-      // Si la consulta falla (ej. sin índice todavía), no bloquea el guardado
-      // del examen -- se devuelve el código sin verificar de nuevo.
-      console.warn('[Examenes] No se pudo verificar unicidad del código:', e.message);
-      return codigo;
+      console.warn('[Examenes] No se pudo verificar disponibilidad del código, se intenta con otro:', e.message);
     }
   }
   return null;
@@ -27073,18 +27086,26 @@ async function guardarExamen() {
       docenteEmail: window.currentUser.email || ''
     };
     if (ex.id) {
-      // Backfill: exámenes creados antes de que existiera el código corto no
-      // lo tienen -- se le asigna uno la primera vez que se vuelve a guardar,
-      // en vez de dejarlo sin código para siempre.
-      if (!ex.codigo) data.codigo = await _generarCodigoExamenUnico();
+      // Los exámenes creados antes de este cambio tienen un id largo
+      // (autogenerado por Firestore) y no hay forma de acortarlo despues --
+      // Firestore no permite renombrar el id de un documento ya existente
+      // sin recrearlo entero (y perder o tener que migrar a mano las
+      // respuestas ya recibidas en su subcolección). Se quedan solo con el
+      // enlace largo y el QR (que funciona igual de bien sin importar qué
+      // tan largo sea el id, porque el estudiante nunca lo escribe).
       await db.collection('examenes').doc(ex.id).update(data);
       registrarCambio('Examen actualizado: "' + ex.titulo + '"');
       mostrarToast('Examen actualizado', 'success');
     } else {
       data.activo = true;
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      data.codigo = await _generarCodigoExamenUnico();
-      await db.collection('examenes').add(data);
+      // El código generado se usa DIRECTO como id del documento (ver
+      // _generarCodigoExamenUnico) -- si por algún motivo no se pudo generar
+      // (ej. sin conexión momentánea), se cae al id autogenerado de siempre
+      // en vez de bloquear la creación del examen.
+      const codigo = await _generarCodigoExamenUnico();
+      if (codigo) await db.collection('examenes').doc(codigo).set(data);
+      else await db.collection('examenes').add(data);
       registrarCambio('Examen creado: "' + ex.titulo + '"');
       mostrarToast('Examen creado y activado', 'success');
 
@@ -27128,28 +27149,22 @@ async function toggleActivarExamen(examenId, nuevoEstado) {
   }
 }
 
-/** Muestra el modal para compartir un examen: código corto de 6 caracteres
- *  (para que el estudiante lo escriba a mano en vez de copiar la URL entera
- *  con el id de Firestore), un QR que abre el enlace directo, y el enlace
- *  completo por si se comparte digital (WhatsApp, classroom, etc.). Si el
- *  examen es de antes de que existiera el código corto, lo genera y lo
- *  guarda en ese momento (backfill perezoso). */
+/** Muestra el modal para compartir un examen: código corto (para que el
+ *  estudiante lo escriba a mano en vez de copiar la URL entera con el id de
+ *  Firestore), un QR que abre el enlace directo, y el enlace completo por si
+ *  se comparte digital (WhatsApp, classroom, etc.).
+ *
+ *  El "código corto" es literalmente el id del documento cuando ese id lo
+ *  generó _generarCodigoExamenUnico() (6 caracteres) -- ver guardarExamen().
+ *  Un examen de antes de este cambio tiene el id largo autogenerado por
+ *  Firestore (20 caracteres) y no se le puede acortar después sin recrear el
+ *  documento entero, así que para esos casos no se muestra código, solo el
+ *  enlace y el QR (que funcionan igual sin importar el largo del id). */
 async function abrirCompartirExamen(examenId) {
   const ex = _examenesCache.find(e => e.id === examenId);
   if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
 
-  if (!ex.codigo) {
-    const codigo = await _generarCodigoExamenUnico();
-    if (codigo) {
-      try {
-        await db.collection('examenes').doc(examenId).update({ codigo });
-        ex.codigo = codigo;
-      } catch (e) {
-        console.warn('[Examenes] No se pudo guardar el código nuevo:', e.message);
-      }
-    }
-  }
-
+  const tieneCodigoCorto = examenId.length <= 8;
   const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
   const url = base + 'examen.html?id=' + examenId;
 
@@ -27158,19 +27173,19 @@ async function abrirCompartirExamen(examenId) {
   if (!overlay || !body) return;
 
   body.innerHTML = `
-    ${ex.codigo ? `
+    ${tieneCodigoCorto ? `
     <div style="text-align:center;margin-bottom:18px;">
       <div style="font-size:.78rem;color:#546E7A;font-weight:600;margin-bottom:8px;">Código para entrar al examen</div>
-      <div style="font-size:2.1rem;font-weight:800;letter-spacing:.25em;color:#1565C0;background:#E3F2FD;border-radius:10px;padding:14px 8px;font-family:'Courier New',monospace;">${_eHtml(ex.codigo)}</div>
-      <button onclick="_copiarTextoExamen('${ex.codigo}','Código')" style="margin-top:8px;background:#F5F5F5;color:#424242;border:none;padding:6px 14px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">
+      <div style="font-size:2.1rem;font-weight:800;letter-spacing:.25em;color:#1565C0;background:#E3F2FD;border-radius:10px;padding:14px 8px;font-family:'Courier New',monospace;">${_eHtml(examenId)}</div>
+      <button onclick="_copiarTextoExamen('${examenId}','Código')" style="margin-top:8px;background:#F5F5F5;color:#424242;border:none;padding:6px 14px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">
         <span class="material-icons" style="font-size:13px;vertical-align:middle;margin-right:3px;">content_copy</span>Copiar código
       </button>
       <p style="font-size:.76rem;color:#9E9E9E;margin-top:8px;">El estudiante entra a <strong>examen.html</strong> (sin nada más en la URL) y escribe este código -- no necesita el enlace completo.</p>
-    </div>
+    </div>` : `<div style="font-size:.82rem;color:#546E7A;margin-bottom:14px;background:#FFF3E0;border-radius:8px;padding:10px 12px;">Este examen se creó antes de que existiera el código corto, así que no tiene uno propio -- comparte el enlace completo o el QR de abajo (ambos abren directo, sin escribir nada). Los exámenes que crees de ahora en adelante sí lo tendrán.</div>`}
     <div style="text-align:center;margin-bottom:18px;">
       <canvas id="ex-compartir-qr"></canvas>
-      <p style="font-size:.76rem;color:#9E9E9E;margin-top:6px;">O escanea este código QR: abre el examen directo, sin escribir nada.</p>
-    </div>` : `<div style="font-size:.83rem;color:#C62828;margin-bottom:14px;background:#FFEBEE;border-radius:8px;padding:10px 12px;">No se pudo generar el código corto (revisa tu conexión). Comparte el enlace completo de abajo mientras tanto.</div>`}
+      <p style="font-size:.76rem;color:#9E9E9E;margin-top:6px;">Código QR: abre el examen directo al escanearlo, sin escribir nada.</p>
+    </div>
     <div>
       <div style="font-size:.78rem;color:#546E7A;font-weight:600;margin-bottom:6px;">Enlace completo</div>
       <div style="display:flex;gap:6px;">
@@ -27181,7 +27196,7 @@ async function abrirCompartirExamen(examenId) {
 
   overlay.classList.remove('hidden');
 
-  if (ex.codigo && window.QRCode) {
+  if (window.QRCode) {
     const canvas = document.getElementById('ex-compartir-qr');
     if (canvas) QRCode.toCanvas(canvas, url, { width: 180, margin: 1, color: { dark: '#1A1A2E', light: '#FFFFFF' } }, err => { if (err) console.warn('[Examenes] QR:', err); });
   }

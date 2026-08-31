@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.20" />
+  <link rel="stylesheet" href="styles.css?v=18.21" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.20" />
+  <link rel="stylesheet" href="auth.css?v=18.21" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3425,6 +3425,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#D84315;">v18.21<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: el código de examen daba "Missing or insufficient permissions"</div>
+              <ul class="about-ver-items">
+                <li>El código corto de v18.20 se buscaba con una consulta (<code>where('codigo','==',...)</code>) que las reglas de seguridad de Firestore no permiten hacerle a un estudiante anónimo -- solo permiten leer un examen por su id directo, no consultar la colección completa. Se rediseñó para que el código corto SEA el id real del examen en Firestore (en vez de un campo aparte que hay que buscar): así, entrar con el código termina siendo la misma lectura directa por id que ya funcionaba con el enlace largo, sin necesitar ningún permiso nuevo. Los exámenes creados antes de este cambio (con id largo) no pueden recibir un código corto retroactivo -- para esos se sigue compartiendo el enlace completo o el QR, que funcionan igual de bien.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8652,9 +8666,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.20"></script>
+  <script src="app.js?v=18.21"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.20"></script>
+  <script src="auth.js?v=18.21"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

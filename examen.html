@@ -268,6 +268,13 @@
     }
   })();
 
+  // El código corto ES el id real del documento en Firestore (ver
+  // guardarExamen() en app.js) -- buscarlo es un simple .doc(id).get(), NO
+  // una consulta con where(). Se intentó primero con
+  // where('codigo','==',...) y falló en producción con "Missing or
+  // insufficient permissions": las reglas de Firestore de este proyecto
+  // solo permiten leer un examen por id directo a un estudiante anónimo, no
+  // hacer consultas de lista sobre la colección completa.
   async function buscarPorCodigo() {
     var input = document.getElementById('codigo-input');
     var errEl = document.getElementById('codigo-error');
@@ -280,18 +287,20 @@
     document.getElementById('st-codigo').classList.add('hidden');
     document.getElementById('st-loading').classList.remove('hidden');
     try {
-      var snap = await db.collection('examenes').where('codigo', '==', codigo).limit(1).get();
-      if (snap.empty) {
+      var snap = await db.collection('examenes').doc(codigo).get();
+      if (!snap.exists) {
         document.getElementById('st-loading').classList.add('hidden');
         document.getElementById('st-codigo').classList.remove('hidden');
         if (errEl) { errEl.textContent = 'No se encontró ningún examen con ese código. Verifica que esté bien escrito.'; errEl.classList.remove('hidden'); }
         return;
       }
-      examId = snap.docs[0].id;
+      examId = codigo;
       // Deja el id en la URL -- si el estudiante recarga la página no vuelve
       // a pedirle el código.
       history.replaceState(null, '', window.location.pathname + '?id=' + examId);
-      cargarExamen(examId);
+      examenData = snap.data();
+      if (!examenData.activo) { mostrarError('Examen cerrado', 'Este examen no está disponible en este momento. Consulta a tu docente.'); return; }
+      renderExamen(examenData);
     } catch (e) {
       console.error(e);
       document.getElementById('st-loading').classList.add('hidden');
