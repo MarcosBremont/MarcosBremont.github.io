@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.28" />
+  <link rel="stylesheet" href="styles.css?v=18.29" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.28" />
+  <link rel="stylesheet" href="auth.css?v=18.29" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3480,6 +3480,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00838F;">v18.29<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" no encontraba el módulo en documentos grandes</div>
+              <ul class="about-ver-items">
+                <li>El sistema leía TODAS las páginas del PDF antes de buscar el módulo, con un tope de 45 segundos para el documento completo. Confirmado en un caso real: un currículo de 242 páginas con el módulo buscado en la página 32 agotaba ese tiempo leyendo páginas de módulos que no hacían falta, y nunca llegaba a analizar con calma la sección que sí importaba -- el sistema reportaba "no se encontró ese código de módulo" pese a que estaba clarito en el documento.</li>
+                <li>Ahora, en cuanto el módulo buscado queda completo (se encontró su encabezado Y el del siguiente módulo, que marca dónde termina), la lectura del PDF se corta ahí mismo -- no sigue leyendo el resto del documento sin necesidad. El tope total también sube de 45 a 90 segundos como respaldo, para el caso en que el módulo buscado esté muy al final de un documento grande.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8825,9 +8840,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.28"></script>
+  <script src="app.js?v=18.29"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.28"></script>
+  <script src="auth.js?v=18.29"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

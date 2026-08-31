@@ -22347,7 +22347,7 @@ function _curriculoArchivoSeleccionado(input) {
  *  pudo leer, sus fragmentos de texto CON posición (x, y) real -- lo necesita
  *  _reconstruirColumnasTabla() para separar las dos columnas de la tabla de
  *  RA/Criterios (ver ahí por qué el orden lineal de `texto` no alcanza). */
-async function _extraerTextoPdf(arrayBuffer) {
+async function _extraerTextoPdf(arrayBuffer, moduloBuscado) {
   if (!window.pdfjsLib) {
     throw new Error('No se pudo cargar el lector de PDF (pdf.js). Revisa tu conexión e intenta de nuevo.');
   }
@@ -22358,7 +22358,12 @@ async function _extraerTextoPdf(arrayBuffer) {
   let textoCompleto = '';
   const paginas = [];
   const inicio = Date.now();
-  const TOPE_TOTAL_MS = 45000; // presupuesto total de tiempo para todo el documento
+  // Con el corte anticipado de abajo (apenas se ubica y acota el módulo
+  // buscado), este tope casi nunca se alcanza en el caso normal -- solo
+  // protege el caso extremo donde el módulo buscado está muy al final de un
+  // documento grande, o el código no coincide con nada (el corte anticipado
+  // nunca dispara) y hay que leer todo para poder reportar "no encontrado".
+  const TOPE_TOTAL_MS = 90000; // presupuesto total de tiempo para todo el documento
   for (let p = 1; p <= doc.numPages; p++) {
     if (Date.now() - inicio > TOPE_TOTAL_MS) {
       console.warn(`[Currículo] Extracción de texto del PDF superó el tope de tiempo total, se detiene en la página ${p} de ${doc.numPages}.`);
@@ -22393,6 +22398,27 @@ async function _extraerTextoPdf(arrayBuffer) {
     });
     textoCompleto += items.map(it => it.str).join(' ') + '\n\n';
     paginas.push({ numero: p, items: items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] })) });
+
+    // Si ya se conoce el código del módulo que se busca (el docente lo escribe
+    // ANTES de subir el PDF), no hace falta esperar a leer el documento
+    // entero para saber si ya se puede ubicar y acotar por completo -- en
+    // cuanto _ubicarModulo() encuentra el módulo Y también el encabezado del
+    // SIGUIENTE módulo (lo que le da un idxFin real, no "lo que se alcanzó a
+    // leer hasta ahora"), el resto de las páginas ya no aportan nada para
+    // esta búsqueda puntual. Sin este corte, un currículo grande (visto un
+    // caso real de 242 páginas con el módulo buscado en la página 32) seguía
+    // leyendo las ~210 páginas restantes igual, agotando el presupuesto total
+    // de tiempo (TOPE_TOTAL_MS) antes de llegar a analizar el módulo que ya
+    // estaba completo desde hacía rato -- el PDF terminaba reportando "no se
+    // encontró ese código de módulo" pese a que sí estaba, solo que nunca se
+    // llegaba a intentar ubicarlo con calma.
+    if (moduloBuscado) {
+      const ubicacion = _ubicarModulo(textoCompleto, moduloBuscado);
+      if (ubicacion && ubicacion.idxFin < textoCompleto.length) {
+        console.log(`[Currículo] Módulo ya ubicado y acotado en la página ${p} de ${doc.numPages} -- se deja de leer el resto del documento.`);
+        break;
+      }
+    }
   }
   return { texto: textoCompleto, paginas };
 }
@@ -23031,7 +23057,7 @@ async function _procesarImportCurriculo() {
 
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const { texto: textoCompleto, paginas } = await _extraerTextoPdf(arrayBuffer);
+    const { texto: textoCompleto, paginas } = await _extraerTextoPdf(arrayBuffer, moduloBuscado);
     console.log(`[Currículo] Texto extraído: ${textoCompleto.length} caracteres totales, ${paginas.length} páginas leídas.`);
 
     const parsed = _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas);
