@@ -26637,6 +26637,7 @@ function renderizarExamenes() {
         <button onclick="verResultadosExamen('${ex.id}')" style="${bS}background:#F3E5F5;color:#6A1B9A;"><span class="material-icons" style="font-size:15px;">bar_chart</span>Resultados</button>
         <button onclick="copiarLinkExamen('${ex.id}')" style="${bS}background:#E3F2FD;color:#1565C0;"><span class="material-icons" style="font-size:15px;">link</span>Enlace</button>
         <button onclick="imprimirExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;"><span class="material-icons" style="font-size:15px;">print</span>Imprimir</button>
+        <button onclick="duplicarExamen('${ex.id}')" style="${bS}background:#E8F5E9;color:#2E7D32;"><span class="material-icons" style="font-size:15px;">content_copy</span>Duplicar</button>
         <button onclick="abrirEditorExamen('${ex.id}')" style="${bS}background:#F5F5F5;color:#424242;"><span class="material-icons" style="font-size:15px;">edit</span></button>
         <button onclick="toggleActivarExamen('${ex.id}',${!activo})" style="${bS}background:${activo ? '#FFF3E0' : '#E8F5E9'};color:${activo ? '#E65100' : '#2E7D32'};">${activo ? '⏸ Cerrar' : '▶ Abrir'}</button>
         <button onclick="eliminarExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;padding:6px 8px;"><span class="material-icons" style="font-size:15px;">delete</span></button>
@@ -26723,6 +26724,30 @@ async function imprimirExamen(examenId) {
     </body></html>
   `);
   ventana.document.close();
+}
+
+/** Abre el editor precargado con una copia de un examen existente, lista para
+ *  ajustar (típicamente el curso) y guardar como examen NUEVO -- para no
+ *  tener que rehacer a mano el mismo examen para otro curso/sección. No toca
+ *  el examen original: mientras no se guarde, `id` queda en null igual que
+ *  un examen nuevo cualquiera, así que "Guardar" crea un documento aparte. */
+function duplicarExamen(examenId) {
+  const ex = _examenesCache.find(e => e.id === examenId);
+  if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
+  const copia = JSON.parse(JSON.stringify(ex));
+  _examenEditor = {
+    id: null,
+    titulo: (copia.titulo || '') + ' (copia)',
+    materia: copia.materia || '',
+    curso: '',
+    instrucciones: copia.instrucciones || '',
+    preguntas: (copia.preguntas || []).map((p, i) => ({ ...p, id: 'p' + Date.now() + '_' + i + '_' + Math.floor(Math.random() * 9999) }))
+  };
+  const tEl = document.getElementById('examen-editor-modal-titulo');
+  if (tEl) tEl.textContent = 'Duplicar Examen';
+  _renderEditorExamen();
+  document.getElementById('examenes-editor-overlay').classList.remove('hidden');
+  mostrarToast('Ajusta el curso y guarda para crear la copia', 'success');
 }
 
 // ── Editor ────────────────────────────────────────────────────────────
