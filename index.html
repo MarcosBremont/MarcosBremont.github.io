@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.25" />
+  <link rel="stylesheet" href="styles.css?v=18.26" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.25" />
+  <link rel="stylesheet" href="auth.css?v=18.26" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3049,9 +3049,14 @@
           <span class="material-icons" style="color:#1565C0;font-size:22px;">quiz</span>
           Exámenes y Pruebas
         </h2>
-        <button onclick="abrirEditorExamen(null)" style="background:#1565C0;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
-          <span class="material-icons" style="font-size:16px;">add</span> Nuevo Examen
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="abrirInformeCombinadoExamenes()" style="background:#EDE7F6;color:#5E35B1;border:none;padding:9px 18px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">summarize</span> Informe combinado
+          </button>
+          <button onclick="abrirEditorExamen(null)" style="background:#1565C0;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">add</span> Nuevo Examen
+          </button>
+        </div>
       </div>
       <p style="font-size:.8rem;color:#9E9E9E;margin-bottom:20px;">Crea exámenes, comparte el enlace con tus estudiantes y recibe las respuestas aquí.</p>
       <div id="examenes-lista">
@@ -3139,10 +3144,57 @@
       </div>
       <div class="modal-body" id="examenes-resultados-body" style="overflow-y:auto;flex:1;padding:18px 20px;"></div>
       <div class="modal-footer" style="justify-content:space-between;">
-        <button onclick="exportarInformeExamenExcel()" style="background:#E8F5E9;color:#2E7D32;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
-          <span class="material-icons" style="font-size:16px;">grid_on</span>Exportar a Excel
-        </button>
+        <div style="display:flex;gap:8px;">
+          <button onclick="exportarInformeExamenExcel()" style="background:#E8F5E9;color:#2E7D32;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">grid_on</span>Exportar a Excel
+          </button>
+          <button onclick="exportarInformeExamenWord()" style="background:#E3F2FD;color:#1565C0;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">description</span>Exportar a Word
+          </button>
+        </div>
         <button class="btn-secundario" onclick="cerrarResultadosExamen()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OVERLAY: INFORME COMBINADO DE EXÁMENES (varios cursos en un Word) ===== -->
+  <div id="examenes-informe-comb-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='examenes-informe-comb-overlay')cerrarInformeCombinadoExamenes()">
+    <div class="modal-box" style="max-width:600px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">summarize</span>
+          Informe combinado
+        </h3>
+        <button class="modal-close" onclick="cerrarInformeCombinadoExamenes()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" style="overflow-y:auto;flex:1;padding:18px 20px;">
+        <p style="font-size:.83rem;color:#546E7A;margin-bottom:14px;line-height:1.5;">
+          Elige los exámenes que quieres juntar en un solo informe (ej. el mismo examen aplicado a distintas secciones) -- cada uno aparece como una fila de la tabla.
+        </p>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Título del informe</label>
+          <input type="text" id="inf-comb-titulo" placeholder="Ej: Informe sobre la evaluación Diagnóstica" style="width:100%;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.83rem;outline:none;font-family:inherit;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div>
+            <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Asignatura</label>
+            <input type="text" id="inf-comb-asignatura" style="width:100%;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.83rem;outline:none;font-family:inherit;">
+          </div>
+          <div>
+            <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Maestro/a</label>
+            <input type="text" id="inf-comb-maestra" style="width:100%;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.83rem;outline:none;font-family:inherit;">
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;">Fecha de implementación</label>
+          <input type="date" id="inf-comb-fecha" style="padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.83rem;outline:none;font-family:inherit;">
+        </div>
+        <div style="font-size:.78rem;color:#546E7A;font-weight:600;margin-bottom:8px;">Exámenes a incluir</div>
+        <div id="inf-comb-lista" style="max-height:260px;overflow-y:auto;border:1px solid #E8EDF2;border-radius:8px;padding:6px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" onclick="cerrarInformeCombinadoExamenes()">Cancelar</button>
+        <button id="inf-comb-generar" onclick="_generarInformeCombinadoWord()" style="background:#5E35B1;color:#fff;border:none;padding:9px 22px;border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;">Generar Word</button>
       </div>
     </div>
   </div>
@@ -3428,6 +3480,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4527A0;">v18.26<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Informe combinado de exámenes en Word (con narrativa y tabla por curso)</div>
+              <ul class="about-ver-items">
+                <li>Botón "Informe combinado" en Exámenes y Pruebas: elige varios exámenes (ej. el mismo diagnóstico aplicado a distintas secciones) y genera un Word con un párrafo de análisis y una tabla resumen por curso -- cantidad que tomó la prueba, Masculino/Femenino, Aprobados, No aprobados, No la tomó (cruzando contra la matrícula real del curso cuando el nombre coincide con uno del Libro de Calificaciones), con fila de Total. El párrafo se arma a partir de los números reales calculados (nunca inventa una cifra ni una conclusión que los datos no respalden).</li>
+                <li>El botón "Exportar a Word" junto al de Excel, dentro del Informe de un examen, es un atajo al mismo informe combinado con ese examen ya marcado.</li>
+                <li>Para poder calcular Masculino/Femenino, el formulario que llena el estudiante al responder un examen ahora pide también su sexo (además de nombre y número/cédula).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8728,9 +8796,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.25"></script>
+  <script src="app.js?v=18.26"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.25"></script>
+  <script src="auth.js?v=18.26"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

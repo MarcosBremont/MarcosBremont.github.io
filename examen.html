@@ -63,11 +63,12 @@
     @media(max-width: 500px) { .student-form .row { grid-template-columns: 1fr; } }
 
     .fld label { display: block; font-size: .73rem; font-weight: 600; color: #546E7A; margin-bottom: 4px; }
-    .fld input {
+    .fld input, .fld select {
       width: 100%; padding: 9px 12px; border: 1.5px solid #CFD8DC; border-radius: 8px;
       font-family: 'Inter', sans-serif; font-size: .85rem; color: #212121; outline: none; transition: border-color .2s;
+      background: #fff;
     }
-    .fld input:focus { border-color: #1565C0; }
+    .fld input:focus, .fld select:focus { border-color: #1565C0; }
 
     .question-card {
       background: #fff; border-radius: 12px; box-shadow: 0 1px 5px rgba(0,0,0,.07);
@@ -184,6 +185,16 @@
         <div class="fld">
           <label>Número / Cédula *</label>
           <input type="text" id="est-numero" placeholder="Ej: 001-1234567-8" maxlength="50">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="fld">
+          <label>Sexo *</label>
+          <select id="est-sexo">
+            <option value="">Selecciona...</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+          </select>
         </div>
       </div>
     </div>
@@ -400,8 +411,10 @@
   async function enviarExamen() {
     var nombre = (document.getElementById('est-nombre').value || '').trim();
     var numero = (document.getElementById('est-numero').value || '').trim();
+    var sexo = (document.getElementById('est-sexo').value || '').trim();
     if (!nombre) { alert('Por favor escribe tu nombre completo.'); document.getElementById('est-nombre').focus(); return; }
     if (!numero) { alert('Por favor escribe tu número o cédula.'); document.getElementById('est-numero').focus(); return; }
+    if (!sexo) { alert('Por favor selecciona tu sexo.'); document.getElementById('est-sexo').focus(); return; }
 
     var preguntas = examenData.preguntas || [];
     var respuestas = {};
@@ -436,6 +449,7 @@
       await db.collection('examenes').doc(examId).collection('respuestas').add({
         estudianteNombre: nombre,
         estudianteNumero: numero,
+        estudianteSexo: sexo,
         fechaEnvio: firebase.firestore.FieldValue.serverTimestamp(),
         respuestas: respuestas,
         salidasCount: salidasCount,

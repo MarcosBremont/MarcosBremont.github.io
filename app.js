@@ -27599,6 +27599,258 @@ function exportarInformeExamenExcel() {
   mostrarToast('Informe exportado', 'success');
 }
 
+// ── Informe combinado (varios exámenes, un solo Word) ──────────────────
+
+/** Atajo desde el modal de Informes de UN examen: abre el selector de
+ *  Informe combinado con ese examen ya marcado, en vez de duplicar toda la
+ *  lógica de generación de Word solo para el caso de un examen único --
+ *  "un examen" es simplemente "un informe combinado con un solo elegido". */
+function exportarInformeExamenWord() {
+  const info = _examenInformeActual;
+  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
+  abrirInformeCombinadoExamenes(info.ex.id);
+}
+
+function abrirInformeCombinadoExamenes(preseleccionarId) {
+  if (!_examenesCache.length) { mostrarToast('No tienes exámenes creados todavía', 'error'); return; }
+
+  const lista = document.getElementById('inf-comb-lista');
+  if (lista) {
+    lista.innerHTML = _examenesCache.map(ex => {
+      const fecha = ex.createdAt && ex.createdAt.toDate ? ex.createdAt.toDate().toLocaleDateString('es-DO') : '';
+      const marcado = preseleccionarId ? ex.id === preseleccionarId : false;
+      return `<label style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid #F0F4F8;cursor:pointer;font-size:.83rem;">
+        <input type="checkbox" class="inf-comb-check" value="${ex.id}" ${marcado ? 'checked' : ''} style="cursor:pointer;flex-shrink:0;">
+        <span style="flex:1;color:#1A1A2E;">${escapeHTML(ex.titulo || 'Sin título')}</span>
+        <span style="color:#9E9E9E;font-size:.76rem;">${escapeHTML(ex.curso || '—')} · ${fecha}</span>
+      </label>`;
+    }).join('');
+  }
+
+  // Asignatura: si todos los exámenes elegidos (o, a falta de selección, TODOS
+  // los del docente) comparten la misma materia, se autocompleta -- si no,
+  // se deja en blanco para que el docente la escriba a mano.
+  const materias = [...new Set(_examenesCache.map(ex => (ex.materia || '').trim()).filter(Boolean))];
+  const asigEl = document.getElementById('inf-comb-asignatura');
+  if (asigEl) asigEl.value = materias.length === 1 ? materias[0] : '';
+
+  const maestraEl = document.getElementById('inf-comb-maestra');
+  if (maestraEl) maestraEl.value = (window.currentUser && window.currentUser.displayName) || '';
+
+  const tituloEl = document.getElementById('inf-comb-titulo');
+  if (tituloEl && !tituloEl.value) {
+    const ex0 = preseleccionarId ? _examenesCache.find(e => e.id === preseleccionarId) : null;
+    tituloEl.value = ex0 ? 'Informe sobre la evaluación ' + (ex0.titulo || '') : '';
+  }
+
+  const fechaEl = document.getElementById('inf-comb-fecha');
+  if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().slice(0, 10);
+
+  document.getElementById('examenes-informe-comb-overlay').classList.remove('hidden');
+}
+
+function cerrarInformeCombinadoExamenes() {
+  document.getElementById('examenes-informe-comb-overlay').classList.add('hidden');
+}
+
+/** Lee las respuestas de UN examen y calcula la fila que le corresponde en
+ *  la tabla del informe combinado: cuántos la tomaron, por sexo, aprobados
+ *  (precisión ≥70%, mismo umbral que el resto del sistema) / no aprobados,
+ *  y "no la tomó" cruzando contra la matrícula real del curso en el Libro
+ *  de Calificaciones (calState) cuando el nombre del curso coincide -- si
+ *  no coincide con ningún curso registrado, esa columna queda en blanco en
+ *  vez de inventar un número. */
+async function _calcularFilaInformeCombinado(ex) {
+  const snap = await db.collection('examenes').doc(ex.id).collection('respuestas').get();
+  const respuestas = snap.docs.map(d => d.data());
+  const preguntas = ex.preguntas || [];
+  const preguntasCalificables = preguntas.filter(p => (p.tipo === 'mc' || p.tipo === 'vf') && p.respuestaCorrecta);
+  const puntosPosiblesAuto = preguntasCalificables.reduce((s, p) => s + (p.puntos || 1), 0);
+
+  const tomaron = respuestas.length;
+  const masculino = respuestas.filter(r => r.estudianteSexo === 'M').length;
+  const femenino = respuestas.filter(r => r.estudianteSexo === 'F').length;
+
+  let aprobados = 0, noAprobados = 0;
+  if (puntosPosiblesAuto > 0) {
+    respuestas.forEach(r => {
+      const puntos = preguntasCalificables.reduce((s, p) =>
+        s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0);
+      if ((puntos / puntosPosiblesAuto * 100) >= 70) aprobados++; else noAprobados++;
+    });
+  }
+
+  let noLaTomo = null;
+  const cursoNorm = (ex.curso || '').trim().toLowerCase();
+  if (cursoNorm && typeof calState !== 'undefined' && calState && calState.cursos) {
+    const cursoMatch = Object.values(calState.cursos).find(c => (c.nombre || '').trim().toLowerCase() === cursoNorm);
+    if (cursoMatch && Array.isArray(cursoMatch.estudiantes)) {
+      noLaTomo = Math.max(0, cursoMatch.estudiantes.length - tomaron);
+    }
+  }
+
+  return { ex, tomaron, masculino, femenino, aprobados, noAprobados, noLaTomo, puntosPosiblesAuto };
+}
+
+/** Arma el párrafo narrativo del informe a partir de los números YA
+ *  calculados de cada fila -- nunca inventa una cifra ni una conclusión que
+ *  los datos no respalden (ej. no dice "nivel bajo" si el promedio de
+ *  aprobación es alto). El texto se adapta según haya uno o varios
+ *  exámenes, y según el resultado general sea favorable, mixto o bajo. */
+function _construirNarrativaInformeCombinado(filas, asignatura) {
+  const asigTxt = asignatura || 'la asignatura evaluada';
+  const totalAprobados = filas.reduce((s, f) => s + f.aprobados, 0);
+  const totalNoAprobados = filas.reduce((s, f) => s + f.noAprobados, 0);
+  const totalCalificable = totalAprobados + totalNoAprobados;
+  const pctAprobacion = totalCalificable ? Math.round(totalAprobados / totalCalificable * 100) : null;
+
+  const nombresCurso = filas.map(f => (f.ex.curso || '').trim()).filter(Boolean);
+  const raices = nombresCurso.map(n => n.replace(/\s+[A-Za-z]$/, '').trim());
+  const nivelComun = (raices.length && raices.every(r => r === raices[0])) ? raices[0] : '';
+  const sujeto = nivelComun
+    ? `los grupos de ${nivelComun}`
+    : (filas.length > 1 ? 'los grupos seleccionados' : (nombresCurso[0] || 'el grupo evaluado'));
+
+  let p1 = `Con el propósito de conocer el nivel de dominio previo de los estudiantes en la asignatura de ${asigTxt}, `
+    + `se aplicó una prueba diagnóstica a ${sujeto}. Los resultados obtenidos permitieron identificar fortalezas y `
+    + `debilidades en el aprendizaje, así como establecer estrategias para orientar la planificación docente durante el año escolar.`;
+
+  if (pctAprobacion !== null) {
+    if (pctAprobacion >= 70) {
+      p1 += ` Los datos muestran que la mayoría de los estudiantes (${pctAprobacion}%) alcanzó un desempeño favorable en la prueba.`;
+    } else if (pctAprobacion >= 40) {
+      p1 += ` Los datos muestran resultados mixtos: ${pctAprobacion}% de los estudiantes alcanzó un desempeño favorable, `
+        + `mientras que una parte importante del grupo todavía necesita reforzar contenidos básicos.`;
+    } else {
+      p1 += ` Los datos muestran que la mayoría de los estudiantes presenta un nivel bajo en ${asigTxt}. El porcentaje `
+        + `de no aprobación (${100 - pctAprobacion}%) indica que existe una necesidad significativa de reforzar las competencias evaluadas.`;
+    }
+  }
+
+  const parrafos = [p1];
+
+  if (filas.length > 1) {
+    const conDatos = filas.filter(f => (f.aprobados + f.noAprobados) > 0);
+    if (conDatos.length > 1) {
+      const ordenadas = conDatos.slice().sort((a, b) =>
+        (a.aprobados / (a.aprobados + a.noAprobados)) - (b.aprobados / (b.aprobados + b.noAprobados)));
+      const peores = ordenadas.slice(0, Math.max(1, Math.min(2, Math.ceil(ordenadas.length / 3))))
+        .map(f => f.ex.curso).filter(Boolean);
+      if (peores.length) {
+        parrafos.push(`Asimismo, se evidencian diferencias entre las secciones: ${peores.join(' y ')} reflejan los `
+          + `resultados más bajos, lo que sugiere dificultades marcadas que requieren atención prioritaria.`);
+      }
+    }
+  }
+
+  return parrafos;
+}
+
+/** Genera el Word (mismo truco de HTML-con-extensión-.doc que usa el resto
+ *  del sistema para "exportar a Word" sin depender de una plantilla subida
+ *  por Superadmin ni de docxtemplater): párrafo(s) narrativos + tabla de
+ *  resumen estadístico por curso, con fila de Total -- mismo formato que el
+ *  informe institucional que el docente ya usaba en otro sistema. */
+async function _generarInformeCombinadoWord() {
+  const checks = Array.from(document.querySelectorAll('.inf-comb-check:checked'));
+  if (!checks.length) { mostrarToast('Selecciona al menos un examen', 'error'); return; }
+  const examenes = checks.map(c => _examenesCache.find(e => e.id === c.value)).filter(Boolean);
+
+  const titulo = (document.getElementById('inf-comb-titulo')?.value || '').trim() || 'Informe sobre la evaluación';
+  const asignatura = (document.getElementById('inf-comb-asignatura')?.value || '').trim();
+  const maestra = (document.getElementById('inf-comb-maestra')?.value || '').trim();
+  const fechaInput = document.getElementById('inf-comb-fecha')?.value || '';
+  const fechaStr = fechaInput ? new Date(fechaInput + 'T00:00:00').toLocaleDateString('es-DO') : '';
+
+  const btn = document.getElementById('inf-comb-generar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+  try {
+    const filas = await Promise.all(examenes.map(ex => _calcularFilaInformeCombinado(ex)));
+    const parrafos = _construirNarrativaInformeCombinado(filas, asignatura);
+
+    const thStyle = 'background:#9575CD;color:#ffffff;font-weight:bold;padding:8px 10px;border:1px solid #7E57C2;text-align:center;';
+    const tdStyle = 'padding:7px 10px;border:1px solid #CFD8DC;text-align:center;';
+    const tdStyleTexto = tdStyle + 'mso-number-format:\'\\@\';';
+
+    const totales = filas.reduce((t, f) => ({
+      tomaron: t.tomaron + f.tomaron,
+      masculino: t.masculino + f.masculino,
+      femenino: t.femenino + f.femenino,
+      aprobados: t.aprobados + f.aprobados,
+      noAprobados: t.noAprobados + f.noAprobados,
+      noLaTomo: (t.noLaTomo === null || f.noLaTomo === null) ? null : t.noLaTomo + f.noLaTomo
+    }), { tomaron: 0, masculino: 0, femenino: 0, aprobados: 0, noAprobados: 0, noLaTomo: 0 });
+
+    const filaHtml = f => `<tr>
+      <td style="${tdStyleTexto}text-align:left;font-weight:bold;">${escapeHTML(f.ex.curso || f.ex.titulo || '—')}</td>
+      <td style="${tdStyle}">${f.tomaron}</td>
+      <td style="${tdStyle}">${f.masculino}</td>
+      <td style="${tdStyle}">${f.femenino}</td>
+      <td style="${tdStyle}">${f.aprobados}</td>
+      <td style="${tdStyle}">${f.noAprobados}</td>
+      <td style="${tdStyle}">${f.noLaTomo === null ? '—' : f.noLaTomo}</td>
+    </tr>`;
+
+    const tablaHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;width:100%;margin-top:10px;">'
+      + '<tr>'
+        + '<td colspan="2" style="border:1px solid #CFD8DC;padding:8px 10px;">'
+          + (asignatura ? '<strong>Asignatura:</strong> ' + escapeHTML(asignatura) + '.' : '') + '<br>'
+          + (maestra ? '<strong>Maestro/a:</strong> ' + escapeHTML(maestra) + '.' : '')
+        + '</td>'
+        + '<td colspan="5" style="border:1px solid #CFD8DC;padding:8px 10px;">'
+          + '<strong>Fecha de implementación:</strong><br>' + escapeHTML(fechaStr)
+        + '</td>'
+      + '</tr>'
+      + '<tr>'
+        + '<th style="' + thStyle + '">Curso</th>'
+        + '<th style="' + thStyle + '">Cantidad de estudiantes que tomaron la prueba</th>'
+        + '<th style="' + thStyle + '">Masculino</th>'
+        + '<th style="' + thStyle + '">Femenino</th>'
+        + '<th style="' + thStyle + '">Aprobados</th>'
+        + '<th style="' + thStyle + '">No aprobados</th>'
+        + '<th style="' + thStyle + '">No la tomó</th>'
+      + '</tr>'
+      + filas.map(filaHtml).join('')
+      + `<tr>
+          <td style="${tdStyle}text-align:left;font-weight:bold;">Total</td>
+          <td style="${tdStyle}font-weight:bold;">${totales.tomaron}</td>
+          <td style="${tdStyle}font-weight:bold;">${totales.masculino}</td>
+          <td style="${tdStyle}font-weight:bold;">${totales.femenino}</td>
+          <td style="${tdStyle}font-weight:bold;">${totales.aprobados}</td>
+          <td style="${tdStyle}font-weight:bold;">${totales.noAprobados}</td>
+          <td style="${tdStyle}font-weight:bold;">${totales.noLaTomo === null ? '—' : totales.noLaTomo}</td>
+        </tr>`
+      + '</table>';
+
+    const bodyHTML = `<div style="font-family:Calibri,Arial,sans-serif;">`
+      + `<h2 style="text-align:center;font-size:16px;">${escapeHTML(titulo)}</h2>`
+      + parrafos.map(p => `<p style="font-size:13px;line-height:1.5;text-align:justify;margin-bottom:10px;">${escapeHTML(p)}</p>`).join('')
+      + `<h3 style="text-align:center;font-size:14px;margin-top:20px;">Resumen estadístico del monitoreo a la implementación de las evaluaciones diagnósticas</h3>`
+      + tablaHtml
+      + `</div>`;
+
+    const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+      + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
+
+    const filename = 'informe-' + (titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.doc';
+    const blob = new Blob(['﻿' + html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    cerrarInformeCombinadoExamenes();
+    mostrarToast('Informe generado', 'success');
+  } catch (e) {
+    console.error('[Informe combinado]', e);
+    mostrarToast('Error al generar: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Generar Word'; }
+  }
+}
+
 function _toggleResDetalle(id, header) {
   const det = document.getElementById(id);
   if (!det) return;
