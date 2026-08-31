@@ -27443,6 +27443,52 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
       </div>`
     : '';
 
+  // Tabla por estudiante: cuántas respondió bien/mal cada uno, ordenada de
+  // menor a mayor precisión -- el mismo criterio "lo que más necesita
+  // atención primero" que ya usa el análisis por pregunta.
+  const totalCalificables = preguntasCalificables.length;
+  const estudiantesData = respuestas.map(r => {
+    const correctas = preguntasCalificables.filter(p => (r.respuestas || {})[p.id] === p.respuestaCorrecta).length;
+    const puntos = preguntasCalificables.reduce((s, p) =>
+      s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0);
+    return {
+      nombre: r.estudianteNombre || '—',
+      correctas, incorrectas: totalCalificables - correctas,
+      precision: Math.round(puntos / puntosPosiblesAuto * 100)
+    };
+  }).sort((a, b) => a.precision - b.precision);
+
+  const filasEstudiantes = estudiantesData.map(e => {
+    const completado = e.precision >= 70;
+    return `<tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;font-size:.83rem;color:#1A1A2E;">${_eHtml(e.nombre)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:#2E7D32;font-weight:700;">${e.correctas}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:#C62828;font-weight:700;">${e.incorrectas}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:${colorPct(e.precision)};font-weight:700;">${e.precision}%</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;">
+        <span style="font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:20px;background:${completado ? '#E8F5E9' : '#FFEBEE'};color:${completado ? '#2E7D32' : '#C62828'};">${completado ? 'Completado' : 'Necesita apoyo'}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const tablaEstudiantesHtml = `
+    <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;margin-top:22px;">Estudiantes</div>
+    <div style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">Respuestas correctas e incorrectas de cada uno, sobre ${totalCalificables} pregunta${totalCalificables !== 1 ? 's' : ''} calificable${totalCalificables !== 1 ? 's' : ''} -- ordenado de menor a mayor precisión.</div>
+    <div style="max-height:340px;overflow-y:auto;border:1px solid #E8EDF2;border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead style="position:sticky;top:0;">
+          <tr style="background:#F5F5F5;">
+            <th style="padding:8px 10px;text-align:left;font-size:.72rem;color:#546E7A;font-weight:700;">Nombre</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Correctas</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Incorrectas</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Precisión</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>${filasEstudiantes}</tbody>
+      </table>
+    </div>`;
+
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px;">
       <div style="background:#E3F2FD;border-radius:10px;padding:12px 14px;text-align:center;">
@@ -27467,17 +27513,24 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
     <div style="margin-bottom:22px;">${distribucionHtml}</div>
     <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;">Desempeño por pregunta</div>
     <div style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">De menor a mayor porcentaje de aciertos -- las primeras son las que más le costaron al curso.</div>
-    <div>${preguntasHtml}</div>`;
+    <div>${preguntasHtml}</div>
+    ${tablaEstudiantesHtml}`;
 }
 
 /** Exporta a Excel (mismo truco de HTML con extensión .xls que ya usa
  *  exportarAlumnosCSV -- Excel lo abre y lo formatea como tabla real, sin
  *  necesitar ninguna librería de .xlsx) una fila por estudiante con Nombre,
- *  Precisión (% de aciertos en las preguntas calificables), Puntuación
- *  (puntos obtenidos/posibles) y Estado: "Completado" si llegó al 70% (el
- *  mismo umbral de aprobación que ya usa el resto del sistema, ver
- *  _construirInformeExamen), "Necesita apoyo" si no. Usa los datos que ya
- *  cargó verResultadosExamen() -- no vuelve a leer Firestore. */
+ *  Respuestas correctas/incorrectas (conteo, no puntos), Precisión (% de
+ *  aciertos), Puntuación (puntos obtenidos/posibles) y Estado: "Completado"
+ *  si llegó al 70% (el mismo umbral de aprobación que ya usa el resto del
+ *  sistema, ver _construirInformeExamen), "Necesita apoyo" si no. Usa los
+ *  datos que ya cargó verResultadosExamen() -- no vuelve a leer Firestore.
+ *
+ *  Las columnas Número/Cédula y Puntuación llevan `mso-number-format:'\@'`
+ *  (código de Excel para "Texto") -- sin eso, Excel autodetecta "10/15"
+ *  como fecha (¡y lo muestra como "oct-15"!) y una cédula larga como número
+ *  y la vuelve notación científica ("7.79885E+12"). Confirmado en un
+ *  informe real exportado antes de este fix. */
 function exportarInformeExamenExcel() {
   const info = _examenInformeActual;
   if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
@@ -27490,8 +27543,12 @@ function exportarInformeExamenExcel() {
 
   const thStyle = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #78909C;text-align:center;white-space:nowrap;';
   const tdStyle = 'padding:5px 8px;border:1px solid #CFD8DC;';
+  const tdStyleTexto = tdStyle + 'mso-number-format:\'\\@\';'; // fuerza formato Texto (ver nota arriba)
+  const totalCalificables = preguntasCalificables.length;
 
   const filas = respuestas.map(r => {
+    const correctas = preguntasCalificables.filter(p => (r.respuestas || {})[p.id] === p.respuestaCorrecta).length;
+    const incorrectas = totalCalificables - correctas;
     const puntos = preguntasCalificables.reduce((s, p) =>
       s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0);
     const precision = Math.round(puntos / puntosPosiblesAuto * 100);
@@ -27500,23 +27557,27 @@ function exportarInformeExamenExcel() {
     const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') : '';
     return '<tr>'
       + '<td style="' + tdStyle + '">' + escapeHTML(r.estudianteNombre || '') + '</td>'
-      + '<td style="' + tdStyle + '">' + escapeHTML(r.estudianteNumero || '') + '</td>'
+      + '<td style="' + tdStyleTexto + '">' + escapeHTML(r.estudianteNumero || '') + '</td>'
+      + '<td style="' + tdStyle + 'text-align:center;color:#2E7D32;font-weight:bold;">' + correctas + '</td>'
+      + '<td style="' + tdStyle + 'text-align:center;color:#C62828;font-weight:bold;">' + incorrectas + '</td>'
       + '<td style="' + tdStyle + 'text-align:center;">' + precision + '%</td>'
-      + '<td style="' + tdStyle + 'text-align:center;">' + puntos + '/' + puntosPosiblesAuto + '</td>'
+      + '<td style="' + tdStyleTexto + 'text-align:center;">' + puntos + '/' + puntosPosiblesAuto + '</td>'
       + '<td style="' + tdStyle + 'text-align:center;font-weight:bold;color:' + (completado ? '#2E7D32' : '#C62828') + ';">'
         + (completado ? 'Completado' : 'Necesita apoyo') + '</td>'
       + '<td style="' + tdStyle + '">' + fechaStr + '</td>'
       + '</tr>';
   }).join('');
 
-  const totalCols = 6;
+  const totalCols = 8;
   const banner = '<tr><td colspan="' + totalCols + '" style="background:#0D47A1;color:#ffffff;font-weight:bold;padding:8px;font-size:13px;">'
-    + escapeHTML((ex.titulo || 'Examen') + (ex.curso ? ' — ' + ex.curso : '') + ' · Estado: Completado (precisión ≥70%) / Necesita apoyo (menos de 70%)')
+    + escapeHTML((ex.titulo || 'Examen') + (ex.curso ? ' — ' + ex.curso : '') + ' · Total preguntas calificables: ' + totalCalificables + ' · Estado: Completado (precisión ≥70%) / Necesita apoyo (menos de 70%)')
     + '</td></tr>';
 
   const headerRow = '<tr>'
     + '<th style="' + thStyle + '">Nombre</th>'
     + '<th style="' + thStyle + '">Número/Cédula</th>'
+    + '<th style="' + thStyle + '">Correctas</th>'
+    + '<th style="' + thStyle + '">Incorrectas</th>'
     + '<th style="' + thStyle + '">Precisión</th>'
     + '<th style="' + thStyle + '">Puntuación</th>'
     + '<th style="' + thStyle + '">Estado</th>'

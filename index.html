@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.24" />
+  <link rel="stylesheet" href="styles.css?v=18.25" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.24" />
+  <link rel="stylesheet" href="auth.css?v=18.25" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3428,6 +3428,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v18.25<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: el Excel del informe mostraba fechas y notación científica en vez de los valores reales</div>
+              <ul class="about-ver-items">
+                <li>Excel autodetecta el contenido de una celda por su forma: "10/15" lo interpretaba como fecha y lo mostraba como "oct-15", y una cédula larga la volvía notación científica ("7.79885E+12"). Las columnas de Número/Cédula y Puntuación ahora se marcan explícitamente como texto para Excel, así se ven tal cual se escribieron.</li>
+                <li>Nuevo: columnas separadas de <strong>Correctas</strong> e <strong>Incorrectas</strong> (conteo de respuestas, no puntos) en el Excel exportado.</li>
+                <li>Nuevo: el Informe dentro de la app también muestra ahora una tabla de estudiantes con sus respuestas correctas/incorrectas, precisión y estado, ordenada de menor a mayor precisión para ver primero quién necesita más apoyo.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8712,9 +8728,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.24"></script>
+  <script src="app.js?v=18.25"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.24"></script>
+  <script src="auth.js?v=18.25"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
