@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.22" />
+  <link rel="stylesheet" href="styles.css?v=18.23" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.22" />
+  <link rel="stylesheet" href="auth.css?v=18.23" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3132,8 +3132,8 @@
     <div class="modal-box" style="max-width:960px;width:97%;max-height:90vh;display:flex;flex-direction:column;">
       <div class="modal-header">
         <h3>
-          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">bar_chart</span>
-          <span id="examenes-resultados-titulo">Resultados</span>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">insights</span>
+          <span id="examenes-resultados-titulo">Informes</span>
         </h3>
         <button class="modal-close" onclick="cerrarResultadosExamen()"><span class="material-icons">close</span></button>
       </div>
@@ -3425,6 +3425,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v18.23<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Informe de examen (promedio, distribución de notas y qué preguntas fallaron más)</div>
+              <ul class="about-ver-items">
+                <li>El botón "Resultados" de cada examen pasa a llamarse "Informes" y ahora abre primero una pestaña de análisis en vez de la lista cruda de respuestas: promedio del curso, nota más alta y más baja, cuántos estudiantes aprobaron (≥70%), la distribución de calificaciones por rango, y el desempeño de cada pregunta ordenado de peor a mejor -- para ver de un vistazo qué pregunta (y qué tema) le costó más al curso, en vez de tener que revisar estudiante por estudiante para notar el patrón. La lista de respuestas individuales de siempre sigue disponible en la otra pestaña, "Respuestas individuales".</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8681,9 +8695,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.22"></script>
+  <script src="app.js?v=18.23"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.22"></script>
+  <script src="auth.js?v=18.23"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

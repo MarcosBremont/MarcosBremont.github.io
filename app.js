@@ -26634,7 +26634,7 @@ function renderizarExamenes() {
         <div style="font-size:.74rem;color:#9E9E9E;">${nP} pregunta${nP !== 1 ? 's' : ''} · ${fecha}</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-        <button onclick="verResultadosExamen('${ex.id}')" style="${bS}background:#F3E5F5;color:#6A1B9A;"><span class="material-icons" style="font-size:15px;">bar_chart</span>Resultados</button>
+        <button onclick="verResultadosExamen('${ex.id}')" style="${bS}background:#F3E5F5;color:#6A1B9A;"><span class="material-icons" style="font-size:15px;">insights</span>Informes</button>
         <button onclick="abrirCompartirExamen('${ex.id}')" style="${bS}background:#E3F2FD;color:#1565C0;"><span class="material-icons" style="font-size:15px;">qr_code_2</span>Compartir</button>
         <button onclick="imprimirExamen('${ex.id}')" style="${bS}background:#FFEBEE;color:#C62828;"><span class="material-icons" style="font-size:15px;">print</span>Imprimir</button>
         <button onclick="duplicarExamen('${ex.id}')" style="${bS}background:#E8F5E9;color:#2E7D32;"><span class="material-icons" style="font-size:15px;">content_copy</span>Duplicar</button>
@@ -27256,6 +27256,8 @@ async function verResultadosExamen(examenId) {
     const hayPreguntasManuales = preguntas.length > preguntasCalificables.length;
     const vfLabel = v => v === 'V' ? 'Verdadero' : (v === 'F' ? 'Falso' : v);
 
+    const informeHtml = _construirInformeExamen(respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto);
+
     const tarjetas = respuestas.map((r, ri) => {
       const fechaObj = r.fechaEnvio && r.fechaEnvio.toDate ? r.fechaEnvio.toDate() : null;
       const fechaStr = fechaObj ? fechaObj.toLocaleDateString('es-DO') + ' · ' + fechaObj.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -27324,7 +27326,7 @@ async function verResultadosExamen(examenId) {
       </div>`;
     }).join('');
 
-    body.innerHTML = `
+    const respuestasHtml = `
       <div style="display:flex;align-items:center;gap:10px;background:#E3F2FD;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:.83rem;color:#1565C0;font-weight:600;">
         <span class="material-icons" style="font-size:18px;">people</span>
         ${respuestas.length} estudiante${respuestas.length !== 1 ? 's' : ''} respondieron · ${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}
@@ -27332,9 +27334,135 @@ async function verResultadosExamen(examenId) {
       </div>
       ${hayPreguntasManuales ? `<div style="font-size:.76rem;color:#E65100;margin-bottom:16px;">Este examen tiene preguntas abiertas o sin respuesta correcta marcada -- esas quedan fuera del puntaje automático y hay que revisarlas a mano.</div>` : '<div style="margin-bottom:16px;"></div>'}
       ${tarjetas}`;
+
+    body.innerHTML = `
+      <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1.5px solid #E8EDF2;">
+        <button type="button" id="ex-inf-tab-informe" onclick="_switchTabInformeExamen('informe')" style="background:none;border:none;border-bottom:2.5px solid #6A1B9A;color:#6A1B9A;padding:8px 4px;margin-right:16px;font-size:.85rem;font-weight:700;cursor:pointer;">Informe</button>
+        <button type="button" id="ex-inf-tab-respuestas" onclick="_switchTabInformeExamen('respuestas')" style="background:none;border:none;border-bottom:2.5px solid transparent;color:#9E9E9E;padding:8px 4px;font-size:.85rem;font-weight:700;cursor:pointer;">Respuestas individuales</button>
+      </div>
+      <div id="ex-inf-panel-informe">${informeHtml}</div>
+      <div id="ex-inf-panel-respuestas" style="display:none;">${respuestasHtml}</div>`;
   } catch (e) {
     body.innerHTML = '<div style="color:#C62828;padding:16px;font-size:.83rem;">Error al cargar: ' + e.message + '</div>';
   }
+}
+
+function _switchTabInformeExamen(tab) {
+  const panelInforme = document.getElementById('ex-inf-panel-informe');
+  const panelResp = document.getElementById('ex-inf-panel-respuestas');
+  const tabInforme = document.getElementById('ex-inf-tab-informe');
+  const tabResp = document.getElementById('ex-inf-tab-respuestas');
+  if (!panelInforme || !panelResp || !tabInforme || !tabResp) return;
+  const activo = 'border-bottom:2.5px solid #6A1B9A;color:#6A1B9A;';
+  const inactivo = 'border-bottom:2.5px solid transparent;color:#9E9E9E;';
+  const base = 'background:none;border:none;padding:8px 4px;font-size:.85rem;font-weight:700;cursor:pointer;';
+  if (tab === 'respuestas') {
+    panelInforme.style.display = 'none';
+    panelResp.style.display = '';
+    tabInforme.style.cssText = base + inactivo + 'margin-right:16px;';
+    tabResp.style.cssText = base + activo;
+  } else {
+    panelInforme.style.display = '';
+    panelResp.style.display = 'none';
+    tabInforme.style.cssText = base + activo + 'margin-right:16px;';
+    tabResp.style.cssText = base + inactivo;
+  }
+}
+
+/** Arma el HTML del "Informe" de un examen: resumen (promedio, nota más alta
+ *  y más baja, % de aprobados), distribución de calificaciones por rango, y
+ *  análisis por pregunta ordenado de peor a mejor desempeño -- para que las
+ *  preguntas/temas más flojos salten a la vista primero, en vez de tener que
+ *  revisar estudiante por estudiante para notar un patrón. */
+function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto) {
+  if (puntosPosiblesAuto === 0) {
+    return `<div style="font-size:.85rem;color:#546E7A;background:#FFF3E0;border-radius:8px;padding:14px 16px;line-height:1.6;">
+      Este examen todavía no tiene preguntas de Selección múltiple o Verdadero/Falso con la respuesta correcta marcada,
+      así que no hay puntaje que analizar todavía. Marca la respuesta correcta en el editor del examen para ver el informe acá.
+    </div>`;
+  }
+
+  const puntajes = respuestas.map(r => preguntasCalificables.reduce((s, p) =>
+    s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0) / puntosPosiblesAuto * 100);
+
+  const promedio = puntajes.reduce((a, b) => a + b, 0) / puntajes.length;
+  const maximo = Math.max(...puntajes);
+  const minimo = Math.min(...puntajes);
+  const aprobados = puntajes.filter(v => v >= 70).length;
+
+  const rangos = [
+    { label: '90-100%', min: 90, max: 100.001, color: '#2E7D32' },
+    { label: '80-89%', min: 80, max: 90, color: '#66BB6A' },
+    { label: '70-79%', min: 70, max: 80, color: '#FDD835' },
+    { label: '60-69%', min: 60, max: 70, color: '#FB8C00' },
+    { label: '0-59%', min: 0, max: 60, color: '#E53935' }
+  ];
+  const maxEnRango = Math.max(1, ...rangos.map(r => puntajes.filter(v => v >= r.min && v < r.max).length));
+  const distribucionHtml = rangos.map(r => {
+    const n = puntajes.filter(v => v >= r.min && v < r.max).length;
+    const anchoPct = Math.round(n / maxEnRango * 100);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:.75rem;color:#616161;width:64px;flex-shrink:0;">${r.label}</span>
+      <div style="flex:1;background:#F0F4F8;border-radius:5px;overflow:hidden;height:16px;">
+        <div style="width:${n ? Math.max(anchoPct, 4) : 0}%;background:${r.color};height:100%;"></div>
+      </div>
+      <span style="font-size:.75rem;color:#616161;width:56px;flex-shrink:0;text-align:right;">${n} est.</span>
+    </div>`;
+  }).join('');
+
+  const analisisPreguntas = preguntasCalificables
+    .map((p, i) => {
+      const total = respuestas.length;
+      const correctas = respuestas.filter(r => (r.respuestas || {})[p.id] === p.respuestaCorrecta).length;
+      const pct = total ? Math.round(correctas / total * 100) : 0;
+      return { enunciado: p.enunciado, correctas, total, pct, numero: preguntas.indexOf(p) + 1 };
+    })
+    .sort((a, b) => a.pct - b.pct);
+
+  const colorPct = pct => pct < 50 ? '#C62828' : (pct < 70 ? '#E65100' : '#2E7D32');
+  const preguntasHtml = analisisPreguntas.map(a => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F4F8;">
+      <span style="font-size:.7rem;font-weight:700;background:#F5F5F5;color:#616161;padding:3px 7px;border-radius:4px;flex-shrink:0;">P${a.numero}</span>
+      <span style="flex:1;min-width:0;font-size:.82rem;color:#424242;line-height:1.4;">${_eHtml(a.enunciado)}</span>
+      <div style="flex-shrink:0;text-align:right;">
+        <div style="font-size:.85rem;font-weight:700;color:${colorPct(a.pct)};">${a.pct}%</div>
+        <div style="font-size:.68rem;color:#9E9E9E;">${a.correctas}/${a.total} correctas</div>
+      </div>
+    </div>`).join('');
+
+  const peorPregunta = analisisPreguntas[0];
+  const alertaPeor = (peorPregunta && peorPregunta.pct < 60)
+    ? `<div style="display:flex;gap:8px;align-items:flex-start;background:#FFEBEE;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.82rem;color:#B71C1C;line-height:1.5;">
+        <span class="material-icons" style="font-size:18px;flex-shrink:0;">lightbulb</span>
+        <span>La pregunta P${peorPregunta.numero} tuvo el desempeño más bajo (${peorPregunta.pct}% de aciertos) -- puede valer la pena repasar ese tema con el curso.</span>
+      </div>`
+    : '';
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px;">
+      <div style="background:#E3F2FD;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;color:#1565C0;">${Math.round(promedio)}%</div>
+        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Promedio</div>
+      </div>
+      <div style="background:#E8F5E9;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;color:#2E7D32;">${Math.round(maximo)}%</div>
+        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Nota más alta</div>
+      </div>
+      <div style="background:#FFEBEE;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;color:#C62828;">${Math.round(minimo)}%</div>
+        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Nota más baja</div>
+      </div>
+      <div style="background:#F3E5F5;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;color:#6A1B9A;">${aprobados}/${puntajes.length}</div>
+        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Aprobados (≥70%)</div>
+      </div>
+    </div>
+    ${alertaPeor}
+    <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:10px;">Distribución de calificaciones</div>
+    <div style="margin-bottom:22px;">${distribucionHtml}</div>
+    <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;">Desempeño por pregunta</div>
+    <div style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">De menor a mayor porcentaje de aciertos -- las primeras son las que más le costaron al curso.</div>
+    <div>${preguntasHtml}</div>`;
 }
 
 function _toggleResDetalle(id, header) {
