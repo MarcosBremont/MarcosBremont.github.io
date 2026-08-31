@@ -23076,6 +23076,11 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // el PDF sí las tiene. Con esto, la próxima vez que pase, alcanza con
   // pedir la consola en vez de otra ronda de capturas de pantalla.
   console.log('[Currículo] Texto de la columna RA (columnas separadas: ' + columnasSeparadas + '):', textoRA.slice(0, 4000));
+  // Mismo diagnóstico para la columna de Criterios -- para confirmar si una
+  // palabra que falta en la descripción de un RA (ej. "y", "de", "que") se
+  // fue a parar acá por error de clasificación de columna, o si se pierde
+  // directamente y no aparece en ninguna de las dos.
+  console.log('[Currículo] Texto de la columna CE (columnas separadas: ' + columnasSeparadas + '):', textoCE.slice(0, 4000));
 
   const ras = posicionesRAModulo.map((ra, idxRA) => {
     const descripcion = textoRA.substring(ra.finMarcador, finDeBloqueRA(ra.indice)).replace(/\s+/g, ' ').trim();
