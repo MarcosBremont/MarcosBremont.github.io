@@ -5785,13 +5785,14 @@ function imprimirPDF() {
 // bytes"). Mismo patron ya usado para el CV del Portafolio Docente
 // (_guardarPortafolioCV/cargarPortafolioCV): se parte el base64 en
 // documentos de ~900 KB dentro de una subcoleccion, con un doc de metadatos
-// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto'.
+// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto', 'informeExamen'.
 const PLANTILLA_CENTRO_CHUNK_CHARS = 900000;
 const PLANTILLA_CENTRO_CAMPOS = {
   planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
   diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
   psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' },
-  impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' }
+  impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' },
+  informeExamen: { base64: 'plantillaInformeExamenBase64', nombre: 'plantillaInformeExamenNombre', fallback: 'plantilla_informe_examen.docx' }
 };
 
 function _plantillasCentroChunksRef(centroId) {
@@ -6377,6 +6378,34 @@ async function _getPlantillaReportePsicologiaCentro() {
     const centro = snap.docs[0].data();
     const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'psicologia');
     if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
+  }
+  return null;
+}
+
+/** Igual que _getPlantillaReportePsicologiaCentro() pero para la plantilla de
+ *  Informe de Evaluación de Exámenes (Superadmin > Centro Educativo). */
+async function _getPlantillaInformeExamenCentro() {
+  if (!window.currentUser) return null;
+  let centroId = null;
+  const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+  if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+  if (!centroId) {
+    const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+  }
+  if (centroId) {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (centroDoc.exists) {
+      const centro = centroDoc.data();
+      const result = await _cargarPlantillaCentroChunked(centroId, 'informeExamen');
+      if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '', centroLogoUrl: centro.logoUrl || '' };
+    }
+  }
+  const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_informeExamen', '==', true).limit(1).get();
+  if (!snap.empty) {
+    const centro = snap.docs[0].data();
+    const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'informeExamen');
+    if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '', centroLogoUrl: centro.logoUrl || '' };
   }
   return null;
 }
@@ -27768,11 +27797,6 @@ async function _generarInformeCombinadoWord() {
   try {
     const filas = await Promise.all(examenes.map(ex => _calcularFilaInformeCombinado(ex)));
     const parrafos = _construirNarrativaInformeCombinado(filas, asignatura);
-
-    const thStyle = 'background:#9575CD;color:#ffffff;font-weight:bold;padding:8px 10px;border:1px solid #7E57C2;text-align:center;';
-    const tdStyle = 'padding:7px 10px;border:1px solid #CFD8DC;text-align:center;';
-    const tdStyleTexto = tdStyle + 'mso-number-format:\'\\@\';';
-
     const totales = filas.reduce((t, f) => ({
       tomaron: t.tomaron + f.tomaron,
       masculino: t.masculino + f.masculino,
@@ -27782,64 +27806,21 @@ async function _generarInformeCombinadoWord() {
       noLaTomo: (t.noLaTomo === null || f.noLaTomo === null) ? null : t.noLaTomo + f.noLaTomo
     }), { tomaron: 0, masculino: 0, femenino: 0, aprobados: 0, noAprobados: 0, noLaTomo: 0 });
 
-    const filaHtml = f => `<tr>
-      <td style="${tdStyleTexto}text-align:left;font-weight:bold;">${escapeHTML(f.ex.curso || f.ex.titulo || '—')}</td>
-      <td style="${tdStyle}">${f.tomaron}</td>
-      <td style="${tdStyle}">${f.masculino}</td>
-      <td style="${tdStyle}">${f.femenino}</td>
-      <td style="${tdStyle}">${f.aprobados}</td>
-      <td style="${tdStyle}">${f.noAprobados}</td>
-      <td style="${tdStyle}">${f.noLaTomo === null ? '—' : f.noLaTomo}</td>
-    </tr>`;
+    const datos = { titulo, asignatura, maestra, fechaStr, filas, totales, parrafos };
 
-    const tablaHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;width:100%;margin-top:10px;">'
-      + '<tr>'
-        + '<td colspan="2" style="border:1px solid #CFD8DC;padding:8px 10px;">'
-          + (asignatura ? '<strong>Asignatura:</strong> ' + escapeHTML(asignatura) + '.' : '') + '<br>'
-          + (maestra ? '<strong>Maestro/a:</strong> ' + escapeHTML(maestra) + '.' : '')
-        + '</td>'
-        + '<td colspan="5" style="border:1px solid #CFD8DC;padding:8px 10px;">'
-          + '<strong>Fecha de implementación:</strong><br>' + escapeHTML(fechaStr)
-        + '</td>'
-      + '</tr>'
-      + '<tr>'
-        + '<th style="' + thStyle + '">Curso</th>'
-        + '<th style="' + thStyle + '">Cantidad de estudiantes que tomaron la prueba</th>'
-        + '<th style="' + thStyle + '">Masculino</th>'
-        + '<th style="' + thStyle + '">Femenino</th>'
-        + '<th style="' + thStyle + '">Aprobados</th>'
-        + '<th style="' + thStyle + '">No aprobados</th>'
-        + '<th style="' + thStyle + '">No la tomó</th>'
-      + '</tr>'
-      + filas.map(filaHtml).join('')
-      + `<tr>
-          <td style="${tdStyle}text-align:left;font-weight:bold;">Total</td>
-          <td style="${tdStyle}font-weight:bold;">${totales.tomaron}</td>
-          <td style="${tdStyle}font-weight:bold;">${totales.masculino}</td>
-          <td style="${tdStyle}font-weight:bold;">${totales.femenino}</td>
-          <td style="${tdStyle}font-weight:bold;">${totales.aprobados}</td>
-          <td style="${tdStyle}font-weight:bold;">${totales.noAprobados}</td>
-          <td style="${tdStyle}font-weight:bold;">${totales.noLaTomo === null ? '—' : totales.noLaTomo}</td>
-        </tr>`
-      + '</table>';
-
-    const bodyHTML = `<div style="font-family:Calibri,Arial,sans-serif;">`
-      + `<h2 style="text-align:center;font-size:16px;">${escapeHTML(titulo)}</h2>`
-      + parrafos.map(p => `<p style="font-size:13px;line-height:1.5;text-align:justify;margin-bottom:10px;">${escapeHTML(p)}</p>`).join('')
-      + `<h3 style="text-align:center;font-size:14px;margin-top:20px;">Resumen estadístico del monitoreo a la implementación de las evaluaciones diagnósticas</h3>`
-      + tablaHtml
-      + `</div>`;
-
-    const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
-      + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
-
-    const filename = 'informe-' + (titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.doc';
-    const blob = new Blob(['﻿' + html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Si el centro subió su plantilla institucional (Superadmin > Centro
+    // Educativo), se usa esa -- mantiene el membrete/logo real del centro.
+    // Si no hay plantilla (o falla por cualquier motivo: falta un tag, el
+    // .docx está corrupto, etc.), se cae al formato genérico de siempre en
+    // vez de dejar al docente sin nada.
+    let generadoConPlantilla = false;
+    try {
+      const plantilla = await _getPlantillaInformeExamenCentro();
+      if (plantilla) generadoConPlantilla = await _generarInformeCombinadoConPlantilla(plantilla, datos);
+    } catch (e) {
+      console.warn('[Informe combinado] No se pudo usar la plantilla del centro, se usa el formato genérico:', e.message);
+    }
+    if (!generadoConPlantilla) _descargarInformeCombinadoGenerico(datos);
 
     cerrarInformeCombinadoExamenes();
     mostrarToast('Informe generado', 'success');
@@ -27849,6 +27830,142 @@ async function _generarInformeCombinadoWord() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Generar Word'; }
   }
+}
+
+/** Intenta generar el informe combinado con la plantilla .docx del centro
+ *  (docxtemplater, mismo patrón que Psicología/Impacto/Diaria). Placeholders
+ *  ver _mostrarGuiaPlaceholdersInformeExamen(). Devuelve true si lo logró
+ *  (y ya disparó la descarga), false si no había plantilla o falló, para que
+ *  el llamador caiga al formato genérico. */
+async function _generarInformeCombinadoConPlantilla(plantilla, datos) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return false;
+
+  try {
+    const binaryStr = atob(plantilla.base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    const zip = new PizZip(bytes.buffer);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      delimiters: { start: '{', end: '}' },
+      nullGetter: () => ''
+    });
+
+    const t = datos.totales;
+    doc.render({
+      titulo: datos.titulo,
+      asignatura: datos.asignatura,
+      maestra: datos.maestra,
+      fecha_implementacion: datos.fechaStr,
+      centro: plantilla.centroNombre || '',
+      parrafo_analisis: datos.parrafos.join('\n\n'),
+      cursos: datos.filas.map(f => ({
+        curso: f.ex.curso || f.ex.titulo || '—',
+        cantidad: f.tomaron,
+        masculino: f.masculino,
+        femenino: f.femenino,
+        aprobados: f.aprobados,
+        no_aprobados: f.noAprobados,
+        no_tomo: f.noLaTomo === null ? '—' : f.noLaTomo
+      })),
+      total_cantidad: t.tomaron,
+      total_masculino: t.masculino,
+      total_femenino: t.femenino,
+      total_aprobados: t.aprobados,
+      total_no_aprobados: t.noAprobados,
+      total_no_tomo: t.noLaTomo === null ? '—' : t.noLaTomo
+    });
+
+    const out = doc.getZip().generate({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const filename = 'informe-' + (datos.titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.docx';
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (e) {
+    console.error('[Informe combinado] Error renderizando la plantilla del centro:', e);
+    mostrarToast('La plantilla del centro tiene un error (revisa los placeholders) -- se generó con el formato genérico.', 'error');
+    return false;
+  }
+}
+
+/** Formato de respaldo cuando el centro no tiene plantilla propia cargada
+ *  (o la plantilla falló al renderizar): mismo truco de HTML-con-extensión
+ *  .doc que ya usa el resto del sistema, sin depender de ningún archivo
+ *  subido. */
+function _descargarInformeCombinadoGenerico(datos) {
+  const { titulo, asignatura, maestra, fechaStr, filas, totales, parrafos } = datos;
+
+  const thStyle = 'background:#9575CD;color:#ffffff;font-weight:bold;padding:8px 10px;border:1px solid #7E57C2;text-align:center;';
+  const tdStyle = 'padding:7px 10px;border:1px solid #CFD8DC;text-align:center;';
+  const tdStyleTexto = tdStyle + 'mso-number-format:\'\\@\';';
+
+  const filaHtml = f => `<tr>
+    <td style="${tdStyleTexto}text-align:left;font-weight:bold;">${escapeHTML(f.ex.curso || f.ex.titulo || '—')}</td>
+    <td style="${tdStyle}">${f.tomaron}</td>
+    <td style="${tdStyle}">${f.masculino}</td>
+    <td style="${tdStyle}">${f.femenino}</td>
+    <td style="${tdStyle}">${f.aprobados}</td>
+    <td style="${tdStyle}">${f.noAprobados}</td>
+    <td style="${tdStyle}">${f.noLaTomo === null ? '—' : f.noLaTomo}</td>
+  </tr>`;
+
+  const tablaHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:12px;width:100%;margin-top:10px;">'
+    + '<tr>'
+      + '<td colspan="2" style="border:1px solid #CFD8DC;padding:8px 10px;">'
+        + (asignatura ? '<strong>Asignatura:</strong> ' + escapeHTML(asignatura) + '.' : '') + '<br>'
+        + (maestra ? '<strong>Maestro/a:</strong> ' + escapeHTML(maestra) + '.' : '')
+      + '</td>'
+      + '<td colspan="5" style="border:1px solid #CFD8DC;padding:8px 10px;">'
+        + '<strong>Fecha de implementación:</strong><br>' + escapeHTML(fechaStr)
+      + '</td>'
+    + '</tr>'
+    + '<tr>'
+      + '<th style="' + thStyle + '">Curso</th>'
+      + '<th style="' + thStyle + '">Cantidad de estudiantes que tomaron la prueba</th>'
+      + '<th style="' + thStyle + '">Masculino</th>'
+      + '<th style="' + thStyle + '">Femenino</th>'
+      + '<th style="' + thStyle + '">Aprobados</th>'
+      + '<th style="' + thStyle + '">No aprobados</th>'
+      + '<th style="' + thStyle + '">No la tomó</th>'
+    + '</tr>'
+    + filas.map(filaHtml).join('')
+    + `<tr>
+        <td style="${tdStyle}text-align:left;font-weight:bold;">Total</td>
+        <td style="${tdStyle}font-weight:bold;">${totales.tomaron}</td>
+        <td style="${tdStyle}font-weight:bold;">${totales.masculino}</td>
+        <td style="${tdStyle}font-weight:bold;">${totales.femenino}</td>
+        <td style="${tdStyle}font-weight:bold;">${totales.aprobados}</td>
+        <td style="${tdStyle}font-weight:bold;">${totales.noAprobados}</td>
+        <td style="${tdStyle}font-weight:bold;">${totales.noLaTomo === null ? '—' : totales.noLaTomo}</td>
+      </tr>`
+    + '</table>';
+
+  const bodyHTML = `<div style="font-family:Calibri,Arial,sans-serif;">`
+    + `<h2 style="text-align:center;font-size:16px;">${escapeHTML(titulo)}</h2>`
+    + parrafos.map(p => `<p style="font-size:13px;line-height:1.5;text-align:justify;margin-bottom:10px;">${escapeHTML(p)}</p>`).join('')
+    + `<h3 style="text-align:center;font-size:14px;margin-top:20px;">Resumen estadístico del monitoreo a la implementación de las evaluaciones diagnósticas</h3>`
+    + tablaHtml
+    + `</div>`;
+
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
+
+  const filename = 'informe-' + (titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.doc';
+  const blob = new Blob(['﻿' + html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function _toggleResDetalle(id, header) {
@@ -41525,7 +41642,7 @@ async function _renderCentrosEducativos() {
 async function _mostrarFormCentro(centroId) {
   let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
 
-  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false } };
+  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false } };
 
   if (centroId) {
     try {
@@ -41536,13 +41653,14 @@ async function _mostrarFormCentro(centroId) {
     // El base64 de cada plantilla ya no vive en este documento (se guarda en
     // chunks aparte, ver PLANTILLA_CENTRO_CAMPOS) -- se consulta si existe sin
     // traer el archivo completo, solo para mostrar el indicador "Plantilla cargada".
-    const [pPlan, pDiaria, pPsico, pImpacto] = await Promise.all([
+    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen] = await Promise.all([
       _tienePlantillaCentroChunked(centroId, 'planificacion', centro),
       _tienePlantillaCentroChunked(centroId, 'diaria', centro),
       _tienePlantillaCentroChunked(centroId, 'psicologia', centro),
-      _tienePlantillaCentroChunked(centroId, 'impacto', centro)
+      _tienePlantillaCentroChunked(centroId, 'impacto', centro),
+      _tienePlantillaCentroChunked(centroId, 'informeExamen', centro)
     ]);
-    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto };
+    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen };
   }
 
   const cont = document.getElementById('sa-contenido');
@@ -41649,6 +41767,21 @@ async function _mostrarFormCentro(centroId) {
       : '')
     + '<input type="file" id="sa-centro-plantilla-impacto" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #5E35B1;border-radius:10px;background:#EDE7F6;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#4527A0;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">insights</span> Plantilla Word para Informe de Evaluación de Exámenes (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx (con el membrete/logo del centro) para el "Informe combinado" que arma Exámenes y Pruebas. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersInformeExamen();" style="color:#5E35B1;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (plantillasInfo.informeExamen.existe
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.informeExamen.nombre || 'plantilla_informe_examen.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'informeExamen\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
+        + '<button onclick="_eliminarPlantillaInformeExamenCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el "Informe combinado" se genera igual, pero con un formato genérico sin membrete.</div>')
+    + '<input type="file" id="sa-centro-plantilla-informe-examen" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -41749,6 +41882,19 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  const fileInputInformeExamen = document.getElementById('sa-centro-plantilla-informe-examen');
+  const fileInformeExamen = fileInputInformeExamen?.files?.[0];
+  if (fileInformeExamen) {
+    if (!fileInformeExamen.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla de Informe de Evaluación', 'error');
+      return;
+    }
+    if (fileInformeExamen.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla de Informe de Evaluación no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -41810,6 +41956,17 @@ async function _guardarCentro(centroId) {
       await _guardarPlantillaCentroChunked(finalId, 'impacto', base64I, fileImpacto.name);
     }
 
+    if (fileInformeExamen && finalId) {
+      mostrarToast('Guardando plantilla de Informe de Evaluación...', 'info');
+      const readerE = new FileReader();
+      const base64E = await new Promise((resolve, reject) => {
+        readerE.onload = () => resolve(readerE.result.split(',')[1]);
+        readerE.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerE.readAsDataURL(fileInformeExamen);
+      });
+      await _guardarPlantillaCentroChunked(finalId, 'informeExamen', base64E, fileInformeExamen.name);
+    }
+
     registrarCambio(centroId ? `Centro educativo actualizado: "${nombre}"` : `Centro educativo creado: "${nombre}"`);
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
@@ -41864,6 +42021,18 @@ async function _eliminarPlantillaImpactoCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla de Reporte de Impacto: ' + e.message, 'error');
+  }
+}
+
+/** Elimina plantilla de Informe de Evaluación de Exámenes del centro */
+async function _eliminarPlantillaInformeExamenCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de Informe de Evaluación de este centro?')) return;
+  try {
+    await _eliminarPlantillaCentroChunked(centroId, 'informeExamen');
+    mostrarToast('Plantilla de Informe de Evaluación eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla de Informe de Evaluación: ' + e.message, 'error');
   }
 }
 
@@ -42089,6 +42258,70 @@ function _mostrarGuiaPlaceholdersPsicologia() {
     + '<div style="margin-top:14px;padding:12px;background:#F3E5F5;border-radius:8px;border:1px solid #E1BEE7;">'
     + '<strong style="color:#4A148C;font-size:0.82rem;">Sugerencia de diseño:</strong>'
     + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">La plantilla puede seguir el formato del formulario impreso: encabezado institucional, tabla de datos del estudiante, bloques para detalles, medidas y firmas.</p>'
+    + '</div>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+/** Muestra guía de placeholders para la plantilla del Informe combinado de
+ *  Exámenes (Superadmin > Centro Educativo > Informe de Evaluación). */
+function _mostrarGuiaPlaceholdersInformeExamen() {
+  const placeholders = [
+    ['{titulo}', 'Título del informe (ej. "Informe sobre la evaluación Diagnóstica")'],
+    ['{asignatura}', 'Asignatura escrita en el formulario'],
+    ['{maestra}', 'Nombre del maestro/a escrito en el formulario'],
+    ['{fecha_implementacion}', 'Fecha elegida en el formulario'],
+    ['{centro}', 'Nombre del centro educativo'],
+    ['{parrafo_analisis}', 'El o los párrafos de análisis, generados a partir de los resultados reales'],
+    ['{total_cantidad}', 'Total de estudiantes que tomaron la prueba (suma de todos los cursos elegidos)'],
+    ['{total_masculino}', 'Total Masculino'],
+    ['{total_femenino}', 'Total Femenino'],
+    ['{total_aprobados}', 'Total Aprobados'],
+    ['{total_no_aprobados}', 'Total No aprobados'],
+    ['{total_no_tomo}', 'Total No la tomó (— si no se pudo calcular para algún curso)']
+  ];
+
+  const rows = placeholders.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#4527A0;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  const tablaInfo = `<div style="margin-top:14px;padding:12px;background:#EDE7F6;border-radius:8px;border:1px solid #D1C4E9;">
+    <strong style="color:#4527A0;font-size:0.82rem;">Tabla por curso (loop):</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">En tu plantilla Word, crea la fila de datos de la tabla (una fila, debajo de los encabezados) y pon estos tags en las celdas -- se repite sola una vez por cada examen que elijas al generar el informe:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.72rem;margin:6px 0;">
+      <tr style="background:#5E35B1;color:#fff;">
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">Curso</th>
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">Cantidad</th>
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">Masculino</th>
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">Femenino</th>
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">Aprobados</th>
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">No aprobados</th>
+        <th style="padding:4px 6px;border:1px solid #5E35B1;">No la tomó</th>
+      </tr>
+      <tr>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{#cursos}{curso}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{cantidad}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{masculino}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{femenino}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{aprobados}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{no_aprobados}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#4527A0;">{no_tomo}{/cursos}</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;"><code>{#cursos}</code> va pegado al tag de la PRIMERA celda de la fila, y <code>{/cursos}</code> pegado al tag de la ÚLTIMA celda -- así docxtemplater sabe que toda esa fila se repite. La fila de "Total" debajo NO lleva {#cursos}, usa los placeholders {total_*} de la tabla de arriba.</p>
+  </div>`;
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Informe de Evaluación de Exámenes';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Usa estos placeholders en tu plantilla Word (con el membrete/logo del centro ya puesto a mano) para que el "Informe combinado" de Exámenes y Pruebas los rellene con los datos reales:</p>'
+    + '<div style="max-height:260px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#5E35B1;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #5E35B1;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#5E35B1;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #5E35B1;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + tablaInfo
+    + '<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
+    + '<strong style="color:#E65100;font-size:0.82rem;">Si no subes ninguna plantilla:</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">El "Informe combinado" se sigue generando igual, con un formato genérico (sin membrete). Subir esta plantilla es opcional, solo para que el documento salga con la identidad visual real del centro.</p>'
     + '</div>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
