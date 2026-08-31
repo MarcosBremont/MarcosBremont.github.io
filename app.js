@@ -22686,7 +22686,12 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   // se vio en un documento real un formato de 2 niveles ("CE1.1"..."CE1.11")
   // donde el primer número es simplemente la posición ordinal del RA dentro
   // de la tabla del módulo, no relacionado con el número propio del RA.
-  const esRA = s => /RAE?\s*\d+(?:\.\d+)?/.test(s);
+  // "(?:XX\.?\s*)?" -- un documento real trae el marcador como "RAXX1:" en
+  // vez de un número: la plantilla oficial del currículo dejó "XX" sin
+  // rellenar con el número real, así que el propio PDF trae ese texto tal
+  // cual. Se tolera esa "XX" (con o sin punto/espacio) entre "RA" y el
+  // dígito, en vez de no reconocer el marcador en absoluto.
+  const esRA = s => /RAE?\s*(?:XX\.?\s*)?\d+(?:\.\d+)?/.test(s);
   const esCE = s => /CE\s*\d+\.\d+(?:\.\d+)?/.test(s);
   const xRA = itemsRelevantes.filter(it => esRA(it.str)).map(it => it.x);
   const xCE = itemsRelevantes.filter(it => esCE(it.str)).map(it => it.x);
@@ -22875,7 +22880,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // El primer RA del módulo tampoco sigue siempre el mismo formato -- un
   // módulo real usa "RA4:" (sin ".1") para el primero y recién decimal desde
   // el segundo ("RA4.2:") -- el ".N" es opcional para no perderlo.
-  const matchPrimerRA = /RAE?\s*\d+(?:\.\d+)?/i.exec(textoModulo);
+  const matchPrimerRA = /RAE?\s*(?:XX\.?\s*)?\d+(?:\.\d+)?/i.exec(textoModulo);
   // Cuando el módulo solo tiene UNA Unidad de Competencia (no hay
   // posicionesUC[1] que la acote), el límite caía directo en el primer RA --
   // pero entre la UC y el primer RA suele estar el encabezado de la tabla
@@ -22938,8 +22943,11 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // "CE3.10.1. texto" (con un punto extra que "CE3.1.1 texto" no tiene) --
   // exigirla dejaba esos RA/criterios sin reconocer del todo. La parte
   // decimal también es OPCIONAL: un módulo real usa "RA4:" (sin ".1") para
-  // el primer RA y recién decimal desde el segundo ("RA4.2:").
-  const regexRA = /RAE?\s*(\d+(?:\.\d+)?)\s*[:.\-]?\s*/g;
+  // el primer RA y recién decimal desde el segundo ("RA4.2:"). Y "(?:XX\.?\s*)?"
+  // tolera un "RAXX1:" real -- la plantilla oficial de ese currículo dejó
+  // "XX" sin rellenar con el número real del RA, y el PDF trae ese texto tal
+  // cual; se captura igual solo el dígito final como número del RA.
+  const regexRA = /RAE?\s*(?:XX\.?\s*)?(\d+(?:\.\d+)?)\s*[:.\-]?\s*/g;
   const posicionesRA = [];
   let m;
   while ((m = regexRA.exec(textoRA)) !== null) {

@@ -30,9 +30,9 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.31" />
+  <link rel="stylesheet" href="styles.css?v=18.32" />
   <!-- Auth -->
-  <link rel="stylesheet" href="auth.css?v=18.31" />
+  <link rel="stylesheet" href="auth.css?v=18.32" />
   <!-- Splash loader -->
   <style>
     #splash-loader {
@@ -3480,6 +3480,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v18.32<span class="about-ver-fecha">Ago
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" no reconocía un RA marcado como "RAXX1" en vez de un número real</div>
+              <ul class="about-ver-items">
+                <li>Un currículo real trae el Resultado de Aprendizaje escrito como "RAXX1:" en vez de "RA3.1:" -- la plantilla oficial del documento parece haber dejado "XX" sin reemplazar por el número real. El sistema buscaba un dígito justo después de "RA" y no reconocía ese marcador en absoluto, así que el módulo se ubicaba bien pero salía "no tiene RA reconocibles".</li>
+                <li>Ahora se tolera ese "XX" (con o sin punto/espacio) entre "RA" y el número, en los tres lugares que reconocen un marcador de RA -- probado contra el caso real y contra los formatos normales ("RA3.1", "RA4") para no afectarlos.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8855,9 +8870,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.31"></script>
+  <script src="app.js?v=18.32"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.31"></script>
+  <script src="auth.js?v=18.32"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
