@@ -2868,7 +2868,7 @@ function _agregarNuevoEC() {
   const siguiente = `E.C.${parseInt(partes[0] || 1) + 1}.${partes[1] || 1}.${partes[2] || 1}`;
 
   const NIVELES = [
-    { val: 'conocimiento', label: 'Conocer' },
+    { val: 'conocimiento', label: 'Recordar' },
     { val: 'comprension', label: 'Comprensión' },
     { val: 'aplicacion', label: 'Aplicación' },
     { val: 'actitudinal', label: 'Actitudinal' },
@@ -2986,7 +2986,7 @@ function renderizarEC(listaEC) {
 
 
 
-    const nombreNivel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' }[ec.nivel];
+    const nombreNivel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' }[ec.nivel];
 
 
 
@@ -3285,7 +3285,7 @@ function _editarNivelEC(idx, chipEl) {
   document.querySelectorAll('.ec-nivel-dropdown').forEach(d => d.remove());
 
   const NIVELES = [
-    { val: 'conocimiento', label: 'Conocer', color: '#1565C0' },
+    { val: 'conocimiento', label: 'Recordar', color: '#1565C0' },
     { val: 'comprension', label: 'Comprensión', color: '#2E7D32' },
     { val: 'aplicacion', label: 'Aplicación', color: '#E65100' },
     { val: 'actitudinal', label: 'Actitudinal', color: '#6A1B9A' },
@@ -5275,7 +5275,7 @@ function renderizarVistaPrevia() {
 
 
 
-  const nivelLabel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
 
 
@@ -5357,7 +5357,7 @@ function renderizarVistaPrevia() {
 
 
   // Tabla de actividades agrupada por EC (con rowspan)
-  const nivelLabelAct = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabelAct = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
   // Agrupar actividades por EC manteniendo orden
   const _actsSeqVP = {};
@@ -6113,7 +6113,7 @@ async function _exportarConPlantillaCentro() {
   // Construir filas para loop de docxtemplater (tabla en Word)
   // Usamos marcadores __VMERGE__ para celdas que deben fusionarse verticalmente
   // y __VSTART__ para la primera celda del grupo (restart del merge)
-  const nivelLabelTpl = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabelTpl = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
   const actividades = [];
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
@@ -23689,7 +23689,7 @@ function _exportarWordHTML() {
   const ra = planificacion.ra || {};
   const ec = planificacion.elementosCapacidad || [];
   const acts = planificacion.actividades || [];
-  const nivelLabel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
   // Tabla EC
   let tablaEC = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
@@ -28095,7 +28095,7 @@ function renderizarDiarias() {
 
 
 
-  const nivLabel = { conocimiento: 'Conocer', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
 
 
 
@@ -41290,7 +41290,7 @@ REGLAS PARA LOS EC:
 - NUNCA menciones "CE1", "CE2", "criterios de evaluación", "en correspondencia con" en los enunciados.
 - Además del enunciado, cada EC debe declarar en el campo "contraste" con cuáles criterios de evaluación se relaciona temáticamente, citando 1 o 2 de los códigos "CE.n" listados arriba (ej. ["CE.1"] o ["CE.1","CE.3"]). Citar el código en "contraste" NO es lo mismo que copiar su texto en el enunciado -- eso sigue prohibido. Todo EC debe tener al menos un código en "contraste" si hay criterios definidos; si la lista de criterios está vacía, deja "contraste" como [].
 - El VERBO debe corresponder al nivel de Bloom asignado:
-  * Conocer: Identificar, Reconocer, Clasificar, Enumerar, Definir
+  * Recordar: Identificar, Reconocer, Clasificar, Enumerar, Definir
   * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
   * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
   * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
