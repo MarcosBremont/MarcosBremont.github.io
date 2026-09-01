@@ -28025,6 +28025,7 @@ async function _generarInstrumentoExamenConPlantilla(plantilla, datos) {
       distrito: plantilla.centroDistrito || '',
       director: plantilla.director || '',
       coordinador: plantilla.coordinador || '',
+      docente: datos.ex.docenteNombre || '',
       grado_seccion: datos.ex.curso || '',
       modulo_formativo: datos.ex.titulo || '',
       asignatura: datos.ex.materia || '',
@@ -28074,8 +28075,8 @@ function _descargarInstrumentoExamenGenerico(datos, plantilla) {
 
   const encabezadoHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;margin-bottom:10px;">'
     + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Centro:</strong> ' + escapeHTML(p.centroNombre || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Código:</strong> ' + escapeHTML(p.centroCodigo || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Distrito:</strong> ' + escapeHTML(p.centroDistrito || '') + '</td></tr>'
-    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Director/a:</strong> ' + escapeHTML(p.director || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Coordinador/a:</strong> ' + escapeHTML(p.coordinador || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Grado/Sección:</strong> ' + escapeHTML(ex.curso || '') + '</td></tr>'
-    + '<tr><td colspan="3" style="' + tdStyle + 'text-align:left;"><strong>Módulo formativo:</strong> ' + escapeHTML(ex.titulo || '') + '</td></tr>'
+    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Director/a:</strong> ' + escapeHTML(p.director || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Docente:</strong> ' + escapeHTML(ex.docenteNombre || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Grado/Sección:</strong> ' + escapeHTML(ex.curso || '') + '</td></tr>'
+    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Coordinador/a:</strong> ' + escapeHTML(p.coordinador || '') + '</td><td colspan="2" style="' + tdStyle + 'text-align:left;"><strong>Módulo formativo:</strong> ' + escapeHTML(ex.titulo || '') + '</td></tr>'
     + '</table>';
 
   const tablaHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;">'
@@ -42781,6 +42782,7 @@ function _mostrarGuiaPlaceholdersInstrumentoExamen() {
     ['{distrito}', 'Distrito Educativo del centro'],
     ['{director}', 'Director/a del centro (Superadmin > Centro Educativo)'],
     ['{coordinador}', 'Coordinador/a del centro (Superadmin > Centro Educativo)'],
+    ['{docente}', 'Nombre del docente que creó el examen'],
     ['{grado_seccion}', 'Curso/sección del examen que se está exportando'],
     ['{modulo_formativo}', 'Título del examen'],
     ['{asignatura}', 'Materia del examen (si se completó al crearlo)']
