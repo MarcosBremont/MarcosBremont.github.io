@@ -3151,7 +3151,7 @@
           <button onclick="exportarInformeExamenWord()" style="background:#E3F2FD;color:#1565C0;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
             <span class="material-icons" style="font-size:16px;">description</span>Exportar a Word
           </button>
-          <button onclick="exportarInstrumentoExamenWord()" hidden style="background:#E0F2F1;color:#00695C;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          <button onclick="exportarInstrumentoExamenWord()" hidden style="display:none;background:#E0F2F1;color:#00695C;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;align-items:center;gap:6px;">
             <span class="material-icons" style="font-size:16px;">checklist</span>Exportar Instrumento
           </button>
           <button onclick="abrirPlanReforzamiento()" style="background:#FFF3E0;color:#E65100;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
@@ -3504,6 +3504,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.44<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: el botón "Exportar Instrumento" seguía visible pese a estar oculto</div>
+              <ul class="about-ver-items">
+                <li>El botón se ocultó en v18.40 con el atributo <code>hidden</code>, pero ese mismo elemento tenía <code>display:inline-flex</code> puesto directo en su estilo -- un estilo en línea siempre gana sobre la regla <code>[hidden]{display:none}</code> del navegador, así que el botón seguía mostrándose. Ahora el estilo en línea fuerza <code>display:none</code> también.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9043,9 +9057,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.43"></script>
+  <script src="app.js?v=18.44"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.43"></script>
+  <script src="auth.js?v=18.44"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
