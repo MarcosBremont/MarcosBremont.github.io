@@ -3508,6 +3508,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v18.49<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Cargar Currículo" no reconocía el código "MF_016_3" (guion bajo entre letras y número)</div>
+              <ul class="about-ver-items">
+                <li>Todos los formatos de código soportados hasta ahora tenían las letras pegadas directo al número (ej. "MF015_3", o con prefijo institucional "AFYD-MF015_3") -- un documento real (Módulo 8: Inglés en Actividades de Turismo y Hostelería) usa "MF_016_3", con un guion bajo extra entre las letras y el número, que el limpiador de código no reconocía y devolvía "no se encontró ese código".</li>
+                <li>Ahora también tolera ese guion bajo extra, verificado contra los 8 formatos ya soportados (con y sin prefijo institucional, con espacios sueltos por corrupción de fuente, con texto sobrante detrás) para confirmar que ninguno se rompe.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v18.48<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9115,9 +9130,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.48"></script>
+  <script src="app.js?v=18.49"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.48"></script>
+  <script src="auth.js?v=18.49"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

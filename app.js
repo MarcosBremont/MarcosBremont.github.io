@@ -22546,7 +22546,11 @@ const _PATRON_CODIGO_LAXO = '[A-Za-z0-9_\\-](?:[ ]?[A-Za-z0-9_\\-]){1,40}';
  *  '' (no era un código real después de "Código:"). */
 function _limpiarCodigoLaxo(capturado) {
   const sinEspacios = (capturado || '').replace(/\s+/g, '');
-  const m = /^[A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?\d{2,4}_\d/i.exec(sinEspacios);
+  // El "_?" antes de los dígitos tolera el formato "MF_016_3" (guion bajo
+  // entre el prefijo de letras y el número, ej. Módulo 8 "Inglés en
+  // actividades de turismo y hostelería") -- distinto de "MF015_3" (letras
+  // pegadas al número) que ya soportaba esta misma regex.
+  const m = /^[A-Za-z]{2,10}(?:-[A-Za-z]{1,4})?_?\d{2,4}_\d/i.exec(sinEspacios);
   return m ? m[0] : '';
 }
 
