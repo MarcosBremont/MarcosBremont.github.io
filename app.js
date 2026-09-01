@@ -28235,31 +28235,54 @@ function abrirPlanReforzamiento() {
  *  corresponde al tema débil que va a reforzar. */
 function _prListarPlanificacionesEtp() {
   const biblio = cargarBiblioteca();
+  // Una planificación ETP no guarda "curso" en datosGenerales (aplica al
+  // módulo/RA en general, no a una sección puntual) -- el vínculo con un
+  // curso vive del otro lado, en calState.cursos[x].planIds (mismo patrón ya
+  // usado por _getBiblioOpts para el Libro de Calificaciones). Se hace la
+  // búsqueda inversa acá para poder mostrar el curso al principio de cada
+  // opción y ayudar a identificar cuál planificación usar.
+  const cursosMap = (typeof calState !== 'undefined' && calState && calState.cursos) ? calState.cursos : {};
   return (biblio.items || [])
     .filter(it => it.tipo !== 'academico' && it.planificacion && it.planificacion.datosGenerales)
     .map(it => {
       const dg = it.planificacion.datosGenerales || {};
       const ra = it.planificacion.ra || {};
+      const cursos = Object.values(cursosMap)
+        .filter(c => (c.planIds || []).includes(it.id))
+        .map(c => c.nombre)
+        .filter(Boolean);
+      const prefijoCurso = cursos.length ? '[' + cursos.join(', ') + '] ' : '';
       return {
         id: it.id,
-        label: (dg.moduloFormativo || 'Sin módulo') + (ra.descripcion ? ' — ' + ra.descripcion.slice(0, 60) : ''),
+        cursos,
+        label: prefijoCurso + (dg.moduloFormativo || 'Sin módulo') + (ra.descripcion ? ' — ' + ra.descripcion.slice(0, 60) : ''),
         dg, ra
       };
     });
 }
 
 /** Entre las planificaciones ETP guardadas, encuentra la que mejor coincide
- *  con el examen por nombre de módulo/materia -- coincidencia flexible en
- *  cualquier dirección (no exige texto idéntico). Devuelve el id o null. */
+ *  con el examen -- primero por módulo/materia Y curso asignado a la vez (la
+ *  más específica posible), y si ninguna cumple ambas, solo por módulo/materia
+ *  (coincidencia flexible en cualquier dirección, no exige texto idéntico).
+ *  Devuelve el id o null. */
 function _prMejorMatchPlanificacion(ex, lista) {
   const candidatos = [ex.materia, ex.titulo].map(t => (t || '').trim().toLowerCase()).filter(Boolean);
+  const cursoEx = (ex.curso || '').trim().toLowerCase();
   if (!candidatos.length) return null;
-  for (const item of lista) {
+
+  const coincideModulo = item => {
     const modulo = (item.dg.moduloFormativo || '').trim().toLowerCase();
-    if (!modulo) continue;
-    if (candidatos.some(c => c === modulo || c.includes(modulo) || modulo.includes(c))) return item.id;
+    return !!modulo && candidatos.some(c => c === modulo || c.includes(modulo) || modulo.includes(c));
+  };
+  const coincideCurso = item => cursoEx && item.cursos.some(c => c.trim().toLowerCase() === cursoEx);
+
+  if (cursoEx) {
+    const porModuloYCurso = lista.find(item => coincideModulo(item) && coincideCurso(item));
+    if (porModuloYCurso) return porModuloYCurso.id;
   }
-  return null;
+  const porModulo = lista.find(coincideModulo);
+  return porModulo ? porModulo.id : null;
 }
 
 /** Aplica los datos de una planificación guardada (elegida en el dropdown, o
