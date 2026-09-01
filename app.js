@@ -28342,9 +28342,12 @@ function _renderPlanReforzamientoBody() {
 
     <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin:16px 0 4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
       <span style="font-size:.82rem;font-weight:700;color:#1A1A2E;">Lista de Cotejo -- criterios (${s.criterios.length})</span>
-      <button type="button" onclick="_prAgregarCriterio()" style="background:#E0F2F1;color:#00695C;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Agregar criterio</button>
+      <div style="display:flex;gap:6px;">
+        <button type="button" id="plan-ref-ia-criterios" onclick="_prGenerarCriteriosIA()" style="background:#EDE7F6;color:#5E35B1;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:14px;">auto_awesome</span>Generar con IA</button>
+        <button type="button" onclick="_prAgregarCriterio()" style="background:#E0F2F1;color:#00695C;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Agregar criterio</button>
+      </div>
     </div>
-    <p style="font-size:.72rem;color:#9E9E9E;margin:0 0 8px;">Las columnas Logrado/En proceso/No logrado quedan en blanco en el documento -- son para marcar a mano al evaluar cada estudiante.</p>
+    <p style="font-size:.72rem;color:#9E9E9E;margin:0 0 8px;">Las columnas Logrado/En proceso/No logrado quedan en blanco en el documento -- son para marcar a mano al evaluar cada estudiante. "Generar con IA" usa la Unidad de competencia y los Contenidos ya escritos arriba (configura una clave de IA en Ajustes).</p>
     <div id="plan-ref-criterios">${s.criterios.map((c, i) => _renderPlanRefCriterioItem(c, i)).join('')}</div>
   `;
 }
@@ -28400,6 +28403,81 @@ function _prEliminarCriterio(idx) {
   if (!_planRefState) return;
   _planRefState.criterios.splice(idx, 1);
   _rerenderPlanReforzamiento();
+}
+
+function _prConstruirPromptCriterios(s) {
+  const contenidos = [s.conceptuales, s.procedimentales, s.actitudinales].filter(t => t.trim()).join('\n');
+  const preguntas = s.analisis.map(a => '- ' + a.enunciado + ' (' + a.pct + '% de aciertos en el curso)').join('\n');
+  return 'Eres un docente de Educación Técnico Profesional (ETP) en República Dominicana, preparando una Lista de Cotejo para evaluar una actividad individual de reforzamiento después de una evaluación diagnóstica.\n\n'
+    + 'Módulo formativo: ' + (s.moduloFormativo || 'no especificado') + '\n'
+    + 'Unidad de competencia: ' + (s.unidadCompetencia || 'no especificada') + '\n'
+    + (contenidos ? 'Contenidos a reforzar:\n' + contenidos + '\n' : '')
+    + (preguntas ? 'Preguntas del diagnóstico con menor desempeño (temas que más le costaron al curso):\n' + preguntas + '\n' : '')
+    + '\nGenera entre 6 y 10 criterios de evaluación CONCRETOS y OBSERVABLES para la Lista de Cotejo, que permitan verificar si el estudiante domina estos contenidos específicos después del reforzamiento -- no criterios genéricos. Cada criterio es una frase corta que empieza con una acción evaluable (ej. "Explicación clara de...", "Ejemplo correcto de...", "Identificación precisa de...", "Aplicación adecuada de...").\n\n'
+    + 'Responde SOLO con este JSON, sin texto adicional ni markdown:\n'
+    + '{"criterios": ["criterio 1", "criterio 2", "..."]}';
+}
+
+/** Genera los criterios de la Lista de Cotejo con IA (misma cascada de
+ *  proveedores que el resto del sistema: Claude -> Groq -> Gemini ->
+ *  OpenRouter, escalando al siguiente si uno falla o responde vacío) a partir
+ *  de la Unidad de competencia, los Contenidos y las preguntas de menor
+ *  desempeño ya presentes en el formulario -- para que el docente no tenga
+ *  que escribir cada criterio a mano. */
+async function _prGenerarCriteriosIA() {
+  const s = _planRefState;
+  if (!s) return;
+
+  const groqKey = getGroqKey(), openrouterKey = getOpenRouterKey(), claudeKey = getClaudeKey(), geminiKey = getGeminiKey();
+  if (!groqKey && !geminiKey && !openrouterKey && !claudeKey) {
+    mostrarToast('Configura una clave de IA (Groq, Gemini, OpenRouter o Claude) en Ajustes para generar los criterios automáticamente.', 'error');
+    return;
+  }
+  if (!s.unidadCompetencia.trim() && !s.conceptuales.trim() && !s.procedimentales.trim() && !s.actitudinales.trim()) {
+    mostrarToast('Completa la Unidad de competencia o los Contenidos primero (o elige una Planificación guardada arriba) para que la IA sepa qué evaluar.', 'error');
+    return;
+  }
+  if (s.criterios.some(c => c.trim()) && !confirm('Esto va a reemplazar los criterios que ya escribiste. ¿Continuar?')) return;
+
+  const btn = document.getElementById('plan-ref-ia-criterios');
+  const btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+  try {
+    const prompt = _prConstruirPromptCriterios(s);
+    let aiData = null;
+
+    if (claudeKey) {
+      try { aiData = await _llamarClaude(prompt, 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Claude falló:', e.message); }
+    }
+    if (!aiData && groqKey) {
+      try { aiData = await _llamarGroqConFallback(prompt, 'Generando criterios de evaluación', 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Groq falló:', e.message); }
+    }
+    if (!aiData && geminiKey) {
+      try { aiData = await _llamarGemini(prompt, 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Gemini falló:', e.message); }
+    }
+    if (!aiData && openrouterKey) {
+      try { aiData = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Generando criterios de evaluación', 2048, 60000); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] OpenRouter falló:', e.message); }
+    }
+
+    const lista = Array.isArray(aiData?.criterios) ? aiData.criterios.map(c => String(c || '').trim()).filter(Boolean) : [];
+    if (!lista.length) {
+      mostrarToast('Ningún proveedor de IA pudo generar los criterios -- complétalos manualmente.', 'error');
+      return;
+    }
+    _planRefState.criterios = lista;
+    _rerenderPlanReforzamiento();
+    mostrarToast('Criterios generados con IA -- revísalos y ajusta lo que haga falta', 'success');
+  } catch (e) {
+    console.error('[Plan Reforzamiento IA]', e);
+    mostrarToast('Error generando criterios: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+  }
 }
 
 /** Convierte texto libre (un elemento por línea) en una lista con guiones,
