@@ -390,7 +390,12 @@ service cloud.firestore {
       // Publico a proposito: los padres abren el reporte via un link con id corto
       // (links_padre) sin haber iniciado sesion.
       allow read: if true;
-      allow write: if signedIn() && request.auth.uid == userId;
+      // Ademas del propio docente dueno, Psicologia/coordinadora/director/
+      // admin_centro del mismo centro (o el superadmin) tambien pueden escribir
+      // aqui -- necesario para poder eliminar un reporte desde el panel
+      // "Departamento de Psicologia" (agrega los reportes de TODOS los
+      // docentes), que antes solo podia leer pero no borrar nada.
+      allow write: if signedIn() && (request.auth.uid == userId || canReadConvivenciaGlobal(userId));
     }
 
     // Calendario global heredado (reemplazado por centros/{id}/calendario). Se deja de

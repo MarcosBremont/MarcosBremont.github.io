@@ -40434,6 +40434,9 @@ function renderPsicologia() {
             <button class="btn-icon-sm" title="Descargar Word" onclick="descargarReportePsicologiaGuardado('${d.estId}','${r.id}')" style="color:#1565C0;">
               <span class="material-icons" style="font-size:16px;">download</span>
             </button>
+            <button class="btn-icon-sm" title="Eliminar reporte" onclick="eliminarReportePsicologia('${d.docenteUid}','${d.estId}','${r.id}')" style="color:#C62828;">
+              <span class="material-icons" style="font-size:16px;">delete</span>
+            </button>
           </div>
           ${campos.map(c => `
             <div style="margin-bottom:4px;">
@@ -40447,6 +40450,40 @@ function renderPsicologia() {
   });
 
   cont.innerHTML = html;
+}
+
+/** Elimina un reporte del Departamento de Psicología. El documento
+ *  public_blogs/{docenteUid}/datos_padre/{estId} le pertenece al DOCENTE
+ *  (no a quien lo está borrando, casi siempre Psicología/Director/Superadmin
+ *  viendo el panel agregado de todos los docentes), así que esto requiere
+ *  que firestore.rules permita escribir ese documento también a esos roles
+ *  del mismo centro (ver canReadConvivenciaGlobal) -- antes solo el propio
+ *  docente podía escribir ahí. */
+async function eliminarReportePsicologia(docenteUid, estId, reporteId) {
+  if (!confirm('¿Eliminar este reporte de Psicología? Esta acción no se puede deshacer.')) return;
+  try {
+    const ref = db.collection('public_blogs').doc(docenteUid).collection('datos_padre').doc(estId);
+    const snap = await ref.get();
+    if (!snap.exists) { mostrarToast('El reporte ya no existe', 'error'); return; }
+    const reportesActuales = snap.data().reportes || [];
+    const nuevosReportes = reportesActuales.filter(r => r.id !== reporteId);
+    await ref.update({ reportes: nuevosReportes });
+
+    // Actualizar en memoria sin recargar todo el panel
+    const grupo = _psicoDatos.find(d => d.docenteUid === docenteUid && d.estId === estId);
+    if (grupo) {
+      grupo.reportes = grupo.reportes.filter(r => r.id !== reporteId);
+      if (grupo.reportes.length === 0) {
+        _psicoDatos = _psicoDatos.filter(d => d !== grupo);
+      }
+    }
+
+    registrarCambio('Reporte de Psicología eliminado (estudiante: ' + (grupo?.estNombre || estId) + ')');
+    mostrarToast('Reporte eliminado', 'success');
+    renderPsicologia();
+  } catch (e) {
+    mostrarToast('Error eliminando reporte: ' + e.message, 'error');
+  }
 }
 
 // Sincronizar reporte nuevo a Firestore para que Psicología lo vea en tiempo real
