@@ -3508,6 +3508,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#4285F4;">v18.50<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: registrarse con Google desde "Entrar" no pedía el centro educativo</div>
+              <ul class="about-ver-items">
+                <li>El botón de Google en la pestaña "Crear cuenta" sí abría el selector de centro antes de iniciar sesión, pero el de la pestaña "Entrar" (pensado solo para cuentas ya existentes) no lo pedía -- si una persona nueva usaba ESE botón por error (muy común, es el primero que ve), quedaba autenticada sin perfil ni centro asignado, y entraba directo a la app.</li>
+                <li>Ahora, sin importar por cuál botón de Google se entre, si la cuenta autenticada no tiene perfil en Firestore todavía, se le pide elegir su centro antes de continuar (sin volver a abrir la ventana de Google, ya que la sesión ya quedó iniciada) y su cuenta queda pendiente de aprobación como cualquier registro normal.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#6A1B9A;">v18.49<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9130,9 +9145,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.49"></script>
+  <script src="app.js?v=18.50"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.49"></script>
+  <script src="auth.js?v=18.50"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

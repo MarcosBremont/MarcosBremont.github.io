@@ -105,6 +105,19 @@ auth.onAuthStateChanged(async (user) => {
       _mostrarPantallaRechazado(perfil);
       return;
     }
+    if (!perfil) {
+      // Usuario autenticado (típicamente por Google, desde el botón de
+      // "Entrar" o el de "Crear cuenta") pero sin perfil en Firestore -- el
+      // registro por email/contraseña siempre crea el perfil ANTES de que
+      // este listener llegue a dispararse (ver authRegistrarse/_registrando),
+      // así que llegar aquí sin perfil significa que todavía le falta elegir
+      // su centro educativo. Sin este chequeo entraba directo a la app sin
+      // centro asignado -- bug reportado: "con Google no me aparece para
+      // seleccionar el centro", porque el botón de "Entrar" (a diferencia
+      // del de "Crear cuenta") nunca pedía el centro antes de iniciar sesión.
+      _mostrarSelectorCentroPostGoogle();
+      return;
+    }
     await _onLogin(user);
   } else {
     window.currentUser = null;
@@ -1331,6 +1344,18 @@ function authVolverAlLogin() {
   authCambiarTab('login');
 }
 
+/** Un usuario de Google recién autenticado (sin perfil en Firestore todavía,
+ *  ver onAuthStateChanged) necesita elegir su centro antes de poder usar la
+ *  app -- reusa el mismo modal de selección de centro que el flujo de
+ *  "Crear cuenta con Google", pero _confirmarCodigoGoogle() detecta que
+ *  window.currentUser ya está asignado y NO vuelve a abrir el popup de
+ *  Google, solo crea el perfil con el centro elegido. */
+function _mostrarSelectorCentroPostGoogle() {
+  _mostrarAuthOverlay();
+  _cargarCentrosParaRegistro();
+  authMostrarCodigoGoogle();
+}
+
 function authMostrarCodigoGoogle() {
   const overlay = document.getElementById('auth-google-code-overlay');
   const input = document.getElementById('auth-codigo-google');
@@ -1360,11 +1385,40 @@ async function _confirmarCodigoGoogle() {
     centroNombre = otro;
   }
 
-  // Guardar centro seleccionado para usarlo después del login
+  document.getElementById('auth-google-code-overlay')?.classList.add('hidden');
+
+  // Si window.currentUser ya está asignado, la sesión de Google se inició
+  // ANTES de llegar a este modal (ver _mostrarSelectorCentroPostGoogle,
+  // disparado por onAuthStateChanged al detectar un usuario sin perfil) --
+  // no hay que abrir el popup de nuevo, solo falta crear el perfil con el
+  // centro elegido.
+  if (window.currentUser) {
+    const user = window.currentUser;
+    const perfilData = {
+      nombre: user.displayName || '',
+      email: user.email,
+      rol: 'docente',
+      roles: ['docente'],
+      centroId,
+      centroNombre,
+      estado: 'pendiente',
+      createdAt: new Date().toISOString()
+    };
+    try {
+      await _crearPerfilUsuario(user.uid, perfilData);
+      _incrementarContadorUsuariosPublico();
+      _mostrarPantallaPendiente(perfilData);
+    } catch (e) {
+      if (errEl) { errEl.textContent = 'No se pudo completar el registro. Intenta de nuevo.'; errEl.classList.add('visible'); }
+      document.getElementById('auth-google-code-overlay')?.classList.remove('hidden');
+    }
+    return;
+  }
+
+  // Guardar centro seleccionado para usarlo después del login (flujo
+  // "Crear cuenta con Google": todavía no hay sesión iniciada)
   window._pendingGoogleCentro = { centroId, centroNombre };
 
-  // Código correcto — cerrar modal y abrir Google sign-in
-  document.getElementById('auth-google-code-overlay')?.classList.add('hidden');
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
     _registrando = true;
