@@ -28242,8 +28242,27 @@ function _prListarPlanificacionesEtp() {
   // búsqueda inversa acá para poder mostrar el curso al principio de cada
   // opción y ayudar a identificar cuál planificación usar.
   const cursosMap = (typeof calState !== 'undefined' && calState && calState.cursos) ? calState.cursos : {};
+
+  // archivarCicloActual() mueve TODO calState.cursos a
+  // calState.cursosArchivados[year] y vacía calState.cursos -- pero no marca
+  // reg.archivada en la biblioteca, así que las planificaciones de un ciclo
+  // ya cerrado se quedaban apareciendo sueltas (sin curso, sin filtrar) en
+  // este selector. Se excluyen acá las que quedaron asignadas SOLO a cursos
+  // de ciclos archivados (si además siguen en algún curso activo, o nunca
+  // estuvieron asignadas a ningún curso, se mantienen).
+  const cursosArchivadosMap = (typeof calState !== 'undefined' && calState && calState.cursosArchivados) ? calState.cursosArchivados : {};
+  const planIdsSoloEnCiclosArchivados = new Set();
+  Object.values(cursosArchivadosMap).forEach(reg => {
+    (Array.isArray(reg.cursos) ? reg.cursos : []).forEach(c => {
+      (c.planIds || []).forEach(pid => planIdsSoloEnCiclosArchivados.add(pid));
+    });
+  });
+  Object.values(cursosMap).forEach(c => {
+    (c.planIds || []).forEach(pid => planIdsSoloEnCiclosArchivados.delete(pid));
+  });
+
   return (biblio.items || [])
-    .filter(it => it.tipo !== 'academico' && !it.archivada && it.planificacion && it.planificacion.datosGenerales)
+    .filter(it => it.tipo !== 'academico' && !it.archivada && !planIdsSoloEnCiclosArchivados.has(it.id) && it.planificacion && it.planificacion.datosGenerales)
     .map(it => {
       const dg = it.planificacion.datosGenerales || {};
       const ra = it.planificacion.ra || {};

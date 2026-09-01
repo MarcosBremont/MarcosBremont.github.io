@@ -3508,6 +3508,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.48<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: el selector de Planificaciones seguía mostrando las de ciclos ya cerrados</div>
+              <ul class="about-ver-items">
+                <li>El fix de v18.47 solo excluía planificaciones marcadas manualmente como archivada -- pero al cerrar un ciclo escolar (archivarCicloActual), los CURSOS se mueven a un historial aparte y calState.cursos queda vacío, sin tocar la bandera archivada de sus planificaciones. Resultado: cada ciclo cerrado dejaba sus planificaciones viejas apareciendo sueltas (sin el prefijo de curso) mezcladas con las del ciclo activo.</li>
+                <li>Ahora se excluyen también las planificaciones que quedaron asignadas SOLO a cursos de ciclos ya archivados -- si siguen en algún curso activo, o nunca se asignaron a ningún curso (plan nuevo), se mantienen en la lista.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v18.47<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9100,9 +9115,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.47"></script>
+  <script src="app.js?v=18.48"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.47"></script>
+  <script src="auth.js?v=18.48"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
