@@ -27835,9 +27835,12 @@ function exportarInformeExamenExcel() {
  *  lógica de generación de Word solo para el caso de un examen único --
  *  "un examen" es simplemente "un informe combinado con un solo elegido". */
 function exportarInformeExamenWord() {
-  const info = _examenInformeActual;
-  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
-  abrirInformeCombinadoExamenes(info.ex.id);
+  // El botón "Exportar a Word" del informe de un examen ahora genera
+  // directamente el Instrumento (roster por estudiante) del curso abierto,
+  // en vez de abrir el selector de "Informe combinado" -- eso último sigue
+  // disponible aparte, desde su propio botón en el encabezado del panel de
+  // Exámenes y Pruebas (abrirInformeCombinadoExamenes sin preseleccionar).
+  exportarInstrumentoExamenWord();
 }
 
 function abrirInformeCombinadoExamenes(preseleccionarId) {
