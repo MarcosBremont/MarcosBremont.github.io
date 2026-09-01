@@ -27204,12 +27204,22 @@ function _parsearPreguntasTexto(texto) {
   // enunciado pegado directo al número ("10)Si ti y t2..." sin espacio).
   const regexPregunta = /^\s*(\d{1,3})(?:\.\s+|\)\s*)(.+)$/;
   const regexOpcion = /^[\s•·o○▪\-]*([A-Da-d])(?:\.\s+|\)\s*)(.+)$/;
+  // Algunos exámenes agrupan sus preguntas de Verdadero/Falso bajo un
+  // encabezado de sección ("V y F", "Verdadero y Falso", "V/F") en vez de
+  // repetir "A) Verdadero B) Falso" en cada pregunta -- se detecta ese
+  // encabezado y se recuerda mientras dure la sección, para clasificar como
+  // V/F a las preguntas sin opciones propias que caen dentro de ella. Un
+  // encabezado de otra sección reconocible ("Selección múltiple", "Completación",
+  // "Respuesta abierta"...) cierra la sección V/F.
+  let seccionActual = null;
+  const regexSeccionVF = /^\s*(v\s*(?:y|\/|-)\s*f|verdadero\s*(?:y|\/|-)\s*falso)\.?\s*$/i;
+  const regexSeccionOtra = /^\s*(selecci[oó]n\s*m[uú]ltiple|opci[oó]n\s*m[uú]ltiple|completaci[oó]n|respuesta\s*abierta|preguntas?\s*abiertas?)\.?\s*$/i;
 
   lineas.forEach(linea => {
     const mP = regexPregunta.exec(linea);
     if (mP) {
       if (actual) bloques.push(actual);
-      actual = { enunciado: mP[2].trim(), opciones: [] };
+      actual = { enunciado: mP[2].trim(), opciones: [], seccion: seccionActual };
       return;
     }
     const mO = regexOpcion.exec(linea);
@@ -27217,9 +27227,12 @@ function _parsearPreguntasTexto(texto) {
       actual.opciones.push(mO[2].trim());
       return;
     }
-    // Una línea que no es ni "N." ni "letra)" -- si la pregunta actual
-    // todavía no tiene opciones, es la continuación del enunciado (preguntas
-    // largas que ocupan más de una línea antes de llegar a las opciones).
+    if (regexSeccionVF.test(linea)) { seccionActual = 'vf'; return; }
+    if (regexSeccionOtra.test(linea)) { seccionActual = null; return; }
+    // Una línea que no es ni "N." ni "letra)" ni un encabezado de sección --
+    // si la pregunta actual todavía no tiene opciones, es la continuación
+    // del enunciado (preguntas largas que ocupan más de una línea antes de
+    // llegar a las opciones).
     const t = linea.trim();
     if (actual && !actual.opciones.length && t) actual.enunciado += ' ' + t;
   });
@@ -27233,6 +27246,7 @@ function _parsearPreguntasTexto(texto) {
       const esVF = opciones.length === 2 && opciones.every(o => /^(verdadero|falso)\.?$/i.test(o.trim()));
       if (esVF) return { ...base, tipo: 'vf', opciones: [] };
       if (opciones.length >= 2) return { ...base, tipo: 'mc', opciones: opciones.slice(0, 4) };
+      if (!opciones.length && b.seccion === 'vf') return { ...base, tipo: 'vf', opciones: [] };
       return { ...base, tipo: 'abierta', opciones: [] };
     });
 }

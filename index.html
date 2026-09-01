@@ -3099,8 +3099,9 @@
         <p style="font-size:.83rem;color:#546E7A;margin-bottom:10px;line-height:1.5;">
           Pega aquí el texto de una evaluación ya hecha (por ejemplo, la que generaste con IA en Word) y el sistema
           reconoce preguntas numeradas ("1.", "2)"...) con sus opciones marcadas con letra ("A)", "B."...). Las preguntas
-          sin opciones se importan como respuesta abierta. Ninguna respuesta correcta se marca sola -- eso se hace después,
-          en cada pregunta.
+          sin opciones se importan como respuesta abierta -- salvo que estén bajo un encabezado de sección "V y F" o
+          "Verdadero y Falso" (una sola línea, antes de esas preguntas), en cuyo caso se importan como Verdadero/Falso.
+          Ninguna respuesta correcta se marca sola -- eso se hace después, en cada pregunta.
         </p>
         <textarea id="ex-importar-texto" rows="10" placeholder="1. ¿Qué es una base de datos?&#10;A) Un programa para editar imágenes.&#10;B) Un conjunto organizado de datos relacionados.&#10;C) Un sistema operativo.&#10;D) Un navegador web.&#10;&#10;2. ..."
           style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:.83rem;outline:none;font-family:inherit;resize:vertical;" oninput="document.getElementById('ex-importar-preview').innerHTML='';document.getElementById('ex-importar-confirmar').disabled=true;"></textarea>
@@ -3504,6 +3505,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v18.52<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "Importar preguntas" reconoce V/F agrupadas bajo un encabezado de sección</div>
+              <ul class="about-ver-items">
+                <li>Hasta ahora una pregunta de Verdadero/Falso solo se reconocía si cada una traía sus propias opciones "A) Verdadero B) Falso" -- pero algunos exámenes agrupan sus preguntas de V/F bajo un encabezado de sección ("V y F", "Verdadero y Falso", "V/F") y no repiten las opciones en cada una. Esas preguntas se importaban como "Abierta" en vez de "V/F".</li>
+                <li>Ahora una línea con ese encabezado (antes del grupo de preguntas) marca todas las que siguen como Verdadero/Falso, hasta que aparezca otro encabezado de sección reconocible ("Selección múltiple", "Completación", "Respuesta abierta"). Verificado con test Node contra el caso reportado y los formatos ya soportados (V/F por opciones explícitas, selección múltiple, sin encabezado), sin romper ninguno.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9160,9 +9176,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.51"></script>
+  <script src="app.js?v=18.52"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.51"></script>
+  <script src="auth.js?v=18.52"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
