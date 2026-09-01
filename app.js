@@ -27999,6 +27999,26 @@ function _calcularEstudiantesConNivel(info) {
     }));
 }
 
+/** Año escolar actual en formato "26-27" -- agosto a diciembre cuentan como
+ *  el año que empieza (ej. agosto 2026 = "26-27"), enero a julio como el que
+ *  ya venía corriendo (ej. marzo 2027 = "26-27"). Se calcula solo a partir de
+ *  la fecha de hoy para que nunca quede desactualizado de un año escolar al
+ *  siguiente. */
+function _anioEscolarActual() {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const inicio = (hoy.getMonth() + 1) >= 8 ? anio : anio - 1;
+  const dosDigitos = n => String(((n % 100) + 100) % 100).padStart(2, '0');
+  return dosDigitos(inicio) + '-' + dosDigitos(inicio + 1);
+}
+
+/** Nombre de archivo del Instrumento: fijo + año escolar + curso, para que no
+ *  se sobrescriban entre sí al exportar varios cursos del mismo año. */
+function _nombreArchivoInstrumento(ex, ext) {
+  const curso = (ex.curso || ex.titulo || '').trim();
+  return ('TABULAR POR GRADO RESULTADOS DIAGNÓSTICA ' + _anioEscolarActual() + (curso ? ' - ' + curso : '')).slice(0, 120) + '.' + ext;
+}
+
 /** Genera el "Instrumento para Recolección de Resultados de la Evaluación
  *  Diagnóstica" (roster por estudiante, rúbrica Tobón/MINERD de 4 niveles) de
  *  UN SOLO examen/curso a la vez -- confirmado con el usuario: "un
@@ -28078,7 +28098,7 @@ async function _generarInstrumentoExamenConPlantilla(plantilla, datos) {
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
-    const filename = 'instrumento-' + (datos.ex.curso || datos.ex.titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.docx';
+    const filename = _nombreArchivoInstrumento(datos.ex, 'docx');
     const url = URL.createObjectURL(out);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
@@ -28143,7 +28163,7 @@ function _descargarInstrumentoExamenGenerico(datos, plantilla) {
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
     + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
 
-  const filename = 'instrumento-' + (ex.curso || ex.titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.doc';
+  const filename = _nombreArchivoInstrumento(ex, 'doc');
   const blob = new Blob(['\uFEFF' + html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
