@@ -28243,7 +28243,7 @@ function _prListarPlanificacionesEtp() {
   // opción y ayudar a identificar cuál planificación usar.
   const cursosMap = (typeof calState !== 'undefined' && calState && calState.cursos) ? calState.cursos : {};
   return (biblio.items || [])
-    .filter(it => it.tipo !== 'academico' && it.planificacion && it.planificacion.datosGenerales)
+    .filter(it => it.tipo !== 'academico' && !it.archivada && it.planificacion && it.planificacion.datosGenerales)
     .map(it => {
       const dg = it.planificacion.datosGenerales || {};
       const ra = it.planificacion.ra || {};
