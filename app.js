@@ -5785,7 +5785,7 @@ function imprimirPDF() {
 // bytes"). Mismo patron ya usado para el CV del Portafolio Docente
 // (_guardarPortafolioCV/cargarPortafolioCV): se parte el base64 en
 // documentos de ~900 KB dentro de una subcoleccion, con un doc de metadatos
-// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto', 'informeExamen', 'instrumentoExamen'.
+// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto', 'informeExamen', 'instrumentoExamen', 'planReforzamiento'.
 const PLANTILLA_CENTRO_CHUNK_CHARS = 900000;
 const PLANTILLA_CENTRO_CAMPOS = {
   planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
@@ -5793,7 +5793,8 @@ const PLANTILLA_CENTRO_CAMPOS = {
   psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' },
   impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' },
   informeExamen: { base64: 'plantillaInformeExamenBase64', nombre: 'plantillaInformeExamenNombre', fallback: 'plantilla_informe_examen.docx' },
-  instrumentoExamen: { base64: 'plantillaInstrumentoExamenBase64', nombre: 'plantillaInstrumentoExamenNombre', fallback: 'plantilla_instrumento_examen.docx' }
+  instrumentoExamen: { base64: 'plantillaInstrumentoExamenBase64', nombre: 'plantillaInstrumentoExamenNombre', fallback: 'plantilla_instrumento_examen.docx' },
+  planReforzamiento: { base64: 'plantillaPlanReforzamientoBase64', nombre: 'plantillaPlanReforzamientoNombre', fallback: 'plantilla_plan_reforzamiento.docx' }
 };
 
 function _plantillasCentroChunksRef(centroId) {
@@ -6457,6 +6458,34 @@ async function _getPlantillaInstrumentoExamenCentro() {
       director: centro.directorNombre || '',
       coordinador: centro.coordinadorNombre || ''
     };
+  }
+  return null;
+}
+
+/** Igual que _getPlantillaInformeExamenCentro() pero para el Plan de
+ *  Reforzamiento de Módulos Formativos. */
+async function _getPlantillaPlanReforzamientoCentro() {
+  if (!window.currentUser) return null;
+  let centroId = null;
+  const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+  if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+  if (!centroId) {
+    const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+  }
+  if (centroId) {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (centroDoc.exists) {
+      const centro = centroDoc.data();
+      const result = await _cargarPlantillaCentroChunked(centroId, 'planReforzamiento');
+      if (result) return { base64: result.base64, centroId, centroNombre: centro.nombre || '' };
+    }
+  }
+  const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_planReforzamiento', '==', true).limit(1).get();
+  if (!snap.empty) {
+    const centro = snap.docs[0].data();
+    const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'planReforzamiento');
+    if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '' };
   }
   return null;
 }
@@ -27608,6 +27637,21 @@ function _switchTabInformeExamen(tab) {
  *  análisis por pregunta ordenado de peor a mejor desempeño -- para que las
  *  preguntas/temas más flojos salten a la vista primero, en vez de tener que
  *  revisar estudiante por estudiante para notar un patrón. */
+/** Porcentaje de aciertos de cada pregunta calificable, ordenado de menor a
+ *  mayor (la que más le costó al curso primero) -- usado por el informe del
+ *  examen y por el Plan de Reforzamiento (como referencia de qué temas
+ *  reforzar). */
+function _analizarDesempenoPreguntas(respuestas, preguntas, preguntasCalificables) {
+  return preguntasCalificables
+    .map(p => {
+      const total = respuestas.length;
+      const correctas = respuestas.filter(r => (r.respuestas || {})[p.id] === p.respuestaCorrecta).length;
+      const pct = total ? Math.round(correctas / total * 100) : 0;
+      return { enunciado: p.enunciado, correctas, total, pct, numero: preguntas.indexOf(p) + 1 };
+    })
+    .sort((a, b) => a.pct - b.pct);
+}
+
 function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto) {
   if (puntosPosiblesAuto === 0) {
     return `<div style="font-size:.85rem;color:#546E7A;background:#FFF3E0;border-radius:8px;padding:14px 16px;line-height:1.6;">
@@ -27644,14 +27688,7 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
     </div>`;
   }).join('');
 
-  const analisisPreguntas = preguntasCalificables
-    .map((p, i) => {
-      const total = respuestas.length;
-      const correctas = respuestas.filter(r => (r.respuestas || {})[p.id] === p.respuestaCorrecta).length;
-      const pct = total ? Math.round(correctas / total * 100) : 0;
-      return { enunciado: p.enunciado, correctas, total, pct, numero: preguntas.indexOf(p) + 1 };
-    })
-    .sort((a, b) => a.pct - b.pct);
+  const analisisPreguntas = _analizarDesempenoPreguntas(respuestas, preguntas, preguntasCalificables);
 
   const colorPct = pct => pct < 50 ? '#C62828' : (pct < 70 ? '#E65100' : '#2E7D32');
   const preguntasHtml = analisisPreguntas.map(a => `
@@ -28113,6 +28150,447 @@ function _descargarInstrumentoExamenGenerico(datos, plantilla) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ── Plan de Reforzamiento ────────────────────────────────────────────
+// A diferencia del Instrumento (que se llena solo con datos que el examen ya
+// tiene), este documento trae mucho contenido pedagógico que el sistema no
+// puede inventar (Familia Profesional, Unidad de competencia, Contenidos,
+// Actividades, Lista de Cotejo) -- por eso se arma con un formulario que el
+// docente completa cada vez, con Módulo/Docente autocompletados desde el
+// examen y las preguntas de menor desempeño mostradas como referencia (no se
+// insertan solas en el documento, son solo una ayuda en pantalla).
+let _planRefState = null;
+
+function abrirPlanReforzamiento() {
+  const info = _examenInformeActual;
+  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
+
+  const analisis = info.puntosPosiblesAuto > 0
+    ? _analizarDesempenoPreguntas(info.respuestas, info.preguntas, info.preguntasCalificables).slice(0, 5)
+    : [];
+
+  _planRefState = {
+    analisis,
+    familiaProfesional: '',
+    bachillerTecnico: '',
+    moduloFormativo: info.ex.titulo || '',
+    docente: info.ex.docenteNombre || '',
+    periodoInicio: '',
+    periodoFin: '',
+    unidadCompetencia: '',
+    conceptuales: '',
+    procedimentales: '',
+    actitudinales: '',
+    actividades: [
+      { actividad: 'Aplicación de la evaluación diagnóstica.', tiempo: '50 min.', seguimiento: 'Lluvia de ideas', evidencias: 'Evaluación escrita', instrumento: 'Escala sumativa', recursos: 'Laptop y conexión a Internet.' },
+      { actividad: 'Socialización grupal de la evaluación diagnóstica.', tiempo: '50 min.', seguimiento: 'Preguntas orales/revisión de cuadernos', evidencias: 'Producciones escritas', instrumento: 'Rúbrica', recursos: 'Folletos, cuaderno, lápiz, lapicero.' },
+      { actividad: 'Utilizando material de apoyo impreso, los estudiantes definen en su cuaderno los contenidos de la evaluación diagnóstica.', tiempo: '50 min.', seguimiento: 'Corrección de cuadernos', evidencias: 'Producciones escritas', instrumento: 'Lista de cotejo', recursos: 'Folletos, cuadernos, lápiz, pc.' },
+      { actividad: 'Mediante presentación de PowerPoint, el maestro explica los contenidos aplicados en la evaluación diagnóstica.', tiempo: '50 min.', seguimiento: 'Socialización', evidencias: 'Ejercicios prácticos', instrumento: 'Lista de cotejo', recursos: 'Material impreso, cuadernos, lápiz, laptop.' },
+      { actividad: 'Ejercicios de comprensión sobre los contenidos de la evaluación.', tiempo: '100 min.', seguimiento: 'Socialización', evidencias: 'Producciones escritas', instrumento: 'Lista de cotejo', recursos: 'Cuaderno, lápiz y lapicero.' },
+      { actividad: 'Kahoot en línea sobre los contenidos abordados.', tiempo: '20 min.', seguimiento: 'Preguntas orales', evidencias: 'Informe de respuestas', instrumento: 'Escala sumativa', recursos: 'Laptop, internet.' }
+    ],
+    criterios: ['']
+  };
+
+  _rerenderPlanReforzamiento();
+  document.getElementById('plan-reforzamiento-overlay').classList.remove('hidden');
+}
+
+function cerrarPlanReforzamiento() {
+  document.getElementById('plan-reforzamiento-overlay').classList.add('hidden');
+  _planRefState = null;
+}
+
+function _rerenderPlanReforzamiento() {
+  const body = document.getElementById('plan-ref-body');
+  if (body) body.innerHTML = _renderPlanReforzamientoBody();
+}
+
+function _renderPlanReforzamientoBody() {
+  const s = _planRefState;
+  const inputS = 'width:100%;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:7px;font-size:.83rem;outline:none;font-family:inherit;box-sizing:border-box;';
+  const labelS = 'display:block;font-size:.73rem;font-weight:600;color:#546E7A;margin-bottom:4px;';
+
+  const referenciaHtml = s.analisis.length
+    ? '<div style="background:#FFF3E0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.78rem;color:#616161;">'
+      + '<strong style="color:#E65100;">Preguntas con menor desempeño (referencia, no se insertan solas en el documento):</strong>'
+      + '<ul style="margin:6px 0 0;padding-left:18px;">'
+      + s.analisis.map(a => '<li>P' + a.numero + ' (' + a.pct + '%): ' + _eHtml(a.enunciado) + '</li>').join('')
+      + '</ul></div>'
+    : '';
+
+  return `
+    ${referenciaHtml}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div><label style="${labelS}">Familia Profesional</label>
+        <input type="text" value="${_eHtml(s.familiaProfesional)}" style="${inputS}" oninput="_planRefState.familiaProfesional=this.value"></div>
+      <div><label style="${labelS}">Bachiller técnico en</label>
+        <input type="text" value="${_eHtml(s.bachillerTecnico)}" style="${inputS}" oninput="_planRefState.bachillerTecnico=this.value"></div>
+    </div>
+    <div style="margin-bottom:10px;"><label style="${labelS}">Módulo formativo</label>
+      <input type="text" value="${_eHtml(s.moduloFormativo)}" style="${inputS}" oninput="_planRefState.moduloFormativo=this.value"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div><label style="${labelS}">Docente</label>
+        <input type="text" value="${_eHtml(s.docente)}" style="${inputS}" oninput="_planRefState.docente=this.value"></div>
+      <div><label style="${labelS}">Período desde</label>
+        <input type="date" value="${s.periodoInicio}" style="${inputS}" oninput="_planRefState.periodoInicio=this.value"></div>
+      <div><label style="${labelS}">Período hasta</label>
+        <input type="date" value="${s.periodoFin}" style="${inputS}" oninput="_planRefState.periodoFin=this.value"></div>
+    </div>
+    <div style="margin-bottom:14px;"><label style="${labelS}">Unidad de competencia</label>
+      <textarea rows="2" style="${inputS}resize:vertical;" oninput="_planRefState.unidadCompetencia=this.value">${_eHtml(s.unidadCompetencia)}</textarea></div>
+
+    <div style="font-size:.82rem;font-weight:700;color:#1A1A2E;margin-bottom:2px;">Contenidos</div>
+    <p style="font-size:.72rem;color:#9E9E9E;margin:0 0 8px;">Un elemento por línea -- se listan como viñetas en el documento.</p>
+    <div style="margin-bottom:10px;"><label style="${labelS}">Conceptuales</label>
+      <textarea rows="3" style="${inputS}resize:vertical;" placeholder="Ej: Algoritmos&#10;Operadores lógicos, relacionales y matemáticos." oninput="_planRefState.conceptuales=this.value">${_eHtml(s.conceptuales)}</textarea></div>
+    <div style="margin-bottom:10px;"><label style="${labelS}">Procedimentales</label>
+      <textarea rows="3" style="${inputS}resize:vertical;" oninput="_planRefState.procedimentales=this.value">${_eHtml(s.procedimentales)}</textarea></div>
+    <div style="margin-bottom:16px;"><label style="${labelS}">Actitudes y valores</label>
+      <textarea rows="3" style="${inputS}resize:vertical;" oninput="_planRefState.actitudinales=this.value">${_eHtml(s.actitudinales)}</textarea></div>
+
+    <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:.82rem;font-weight:700;color:#1A1A2E;">Actividades de aprendizaje (${s.actividades.length})</span>
+      <button type="button" onclick="_prAgregarActividad()" style="background:#E0F2F1;color:#00695C;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Agregar actividad</button>
+    </div>
+    <div id="plan-ref-actividades">${s.actividades.map((a, i) => _renderPlanRefActividadItem(a, i)).join('')}</div>
+
+    <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin:16px 0 4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:.82rem;font-weight:700;color:#1A1A2E;">Lista de Cotejo -- criterios (${s.criterios.length})</span>
+      <button type="button" onclick="_prAgregarCriterio()" style="background:#E0F2F1;color:#00695C;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Agregar criterio</button>
+    </div>
+    <p style="font-size:.72rem;color:#9E9E9E;margin:0 0 8px;">Las columnas Logrado/En proceso/No logrado quedan en blanco en el documento -- son para marcar a mano al evaluar cada estudiante.</p>
+    <div id="plan-ref-criterios">${s.criterios.map((c, i) => _renderPlanRefCriterioItem(c, i)).join('')}</div>
+  `;
+}
+
+function _renderPlanRefActividadItem(a, idx) {
+  const inputS = 'width:100%;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.8rem;outline:none;font-family:inherit;box-sizing:border-box;';
+  const labelS = 'display:block;font-size:.68rem;font-weight:600;color:#78909C;margin-bottom:2px;';
+  return `<div style="background:#FAFAFA;border:1.5px solid #E8EDF2;border-radius:9px;padding:12px 13px;margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-size:.7rem;color:#BDBDBD;font-weight:700;">Actividad ${idx + 1}</span>
+      <button type="button" onclick="_prEliminarActividad(${idx})" title="Eliminar" style="background:#FFEBEE;color:#C62828;border:none;border-radius:5px;cursor:pointer;padding:3px 7px;display:flex;align-items:center;"><span class="material-icons" style="font-size:14px;">delete</span></button>
+    </div>
+    <label style="${labelS}">Actividad (acciones y tareas a desarrollar)</label>
+    <textarea rows="2" style="${inputS}resize:vertical;margin-bottom:6px;" oninput="_planRefState.actividades[${idx}].actividad=this.value">${_eHtml(a.actividad)}</textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div><label style="${labelS}">Tiempo</label><input type="text" value="${_eHtml(a.tiempo)}" style="${inputS}" oninput="_planRefState.actividades[${idx}].tiempo=this.value"></div>
+      <div><label style="${labelS}">Seguimiento</label><input type="text" value="${_eHtml(a.seguimiento)}" style="${inputS}" oninput="_planRefState.actividades[${idx}].seguimiento=this.value"></div>
+      <div><label style="${labelS}">Evidencias y productos</label><input type="text" value="${_eHtml(a.evidencias)}" style="${inputS}" oninput="_planRefState.actividades[${idx}].evidencias=this.value"></div>
+      <div><label style="${labelS}">Instrumentos de evaluación</label><input type="text" value="${_eHtml(a.instrumento)}" style="${inputS}" oninput="_planRefState.actividades[${idx}].instrumento=this.value"></div>
+    </div>
+    <div style="margin-top:6px;"><label style="${labelS}">Recursos</label><input type="text" value="${_eHtml(a.recursos)}" style="${inputS}" oninput="_planRefState.actividades[${idx}].recursos=this.value"></div>
+  </div>`;
+}
+
+function _prAgregarActividad() {
+  if (!_planRefState) return;
+  _planRefState.actividades.push({ actividad: '', tiempo: '', seguimiento: '', evidencias: '', instrumento: '', recursos: '' });
+  _rerenderPlanReforzamiento();
+}
+
+function _prEliminarActividad(idx) {
+  if (!_planRefState) return;
+  _planRefState.actividades.splice(idx, 1);
+  _rerenderPlanReforzamiento();
+}
+
+function _renderPlanRefCriterioItem(c, idx) {
+  const inputS = 'flex:1;padding:7px 9px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.82rem;outline:none;font-family:inherit;box-sizing:border-box;';
+  return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+    <span style="font-size:.7rem;color:#BDBDBD;font-weight:700;width:16px;flex-shrink:0;">${idx + 1}.</span>
+    <input type="text" value="${_eHtml(c)}" placeholder="Ej: Explicación clara de qué es un sistema de información" style="${inputS}" oninput="_planRefState.criterios[${idx}]=this.value">
+    <button type="button" onclick="_prEliminarCriterio(${idx})" title="Eliminar" style="background:#FFEBEE;color:#C62828;border:none;border-radius:5px;cursor:pointer;padding:5px 7px;display:flex;align-items:center;flex-shrink:0;"><span class="material-icons" style="font-size:14px;">delete</span></button>
+  </div>`;
+}
+
+function _prAgregarCriterio() {
+  if (!_planRefState) return;
+  _planRefState.criterios.push('');
+  _rerenderPlanReforzamiento();
+}
+
+function _prEliminarCriterio(idx) {
+  if (!_planRefState) return;
+  _planRefState.criterios.splice(idx, 1);
+  _rerenderPlanReforzamiento();
+}
+
+/** Convierte texto libre (un elemento por línea) en una lista con guiones,
+ *  para que se vea como viñetas al insertarse en el Word (linebreaks:true ya
+ *  convierte cada \n en salto de línea real dentro de docxtemplater). */
+function _aListaConGuiones(texto) {
+  return (texto || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => '- ' + l).join('\n');
+}
+
+async function _generarPlanReforzamientoWord() {
+  const s = _planRefState;
+  if (!s) return;
+  if (!s.moduloFormativo.trim()) { mostrarToast('Escribe el módulo formativo', 'error'); return; }
+
+  const fmtFecha = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-DO') : '';
+  const periodoStr = (s.periodoInicio || s.periodoFin) ? (fmtFecha(s.periodoInicio) + ' – ' + fmtFecha(s.periodoFin)) : '';
+
+  const datos = {
+    familiaProfesional: s.familiaProfesional.trim(),
+    bachillerTecnico: s.bachillerTecnico.trim(),
+    moduloFormativo: s.moduloFormativo.trim(),
+    docente: s.docente.trim(),
+    periodoStr,
+    unidadCompetencia: s.unidadCompetencia.trim(),
+    conceptuales: s.conceptuales.trim(),
+    procedimentales: s.procedimentales.trim(),
+    actitudinales: s.actitudinales.trim(),
+    actividades: s.actividades.filter(a => a.actividad.trim()),
+    criterios: s.criterios.map(c => c.trim()).filter(Boolean)
+  };
+
+  const btn = document.getElementById('plan-ref-generar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+  try {
+    let plantilla = null;
+    try { plantilla = await _getPlantillaPlanReforzamientoCentro(); } catch (e) {
+      console.warn('[Plan Reforzamiento] No se pudo resolver el centro/plantilla:', e.message);
+    }
+
+    let generadoConPlantilla = false;
+    if (plantilla && plantilla.base64) {
+      try {
+        generadoConPlantilla = await _generarPlanReforzamientoConPlantilla(plantilla, datos);
+      } catch (e) {
+        console.warn('[Plan Reforzamiento] No se pudo usar la plantilla del centro, se usa el formato genérico:', e.message);
+      }
+    }
+    if (!generadoConPlantilla) _descargarPlanReforzamientoGenerico(datos, plantilla);
+
+    cerrarPlanReforzamiento();
+    mostrarToast('Plan de Reforzamiento generado', 'success');
+  } catch (e) {
+    console.error('[Plan Reforzamiento]', e);
+    mostrarToast('Error al generar: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Generar Word'; }
+  }
+}
+
+/** Intenta generar el Plan de Reforzamiento con la plantilla .docx del centro
+ *  (docxtemplater). Placeholders ver _mostrarGuiaPlaceholdersPlanReforzamiento().
+ *  Devuelve true si lo logró (y ya disparó la descarga), false si no había
+ *  plantilla o falló, para que el llamador caiga al formato genérico. */
+async function _generarPlanReforzamientoConPlantilla(plantilla, datos) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return false;
+
+  try {
+    const binaryStr = atob(plantilla.base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    const zip = new PizZip(bytes.buffer);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      delimiters: { start: '{', end: '}' },
+      nullGetter: () => ''
+    });
+
+    doc.render({
+      centro: plantilla.centroNombre || '',
+      familia_profesional: datos.familiaProfesional,
+      bachiller_tecnico: datos.bachillerTecnico,
+      modulo_formativo: datos.moduloFormativo,
+      docente: datos.docente,
+      periodo_ejecucion: datos.periodoStr,
+      unidad_competencia: datos.unidadCompetencia,
+      conceptuales: _aListaConGuiones(datos.conceptuales),
+      procedimentales: _aListaConGuiones(datos.procedimentales),
+      actitudinales: _aListaConGuiones(datos.actitudinales),
+      actividades: datos.actividades.map(a => ({
+        actividad: a.actividad, tiempo: a.tiempo, seguimiento: a.seguimiento,
+        evidencias: a.evidencias, instrumento: a.instrumento, recursos: a.recursos
+      })),
+      criterios: datos.criterios.map(c => ({ criterio: c }))
+    });
+
+    const out = doc.getZip().generate({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const filename = 'plan-reforzamiento-' + (datos.moduloFormativo || 'modulo').replace(/\s+/g, '_').slice(0, 60) + '.docx';
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (e) {
+    console.error('[Plan Reforzamiento] Error renderizando la plantilla del centro:', e);
+    mostrarToast('La plantilla del centro tiene un error (revisa los placeholders) -- se generó con el formato genérico.', 'error');
+    return false;
+  }
+}
+
+/** Formato de respaldo cuando el centro no tiene plantilla propia cargada
+ *  (o la plantilla falló al renderizar): mismo truco de HTML-con-extensión
+ *  .doc que ya usa el resto del sistema, sin depender de ningún archivo
+ *  subido -- replica la estructura del documento real (encabezado,
+ *  Contenidos en 3 columnas, Actividades, Lista de Cotejo). */
+function _descargarPlanReforzamientoGenerico(datos, plantilla) {
+  const p = plantilla || {};
+  const thStyle = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #0D47A1;text-align:center;font-size:11px;';
+  const tdStyle = 'padding:6px 8px;border:1px solid #CFD8DC;font-size:11px;vertical-align:top;';
+  const tdLabel = tdStyle + 'font-weight:bold;background:#F5F5F5;width:170px;';
+
+  const encabezadoHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;margin-bottom:10px;">'
+    + '<tr><td colspan="2" style="' + thStyle + 'text-align:center;font-style:italic;">PLAN DE REFORZAMIENTO MÓDULOS FORMATIVOS</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Centro:</td><td style="' + tdStyle + '">' + escapeHTML(p.centroNombre || '') + '</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Familia Profesional:</td><td style="' + tdStyle + '">' + escapeHTML(datos.familiaProfesional) + '</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Bachiller técnico en:</td><td style="' + tdStyle + '">' + escapeHTML(datos.bachillerTecnico) + '</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Módulo formativo:</td><td style="' + tdStyle + '">' + escapeHTML(datos.moduloFormativo) + '</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Docente:</td><td style="' + tdStyle + '">' + escapeHTML(datos.docente) + '</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Período de ejecución:</td><td style="' + tdStyle + '">' + escapeHTML(datos.periodoStr) + '</td></tr>'
+    + '<tr><td style="' + tdLabel + '">Unidad de competencia:</td><td style="' + tdStyle + '">' + escapeHTML(datos.unidadCompetencia) + '</td></tr>'
+    + '</table>';
+
+  const listaHtml = txt => {
+    const items = (txt || '').split('\n').map(l => l.trim()).filter(Boolean);
+    if (!items.length) return '';
+    return '<ul style="margin:0;padding-left:16px;">' + items.map(i => '<li>' + escapeHTML(i) + '</li>').join('') + '</ul>';
+  };
+
+  const contenidosHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;margin-bottom:14px;">'
+    + '<tr><td colspan="3" style="' + thStyle + '">Contenidos</td></tr>'
+    + '<tr><th style="' + thStyle + '">Conceptuales</th><th style="' + thStyle + '">Procedimentales</th><th style="' + thStyle + '">Actitudes y valores</th></tr>'
+    + '<tr><td style="' + tdStyle + '">' + listaHtml(datos.conceptuales) + '</td><td style="' + tdStyle + '">' + listaHtml(datos.procedimentales) + '</td><td style="' + tdStyle + '">' + listaHtml(datos.actitudinales) + '</td></tr>'
+    + '</table>';
+
+  const actividadesHtml = datos.actividades.length ? ('<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;margin-bottom:14px;">'
+    + '<tr>'
+      + '<th style="' + thStyle + '">Actividades de aprendizajes (acciones y tareas a desarrollar)</th>'
+      + '<th style="' + thStyle + '">Tiempo</th>'
+      + '<th style="' + thStyle + '">Seguimiento</th>'
+      + '<th style="' + thStyle + '">Evidencias y productos</th>'
+      + '<th style="' + thStyle + '">Instrumentos de evaluación</th>'
+      + '<th style="' + thStyle + '">Recursos</th>'
+    + '</tr>'
+    + datos.actividades.map(a => '<tr>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(a.actividad) + '</td>'
+      + '<td style="' + tdStyle + 'text-align:center;">' + escapeHTML(a.tiempo) + '</td>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(a.seguimiento) + '</td>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(a.evidencias) + '</td>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(a.instrumento) + '</td>'
+      + '<td style="' + tdStyle + '">' + escapeHTML(a.recursos) + '</td>'
+    + '</tr>').join('')
+    + '</table>') : '';
+
+  const cotejoHtml = datos.criterios.length ? ('<div style="font-family:Calibri,Arial,sans-serif;font-size:12px;margin-bottom:6px;"><strong>Ejercicios prácticos.</strong><br><strong>Lista de Cotejo</strong> -- Esta lista de cotejo permite evaluar el cumplimiento de los criterios establecidos en la actividad individual de reforzamiento.</div>'
+    + '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;">'
+    + '<tr><th style="' + thStyle + '">Criterio</th><th style="' + thStyle + '">Logrado (✓)</th><th style="' + thStyle + '">En proceso (◐)</th><th style="' + thStyle + '">No logrado (✗)</th><th style="' + thStyle + '">Observaciones</th></tr>'
+    + datos.criterios.map((c, i) => '<tr><td style="' + tdStyle + '">' + (i + 1) + '. ' + escapeHTML(c) + '</td><td style="' + tdStyle + '"></td><td style="' + tdStyle + '"></td><td style="' + tdStyle + '"></td><td style="' + tdStyle + '"></td></tr>').join('')
+    + '</table>') : '';
+
+  const bodyHTML = '<div style="font-family:Calibri,Arial,sans-serif;">'
+    + encabezadoHtml
+    + contenidosHtml
+    + actividadesHtml
+    + (cotejoHtml ? '<div style="margin-top:14px;">' + cotejoHtml + '</div>' : '')
+    + '</div>';
+
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
+
+  const filename = 'plan-reforzamiento-' + (datos.moduloFormativo || 'modulo').replace(/\s+/g, '_').slice(0, 60) + '.doc';
+  const blob = new Blob(['﻿' + html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Guía de placeholders para la plantilla del Plan de Reforzamiento. */
+function _mostrarGuiaPlaceholdersPlanReforzamiento() {
+  const placeholders = [
+    ['{centro}', 'Nombre del centro educativo'],
+    ['{familia_profesional}', 'Escrito en el formulario al exportar'],
+    ['{bachiller_tecnico}', 'Escrito en el formulario al exportar'],
+    ['{modulo_formativo}', 'Escrito en el formulario (autocompletado con el título del examen)'],
+    ['{docente}', 'Escrito en el formulario (autocompletado con el docente del examen)'],
+    ['{periodo_ejecucion}', 'Rango de fechas del formulario, ej. "1/9/2026 – 4/9/2026"'],
+    ['{unidad_competencia}', 'Escrito en el formulario al exportar'],
+    ['{conceptuales}', 'Contenidos conceptuales del formulario, como lista con guiones (un salto de línea por elemento)'],
+    ['{procedimentales}', 'Contenidos procedimentales del formulario, como lista con guiones'],
+    ['{actitudinales}', 'Actitudes y valores del formulario, como lista con guiones']
+  ];
+
+  const rows = placeholders.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#E65100;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  const tablaActividades = `<div style="margin-top:14px;padding:12px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE0B2;">
+    <strong style="color:#E65100;font-size:0.82rem;">Tabla de Actividades (loop):</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">Crea la fila de datos (debajo de los encabezados) y pon estos tags en las celdas -- se repite sola una vez por cada actividad que agregues en el formulario:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.7rem;margin:6px 0;">
+      <tr style="background:#EF6C00;color:#fff;">
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Actividad</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Tiempo</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Seguimiento</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Evidencias</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Instrumento</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Recursos</th>
+      </tr>
+      <tr>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{#actividades}{actividad}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{tiempo}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{seguimiento}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{evidencias}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{instrumento}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{recursos}{/actividades}</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;"><code>{#actividades}</code> pegado a la PRIMERA celda de la fila, <code>{/actividades}</code> pegado a la ÚLTIMA.</p>
+  </div>`;
+
+  const tablaCriterios = `<div style="margin-top:14px;padding:12px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE0B2;">
+    <strong style="color:#E65100;font-size:0.82rem;">Lista de Cotejo (loop):</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">Igual que Actividades, pero las columnas Logrado/En proceso/No logrado/Observaciones quedan VACÍAS (para marcar a mano al evaluar) -- solo la columna Criterio trae dato:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.7rem;margin:6px 0;">
+      <tr style="background:#EF6C00;color:#fff;">
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Criterio</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Logrado</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">En proceso</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">No logrado</th>
+        <th style="padding:4px 6px;border:1px solid #EF6C00;">Observaciones</th>
+      </tr>
+      <tr>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{#criterios}{criterio}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;color:#BDBDBD;">(vacía)</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;color:#BDBDBD;">(vacía)</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;color:#BDBDBD;">(vacía)</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#E65100;">{/criterios}</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;">La última celda (Observaciones) no tiene ningún dato que mostrar, pero igual necesita el tag <code>{/criterios}</code> escrito ahí (solo eso, sin nada más) para que Word sepa dónde termina la fila que se repite.</p>
+  </div>`;
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Plan de Reforzamiento';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Usa estos placeholders en tu plantilla Word (con el membrete/logo del centro ya puesto a mano) para que el Plan de Reforzamiento, generado desde el formulario del informe de cada examen, los rellene con lo que escribas.</p>'
+    + '<div style="max-height:260px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#EF6C00;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #EF6C00;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#EF6C00;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #EF6C00;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + tablaActividades
+    + tablaCriterios
+    + '<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
+    + '<strong style="color:#E65100;font-size:0.82rem;">Si no subes ninguna plantilla:</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">El Plan de Reforzamiento se sigue generando igual, con un formato genérico (sin membrete). Subir esta plantilla es opcional, solo para que el documento salga con la identidad visual real del centro.</p>'
+    + '</div>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
 /** Arma el párrafo narrativo del informe a partir de los números YA
@@ -42036,7 +42514,7 @@ async function _renderCentrosEducativos() {
 async function _mostrarFormCentro(centroId) {
   let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '', directorNombre: '', coordinadorNombre: '' };
 
-  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false }, instrumentoExamen: { existe: false } };
+  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false }, instrumentoExamen: { existe: false }, planReforzamiento: { existe: false } };
 
   if (centroId) {
     try {
@@ -42047,15 +42525,16 @@ async function _mostrarFormCentro(centroId) {
     // El base64 de cada plantilla ya no vive en este documento (se guarda en
     // chunks aparte, ver PLANTILLA_CENTRO_CAMPOS) -- se consulta si existe sin
     // traer el archivo completo, solo para mostrar el indicador "Plantilla cargada".
-    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen, pInstrumentoExamen] = await Promise.all([
+    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen, pInstrumentoExamen, pPlanReforzamiento] = await Promise.all([
       _tienePlantillaCentroChunked(centroId, 'planificacion', centro),
       _tienePlantillaCentroChunked(centroId, 'diaria', centro),
       _tienePlantillaCentroChunked(centroId, 'psicologia', centro),
       _tienePlantillaCentroChunked(centroId, 'impacto', centro),
       _tienePlantillaCentroChunked(centroId, 'informeExamen', centro),
-      _tienePlantillaCentroChunked(centroId, 'instrumentoExamen', centro)
+      _tienePlantillaCentroChunked(centroId, 'instrumentoExamen', centro),
+      _tienePlantillaCentroChunked(centroId, 'planReforzamiento', centro)
     ]);
-    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen, instrumentoExamen: pInstrumentoExamen };
+    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen, instrumentoExamen: pInstrumentoExamen, planReforzamiento: pPlanReforzamiento };
   }
 
   const cont = document.getElementById('sa-contenido');
@@ -42194,6 +42673,21 @@ async function _mostrarFormCentro(centroId) {
       : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el instrumento se genera igual, pero con un formato genérico sin membrete.</div>')
     + '<input type="file" id="sa-centro-plantilla-instrumento-examen" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #EF6C00;border-radius:10px;background:#FFF8E1;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#E65100;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">fact_check</span> Plantilla Word para Plan de Reforzamiento (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx (con el membrete/logo del centro) para el "Plan de Reforzamiento" que se llena con un formulario desde el informe de cada examen. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersPlanReforzamiento();" style="color:#EF6C00;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (plantillasInfo.planReforzamiento.existe
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.planReforzamiento.nombre || 'plantilla_plan_reforzamiento.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'planReforzamiento\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
+        + '<button onclick="_eliminarPlantillaPlanReforzamientoCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el Plan de Reforzamiento se genera igual, pero con un formato genérico sin membrete.</div>')
+    + '<input type="file" id="sa-centro-plantilla-plan-reforzamiento" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -42322,6 +42816,19 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  const fileInputPlanReforzamiento = document.getElementById('sa-centro-plantilla-plan-reforzamiento');
+  const filePlanReforzamiento = fileInputPlanReforzamiento?.files?.[0];
+  if (filePlanReforzamiento) {
+    if (!filePlanReforzamiento.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla de Plan de Reforzamiento', 'error');
+      return;
+    }
+    if (filePlanReforzamiento.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla de Plan de Reforzamiento no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -42405,6 +42912,17 @@ async function _guardarCentro(centroId) {
       await _guardarPlantillaCentroChunked(finalId, 'instrumentoExamen', base64N, fileInstrumentoExamen.name);
     }
 
+    if (filePlanReforzamiento && finalId) {
+      mostrarToast('Guardando plantilla de Plan de Reforzamiento...', 'info');
+      const readerR = new FileReader();
+      const base64R = await new Promise((resolve, reject) => {
+        readerR.onload = () => resolve(readerR.result.split(',')[1]);
+        readerR.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerR.readAsDataURL(filePlanReforzamiento);
+      });
+      await _guardarPlantillaCentroChunked(finalId, 'planReforzamiento', base64R, filePlanReforzamiento.name);
+    }
+
     registrarCambio(centroId ? `Centro educativo actualizado: "${nombre}"` : `Centro educativo creado: "${nombre}"`);
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
@@ -42483,6 +43001,18 @@ async function _eliminarPlantillaInstrumentoExamenCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla de Instrumento de Evaluación: ' + e.message, 'error');
+  }
+}
+
+/** Elimina plantilla de Plan de Reforzamiento del centro */
+async function _eliminarPlantillaPlanReforzamientoCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de Plan de Reforzamiento de este centro?')) return;
+  try {
+    await _eliminarPlantillaCentroChunked(centroId, 'planReforzamiento');
+    mostrarToast('Plantilla de Plan de Reforzamiento eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla de Plan de Reforzamiento: ' + e.message, 'error');
   }
 }
 

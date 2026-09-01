@@ -3154,6 +3154,9 @@
           <button onclick="exportarInstrumentoExamenWord()" hidden style="background:#E0F2F1;color:#00695C;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
             <span class="material-icons" style="font-size:16px;">checklist</span>Exportar Instrumento
           </button>
+          <button onclick="abrirPlanReforzamiento()" style="background:#FFF3E0;color:#E65100;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons" style="font-size:16px;">fact_check</span>Exportar Plan Reforzamiento
+          </button>
         </div>
         <button class="btn-secundario" onclick="cerrarResultadosExamen()">Cerrar</button>
       </div>
@@ -3198,6 +3201,24 @@
       <div class="modal-footer">
         <button class="btn-secundario" onclick="cerrarInformeCombinadoExamenes()">Cancelar</button>
         <button id="inf-comb-generar" onclick="_generarInformeCombinadoWord()" style="background:#5E35B1;color:#fff;border:none;padding:9px 22px;border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;">Generar Word</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL PLAN DE REFORZAMIENTO ===== -->
+  <div id="plan-reforzamiento-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='plan-reforzamiento-overlay')cerrarPlanReforzamiento()">
+    <div class="modal-box" style="max-width:640px;width:96%;max-height:90vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">fact_check</span>
+          Plan de Reforzamiento
+        </h3>
+        <button class="modal-close" onclick="cerrarPlanReforzamiento()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body" id="plan-ref-body" style="overflow-y:auto;flex:1;padding:18px 20px;"></div>
+      <div class="modal-footer">
+        <button class="btn-secundario" onclick="cerrarPlanReforzamiento()">Cancelar</button>
+        <button id="plan-ref-generar" onclick="_generarPlanReforzamientoWord()" style="background:#EF6C00;color:#fff;border:none;padding:9px 22px;border-radius:7px;font-size:.88rem;font-weight:600;cursor:pointer;">Generar Word</button>
       </div>
     </div>
   </div>
@@ -3483,6 +3504,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#EF6C00;">v18.41<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Plan de Reforzamiento de Módulos Formativos</div>
+              <ul class="about-ver-items">
+                <li>El informe de cada examen ahora tiene un botón "Exportar Plan Reforzamiento" que abre un formulario (Familia Profesional, Bachiller técnico, Módulo/Docente autocompletados, Período de ejecución, Unidad de competencia, Contenidos, Actividades de aprendizaje y Lista de Cotejo, todos editables) y arma el Word -- a diferencia del Instrumento, este documento trae contenido pedagógico que solo el docente puede escribir, así que el sistema no inventa nada, solo lo organiza.</li>
+                <li>El formulario muestra como referencia las preguntas con menor desempeño del examen (ya calculadas en la pestaña "Informe"), para ayudar a decidir qué reforzar, sin insertarlas solas en el documento.</li>
+                <li>Superadmin &gt; Centro Educativo permite subir su propia plantilla .docx institucional para este documento, con guía de placeholders incluida; sin plantilla se genera igual con un formato genérico que replica la estructura del documento real.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -8976,9 +9013,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.40"></script>
+  <script src="app.js?v=18.41"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.40"></script>
+  <script src="auth.js?v=18.41"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
