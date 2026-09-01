@@ -5785,14 +5785,15 @@ function imprimirPDF() {
 // bytes"). Mismo patron ya usado para el CV del Portafolio Docente
 // (_guardarPortafolioCV/cargarPortafolioCV): se parte el base64 en
 // documentos de ~900 KB dentro de una subcoleccion, con un doc de metadatos
-// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto', 'informeExamen'.
+// aparte. tipo es uno de: 'planificacion', 'diaria', 'psicologia', 'impacto', 'informeExamen', 'instrumentoExamen'.
 const PLANTILLA_CENTRO_CHUNK_CHARS = 900000;
 const PLANTILLA_CENTRO_CAMPOS = {
   planificacion: { base64: 'plantillaBase64', nombre: 'plantillaNombre', fallback: 'plantilla.docx' },
   diaria: { base64: 'plantillaDiariaBase64', nombre: 'plantillaDiariaNombre', fallback: 'plantilla_diaria.docx' },
   psicologia: { base64: 'plantillaReportePsicologiaBase64', nombre: 'plantillaReportePsicologiaNombre', fallback: 'plantilla_reportes_psicologia.docx' },
   impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' },
-  informeExamen: { base64: 'plantillaInformeExamenBase64', nombre: 'plantillaInformeExamenNombre', fallback: 'plantilla_informe_examen.docx' }
+  informeExamen: { base64: 'plantillaInformeExamenBase64', nombre: 'plantillaInformeExamenNombre', fallback: 'plantilla_informe_examen.docx' },
+  instrumentoExamen: { base64: 'plantillaInstrumentoExamenBase64', nombre: 'plantillaInstrumentoExamenNombre', fallback: 'plantilla_instrumento_examen.docx' }
 };
 
 function _plantillasCentroChunksRef(centroId) {
@@ -6406,6 +6407,56 @@ async function _getPlantillaInformeExamenCentro() {
     const centro = snap.docs[0].data();
     const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'informeExamen');
     if (result) return { base64: result.base64, centroId: snap.docs[0].id, centroNombre: centro.nombre || '', centroLogoUrl: centro.logoUrl || '' };
+  }
+  return null;
+}
+
+/** Igual que _getPlantillaInformeExamenCentro() pero para el "Instrumento
+ *  para Recolección de Resultados de la Evaluación Diagnóstica" (roster por
+ *  estudiante). A diferencia de esa, además del base64 devuelve los datos
+ *  fijos del centro (código, distrito, Director/a, Coordinador/a) que van en
+ *  el encabezado del instrumento -- por eso, si se encuentra el centro del
+ *  docente, se devuelve SIEMPRE (con base64 null si no hay plantilla subida)
+ *  en vez de caer al centro "prestado" de otro docente, ya que Director/a y
+ *  Coordinador/a son datos propios de cada centro y no deben mezclarse. */
+async function _getPlantillaInstrumentoExamenCentro() {
+  if (!window.currentUser) return null;
+  let centroId = null;
+  const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+  if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+  if (!centroId) {
+    const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+  }
+  if (centroId) {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (centroDoc.exists) {
+      const centro = centroDoc.data();
+      const result = await _cargarPlantillaCentroChunked(centroId, 'instrumentoExamen');
+      return {
+        base64: result ? result.base64 : null,
+        centroId,
+        centroNombre: centro.nombre || '',
+        centroCodigo: centro.codigo || '',
+        centroDistrito: centro.distrito || '',
+        director: centro.directorNombre || '',
+        coordinador: centro.coordinadorNombre || ''
+      };
+    }
+  }
+  const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_instrumentoExamen', '==', true).limit(1).get();
+  if (!snap.empty) {
+    const centro = snap.docs[0].data();
+    const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'instrumentoExamen');
+    if (result) return {
+      base64: result.base64,
+      centroId: snap.docs[0].id,
+      centroNombre: centro.nombre || '',
+      centroCodigo: centro.codigo || '',
+      centroDistrito: centro.distrito || '',
+      director: centro.directorNombre || '',
+      coordinador: centro.coordinadorNombre || ''
+    };
   }
   return null;
 }
@@ -27870,6 +27921,196 @@ async function _calcularFilaInformeCombinado(ex) {
   return { ex, tomaron, masculino, femenino, aprobados, noAprobados, noLaTomo, puntosPosiblesAuto };
 }
 
+/** Rúbrica Tobón/MINERD 2028 de 4 niveles de dominio, usada por el
+ *  "Instrumento para Recolección de Resultados de la Evaluación Diagnóstica". */
+function _nivelTobon(precision) {
+  if (precision >= 81) return 4;
+  if (precision >= 59) return 3;
+  if (precision >= 46) return 2;
+  return 1;
+}
+
+/** Calcula, para cada estudiante que respondió el examen actualmente abierto
+ *  en el informe (info = _examenInformeActual), su nivel de dominio Tobón
+ *  (I-IV) -- a diferencia de _calcularFilaInformeCombinado (que agrega varios
+ *  exámenes en totales por curso), esto es SIEMPRE por un solo examen/curso,
+ *  una fila por estudiante, para el instrumento roster. Ordena por nombre y
+ *  numera después de ordenar (así el número de fila coincide con el orden
+ *  alfabético del documento impreso). */
+function _calcularEstudiantesConNivel(info) {
+  const { respuestas, preguntasCalificables, puntosPosiblesAuto } = info;
+  return respuestas
+    .map(r => {
+      const puntos = preguntasCalificables.reduce((s, p) =>
+        s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0);
+      const precision = puntosPosiblesAuto > 0 ? Math.round(puntos / puntosPosiblesAuto * 100) : 0;
+      return { nombre: r.estudianteNombre || '—', precision, nivel: _nivelTobon(precision) };
+    })
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    .map((e, i) => ({
+      num: i + 1,
+      nombre: e.nombre,
+      precision: e.precision,
+      nivel: e.nivel,
+      nivel4: e.nivel === 4 ? 'X' : '',
+      nivel3: e.nivel === 3 ? 'X' : '',
+      nivel2: e.nivel === 2 ? 'X' : '',
+      nivel1: e.nivel === 1 ? 'X' : ''
+    }));
+}
+
+/** Genera el "Instrumento para Recolección de Resultados de la Evaluación
+ *  Diagnóstica" (roster por estudiante, rúbrica Tobón/MINERD de 4 niveles) de
+ *  UN SOLO examen/curso a la vez -- confirmado con el usuario: "un
+ *  instrumento por curso, un resumen combinado al final", así que esto es una
+ *  exportación separada del "Informe combinado" (que sigue juntando varios
+ *  cursos en un resumen agregado), no una fusión de ambas en un solo Word.
+ *  Usa el examen que está abierto actualmente en el modal de Informes. */
+async function exportarInstrumentoExamenWord() {
+  const info = _examenInformeActual;
+  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
+  if (!info.respuestas.length) { mostrarToast('Este examen todavía no tiene respuestas', 'error'); return; }
+
+  try {
+    const estudiantes = _calcularEstudiantesConNivel(info);
+    const datos = { ex: info.ex, estudiantes };
+
+    let plantilla = null;
+    try { plantilla = await _getPlantillaInstrumentoExamenCentro(); } catch (e) {
+      console.warn('[Instrumento] No se pudo resolver el centro/plantilla:', e.message);
+    }
+
+    let generadoConPlantilla = false;
+    if (plantilla && plantilla.base64) {
+      try {
+        generadoConPlantilla = await _generarInstrumentoExamenConPlantilla(plantilla, datos);
+      } catch (e) {
+        console.warn('[Instrumento] No se pudo usar la plantilla del centro, se usa el formato genérico:', e.message);
+      }
+    }
+    if (!generadoConPlantilla) _descargarInstrumentoExamenGenerico(datos, plantilla);
+
+    mostrarToast('Instrumento generado', 'success');
+  } catch (e) {
+    console.error('[Instrumento]', e);
+    mostrarToast('Error al generar: ' + e.message, 'error');
+  }
+}
+
+/** Intenta generar el instrumento con la plantilla .docx del centro
+ *  (docxtemplater, mismo patrón que el Informe combinado). Placeholders ver
+ *  _mostrarGuiaPlaceholdersInstrumentoExamen(). Devuelve true si lo logró (y
+ *  ya disparó la descarga), false si no había plantilla o falló, para que el
+ *  llamador caiga al formato genérico. */
+async function _generarInstrumentoExamenConPlantilla(plantilla, datos) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return false;
+
+  try {
+    const binaryStr = atob(plantilla.base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    const zip = new PizZip(bytes.buffer);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      delimiters: { start: '{', end: '}' },
+      nullGetter: () => ''
+    });
+
+    doc.render({
+      centro: plantilla.centroNombre || '',
+      codigo_centro: plantilla.centroCodigo || '',
+      distrito: plantilla.centroDistrito || '',
+      director: plantilla.director || '',
+      coordinador: plantilla.coordinador || '',
+      grado_seccion: datos.ex.curso || '',
+      modulo_formativo: datos.ex.titulo || '',
+      asignatura: datos.ex.materia || '',
+      estudiantes: datos.estudiantes.map(e => ({
+        num: e.num, nombre: e.nombre, nivel4: e.nivel4, nivel3: e.nivel3, nivel2: e.nivel2, nivel1: e.nivel1
+      }))
+    });
+
+    const out = doc.getZip().generate({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const filename = 'instrumento-' + (datos.ex.curso || datos.ex.titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.docx';
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (e) {
+    console.error('[Instrumento] Error renderizando la plantilla del centro:', e);
+    mostrarToast('La plantilla del centro tiene un error (revisa los placeholders) -- se generó con el formato genérico.', 'error');
+    return false;
+  }
+}
+
+/** Formato de respaldo cuando el centro no tiene plantilla propia cargada
+ *  (o la plantilla falló al renderizar): mismo truco de HTML-con-extensión
+ *  .doc que ya usa el resto del sistema, sin depender de ningún archivo
+ *  subido. plantilla puede ser null (sin centro resuelto) -- en ese caso el
+ *  encabezado queda con los campos institucionales en blanco. */
+function _descargarInstrumentoExamenGenerico(datos, plantilla) {
+  const ex = datos.ex;
+  const p = plantilla || {};
+  const thStyle = 'background:#00695C;color:#ffffff;font-weight:bold;padding:6px 8px;border:1px solid #00584D;text-align:center;font-size:11px;';
+  const tdStyle = 'padding:5px 8px;border:1px solid #CFD8DC;text-align:center;font-size:11px;';
+  const tdTexto = tdStyle + 'mso-number-format:\'\\@\';';
+
+  const filaHtml = e => `<tr>
+    <td style="${tdTexto}">${e.num}</td>
+    <td style="${tdTexto}text-align:left;">${escapeHTML(e.nombre)}</td>
+    <td style="${tdStyle}font-weight:bold;">${e.nivel4}</td>
+    <td style="${tdStyle}font-weight:bold;">${e.nivel3}</td>
+    <td style="${tdStyle}font-weight:bold;">${e.nivel2}</td>
+    <td style="${tdStyle}font-weight:bold;">${e.nivel1}</td>
+  </tr>`;
+
+  const encabezadoHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;margin-bottom:10px;">'
+    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Centro:</strong> ' + escapeHTML(p.centroNombre || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Código:</strong> ' + escapeHTML(p.centroCodigo || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Distrito:</strong> ' + escapeHTML(p.centroDistrito || '') + '</td></tr>'
+    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Director/a:</strong> ' + escapeHTML(p.director || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Coordinador/a:</strong> ' + escapeHTML(p.coordinador || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Grado/Sección:</strong> ' + escapeHTML(ex.curso || '') + '</td></tr>'
+    + '<tr><td colspan="3" style="' + tdStyle + 'text-align:left;"><strong>Módulo formativo:</strong> ' + escapeHTML(ex.titulo || '') + '</td></tr>'
+    + '</table>';
+
+  const tablaHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;">'
+    + '<tr>'
+      + '<th rowspan="2" style="' + thStyle + '">Núm.</th>'
+      + '<th rowspan="2" style="' + thStyle + '">Nombre del/la estudiante</th>'
+      + '<th colspan="4" style="' + thStyle + '">Nivel de dominio</th>'
+    + '</tr>'
+    + '<tr>'
+      + '<th style="' + thStyle + '">Nivel IV<br>81-100</th>'
+      + '<th style="' + thStyle + '">Nivel III<br>59-80</th>'
+      + '<th style="' + thStyle + '">Nivel II<br>46-58</th>'
+      + '<th style="' + thStyle + '">Nivel I<br>0-45</th>'
+    + '</tr>'
+    + datos.estudiantes.map(filaHtml).join('')
+    + '</table>';
+
+  const bodyHTML = '<div style="font-family:Calibri,Arial,sans-serif;">'
+    + '<h2 style="text-align:center;font-size:14px;">INSTRUMENTO PARA RECOLECCIÓN DE RESULTADOS DE LA EVALUACIÓN DIAGNÓSTICA</h2>'
+    + encabezadoHtml
+    + tablaHtml
+    + '</div>';
+
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
+
+  const filename = 'instrumento-' + (ex.curso || ex.titulo || 'evaluacion').replace(/\s+/g, '_').slice(0, 60) + '.doc';
+  const blob = new Blob(['\uFEFF' + html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 /** Arma el párrafo narrativo del informe a partir de los números YA
  *  calculados de cada fila -- nunca inventa una cifra ni una conclusión que
  *  los datos no respalden (ej. no dice "nivel bajo" si el promedio de
@@ -41789,9 +42030,9 @@ async function _renderCentrosEducativos() {
 
 /** Muestra formulario para crear/editar centro */
 async function _mostrarFormCentro(centroId) {
-  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '' };
+  let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '', directorNombre: '', coordinadorNombre: '' };
 
-  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false } };
+  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false }, instrumentoExamen: { existe: false } };
 
   if (centroId) {
     try {
@@ -41802,14 +42043,15 @@ async function _mostrarFormCentro(centroId) {
     // El base64 de cada plantilla ya no vive en este documento (se guarda en
     // chunks aparte, ver PLANTILLA_CENTRO_CAMPOS) -- se consulta si existe sin
     // traer el archivo completo, solo para mostrar el indicador "Plantilla cargada".
-    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen] = await Promise.all([
+    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen, pInstrumentoExamen] = await Promise.all([
       _tienePlantillaCentroChunked(centroId, 'planificacion', centro),
       _tienePlantillaCentroChunked(centroId, 'diaria', centro),
       _tienePlantillaCentroChunked(centroId, 'psicologia', centro),
       _tienePlantillaCentroChunked(centroId, 'impacto', centro),
-      _tienePlantillaCentroChunked(centroId, 'informeExamen', centro)
+      _tienePlantillaCentroChunked(centroId, 'informeExamen', centro),
+      _tienePlantillaCentroChunked(centroId, 'instrumentoExamen', centro)
     ]);
-    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen };
+    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen, instrumentoExamen: pInstrumentoExamen };
   }
 
   const cont = document.getElementById('sa-contenido');
@@ -41824,6 +42066,8 @@ async function _mostrarFormCentro(centroId) {
     + _inputCentro('sa-centro-telefono', 'Teléfono', centro.telefono, 'Ej: 809-555-1234')
     + _inputCentro('sa-centro-email', 'Email del Centro', centro.email, 'Ej: info@liceo.edu.do')
     + _inputCentro('sa-centro-logo', 'URL del Logo', centro.logoUrl, 'https://ejemplo.com/logo.png')
+    + _inputCentro('sa-centro-director', 'Director/a', centro.directorNombre, 'Ej: Lic. Juana Pérez')
+    + _inputCentro('sa-centro-coordinador', 'Coordinador/a', centro.coordinadorNombre, 'Ej: Lic. Juan Gómez')
     + '</div>'
     + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #1565C0;border-radius:10px;background:#E3F2FD;">'
     + '<label style="font-size:0.82rem;font-weight:600;color:#0D47A1;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
@@ -41931,6 +42175,21 @@ async function _mostrarFormCentro(centroId) {
       : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el "Informe combinado" se genera igual, pero con un formato genérico sin membrete.</div>')
     + '<input type="file" id="sa-centro-plantilla-informe-examen" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #00695C;border-radius:10px;background:#E0F2F1;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#00473C;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">checklist</span> Plantilla Word para Instrumento de Evaluación Diagnóstica (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx (con el membrete/logo del centro) para el "Instrumento para Recolección de Resultados de la Evaluación Diagnóstica" -- el roster por estudiante con los 4 niveles de dominio, que se genera por curso desde el informe de cada examen. Usa Director/a y Coordinador/a de arriba para su encabezado. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersInstrumentoExamen();" style="color:#00695C;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (plantillasInfo.instrumentoExamen.existe
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.instrumentoExamen.nombre || 'plantilla_instrumento_examen.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'instrumentoExamen\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
+        + '<button onclick="_eliminarPlantillaInstrumentoExamenCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el instrumento se genera igual, pero con un formato genérico sin membrete.</div>')
+    + '<input type="file" id="sa-centro-plantilla-instrumento-examen" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -41964,6 +42223,8 @@ async function _guardarCentro(centroId) {
     telefono: document.getElementById('sa-centro-telefono')?.value?.trim() || '',
     email: document.getElementById('sa-centro-email')?.value?.trim() || '',
     logoUrl: document.getElementById('sa-centro-logo')?.value?.trim() || '',
+    directorNombre: document.getElementById('sa-centro-director')?.value?.trim() || '',
+    coordinadorNombre: document.getElementById('sa-centro-coordinador')?.value?.trim() || '',
     emailjsServiceId: document.getElementById('sa-centro-emailjs-service')?.value?.trim() || '',
     emailjsTemplateId: document.getElementById('sa-centro-emailjs-template')?.value?.trim() || '',
     emailjsPublicKey: document.getElementById('sa-centro-emailjs-public-key')?.value?.trim() || '',
@@ -42044,6 +42305,19 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  const fileInputInstrumentoExamen = document.getElementById('sa-centro-plantilla-instrumento-examen');
+  const fileInstrumentoExamen = fileInputInstrumentoExamen?.files?.[0];
+  if (fileInstrumentoExamen) {
+    if (!fileInstrumentoExamen.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla de Instrumento de Evaluación', 'error');
+      return;
+    }
+    if (fileInstrumentoExamen.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla de Instrumento de Evaluación no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -42116,6 +42390,17 @@ async function _guardarCentro(centroId) {
       await _guardarPlantillaCentroChunked(finalId, 'informeExamen', base64E, fileInformeExamen.name);
     }
 
+    if (fileInstrumentoExamen && finalId) {
+      mostrarToast('Guardando plantilla de Instrumento de Evaluación...', 'info');
+      const readerN = new FileReader();
+      const base64N = await new Promise((resolve, reject) => {
+        readerN.onload = () => resolve(readerN.result.split(',')[1]);
+        readerN.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerN.readAsDataURL(fileInstrumentoExamen);
+      });
+      await _guardarPlantillaCentroChunked(finalId, 'instrumentoExamen', base64N, fileInstrumentoExamen.name);
+    }
+
     registrarCambio(centroId ? `Centro educativo actualizado: "${nombre}"` : `Centro educativo creado: "${nombre}"`);
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
@@ -42182,6 +42467,18 @@ async function _eliminarPlantillaInformeExamenCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla de Informe de Evaluación: ' + e.message, 'error');
+  }
+}
+
+/** Elimina plantilla de Instrumento de Evaluación Diagnóstica del centro */
+async function _eliminarPlantillaInstrumentoExamenCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de Instrumento de Evaluación de este centro?')) return;
+  try {
+    await _eliminarPlantillaCentroChunked(centroId, 'instrumentoExamen');
+    mostrarToast('Plantilla de Instrumento de Evaluación eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla de Instrumento de Evaluación: ' + e.message, 'error');
   }
 }
 
@@ -42471,6 +42768,64 @@ function _mostrarGuiaPlaceholdersInformeExamen() {
     + '<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
     + '<strong style="color:#E65100;font-size:0.82rem;">Si no subes ninguna plantilla:</strong>'
     + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">El "Informe combinado" se sigue generando igual, con un formato genérico (sin membrete). Subir esta plantilla es opcional, solo para que el documento salga con la identidad visual real del centro.</p>'
+    + '</div>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+/** Guía de placeholders para la plantilla del Instrumento para Recolección de
+ *  Resultados de la Evaluación Diagnóstica (roster por estudiante). */
+function _mostrarGuiaPlaceholdersInstrumentoExamen() {
+  const placeholders = [
+    ['{centro}', 'Nombre del centro educativo'],
+    ['{codigo_centro}', 'Código del centro (Superadmin > Centro Educativo)'],
+    ['{distrito}', 'Distrito Educativo del centro'],
+    ['{director}', 'Director/a del centro (Superadmin > Centro Educativo)'],
+    ['{coordinador}', 'Coordinador/a del centro (Superadmin > Centro Educativo)'],
+    ['{grado_seccion}', 'Curso/sección del examen que se está exportando'],
+    ['{modulo_formativo}', 'Título del examen'],
+    ['{asignatura}', 'Materia del examen (si se completó al crearlo)']
+  ];
+
+  const rows = placeholders.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#00473C;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  const tablaInfo = `<div style="margin-top:14px;padding:12px;background:#E0F2F1;border-radius:8px;border:1px solid #B2DFDB;">
+    <strong style="color:#00473C;font-size:0.82rem;">Tabla por estudiante (loop):</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">En tu plantilla Word, crea la fila de datos de la tabla (una fila, debajo de los encabezados) y pon estos tags en las celdas -- se repite sola una vez por cada estudiante que respondió el examen, en orden alfabético:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.72rem;margin:6px 0;">
+      <tr style="background:#00695C;color:#fff;">
+        <th style="padding:4px 6px;border:1px solid #00695C;">Núm.</th>
+        <th style="padding:4px 6px;border:1px solid #00695C;">Nombre</th>
+        <th style="padding:4px 6px;border:1px solid #00695C;">Nivel IV (81-100)</th>
+        <th style="padding:4px 6px;border:1px solid #00695C;">Nivel III (59-80)</th>
+        <th style="padding:4px 6px;border:1px solid #00695C;">Nivel II (46-58)</th>
+        <th style="padding:4px 6px;border:1px solid #00695C;">Nivel I (0-45)</th>
+      </tr>
+      <tr>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#00473C;">{#estudiantes}{num}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#00473C;">{nombre}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#00473C;">{nivel4}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#00473C;">{nivel3}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#00473C;">{nivel2}</td>
+        <td style="padding:4px 6px;border:1px solid #E0E0E0;font-family:monospace;color:#00473C;">{nivel1}{/estudiantes}</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;"><code>{#estudiantes}</code> va pegado al tag de la PRIMERA celda de la fila, y <code>{/estudiantes}</code> pegado al tag de la ÚLTIMA celda -- así docxtemplater sabe que toda esa fila se repite. Cada celda {nivelN} viene vacía o con "X" según el nivel de ESE estudiante -- pon solo un {nivelN} por columna de tu tabla de 4 niveles, cada uno en su propia columna.</p>
+  </div>`;
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Instrumento de Evaluación Diagnóstica';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Usa estos placeholders en tu plantilla Word (con el membrete/logo del centro ya puesto a mano) para que el instrumento, generado desde el informe de cada examen, los rellene con los datos reales. Esto se genera UN INSTRUMENTO POR CURSO (cada vez que exportas el instrumento de un examen), no combina varios cursos.</p>'
+    + '<div style="max-height:260px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#00695C;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #00695C;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#00695C;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #00695C;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + tablaInfo
+    + '<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
+    + '<strong style="color:#E65100;font-size:0.82rem;">Si no subes ninguna plantilla:</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">El instrumento se sigue generando igual, con un formato genérico (sin membrete). Subir esta plantilla es opcional, solo para que el documento salga con la identidad visual real del centro.</p>'
     + '</div>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
