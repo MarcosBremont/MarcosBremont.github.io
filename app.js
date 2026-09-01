@@ -27196,8 +27196,14 @@ function _parsearPreguntasTexto(texto) {
   const bloques = [];
   let actual = null;
 
-  const regexPregunta = /^\s*(\d{1,3})[.\)]\s+(.+)$/;
-  const regexOpcion = /^[\s•·o○▪\-]*([A-Da-d])[.\)]\s+(.+)$/;
+  // El espacio después del punto es obligatorio ("\.\s+") para no confundir
+  // un número decimal al inicio de línea (ej. "3.14 es el valor de pi") con
+  // una pregunta nueva -- pero después de ")" el espacio es opcional
+  // ("\)\s*"), porque un cierre de paréntesis nunca es parte de un número
+  // real, y en la práctica el texto pegado desde Word suele traer el
+  // enunciado pegado directo al número ("10)Si ti y t2..." sin espacio).
+  const regexPregunta = /^\s*(\d{1,3})(?:\.\s+|\)\s*)(.+)$/;
+  const regexOpcion = /^[\s•·o○▪\-]*([A-Da-d])(?:\.\s+|\)\s*)(.+)$/;
 
   lineas.forEach(linea => {
     const mP = regexPregunta.exec(linea);

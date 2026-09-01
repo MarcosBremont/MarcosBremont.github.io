@@ -3508,6 +3508,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#5E35B1;">v18.51<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Importar preguntas" no separaba preguntas pegadas al número sin espacio</div>
+              <ul class="about-ver-items">
+                <li>El detector de preguntas exigía un espacio después del "N)" o "N." para reconocer el inicio de una pregunta nueva -- pero el texto pegado desde Word suele traer el enunciado pegado directo al número (ej. "10)Si ti y t2..." sin espacio), así que esa pregunta se pegaba al final de la anterior en vez de reconocerse por separado.</li>
+                <li>Ahora el espacio después de ")" es opcional (sí sigue siendo obligatorio después de "." para no confundir un número decimal al inicio de línea, como "3.14 es el valor de pi", con una pregunta nueva). Mismo ajuste para las opciones "A)"/"B)"... Verificado contra el caso reportado y contra los formatos ya soportados, sin romper ninguno.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#4285F4;">v18.50<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9145,9 +9160,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.50"></script>
+  <script src="app.js?v=18.51"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.50"></script>
+  <script src="auth.js?v=18.51"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
