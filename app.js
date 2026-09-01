@@ -28169,9 +28169,12 @@ function abrirPlanReforzamiento() {
   const analisis = info.puntosPosiblesAuto > 0
     ? _analizarDesempenoPreguntas(info.respuestas, info.preguntas, info.preguntasCalificables).slice(0, 5)
     : [];
+  const planificaciones = _prListarPlanificacionesEtp();
 
   _planRefState = {
     analisis,
+    planificaciones,
+    planificacionId: '',
     familiaProfesional: '',
     bachillerTecnico: '',
     moduloFormativo: info.ex.titulo || '',
@@ -28193,8 +28196,74 @@ function abrirPlanReforzamiento() {
     criterios: ['']
   };
 
-  _rerenderPlanReforzamiento();
+  const matchId = _prMejorMatchPlanificacion(info.ex, planificaciones);
+  if (matchId) {
+    _prAplicarPlanificacion(matchId); // ya re-renderiza el formulario
+  } else {
+    _rerenderPlanReforzamiento();
+  }
   document.getElementById('plan-reforzamiento-overlay').classList.remove('hidden');
+}
+
+/** Busca en la biblioteca local (localStorage) de planificaciones guardadas
+ *  las de tipo ETP (excluye "academico"), para poder auto-rellenar el Plan de
+ *  Reforzamiento con Familia Profesional/Bachiller técnico/Unidad de
+ *  competencia/Contenidos que el docente YA escribió al planificar ese RA --
+ *  así no tiene que volver a escribirlos a mano. Cada planificación guardada
+ *  cubre un solo RA (ver planificacion.ra), por eso puede haber varias para
+ *  el mismo módulo -- se listan todas para que el docente elija el RA que
+ *  corresponde al tema débil que va a reforzar. */
+function _prListarPlanificacionesEtp() {
+  const biblio = cargarBiblioteca();
+  return (biblio.items || [])
+    .filter(it => it.tipo !== 'academico' && it.planificacion && it.planificacion.datosGenerales)
+    .map(it => {
+      const dg = it.planificacion.datosGenerales || {};
+      const ra = it.planificacion.ra || {};
+      return {
+        id: it.id,
+        label: (dg.moduloFormativo || 'Sin módulo') + (ra.descripcion ? ' — ' + ra.descripcion.slice(0, 60) : ''),
+        dg, ra
+      };
+    });
+}
+
+/** Entre las planificaciones ETP guardadas, encuentra la que mejor coincide
+ *  con el examen por nombre de módulo/materia -- coincidencia flexible en
+ *  cualquier dirección (no exige texto idéntico). Devuelve el id o null. */
+function _prMejorMatchPlanificacion(ex, lista) {
+  const candidatos = [ex.materia, ex.titulo].map(t => (t || '').trim().toLowerCase()).filter(Boolean);
+  if (!candidatos.length) return null;
+  for (const item of lista) {
+    const modulo = (item.dg.moduloFormativo || '').trim().toLowerCase();
+    if (!modulo) continue;
+    if (candidatos.some(c => c === modulo || c.includes(modulo) || modulo.includes(c))) return item.id;
+  }
+  return null;
+}
+
+/** Aplica los datos de una planificación guardada (elegida en el dropdown, o
+ *  detectada automáticamente al abrir) a los campos del formulario --
+ *  Contenidos incluidos, ya que ahí vive lo que el docente escribió al
+ *  planificar ese RA. id vacío = "escribir manualmente" (no toca nada). */
+function _prAplicarPlanificacion(id) {
+  if (!_planRefState) return;
+  _planRefState.planificacionId = id || '';
+  if (id) {
+    const item = _planRefState.planificaciones.find(p => p.id === id);
+    if (item) {
+      const { dg, ra } = item;
+      _planRefState.familiaProfesional = dg.familiaProfesional || '';
+      _planRefState.bachillerTecnico = dg.nombreBachillerato || '';
+      _planRefState.unidadCompetencia = dg.unidadCompetencia || '';
+      if (dg.moduloFormativo) _planRefState.moduloFormativo = dg.moduloFormativo;
+      if (!_planRefState.docente && dg.nombreDocente) _planRefState.docente = dg.nombreDocente;
+      _planRefState.conceptuales = ra.contenidosConceptuales || '';
+      _planRefState.procedimentales = ra.contenidosProcedimentales || '';
+      _planRefState.actitudinales = ra.contenidosActitudinales || '';
+    }
+  }
+  _rerenderPlanReforzamiento();
 }
 
 function cerrarPlanReforzamiento() {
@@ -28220,8 +28289,23 @@ function _renderPlanReforzamientoBody() {
       + '</ul></div>'
     : '';
 
+  const selectorHtml = s.planificaciones.length
+    ? '<div style="background:#E3F2FD;border-radius:8px;padding:10px 12px;margin-bottom:14px;">'
+      + '<label style="display:block;font-size:.73rem;font-weight:600;color:#0D47A1;margin-bottom:4px;">'
+      + '<span class="material-icons" style="font-size:14px;vertical-align:middle;">auto_awesome</span> Rellenar desde una Planificación guardada</label>'
+      + '<select onchange="_prAplicarPlanificacion(this.value)" style="width:100%;padding:7px 9px;border:1.5px solid #90CAF9;border-radius:7px;font-size:.82rem;outline:none;font-family:inherit;background:#fff;">'
+      + '<option value="">-- Escribir manualmente --</option>'
+      + s.planificaciones.map(p => '<option value="' + p.id + '" ' + (s.planificacionId === p.id ? 'selected' : '') + '>' + _eHtml(p.label) + '</option>').join('')
+      + '</select>'
+      + '<p style="font-size:.7rem;color:#1565C0;margin:6px 0 0;">' + (s.planificacionId
+        ? 'Familia Profesional, Bachiller técnico, Unidad de competencia y Contenidos se llenaron con lo que ya escribiste al planificar ese RA -- puedes editarlos abajo.'
+        : 'Si ya planificaste este módulo, elige el RA correspondiente para no reescribir Familia Profesional, Unidad de competencia y Contenidos.') + '</p>'
+      + '</div>'
+    : '';
+
   return `
     ${referenciaHtml}
+    ${selectorHtml}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div><label style="${labelS}">Familia Profesional</label>
         <input type="text" value="${_eHtml(s.familiaProfesional)}" style="${inputS}" oninput="_planRefState.familiaProfesional=this.value"></div>
