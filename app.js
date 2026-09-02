@@ -11385,6 +11385,12 @@ function _mostrarPanel(panelId) {
     document.getElementById(id)?.classList.add('hidden');
   });
   _stepSectionsOcultas = true;
+  // #wizard-academico (el asistente de Planificación Académica) vive fuera de
+  // #main-content-etp, así que ocultar las secciones de arriba no lo toca -- sin esto,
+  // si el docente estaba en modo académico y abría cualquier panel (Calificaciones,
+  // Dashboard, etc.), el wizard académico se quedaba visible por encima de todo, dando
+  // la impresión de que el clic no hizo nada y "regresó" solo a la planificación.
+  document.getElementById('wizard-academico')?.classList.add('hidden');
   // Ocultar otros paneles
   ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
