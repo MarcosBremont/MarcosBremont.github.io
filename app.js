@@ -15267,6 +15267,18 @@ function abrirFotoGrupal() {
   _renderFotoGrupalSeleccion();
 }
 
+// Foto de un solo estudiante (ej. faltó el día de la foto grupal) -- reutiliza el mismo
+// modal y el mismo paso de recorte manual, pero sin pasar por la detección automática
+// (no tiene sentido correrla sobre una sola persona) ni por el resto del curso.
+function abrirFotoIndividual(estId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  const est = curso?.estudiantes?.find(e => e.id === estId);
+  if (!est) return;
+  _fotoGrupalState = { cursoId: calState.cursoActivoId, estudiantes: curso.estudiantes, manualLista: [est], idx: 0, img: null, objectUrl: null };
+  document.getElementById('foto-grupal-overlay')?.classList.remove('hidden');
+  _renderFotoGrupalSeleccion();
+}
+
 function cerrarFotoGrupal() {
   document.getElementById('foto-grupal-overlay')?.classList.add('hidden');
   if (_fotoGrupalState?.objectUrl) URL.revokeObjectURL(_fotoGrupalState.objectUrl);
@@ -15277,6 +15289,16 @@ function cerrarFotoGrupal() {
 function _renderFotoGrupalSeleccion() {
   const body = document.getElementById('foto-grupal-body');
   if (!body) return;
+  const s = _fotoGrupalState;
+  if (s?.manualLista) {
+    body.innerHTML =
+      '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 14px;">Elige una foto de <strong>' + escapeHTML(s.manualLista[0].nombre) + '</strong> y luego muévela/haz zoom para recortar su cara.</p>'
+      + '<label class="btn-siguiente" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">'
+      + '<span class="material-icons">upload_file</span> Elegir foto'
+      + '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="_fotoGrupalArchivoSeleccionado(this)">'
+      + '</label>';
+    return;
+  }
   body.innerHTML =
     '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 14px;">Sube UNA foto donde salga todo el curso. TinClass va a intentar detectar las caras automáticamente para que solo tengas que escribir el nombre de cada quien; si no logra detectarlas, podrás recortarlas a mano una por una.</p>'
     + '<label class="btn-siguiente" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">'
@@ -15295,7 +15317,13 @@ function _fotoGrupalArchivoSeleccionado(inputEl) {
     _fotoGrupalState.objectUrl = url;
     _fotoGrupalState.naturalW = img.naturalWidth;
     _fotoGrupalState.naturalH = img.naturalHeight;
-    _fotoGrupalIntentarDeteccion();
+    if (_fotoGrupalState.manualLista) {
+      // Foto individual: directo al recorte, sin detección automática.
+      _fotoGrupalIniciarEncuadre();
+      _renderFotoGrupalCrop();
+    } else {
+      _fotoGrupalIntentarDeteccion();
+    }
   };
   img.onerror = () => { URL.revokeObjectURL(url); mostrarToast('No se pudo cargar esa imagen', 'error'); };
   img.src = url;
@@ -15539,7 +15567,7 @@ function _renderFotoGrupalCrop() {
   const zoomMin = Math.max(FOTO_GRUPAL_WRAP / s.naturalW, FOTO_GRUPAL_WRAP / s.naturalH);
   const zoomPct = Math.round((s.scale / zoomMin) * 100);
   body.innerHTML =
-    '<div style="text-align:center;font-size:0.8rem;color:#78909C;margin-bottom:4px;">Estudiante ' + (s.idx + 1) + ' de ' + lista.length + '</div>'
+    (lista.length > 1 ? '<div style="text-align:center;font-size:0.8rem;color:#78909C;margin-bottom:4px;">Estudiante ' + (s.idx + 1) + ' de ' + lista.length + '</div>' : '')
     + '<div style="text-align:center;font-weight:700;margin-bottom:12px;">' + escapeHTML(est.nombre) + '</div>'
     + '<div id="foto-grupal-wrap" style="width:' + FOTO_GRUPAL_WRAP + 'px;height:' + FOTO_GRUPAL_WRAP + 'px;border-radius:50%;overflow:hidden;position:relative;margin:0 auto 14px;background:#ECEFF1;border:3px solid #B39DDB;cursor:grab;touch-action:none;">'
     + '<img id="foto-grupal-img" src="' + s.img.src + '" draggable="false" style="position:absolute;left:' + s.left + 'px;top:' + s.top + 'px;width:' + dispW + 'px;height:' + dispH + 'px;max-width:none;user-select:none;pointer-events:none;">'
@@ -15888,6 +15916,7 @@ function renderizarTablaCalificaciones() {
       + '<span class="material-icons">supervisor_account</span> Link padres'
       + '</button>'
       + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'
+      + '<button onclick="abrirFotoIndividual(\'' + est.id + '\')" style="color:#37474F;"><span class="material-icons">add_a_photo</span> ' + (fotoEst?.fotoBase64 ? 'Cambiar foto' : 'Agregar foto') + '</button>'
       + (fotoEst?.fotoBase64 ? '<button onclick="_fotoGrupalEliminarFoto(\'' + est.id + '\')" style="color:#37474F;"><span class="material-icons">no_photography</span> Quitar foto</button>' : '')
       + (estIdx > 0 ? '<button onclick="_moverEstudiante(\'' + est.id + '\',-1)" style="color:#37474F;"><span class="material-icons">arrow_upward</span> Subir</button>' : '')
       + (estIdx < curso.estudiantes.length - 1 ? '<button onclick="_moverEstudiante(\'' + est.id + '\',1)" style="color:#37474F;"><span class="material-icons">arrow_downward</span> Bajar</button>' : '')
