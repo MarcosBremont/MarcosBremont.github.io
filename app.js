@@ -466,18 +466,94 @@ function descargarPlantillaEstudiantesCSV() {
   mostrarToast('Plantilla descargada', 'success');
 }
 
-function eliminarEstudiante(estudianteId) {
+async function eliminarEstudiante(estudianteId) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
   const est = curso.estudiantes.find(e => e.id === estudianteId);
   if (!est) return;
-  if (!confirm(`¿Eliminar a "${est.nombre}"?`)) return;
+  if (!confirm(`¿Eliminar a "${est.nombre}"? Esta acción no se puede deshacer.`)) return;
+
+  // Segunda confirmación con contraseña -- a pedido del usuario, para que
+  // eliminar un estudiante (borra también todas sus notas) no sea un solo
+  // clic de más.
+  const confirmado = await _confirmarAccionSensible('eliminar a "' + est.nombre + '"');
+  if (!confirmado) return;
+
   registrarCambio(`Estudiante eliminado: ${est.nombre}`);
   curso.estudiantes = curso.estudiantes.filter(e => e.id !== estudianteId);
   // Limpiar notas
   if (curso.notas && curso.notas[estudianteId]) delete curso.notas[estudianteId];
   guardarCalificaciones();
   renderizarTablaCalificaciones();
+}
+
+// ── Confirmación con contraseña para acciones sensibles (ej. eliminar un
+// estudiante) -- reautentica al docente contra Firebase Auth antes de dejar
+// pasar la acción. Cuentas con contraseña (registro normal) ven un modal
+// propio con el campo enmascarado; cuentas que solo usan Google (sin
+// contraseña en Firebase) confirman reabriendo el popup de Google, mismo
+// mecanismo que ya usa el desbloqueo de pantalla por inactividad
+// (_desbloquearConGoogle). ──
+let _passConfirmResolve = null;
+
+function _pedirConfirmacionPassword(descripcion) {
+  return new Promise(resolve => {
+    _passConfirmResolve = resolve;
+    const desc = document.getElementById('pass-confirm-desc');
+    const input = document.getElementById('pass-confirm-input');
+    const err = document.getElementById('pass-confirm-error');
+    if (desc) desc.textContent = 'Para ' + descripcion + ', escribe tu contraseña.';
+    if (input) input.value = '';
+    if (err) err.textContent = '';
+    document.getElementById('pass-confirm-overlay')?.classList.remove('hidden');
+    setTimeout(() => input?.focus(), 100);
+  });
+}
+
+function _cancelarConfirmarPassword() {
+  document.getElementById('pass-confirm-overlay')?.classList.add('hidden');
+  if (_passConfirmResolve) { _passConfirmResolve(false); _passConfirmResolve = null; }
+}
+
+async function _confirmarPasswordSubmit() {
+  const user = window.currentUser;
+  const pass = document.getElementById('pass-confirm-input')?.value || '';
+  const errEl = document.getElementById('pass-confirm-error');
+  const btn = document.getElementById('pass-confirm-btn');
+  if (!pass) { if (errEl) errEl.textContent = 'Escribe tu contraseña.'; return; }
+  if (btn) btn.disabled = true;
+  try {
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, pass);
+    await user.reauthenticateWithCredential(credential);
+    document.getElementById('pass-confirm-overlay')?.classList.add('hidden');
+    if (_passConfirmResolve) { _passConfirmResolve(true); _passConfirmResolve = null; }
+  } catch (e) {
+    if (errEl) errEl.textContent = 'Contraseña incorrecta.';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function _confirmarAccionSensible(descripcion) {
+  const user = window.currentUser;
+  if (!user) return true; // sin sesión activa detectable, no se puede verificar -- dejar pasar
+
+  const tienePassword = (user.providerData || []).some(p => p.providerId === 'password');
+  if (tienePassword) return await _pedirConfirmacionPassword(descripcion);
+
+  const esGoogle = (user.providerData || []).some(p => p.providerId === 'google.com');
+  if (esGoogle) {
+    if (!confirm('Tu cuenta usa Google (sin contraseña propia) -- se abrirá una ventana para confirmar tu sesión antes de continuar. ¿Seguir?')) return false;
+    try {
+      await user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+      return true;
+    } catch (e) {
+      if (e.code !== 'auth/popup-closed-by-user') mostrarToast('No se pudo confirmar tu sesión. No se realizó la acción.', 'error');
+      return false;
+    }
+  }
+
+  return true; // proveedor no reconocido -- dejar pasar en vez de bloquear sin forma de continuar
 }
 
 function _toggleEstMenu(e, estId) {

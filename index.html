@@ -2090,6 +2090,27 @@
         </div>
       </div>
 
+      <!-- ===== MODAL CONFIRMAR CONTRASEÑA (acciones sensibles, ej. eliminar estudiante) ===== -->
+      <div id="pass-confirm-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='pass-confirm-overlay')_cancelarConfirmarPassword()">
+        <div class="modal-box" style="max-width:340px;width:92%;" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <h3 style="font-size:0.95rem;"><span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">lock</span>Confirma tu contraseña</h3>
+            <button class="modal-close" onclick="_cancelarConfirmarPassword()"><span class="material-icons">close</span></button>
+          </div>
+          <div class="modal-body" style="padding:16px 18px;">
+            <p id="pass-confirm-desc" style="font-size:0.85rem;color:#546E7A;margin:0 0 12px;"></p>
+            <input type="password" id="pass-confirm-input" placeholder="Tu contraseña" autocomplete="current-password"
+              style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')_confirmarPasswordSubmit()">
+            <div id="pass-confirm-error" style="color:#C62828;font-size:0.8rem;min-height:18px;margin-top:6px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+              <button onclick="_cancelarConfirmarPassword()" style="background:none;border:1.5px solid #E0E0E0;color:#757575;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;">Cancelar</button>
+              <button id="pass-confirm-btn" onclick="_confirmarPasswordSubmit()" style="background:#C62828;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Leyenda -->
       <div class="cal-leyenda">
         <span class="cal-badge cal-aprobado">≥ 70 Aprobado</span>
@@ -3540,6 +3561,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.65<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: pide contraseña antes de eliminar un estudiante</div>
+              <ul class="about-ver-items">
+                <li>Eliminar un estudiante del Libro de Calificaciones (borra también todas sus notas) ahora pide dos confirmaciones: primero el mensaje de siempre, y luego tu contraseña -- se reautentica contra tu cuenta real antes de dejar pasar la acción.</li>
+                <li>Si tu cuenta se registró con Google (sin contraseña propia), en su lugar se abre una ventana para confirmar tu sesión de Google.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9392,9 +9428,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.64"></script>
+  <script src="app.js?v=18.65"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.64"></script>
+  <script src="auth.js?v=18.65"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
