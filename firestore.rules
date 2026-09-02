@@ -339,6 +339,14 @@ service cloud.firestore {
       }
     }
 
+    // Foto de perfil de un estudiante (recortada a 300x300 desde una foto grupal),
+    // un documento por estudiante -- cabe entera en un documento, no necesita chunks.
+    match /users/{userId}/est_fotos/{estudianteId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                     (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+    }
+
     // Autoevaluación / plan de mejora del Portafolio Docente, un documento por año escolar.
     match /users/{userId}/portafolio_reflexion/{yearId} {
       allow read, write: if signedIn() && request.auth.uid == userId;

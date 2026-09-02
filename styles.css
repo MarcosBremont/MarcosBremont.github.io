@@ -2588,6 +2588,31 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
   gap: 4px;
 }
 
+.est-avatar {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #ECEFF1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  border: 1.5px solid #E0E0E0;
+}
+
+.est-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.est-avatar .material-icons {
+  font-size: 16px;
+  color: #B0BEC5;
+}
+
 .btn-del-estudiante {
   background: none;
   border: none;

@@ -15183,6 +15183,258 @@ function _mostrarTooltipAct(e, th) {
 }
 
 // ─── Tabla de calificaciones (usa planificación activa del curso) ─
+// ════════════════════════════════════════════════════════════════════
+// FOTOS DE LOS ESTUDIANTES — foto grupal + recorte manual por estudiante
+// (inspirado en Additio: se sube UNA foto del curso completo y, uno por
+// uno, se mueve/hace zoom sobre esa misma foto detrás de un círculo fijo
+// para "capturar" la cara de cada quien). No hay detección automática de
+// caras -- el docente posiciona la foto a mano, como pidió.
+// ════════════════════════════════════════════════════════════════════
+
+// Cache en memoria (no en localStorage, para no inflarlo con base64): estId -> {fotoBase64, fotoMime}.
+let _fotosEstCache = {};
+// Cursos cuyas fotos ya se pidieron esta sesión, para no repetir la consulta a Firestore
+// en cada re-render de la tabla (renderizarTablaCalificaciones se llama muy seguido).
+let _fotosEstCursoCargado = new Set();
+
+function _fotosEstColeccion() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('est_fotos');
+}
+
+// Cada foto (recortada a 300x300, comprimida bajo ~150 KB) cabe sin problema en su propio
+// documento -- a diferencia del CV o las evidencias, aquí no hace falta partir en chunks.
+async function _cargarFotosEstudiantesCurso(cursoId, curso) {
+  const col = _fotosEstColeccion();
+  if (!col || !cursoId || !curso?.estudiantes?.length) return;
+  if (_fotosEstCursoCargado.has(cursoId)) return;
+  _fotosEstCursoCargado.add(cursoId);
+  const ids = curso.estudiantes.map(e => e.id);
+  try {
+    for (let i = 0; i < ids.length; i += 10) {
+      const chunk = ids.slice(i, i + 10);
+      const snap = await col.where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+      snap.forEach(doc => { _fotosEstCache[doc.id] = doc.data(); });
+    }
+    renderizarTablaCalificaciones();
+  } catch (e) {
+    console.warn('[FotosEst] Error cargando fotos de estudiantes:', e);
+  }
+}
+
+async function _fotoGrupalEliminarFoto(estId) {
+  const col = _fotosEstColeccion();
+  if (!col) return;
+  if (!confirm('¿Quitar la foto de este estudiante?')) return;
+  try {
+    await col.doc(estId).delete();
+    delete _fotosEstCache[estId];
+    renderizarTablaCalificaciones();
+    mostrarToast('Foto eliminada', 'info');
+  } catch (e) {
+    mostrarToast('No se pudo eliminar la foto: ' + (e.message || e), 'error');
+  }
+}
+
+const FOTO_GRUPAL_WRAP = 260;   // px -- tamaño en pantalla del recuadro circular de recorte
+const FOTO_GRUPAL_SALIDA = 300; // px -- resolución del avatar final (cuadrado; se ve circular por CSS)
+const FOTO_GRUPAL_MAX_BYTES = 150 * 1024;
+
+let _fotoGrupalState = null; // { cursoId, estudiantes, idx, img, objectUrl, naturalW, naturalH, scale, left, top }
+
+function abrirFotoGrupal() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) { mostrarToast('Selecciona un curso primero', 'error'); return; }
+  if (!curso.estudiantes?.length) { mostrarToast('Este curso no tiene estudiantes todavía', 'error'); return; }
+  _fotoGrupalState = { cursoId: calState.cursoActivoId, estudiantes: curso.estudiantes, idx: 0, img: null, objectUrl: null };
+  document.getElementById('foto-grupal-overlay')?.classList.remove('hidden');
+  _renderFotoGrupalSeleccion();
+}
+
+function cerrarFotoGrupal() {
+  document.getElementById('foto-grupal-overlay')?.classList.add('hidden');
+  if (_fotoGrupalState?.objectUrl) URL.revokeObjectURL(_fotoGrupalState.objectUrl);
+  _fotoGrupalState = null;
+  renderizarTablaCalificaciones();
+}
+
+function _renderFotoGrupalSeleccion() {
+  const body = document.getElementById('foto-grupal-body');
+  if (!body) return;
+  body.innerHTML =
+    '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 14px;">Sube UNA foto donde salga todo el curso. Luego, estudiante por estudiante, vas a mover y hacer zoom sobre esa misma foto para recortar la cara de cada quien -- no es reconocimiento automático, tú ubicas cada cara a mano.</p>'
+    + '<label class="btn-siguiente" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">'
+    + '<span class="material-icons">upload_file</span> Elegir foto grupal'
+    + '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="_fotoGrupalArchivoSeleccionado(this)">'
+    + '</label>';
+}
+
+function _fotoGrupalArchivoSeleccionado(inputEl) {
+  const file = inputEl?.files?.[0];
+  if (!file || !_fotoGrupalState) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    _fotoGrupalState.img = img;
+    _fotoGrupalState.objectUrl = url;
+    _fotoGrupalState.naturalW = img.naturalWidth;
+    _fotoGrupalState.naturalH = img.naturalHeight;
+    _fotoGrupalIniciarEncuadre();
+    _renderFotoGrupalCrop();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); mostrarToast('No se pudo cargar esa imagen', 'error'); };
+  img.src = url;
+}
+
+// Encuadre inicial "cover": la imagen cubre todo el círculo sin dejar bordes vacíos, centrada.
+function _fotoGrupalIniciarEncuadre() {
+  const s = _fotoGrupalState;
+  const scale = Math.max(FOTO_GRUPAL_WRAP / s.naturalW, FOTO_GRUPAL_WRAP / s.naturalH);
+  s.scale = scale;
+  const dispW = s.naturalW * scale, dispH = s.naturalH * scale;
+  s.left = (FOTO_GRUPAL_WRAP - dispW) / 2;
+  s.top = (FOTO_GRUPAL_WRAP - dispH) / 2;
+}
+
+function _renderFotoGrupalCrop() {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  const est = s.estudiantes[s.idx];
+  const body = document.getElementById('foto-grupal-body');
+  if (!body || !est) return;
+  const dispW = s.naturalW * s.scale, dispH = s.naturalH * s.scale;
+  const zoomMin = Math.max(FOTO_GRUPAL_WRAP / s.naturalW, FOTO_GRUPAL_WRAP / s.naturalH);
+  const zoomPct = Math.round((s.scale / zoomMin) * 100);
+  body.innerHTML =
+    '<div style="text-align:center;font-size:0.8rem;color:#78909C;margin-bottom:4px;">Estudiante ' + (s.idx + 1) + ' de ' + s.estudiantes.length + '</div>'
+    + '<div style="text-align:center;font-weight:700;margin-bottom:12px;">' + escapeHTML(est.nombre) + '</div>'
+    + '<div id="foto-grupal-wrap" style="width:' + FOTO_GRUPAL_WRAP + 'px;height:' + FOTO_GRUPAL_WRAP + 'px;border-radius:50%;overflow:hidden;position:relative;margin:0 auto 14px;background:#ECEFF1;border:3px solid #B39DDB;cursor:grab;touch-action:none;">'
+    + '<img id="foto-grupal-img" src="' + s.img.src + '" draggable="false" style="position:absolute;left:' + s.left + 'px;top:' + s.top + 'px;width:' + dispW + 'px;height:' + dispH + 'px;max-width:none;user-select:none;pointer-events:none;">'
+    + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">'
+    + '<span class="material-icons" style="color:#9E9E9E;font-size:18px;">zoom_out</span>'
+    + '<input type="range" min="100" max="400" value="' + zoomPct + '" oninput="_fotoGrupalZoom(this.value)" style="flex:1;">'
+    + '<span class="material-icons" style="color:#9E9E9E;font-size:18px;">zoom_in</span>'
+    + '</div>'
+    + '<p style="font-size:0.75rem;color:#9E9E9E;text-align:center;margin:0 0 14px;">Arrastra la foto para centrar la cara dentro del círculo</p>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+    + (s.idx > 0 ? '<button class="btn-secundario" onclick="_fotoGrupalAnterior()"><span class="material-icons" style="vertical-align:middle;font-size:16px;">arrow_back</span> Anterior</button>' : '')
+    + '<button class="btn-secundario" onclick="_fotoGrupalSaltar()" style="margin-left:auto;">Saltar</button>'
+    + '<button class="btn-siguiente" onclick="_fotoGrupalGuardarYSiguiente()"><span class="material-icons" style="vertical-align:middle;font-size:16px;">check</span> Guardar' + (s.idx < s.estudiantes.length - 1 ? ' y siguiente' : '') + '</button>'
+    + '</div>'
+    + '<div style="text-align:center;margin-top:14px;"><button onclick="cerrarFotoGrupal()" style="background:none;border:none;color:#9E9E9E;font-size:0.8rem;cursor:pointer;text-decoration:underline;">Terminar por ahora</button></div>';
+
+  _fotoGrupalWireDrag();
+}
+
+function _fotoGrupalWireDrag() {
+  const wrap = document.getElementById('foto-grupal-wrap');
+  if (!wrap) return;
+  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  wrap.onpointerdown = (e) => {
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    startLeft = _fotoGrupalState.left; startTop = _fotoGrupalState.top;
+    wrap.setPointerCapture(e.pointerId);
+    wrap.style.cursor = 'grabbing';
+  };
+  wrap.onpointermove = (e) => {
+    if (!dragging) return;
+    _fotoGrupalMover(startLeft + (e.clientX - startX), startTop + (e.clientY - startY));
+  };
+  const soltar = () => { dragging = false; wrap.style.cursor = 'grab'; };
+  wrap.onpointerup = soltar;
+  wrap.onpointercancel = soltar;
+}
+
+// Mueve la imagen dentro del círculo, sin dejar nunca un hueco vacío en los bordes.
+function _fotoGrupalMover(left, top) {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  const dispW = s.naturalW * s.scale, dispH = s.naturalH * s.scale;
+  s.left = Math.min(0, Math.max(FOTO_GRUPAL_WRAP - dispW, left));
+  s.top = Math.min(0, Math.max(FOTO_GRUPAL_WRAP - dispH, top));
+  const img = document.getElementById('foto-grupal-img');
+  if (img) { img.style.left = s.left + 'px'; img.style.top = s.top + 'px'; }
+}
+
+// Cambia el zoom manteniendo fijo el punto que estaba centrado en el círculo.
+function _fotoGrupalZoom(pctStr) {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  const zoomMin = Math.max(FOTO_GRUPAL_WRAP / s.naturalW, FOTO_GRUPAL_WRAP / s.naturalH);
+  const pct = Math.max(100, Math.min(400, Number(pctStr) || 100));
+  const centerXimg = (FOTO_GRUPAL_WRAP / 2 - s.left) / s.scale;
+  const centerYimg = (FOTO_GRUPAL_WRAP / 2 - s.top) / s.scale;
+  s.scale = zoomMin * (pct / 100);
+  _fotoGrupalMover(FOTO_GRUPAL_WRAP / 2 - centerXimg * s.scale, FOTO_GRUPAL_WRAP / 2 - centerYimg * s.scale);
+  const img = document.getElementById('foto-grupal-img');
+  if (img) { img.style.width = (s.naturalW * s.scale) + 'px'; img.style.height = (s.naturalH * s.scale) + 'px'; }
+}
+
+function _fotoGrupalSaltar() {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  if (s.idx < s.estudiantes.length - 1) { s.idx++; _fotoGrupalIniciarEncuadre(); _renderFotoGrupalCrop(); }
+  else cerrarFotoGrupal();
+}
+
+function _fotoGrupalAnterior() {
+  const s = _fotoGrupalState;
+  if (!s || s.idx <= 0) return;
+  s.idx--; _fotoGrupalIniciarEncuadre(); _renderFotoGrupalCrop();
+}
+
+async function _fotoGrupalGuardarYSiguiente() {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  const est = s.estudiantes[s.idx];
+
+  // Recorta exactamente lo que se ve dentro del círculo (en coordenadas de la imagen
+  // original) y lo redibuja en un canvas cuadrado de resolución fija para el avatar.
+  const sSize = FOTO_GRUPAL_WRAP / s.scale;
+  const sx = -s.left / s.scale, sy = -s.top / s.scale;
+  const canvas = document.createElement('canvas');
+  canvas.width = FOTO_GRUPAL_SALIDA; canvas.height = FOTO_GRUPAL_SALIDA;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(s.img, sx, sy, sSize, sSize, 0, 0, FOTO_GRUPAL_SALIDA, FOTO_GRUPAL_SALIDA);
+
+  let calidad = 0.85;
+  let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', calidad));
+  while (blob && blob.size > FOTO_GRUPAL_MAX_BYTES && calidad > 0.3) {
+    calidad -= 0.15;
+    blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', calidad));
+  }
+  if (!blob) { mostrarToast('No se pudo procesar el recorte', 'error'); return; }
+
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('Error leyendo el recorte'));
+    reader.readAsDataURL(blob);
+  });
+
+  const col = _fotosEstColeccion();
+  if (!col) { mostrarToast('Debes iniciar sesión para guardar fotos', 'error'); return; }
+  try {
+    await col.doc(est.id).set({ fotoBase64: base64, fotoMime: 'image/jpeg', actualizadoEn: new Date().toISOString() });
+    _fotosEstCache[est.id] = { fotoBase64: base64, fotoMime: 'image/jpeg' };
+    renderizarTablaCalificaciones();
+  } catch (e) {
+    mostrarToast('No se pudo guardar la foto: ' + (e.message || e), 'error');
+    return;
+  }
+
+  if (s.idx < s.estudiantes.length - 1) {
+    s.idx++;
+    _fotoGrupalIniciarEncuadre();
+    _renderFotoGrupalCrop();
+  } else {
+    mostrarToast('Fotos guardadas', 'success');
+    cerrarFotoGrupal();
+  }
+}
+
 function renderizarTablaCalificaciones() {
   const thead = document.getElementById('cal-thead');
   const tbody = document.getElementById('cal-tbody');
@@ -15198,6 +15450,8 @@ function renderizarTablaCalificaciones() {
     thead.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = '';
     return;
   }
+
+  _cargarFotosEstudiantesCurso(cursoId, curso);
 
   // Obtener planificación activa del curso
   const planActiva = _getPlanActivaDeCurso();
@@ -15345,9 +15599,14 @@ function renderizarTablaCalificaciones() {
       const reg = _normalizarRegRecup(r);
       return count + (reg?.intentos || []).filter(i => i?.estado === 'pendiente').length;
     }, 0);
+    const fotoEst = _fotosEstCache[est.id];
+    const avatarHtml = '<span class="est-avatar">' + (fotoEst?.fotoBase64
+      ? '<img src="data:' + escapeHTML(fotoEst.fotoMime || 'image/jpeg') + ';base64,' + fotoEst.fotoBase64 + '">'
+      : '<span class="material-icons">person</span>') + '</span>';
     let cells = '<td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
       + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
+      + avatarHtml
       + '<span onclick="_toggleNombreMobile(this)" ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Toca para ver opciones · Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
       + '<div class="est-overflow-wrap" style="position:relative;">'
       + '<button class="btn-coment-est" onclick="_toggleEstMenu(event,\'' + est.id + '\')" title="Opciones" style="font-size:18px;font-weight:700;padding:2px 4px;">'
@@ -15387,6 +15646,7 @@ function renderizarTablaCalificaciones() {
       + '<span class="material-icons">supervisor_account</span> Link padres'
       + '</button>'
       + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'
+      + (fotoEst?.fotoBase64 ? '<button onclick="_fotoGrupalEliminarFoto(\'' + est.id + '\')" style="color:#37474F;"><span class="material-icons">no_photography</span> Quitar foto</button>' : '')
       + (estIdx > 0 ? '<button onclick="_moverEstudiante(\'' + est.id + '\',-1)" style="color:#37474F;"><span class="material-icons">arrow_upward</span> Subir</button>' : '')
       + (estIdx < curso.estudiantes.length - 1 ? '<button onclick="_moverEstudiante(\'' + est.id + '\',1)" style="color:#37474F;"><span class="material-icons">arrow_downward</span> Bajar</button>' : '')
       + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'

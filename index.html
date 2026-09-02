@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.60" />
+  <link rel="stylesheet" href="styles.css?v=18.69" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -1966,6 +1966,11 @@
           <button class="btn-export btn-word btn-sm" onclick="exportarCalificacionesWord()">
             <span class="material-icons">description</span> Exportar Word
           </button>
+          <button class="btn-export btn-sm" onclick="abrirFotoGrupal()"
+            style="background:#EDE7F6;border:1.5px solid #B39DDB;color:#4527A0;"
+            title="Sube una foto grupal y recorta la cara de cada estudiante para identificarlos en la lista">
+            <span class="material-icons">add_a_photo</span> Fotos
+          </button>
           <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
             style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;"
             title="Exporta las notas del RA activo a Excel (o la lista de alumnos si no hay RA activo)">
@@ -2111,6 +2116,20 @@
               <button id="pass-confirm-btn" onclick="_confirmarPasswordSubmit()" style="background:#C62828;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Confirmar</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL FOTO GRUPAL (recortar la cara de cada estudiante manualmente) ===== -->
+      <div id="foto-grupal-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='foto-grupal-overlay')cerrarFotoGrupal()">
+        <div class="modal-box" style="max-width:420px;width:96%;max-height:90vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <h3 style="font-size:0.95rem;">
+              <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">add_a_photo</span>
+              Fotos de los estudiantes
+            </h3>
+            <button class="modal-close" onclick="cerrarFotoGrupal()"><span class="material-icons">close</span></button>
+          </div>
+          <div class="modal-body" id="foto-grupal-body" style="overflow-y:auto;flex:1;padding:16px 18px;"></div>
         </div>
       </div>
 
@@ -3564,6 +3583,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4527A0;">v18.69<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: fotos de los estudiantes en el Libro de Calificaciones</div>
+              <ul class="about-ver-items">
+                <li>Botón "Fotos" en Calificaciones: sube UNA foto grupal del curso y, estudiante por estudiante, mueve y haz zoom sobre esa misma foto detrás de un círculo para recortar la cara de cada quien (recorte manual, no reconocimiento automático). La foto aparece luego junto al nombre en el listado, para identificar a cada estudiante de un vistazo. Se puede quitar la foto de un estudiante desde su menú de opciones (⋮).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9477,9 +9510,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.68"></script>
+  <script src="app.js?v=18.69"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.68"></script>
+  <script src="auth.js?v=18.69"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
