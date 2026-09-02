@@ -3509,6 +3509,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#5E35B1;">v18.57<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Importar preguntas" no reconocía "P2." ni una primera pregunta sin número</div>
+              <ul class="about-ver-items">
+                <li>El detector de preguntas exigía un número al inicio de cada línea -- un examen real traía la primera pregunta sin ningún número (solo "¿Qué es un reporte?" seguido directo de las opciones A-D) y las siguientes numeradas como "P2.", "P3." (con una "P" antes del número, no solo el número). Ninguno de los dos casos calzaba, así que no se reconocía ninguna pregunta del texto completo.</li>
+                <li>Ahora el prefijo "P"/"Pregunta" antes del número es opcional y se tolera (ej. "P2." además de "2."). Además, si aparece una opción "A." sin que ninguna pregunta se haya numerado todavía, el texto acumulado desde el inicio se usa como el enunciado de esa primera pregunta implícita. Verificado con test contra el caso reportado y los formatos ya soportados (numeración normal, código pegado sin espacio, encabezado V y F, número decimal al inicio de línea), sin romper ninguno.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v18.56<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9236,9 +9251,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.56"></script>
+  <script src="app.js?v=18.57"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.56"></script>
+  <script src="auth.js?v=18.57"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

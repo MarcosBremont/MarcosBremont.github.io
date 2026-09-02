@@ -27195,6 +27195,12 @@ function _parsearPreguntasTexto(texto) {
   const lineas = (texto || '').split(/\r?\n/);
   const bloques = [];
   let actual = null;
+  // Líneas acumuladas ANTES de que aparezca cualquier marcador reconocible
+  // (número de pregunta u opción) -- si luego aparece una opción "A." sin
+  // que ninguna línea previa tuviera número, esas líneas son el enunciado
+  // de una "pregunta 1" implícita (documento que no numera la primera
+  // pregunta pero sí las siguientes, ej. "P2.", "P3."...).
+  let pendienteInicial = [];
 
   // El espacio después del punto es obligatorio ("\.\s+") para no confundir
   // un número decimal al inicio de línea (ej. "3.14 es el valor de pi") con
@@ -27202,7 +27208,9 @@ function _parsearPreguntasTexto(texto) {
   // ("\)\s*"), porque un cierre de paréntesis nunca es parte de un número
   // real, y en la práctica el texto pegado desde Word suele traer el
   // enunciado pegado directo al número ("10)Si ti y t2..." sin espacio).
-  const regexPregunta = /^\s*(\d{1,3})(?:\.\s+|\)\s*)(.+)$/;
+  // El prefijo opcional "P"/"Pregunta" (ej. "P2.") también se tolera --
+  // algunos exámenes numeran así en vez de usar el número solo.
+  const regexPregunta = /^\s*(?:(?:preg(?:unta)?|p)\.?\s*)?(\d{1,3})(?:\.\s+|\)\s*)(.+)$/i;
   const regexOpcion = /^[\s•·o○▪\-]*([A-Da-d])(?:\.\s+|\)\s*)(.+)$/;
   // Algunos exámenes agrupan sus preguntas de Verdadero/Falso bajo un
   // encabezado de sección ("V y F", "Verdadero y Falso", "V/F") en vez de
@@ -27220,11 +27228,18 @@ function _parsearPreguntasTexto(texto) {
     if (mP) {
       if (actual) bloques.push(actual);
       actual = { enunciado: mP[2].trim(), opciones: [], seccion: seccionActual };
+      pendienteInicial = [];
       return;
     }
     const mO = regexOpcion.exec(linea);
-    if (mO && actual && actual.opciones.length < 4) {
-      actual.opciones.push(mO[2].trim());
+    if (mO) {
+      if (!actual) {
+        const enunciadoImplicito = pendienteInicial.join(' ').trim();
+        if (!enunciadoImplicito) return; // sin texto previo, no hay de dónde sacar la pregunta
+        actual = { enunciado: enunciadoImplicito, opciones: [], seccion: seccionActual };
+        pendienteInicial = [];
+      }
+      if (actual.opciones.length < 4) actual.opciones.push(mO[2].trim());
       return;
     }
     if (regexSeccionVF.test(linea)) { seccionActual = 'vf'; return; }
@@ -27232,9 +27247,11 @@ function _parsearPreguntasTexto(texto) {
     // Una línea que no es ni "N." ni "letra)" ni un encabezado de sección --
     // si la pregunta actual todavía no tiene opciones, es la continuación
     // del enunciado (preguntas largas que ocupan más de una línea antes de
-    // llegar a las opciones).
+    // llegar a las opciones). Si todavía no hay ninguna pregunta activa, se
+    // guarda por si la primera pregunta del texto no trae número (ver arriba).
     const t = linea.trim();
     if (actual && !actual.opciones.length && t) actual.enunciado += ' ' + t;
+    else if (!actual && t) pendienteInicial.push(t);
   });
   if (actual) bloques.push(actual);
 
