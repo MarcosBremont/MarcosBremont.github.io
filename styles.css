@@ -2589,9 +2589,9 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
 }
 
 .est-avatar {
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
   border-radius: 50%;
   overflow: hidden;
   background: #ECEFF1;
@@ -2609,7 +2609,7 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
 }
 
 .est-avatar .material-icons {
-  font-size: 16px;
+  font-size: 20px;
   color: #B0BEC5;
 }
 
