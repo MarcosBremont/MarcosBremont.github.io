@@ -15552,154 +15552,202 @@ function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
 
 
 
+/** Exporta la tabla de calificaciones del curso/RA activo a Word.
+ *  Antes esto capturaba el innerHTML EN VIVO de #cal-tabla-wrap (la tabla
+ *  interactiva que ve el docente) -- eso arrastraba al Word toda la interfaz
+ *  que no tiene sentido fuera de la pantalla: los <span class="material-icons">
+ *  salían como texto roto ("more_vert", "content_copy", ya que Word no tiene
+ *  la fuente de íconos), los <input> de nota no se veían bien, y el menú
+ *  desplegable oculto de cada estudiante (comentarios/incidencias/reportes/
+ *  recuperaciones/etc., con display:none) se copiaba entero como HTML crudo.
+ *  Reportado por el usuario con captura mostrando exactamente eso.
+ *
+ *  Ahora se arma una tabla nueva desde los datos reales (mismas funciones
+ *  que ya usa renderizarTablaCalificaciones() para calcular notas/promedios/
+ *  recuperaciones: _calcNotaRA, _promedioColRA, _normalizarRegRecup...) con
+ *  estilos fijos aptos para Word, sin íconos ni controles interactivos. */
 function exportarCalificacionesWord() {
+  const cursoId = calState.cursoActivoId;
+  if (!cursoId) { mostrarToast('No hay curso activo', 'error'); return; }
+  const curso = calState.cursos[cursoId];
+  if (!curso) { mostrarToast('No hay curso activo', 'error'); return; }
 
+  const planActiva = _getPlanActivaDeCurso();
+  const raKey = _getRaKey();
+  let actividades = (planActiva && planActiva.actividades) || [];
+  if (actividades.length === 0) {
+    const raSnap = curso.ras && curso.ras[raKey];
+    if (raSnap && raSnap._actividadesSnapshot) actividades = raSnap._actividadesSnapshot;
+  }
+  if (actividades.length === 0 || !curso.planActivaId) {
+    mostrarToast('Selecciona una planificación con actividades antes de exportar', 'error');
+    return;
+  }
+  if (!curso.estudiantes || curso.estudiantes.length === 0) {
+    mostrarToast('Agrega estudiantes antes de exportar', 'error');
+    return;
+  }
 
-
-  if (!calState.cursoActivoId) { mostrarToast('No hay curso activo', 'error'); return; }
-
-
-
-  const tabla = document.getElementById('cal-tabla-wrap')?.innerHTML || '';
-
-
-
-  const curso = calState.cursos[calState.cursoActivoId];
-
-
-
-  const dg = planificacion.datosGenerales || {};
-
-
-
+  const raInfo = _ensureRA(curso, raKey);
+  const dg = planActiva?.datosGenerales || {};
+  const ra = planActiva?.ra || {};
   const hoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
-
-
-
-
-
-
-  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
-
-
-
-    xmlns:w='urn:schemas-microsoft-com:office:word'
-
-
-
-    xmlns='http://www.w3.org/TR/REC-html40'>
-
-
-
-  <head><meta charset="utf-8"/>
-
-
-
-  <style>
-
-
-
-    body{font-family:Calibri,Arial;font-size:11pt;margin:1.5cm;}
-
-
-
-    h2{color:#0D47A1;} h3{color:#1565C0;}
-
-
-
-    table{width:100%;border-collapse:collapse;margin:8pt 0;}
-
-
-
-    th,td{border:1pt solid #bbb;padding:5pt 7pt;font-size:9pt;}
-
-
-
-    th{background:#1565C0;color:white;font-weight:bold;}
-
-
-
-  </style></head>
-
-
-
-  <body>
-
-
-
-    <h2>Calificaciones – ${escapeHTML(curso.nombre)}</h2>
-
-
-
-    <p><strong>Módulo:</strong> ${escapeHTML(dg.moduloFormativo || '-')}</p>
-
-
-
-    <p><strong>Docente:</strong> ${escapeHTML(dg.nombreDocente || '-')}</p>
-
-
-
-    <p><strong>Fecha:</strong> ${hoy}</p>
-
-
-
-    <hr/>
-
-
-
-    ${tabla}
-
-
-
-  </body></html>`;
-
-
-
-
-
-
-
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-
-
-
+  const thStyle = 'background:#1565C0;color:#ffffff;font-weight:bold;padding:6px 6px;border:1px solid #0D47A1;text-align:center;font-size:10px;';
+  const thStyleDark = 'background:#0D47A1;color:#ffffff;font-weight:bold;padding:6px 6px;border:1px solid #0D47A1;text-align:center;font-size:10px;';
+  const thStyleAccent = 'background:#5E35B1;color:#ffffff;font-weight:bold;padding:6px 6px;border:1px solid #4527A0;text-align:center;font-size:10px;';
+  const tdStyle = 'padding:5px 6px;border:1px solid #CFD8DC;text-align:center;font-size:10px;';
+  const tdNombre = tdStyle + 'text-align:left;mso-number-format:\'\\@\';';
+
+  const colorNota = (nota, max) => {
+    if (nota === null || nota === undefined) return '';
+    const pct = max > 0 ? (nota / max) * 100 : 0;
+    if (pct >= 70) return 'background:#E8F5E9;color:#2E7D32;font-weight:bold;';
+    if (pct >= 60) return 'background:#FFF3E0;color:#E65100;font-weight:bold;';
+    return 'background:#FFEBEE;color:#C62828;font-weight:bold;';
+  };
+
+  // Encabezado de cada actividad: "Act.N" (o "Compl." si es complementaria) +
+  // su código de EC corto + fecha -- mismo criterio de numeración que la
+  // tabla en vivo (_cntEC/_idxEC), sin el botón de copiar columna.
+  const _cntEC = {};
+  actividades.forEach(a => { const ec = a.ecCodigo || ''; _cntEC[ec] = (_cntEC[ec] || 0) + 1; });
+  const _idxEC = {};
+  let actNum = 0;
+  const encabezadosActs = actividades.map(a => {
+    const esComp = a.esComplementario === true;
+    if (!esComp) actNum++;
+    let etiqueta;
+    if (esComp) {
+      etiqueta = 'Compl.<br><span style="font-weight:normal;">' + escapeHTML((a.enunciado || '').substring(0, 18)) + '</span>';
+    } else {
+      const ecCorto = a.ecCodigo ? a.ecCodigo.replace('E.C.', '').replace('CE', '') : '';
+      _idxEC[a.ecCodigo || ''] = (_idxEC[a.ecCodigo || ''] || 0) + 1;
+      const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + _idxEC[a.ecCodigo || ''] : ecCorto;
+      etiqueta = 'Act.' + actNum + '<br><span style="font-weight:normal;">' + escapeHTML(labelEC) + '</span>';
+    }
+    const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
+    return { etiqueta, fechaCorta };
+  });
+
+  const filaEncabezado1 = '<tr>'
+    + '<th rowspan="2" style="' + thStyle + '">#</th>'
+    + '<th rowspan="2" style="' + thStyle + 'text-align:left;">Estudiante</th>'
+    + '<th colspan="' + actividades.length + '" style="' + thStyle + '">' + escapeHTML((dg.moduloFormativo || 'RA').substring(0, 40)) + ' &mdash; RA (' + raInfo.valorTotal + ' pts)</th>'
+    + '<th rowspan="2" style="' + thStyleDark + '">Total<br>RA</th>'
+    + CAL_RECUP_LABELS.map(l => '<th rowspan="2" style="' + thStyleDark + '">Recup.<br>' + escapeHTML(l) + '</th>').join('')
+    + '<th rowspan="2" style="' + thStyleAccent + '">Total<br>RA+Recup.</th>'
+    + '</tr>';
+  const filaEncabezado2 = '<tr>' + encabezadosActs.map(e =>
+    '<th style="' + thStyle + '">' + e.etiqueta + '<br><span style="font-weight:normal;font-size:9px;">' + escapeHTML(e.fechaCorta) + '</span></th>'
+  ).join('') + '</tr>';
+
+  const recupCache = cargarRecuperaciones();
+
+  const filasEstudiantes = curso.estudiantes.map((est, estIdx) => {
+    const recupMapEst = recupCache[cursoId]?.[est.id] || {};
+    let fila = '<td style="' + tdStyle + '">' + (estIdx + 1) + '</td>'
+      + '<td style="' + tdNombre + '">' + escapeHTML(est.nombre) + '</td>';
+
+    actividades.forEach(a => {
+      const nota = curso.notas?.[est.id]?.[raKey]?.[a.id];
+      const val = (nota !== undefined && nota !== null) ? nota : null;
+      const max = raInfo.valores[a.id] || 100;
+      fila += '<td style="' + tdStyle + colorNota(val, max) + '">' + (val !== null ? val : '&mdash;') + '</td>';
+    });
+
+    const notaRA = _calcNotaRA(curso, est.id, raKey, actividades);
+    fila += '<td style="' + tdStyle + colorNota(notaRA, raInfo.valorTotal) + '">' + (notaRA !== null ? notaRA.toFixed(1) : '&mdash;') + '</td>';
+
+    const recupTotalesPorIntento = [];
+    for (let idxRecup = 0; idxRecup < CAL_RECUP_NUM_INTENTOS; idxRecup++) {
+      let sumIntento = 0, hasIntento = false;
+      actividades.forEach(a => {
+        const reg = _normalizarRegRecup(recupMapEst[raKey + '__' + a.id]);
+        const intento = reg?.intentos?.[idxRecup];
+        if (intento?.notaRecuperacion != null) { sumIntento += intento.notaRecuperacion; hasIntento = true; }
+      });
+      recupTotalesPorIntento.push(hasIntento ? sumIntento : null);
+      fila += '<td style="' + tdStyle + (hasIntento ? colorNota(sumIntento, raInfo.valorTotal) : '') + '">' + (hasIntento ? sumIntento.toFixed(1) : '&mdash;') + '</td>';
+    }
+
+    const notaRecupSum = recupTotalesPorIntento.reduce((s, v) => s + (v || 0), 0);
+    const hasRecup = recupTotalesPorIntento.some(v => v !== null);
+    const totalConRecupRaw = (notaRA !== null || hasRecup) ? (notaRA || 0) + notaRecupSum : null;
+    const totalConRecup = totalConRecupRaw !== null ? Math.min(totalConRecupRaw, raInfo.valorTotal) : null;
+    fila += '<td style="' + tdStyle + 'background:#EDE7F6;font-weight:bold;">' + (totalConRecup !== null ? totalConRecup.toFixed(1) : '&mdash;') + '</td>';
+
+    return '<tr>' + fila + '</tr>';
+  }).join('');
+
+  // Footer: promedios por columna, mismo cálculo que renderizarTablaCalificaciones()
+  let footCells = '<td style="' + tdStyle + '"></td><td style="' + tdStyle + 'text-align:left;font-weight:bold;">Promedio</td>';
+  actividades.forEach(a => {
+    const notas = curso.estudiantes.map(e => curso.notas?.[e.id]?.[raKey]?.[a.id]).filter(n => n !== undefined && n !== null);
+    const avg = notas.length ? notas.reduce((s, n) => s + n, 0) / notas.length : null;
+    const max = raInfo.valores[a.id] || 100;
+    footCells += '<td style="' + tdStyle + 'font-weight:bold;' + (avg !== null ? colorNota(avg, max) : '') + '">' + (avg !== null ? avg.toFixed(1) : '&mdash;') + '</td>';
+  });
+  const avgRA = _promedioColRA(curso, raKey);
+  footCells += '<td style="' + tdStyle + 'font-weight:bold;' + (avgRA !== null ? colorNota(avgRA, raInfo.valorTotal) : '') + '">' + (avgRA !== null ? avgRA.toFixed(1) : '&mdash;') + '</td>';
+
+  const totalesPorEstYIntento = curso.estudiantes.map(e => {
+    const rm = recupCache[cursoId]?.[e.id] || {};
+    const porIntento = [];
+    for (let idxRecup = 0; idxRecup < CAL_RECUP_NUM_INTENTOS; idxRecup++) {
+      let sumIntento = 0, hasIntento = false;
+      actividades.forEach(a => {
+        const reg = _normalizarRegRecup(rm[raKey + '__' + a.id]);
+        const intento = reg?.intentos?.[idxRecup];
+        if (intento?.notaRecuperacion != null) { sumIntento += intento.notaRecuperacion; hasIntento = true; }
+      });
+      porIntento.push(hasIntento ? sumIntento : null);
+    }
+    return porIntento;
+  });
+  for (let idxRecup = 0; idxRecup < CAL_RECUP_NUM_INTENTOS; idxRecup++) {
+    const valoresIntento = totalesPorEstYIntento.map(p => p[idxRecup]).filter(v => v !== null);
+    const avgIntento = valoresIntento.length ? valoresIntento.reduce((s, v) => s + v, 0) / valoresIntento.length : null;
+    footCells += '<td style="' + tdStyle + 'font-weight:bold;' + (avgIntento !== null ? colorNota(avgIntento, raInfo.valorTotal) : '') + '">' + (avgIntento !== null ? avgIntento.toFixed(1) : '&mdash;') + '</td>';
+  }
+  const totalesConRecup = curso.estudiantes.map((e, i) => {
+    const notaRa2 = _calcNotaRA(curso, e.id, raKey);
+    const porIntento = totalesPorEstYIntento[i];
+    const has = porIntento.some(v => v !== null);
+    const s = porIntento.reduce((acc, v) => acc + (v || 0), 0);
+    const raw = (notaRa2 !== null || has) ? (notaRa2 || 0) + s : null;
+    return raw !== null ? Math.min(raw, raInfo.valorTotal) : null;
+  }).filter(v => v !== null);
+  const avgTotal = totalesConRecup.length ? totalesConRecup.reduce((s, v) => s + v, 0) / totalesConRecup.length : null;
+  footCells += '<td style="' + tdStyle + 'font-weight:bold;background:#EDE7F6;">' + (avgTotal !== null ? avgTotal.toFixed(1) : '&mdash;') + '</td>';
+
+  const tabla = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;width:100%;">'
+    + filaEncabezado1 + filaEncabezado2 + filasEstudiantes
+    + '<tr>' + footCells + '</tr>'
+    + '</table>';
+
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"/><style>body{font-family:Calibri,Arial;font-size:11pt;margin:1.2cm;} h2{color:#0D47A1;}</style></head>'
+    + '<body>'
+    + '<h2>Calificaciones &ndash; ' + escapeHTML(curso.nombre) + '</h2>'
+    + '<p><strong>M&oacute;dulo:</strong> ' + escapeHTML(dg.moduloFormativo || '&mdash;') + '</p>'
+    + '<p><strong>Docente:</strong> ' + escapeHTML(dg.nombreDocente || '&mdash;') + '</p>'
+    + (ra.descripcion ? '<p><strong>RA:</strong> ' + escapeHTML(ra.descripcion) + '</p>' : '')
+    + '<p><strong>Fecha:</strong> ' + hoy + '</p>'
+    + '<hr/>'
+    + tabla
+    + '</body></html>';
+
+  const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
-
-
-
   const a = document.createElement('a');
-
-
-
   a.href = url;
-
-
-
   a.download = `Calificaciones_${(curso.nombre || '').replace(/\s+/g, '_')}.doc`;
-
-
-
   document.body.appendChild(a);
-
-
-
   a.click();
-
-
-
   document.body.removeChild(a);
-
-
-
   URL.revokeObjectURL(url);
-
-
-
   mostrarToast('Archivo Word descargado', 'success');
-
-
-
 }
 
 

@@ -3509,6 +3509,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v18.58<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: "Exportar a Word" del Libro de Calificaciones salía feo y con texto roto</div>
+              <ul class="about-ver-items">
+                <li>El botón copiaba tal cual el HTML EN VIVO de la tabla interactiva -- eso arrastraba al Word los íconos como texto roto ("more_vert", "content_copy", ya que Word no tiene esa fuente de íconos), los campos de nota no se veían bien, y hasta el menú oculto de cada estudiante (comentarios, incidencias, reportes...) se copiaba entero como HTML crudo aunque nunca se viera en pantalla.</li>
+                <li>Ahora se arma una tabla nueva a partir de los datos reales (mismos cálculos de nota/promedio/recuperación que ya usa la tabla en pantalla), con colores de aprobado/regular/reprobado y sin ningún ícono ni control interactivo -- solo texto y números, lista para imprimir. De paso, "Módulo" ya no sale en blanco: antes tomaba la planificación que estuviera abierta en el asistente, ahora toma la que realmente está activa en ese curso.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#5E35B1;">v18.57<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9251,9 +9266,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.57"></script>
+  <script src="app.js?v=18.58"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.57"></script>
+  <script src="auth.js?v=18.58"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
