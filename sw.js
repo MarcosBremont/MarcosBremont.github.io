@@ -1,5 +1,5 @@
 // Debe coincidir con el campo "sw" de version.json (ver _instrucciones_ia ahi mismo).
-const CACHE_NAME = 'tinclass-v210';
+const CACHE_NAME = 'tinclass-v211';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/app.js',
   '/auth.js',
   '/docx.js',
+  '/qrcode.min.js',
   '/firebase-config.js',
   '/error-reporter.js',
   '/LogoTinClass.png',

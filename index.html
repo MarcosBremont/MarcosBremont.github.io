@@ -3568,6 +3568,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00838F;">v18.68<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: código QR de Exámenes ya no falla al cargar</div>
+              <ul class="about-ver-items">
+                <li>El código QR para compartir un examen dependía de una librería externa cuya dirección dejó de existir (generaba alertas de error repetidas). Ahora esa librería vive dentro de TinClass, no depende de un servicio externo, y el QR se genera de forma confiable.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v18.67<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9455,13 +9469,17 @@
       .catch(() => {});
   </script>
   <script src="error-reporter.js?v=17.85"></script>
-  <!-- Generación de códigos QR (enlace de Exámenes) -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- Generación de códigos QR (enlace de Exámenes) — self-hosted: npm qrcode@1.5.x
+       dejo de publicar un build de navegador (solo CommonJS crudo), asi que la
+       version 1.5.3 desde jsdelivr/npm daba 404 en /build/qrcode.min.js. Se
+       congelo aqui el ultimo build UMD funcional (1.4.4, misma API QRCode.toCanvas)
+       para no depender de un CDN externo que puede romperse sin aviso. -->
+  <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.67"></script>
+  <script src="app.js?v=18.68"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.67"></script>
+  <script src="auth.js?v=18.68"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
