@@ -15321,17 +15321,21 @@ function _cargarFaceApiScript() {
 }
 
 let _faceApiModeloListo = false;
+// Devuelve { ok, error } en vez de solo true/false -- así _fotoGrupalIntentarDeteccion
+// puede mostrarle al docente EN QUÉ paso falló (script, modelo, o la detección en sí)
+// en vez del mensaje genérico "no se detectaron caras" para los tres casos, que hacía
+// imposible saber si de verdad no había caras o si algo se rompió antes de intentar.
 async function _cargarModeloFaceApi() {
-  if (_faceApiModeloListo) return true;
-  const ok = await _cargarFaceApiScript();
-  if (!ok || !window.faceapi) return false;
+  if (_faceApiModeloListo) return { ok: true };
+  const scriptOk = await _cargarFaceApiScript();
+  if (!scriptOk || !window.faceapi) return { ok: false, error: 'No se pudo cargar la librería de detección de caras' };
   try {
     await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
     _faceApiModeloListo = true;
-    return true;
+    return { ok: true };
   } catch (e) {
     console.warn('[FotosEst] No se pudo cargar el modelo de detección de caras:', e);
-    return false;
+    return { ok: false, error: 'No se pudo cargar el modelo (' + (e.message || e) + ')' };
   }
 }
 
@@ -15348,14 +15352,21 @@ async function _fotoGrupalIntentarDeteccion() {
   if (!s) return;
   _renderFotoGrupalCargando();
   let detecciones = [];
+  let motivoFallo = '';
   try {
-    const listo = await _cargarModeloFaceApi();
-    if (listo) {
-      const resultados = await faceapi.detectAllFaces(s.img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }));
+    const modelo = await _cargarModeloFaceApi();
+    if (modelo.ok) {
+      // inputSize alto (608, no el 416 por defecto) porque en una foto de grupo cada
+      // cara ocupa una porción mucho más chica del cuadro que en un retrato individual
+      // -- con 416 TinyFaceDetector puede no encontrar ninguna cara en fotos así.
+      const resultados = await faceapi.detectAllFaces(s.img, new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.3 }));
       detecciones = resultados || [];
+    } else {
+      motivoFallo = modelo.error;
     }
   } catch (e) {
     console.warn('[FotosEst] Detección de caras falló, se usará el recorte manual:', e);
+    motivoFallo = 'Error al analizar la foto (' + (e.message || e) + ')';
   }
   if (!_fotoGrupalState) return; // el docente cerró el modal mientras se procesaba
 
@@ -15363,7 +15374,7 @@ async function _fotoGrupalIntentarDeteccion() {
     _fotoGrupalPrepararDeteccion(detecciones);
     _renderFotoGrupalDeteccion();
   } else {
-    mostrarToast('No se detectaron caras automáticamente, recórtalas a mano', 'info');
+    mostrarToast((motivoFallo || 'No se detectó ninguna cara en la foto') + ' -- recórtalas a mano', 'info');
     _fotoGrupalIniciarEncuadre();
     _renderFotoGrupalCrop();
   }
