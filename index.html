@@ -3509,6 +3509,23 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v18.56<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Completado: "Importar Planificación desde Word" ahora captura todos los campos</div>
+              <ul class="about-ver-items">
+                <li>El asistente manual (Biblioteca &gt; Importar Planificación) le faltaban los 3 campos de <strong>Contenidos del RA</strong> (Conceptuales/Procedimentales/Actitudinales) -- sin ellos, una planificación importada nunca podía usarse como fuente para el Plan de Reforzamiento (que depende exactamente de esos 3 campos). Ya se piden en el Paso 2.</li>
+                <li>Paso 1 ahora también pide Nombre de Institución, Regional/Distrito, Politécnico, Ordenanza, Unidad de Competencia y Código UC -- antes no se guardaban en absoluto.</li>
+                <li>Se agregó la tabla de Priorización y ponderación de RA (Tiempo/Valor por cada RA del módulo), igual que en "Nueva Planificación".</li>
+                <li>Cantidad de EC y Actividades por EC ya no hay que escribirlos a mano -- se calculan solos a partir de lo que realmente armaste en el Paso 3, para que nunca queden desincronizados.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v18.55<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9219,9 +9236,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.55"></script>
+  <script src="app.js?v=18.56"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.55"></script>
+  <script src="auth.js?v=18.56"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

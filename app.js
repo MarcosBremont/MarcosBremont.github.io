@@ -33090,7 +33090,17 @@ function imp_htmlPaso1() {
     </div>
   </div>
   <div class="imp-section">
-    <div class="imp-section-title"><span class="material-icons">school</span>Institución y Módulo</div>
+    <div class="imp-section-title"><span class="material-icons">business</span>Institución</div>
+    <div class="imp-grid-2">
+      <div class="imp-field full"><label>Nombre de la Institución</label><input id="imp-nombreInstitucion" placeholder="Ej: Politécnico Luis Ernesto Gómez Uribe"></div>
+      <div class="imp-field"><label>Regional/Distrito</label><input id="imp-regional" placeholder="Ej: 08-06"></div>
+      <div class="imp-field"><label>Politécnico</label><input id="imp-politecnico" placeholder="Ej: Politécnico Luis Ernesto Gómez Uribe"></div>
+      <div class="imp-field"><label>Ordenanza</label><input id="imp-ordenanza" placeholder="Ej: Ordenanza 1'2017"></div>
+    </div>
+  </div>
+
+  <div class="imp-section">
+    <div class="imp-section-title"><span class="material-icons">school</span>Módulo</div>
     <div class="imp-grid-2">
       <div class="imp-field"><label>Familia Profesional</label><input id="imp-familiaProfesional" placeholder="Ej: Informática y Comunicaciones"></div>
       <div class="imp-field"><label>Código FP</label><input id="imp-codigoFP" placeholder="Ej: IFC"></div>
@@ -33099,13 +33109,15 @@ function imp_htmlPaso1() {
       <div class="imp-field full"><label>Módulo Formativo</label><input id="imp-moduloFormativo" placeholder="Ej: Programación Web en Entorno Cliente"></div>
       <div class="imp-field"><label>Código del Módulo</label><input id="imp-codigoModulo" placeholder="Ej: MF0491_3"></div>
       <div class="imp-field"><label>Nombre del Docente</label><input id="imp-nombreDocente" placeholder="Ej: Lic. Ana Torres"></div>
+      <div class="imp-field full"><label>Unidad de Competencia Asociada</label><input id="imp-unidadCompetencia" placeholder="Ej: Desarrollar aplicaciones web con tecnologías del lado del cliente"></div>
+      <div class="imp-field"><label>Código UC</label><input id="imp-codigoUC" placeholder="Ej: UC-INCO002_3"></div>
     </div>
   </div>
 
   <div class="imp-section">
     <div class="imp-section-title"><span class="material-icons">calendar_today</span>Horario y Fechas</div>
     <div class="imp-grid-2">
-      <div class="imp-field"><label>Cantidad de RA en el módulo</label><input id="imp-cantidadRA" type="number" min="1" max="20" placeholder="Ej: 3"></div>
+      <div class="imp-field"><label>Cantidad de RA en el módulo</label><input id="imp-cantidadRA" type="number" min="1" max="20" placeholder="Ej: 3" onchange="imp_renderTablaPriorizacion()"></div>
       <div class="imp-field"><label>Valor de este RA (puntos)</label><input id="imp-valorRA" type="number" min="1" max="100" step="0.5" placeholder="Ej: 10"></div>
       <div class="imp-field"><label>Horas semanales totales</label><input id="imp-horasSemana" type="number" min="1" max="40" placeholder="Ej: 6"></div>
       <div class="imp-field"></div>
@@ -33123,7 +33135,92 @@ function imp_htmlPaso1() {
           </div>`).join('')}
       </div>
     </div>
+  </div>
+
+  <div class="imp-section">
+    <div class="imp-section-title"><span class="material-icons">balance</span>Priorización y ponderación de RA</div>
+    <p style="font-size:0.78rem;color:#78909C;margin:0 0 8px;">Según la "Cantidad de RA en el módulo" de arriba -- tiempo y valor en puntos de <strong>cada RA del módulo</strong> (no solo el que estás importando). Escribe primero la cantidad de RA para que aparezcan las columnas.</p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead id="imp-priorizacion-thead"></thead>
+        <tbody id="imp-priorizacion-tbody"></tbody>
+      </table>
+    </div>
   </div>`;
+}
+
+/** Tabla de Tiempo/Valor por cada RA del módulo (no solo el que se está
+ *  importando) -- mismo patrón que _renderTablaPriorizacion()/
+ *  _recogerPriorizacion() de "Nueva Planificación", con sus propios ids
+ *  (imp-prio-*) para no chocar con esa otra pantalla si ambas quedaran
+ *  montadas en el DOM a la vez. */
+function imp_renderTablaPriorizacion() {
+  const thead = document.getElementById('imp-priorizacion-thead');
+  const tbody = document.getElementById('imp-priorizacion-tbody');
+  if (!thead || !tbody) return;
+
+  const cantRA = parseInt(document.getElementById('imp-cantidadRA')?.value) || 0;
+  if (cantRA < 1) { thead.innerHTML = ''; tbody.innerHTML = ''; return; }
+
+  const arr = impState.datos.dg.priorizacion || [];
+  const headerStyle = 'padding:6px 10px;background:#D6E4F0;color:#1F3864;font-weight:700;text-align:center;border:1px solid #B0BEC5;font-size:0.82rem;';
+  const labelStyle = 'padding:8px 12px;background:#ECEFF1;font-weight:700;font-size:0.9rem;border:1px solid #B0BEC5;';
+  const cellStyle = 'padding:4px;border:1px solid #B0BEC5;text-align:center;';
+  const inputStyle = 'width:100%;text-align:center;border:1px solid #CFD8DC;border-radius:4px;padding:6px 4px;font-size:0.85rem;box-sizing:border-box;';
+  const totalStyle = 'padding:6px 10px;background:#D6E4F0;font-weight:700;text-align:center;border:1px solid #B0BEC5;font-size:0.85rem;';
+
+  let hdr = '<tr><th style="' + headerStyle + 'min-width:100px;">No. del RA</th>';
+  for (let i = 1; i <= cantRA; i++) hdr += '<th style="' + headerStyle + '">RA' + i + '</th>';
+  hdr += '<th style="' + headerStyle + '">Total</th></tr>';
+  thead.innerHTML = hdr;
+
+  let trTiempo = '<tr><td style="' + labelStyle + '">Tiempo</td>';
+  for (let i = 0; i < cantRA; i++) {
+    const val = (arr[i] && arr[i].tiempo) || '';
+    trTiempo += '<td style="' + cellStyle + '"><input type="text" class="imp-prio-tiempo" data-idx="' + i + '" value="' + escHTML(val) + '" placeholder="Ej: 3 Sem." style="' + inputStyle + '"></td>';
+  }
+  trTiempo += '<td id="imp-prio-total-tiempo" style="' + totalStyle + '">—</td></tr>';
+
+  let trValor = '<tr><td style="' + labelStyle + '">Valor</td>';
+  for (let i = 0; i < cantRA; i++) {
+    const val = (arr[i] && arr[i].valor) || '';
+    trValor += '<td style="' + cellStyle + '"><input type="number" class="imp-prio-valor" data-idx="' + i + '" value="' + escHTML(String(val)) + '" placeholder="Ej: 10" min="0" max="100" style="' + inputStyle + '"></td>';
+  }
+  trValor += '<td id="imp-prio-total-valor" style="' + totalStyle + '">—</td></tr>';
+
+  tbody.innerHTML = trTiempo + trValor;
+  tbody.querySelectorAll('.imp-prio-valor,.imp-prio-tiempo').forEach(inp => inp.addEventListener('input', imp_calcTotalesPriorizacion));
+  imp_calcTotalesPriorizacion();
+}
+
+function imp_calcTotalesPriorizacion() {
+  let totalVal = 0;
+  document.querySelectorAll('.imp-prio-valor').forEach(inp => { totalVal += parseFloat(inp.value) || 0; });
+  const tdVal = document.getElementById('imp-prio-total-valor');
+  if (tdVal) tdVal.textContent = totalVal || '—';
+
+  let totalTiempo = 0, allNumeric = true;
+  document.querySelectorAll('.imp-prio-tiempo').forEach(inp => {
+    const v = inp.value.trim();
+    const n = parseFloat(v);
+    if (v && isNaN(n)) allNumeric = false;
+    else totalTiempo += n || 0;
+  });
+  const tdTiempo = document.getElementById('imp-prio-total-tiempo');
+  if (tdTiempo) tdTiempo.textContent = allNumeric && totalTiempo ? totalTiempo : '—';
+}
+
+function imp_recogerPriorizacion() {
+  const result = [];
+  const tiempos = document.querySelectorAll('.imp-prio-tiempo');
+  const valores = document.querySelectorAll('.imp-prio-valor');
+  for (let i = 0; i < tiempos.length; i++) {
+    result.push({
+      tiempo: tiempos[i]?.value?.trim() || '',
+      valor: valores[i]?.value?.trim() || ''
+    });
+  }
+  return result.length ? result : undefined;
 }
 
 function imp_poblarPaso1() {
@@ -33144,6 +33241,10 @@ function imp_poblarPaso1() {
         + '<p style="font-size:0.75rem;color:#78909C;margin:4px 0 0;">Las actividades de esta planificación aparecerán en el libro de calificaciones de ese curso.</p>';
     }
   }
+  set('imp-nombreInstitucion', dg.nombreInstitucion);
+  set('imp-regional', dg.regional);
+  set('imp-politecnico', dg.politecnico);
+  set('imp-ordenanza', dg.ordenanza);
   set('imp-familiaProfesional', dg.familiaProfesional);
   set('imp-codigoFP', dg.codigoFP);
   set('imp-nombreBachillerato', dg.nombreBachillerato);
@@ -33151,11 +33252,14 @@ function imp_poblarPaso1() {
   set('imp-moduloFormativo', dg.moduloFormativo);
   set('imp-codigoModulo', dg.codigoModulo);
   set('imp-nombreDocente', dg.nombreDocente);
+  set('imp-unidadCompetencia', dg.unidadCompetencia);
+  set('imp-codigoUC', dg.codigoUC);
   set('imp-cantidadRA', dg.cantidadRA);
   set('imp-valorRA', dg.valorRA);
   set('imp-horasSemana', dg.horasSemana);
   set('imp-fechaInicio', dg.fechaInicio);
   set('imp-fechaTermino', dg.fechaTermino);
+  imp_renderTablaPriorizacion();
   if (dg.diasClase) {
     ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(d => {
       const cfg = dg.diasClase[d];
@@ -33178,6 +33282,10 @@ function imp_leerPaso1() {
     diasClase[d] = { activo: cb ? cb.checked : false, horas: parseInt(hr?.value || '2', 10) };
   });
   impState.datos.dg = {
+    nombreInstitucion: get('imp-nombreInstitucion'),
+    regional: get('imp-regional'),
+    politecnico: get('imp-politecnico'),
+    ordenanza: get('imp-ordenanza'),
     familiaProfesional: get('imp-familiaProfesional'),
     codigoFP: get('imp-codigoFP'),
     nombreBachillerato: get('imp-nombreBachillerato'),
@@ -33185,12 +33293,15 @@ function imp_leerPaso1() {
     moduloFormativo: get('imp-moduloFormativo'),
     codigoModulo: get('imp-codigoModulo'),
     nombreDocente: get('imp-nombreDocente'),
+    unidadCompetencia: get('imp-unidadCompetencia'),
+    codigoUC: get('imp-codigoUC'),
     cantidadRA: get('imp-cantidadRA'),
     valorRA: get('imp-valorRA'),
     horasSemana: get('imp-horasSemana'),
     fechaInicio: get('imp-fechaInicio'),
     fechaTermino: get('imp-fechaTermino'),
-    diasClase
+    diasClase,
+    priorizacion: imp_recogerPriorizacion()
   };
 }
 
@@ -33239,6 +33350,26 @@ CE4. Desarrolla páginas web accesibles siguiendo estándares W3C"></textarea>
         </select>
         <input id="imp-ra-nivel-otro" placeholder="Especifica el nivel de Bloom…"
           style="display:none;margin-top:6px;" onchange="imp_onBloomOtroChange()">
+      </div>
+    </div>
+  </div>
+
+  <div class="imp-section">
+    <div class="imp-section-title"><span class="material-icons">menu_book</span>Contenidos</div>
+    <p style="font-size:0.78rem;color:#78909C;margin:0 0 8px;">Estos 3 campos son los que usa, por ejemplo, el Plan de Reforzamiento (Exámenes y Pruebas) para autocompletarse -- sin ellos, esta planificación no va a poder usarse como fuente ahí.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="imp-field">
+        <label>Contenidos Conceptuales</label>
+        <textarea id="imp-ra-contenidos-conceptuales" rows="3" placeholder="Un elemento por línea, ej:&#10;Algoritmos&#10;Operadores lógicos, relacionales y matemáticos."></textarea>
+      </div>
+      <div class="imp-field">
+        <label>Contenidos Procedimentales</label>
+        <textarea id="imp-ra-contenidos-procedimentales" rows="3"></textarea>
+      </div>
+      <div class="imp-field">
+        <label>Contenidos Actitudinales</label>
+        <textarea id="imp-ra-contenidos-actitudinales" rows="3"></textarea>
+      </div>
     </div>
   </div>`;
 }
@@ -33253,6 +33384,9 @@ function imp_poblarPaso2() {
   set('imp-ra-descripcion', ra.descripcion);
   set('imp-ra-criterios', ra.criterios);
   set('imp-ra-recursos', ra.recursos);
+  set('imp-ra-contenidos-conceptuales', ra.contenidosConceptuales);
+  set('imp-ra-contenidos-procedimentales', ra.contenidosProcedimentales);
+  set('imp-ra-contenidos-actitudinales', ra.contenidosActitudinales);
   set('imp-ra-nivel', ra.nivelBloom && ['conocimiento', 'comprension', 'aplicacion', 'analisis', 'evaluacion', 'creacion', 'actitudinal'].includes(ra.nivelBloom) ? ra.nivelBloom : (ra.nivelBloom ? 'otro' : 'aplicacion'));
   if (ra.nivelBloom && !['conocimiento', 'comprension', 'aplicacion', 'analisis', 'evaluacion', 'creacion', 'actitudinal'].includes(ra.nivelBloom)) {
     const otrEl = document.getElementById('imp-ra-nivel-otro');
@@ -33266,6 +33400,9 @@ function imp_leerPaso2() {
     descripcion: get('imp-ra-descripcion'),
     criterios: get('imp-ra-criterios'),
     recursos: get('imp-ra-recursos'),
+    contenidosConceptuales: get('imp-ra-contenidos-conceptuales'),
+    contenidosProcedimentales: get('imp-ra-contenidos-procedimentales'),
+    contenidosActitudinales: get('imp-ra-contenidos-actitudinales'),
     nivelBloom: (function () {
       const v = get('imp-ra-nivel');
       return v === 'otro' ? (document.getElementById('imp-ra-nivel-otro')?.value.trim() || 'otro') : v;
@@ -33555,6 +33692,15 @@ function imp_guardar() {
   const dg = impState.datos.dg;
   const ra = impState.datos.ra;
   const ecs = impState.datos.ecs;
+
+  // cantidadEC/cantidadActPorEC no se le piden al docente en este asistente
+  // (a diferencia de "Nueva Planificación", donde SÍ controlan cuántos EC/
+  // actividades generar) -- acá se derivan de lo que realmente armó en el
+  // Paso 3, para que queden consistentes con los EC/actividades reales en
+  // vez de arriesgar un número escrito a mano que no coincida.
+  const totalActsImport = impState.datos.actividades.reduce((s, arr) => s + (arr ? arr.length : 0), 0);
+  dg.cantidadEC = ecs.length;
+  dg.cantidadActPorEC = ecs.length ? Math.round(totalActsImport / ecs.length) || 1 : 1;
 
   // Construir elementosCapacidad
   const elementosCapacidad = ecs.map((ec, i) => ({
