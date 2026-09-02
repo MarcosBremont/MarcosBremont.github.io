@@ -2079,6 +2079,17 @@
         </div>
       </div>
 
+      <!-- ===== MODAL MENÚ DE CELDA (Instrumento / Ícono / Comentario / Recursos) ===== -->
+      <div id="celda-menu-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='celda-menu-overlay')cerrarMenuCeldaActividad()">
+        <div class="modal-box" style="max-width:400px;width:94%;max-height:85vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <h3 id="celda-menu-titulo" style="font-size:0.95rem;"></h3>
+            <button class="modal-close" onclick="cerrarMenuCeldaActividad()"><span class="material-icons">close</span></button>
+          </div>
+          <div class="modal-body" id="celda-menu-body" style="overflow-y:auto;flex:1;padding:16px 18px;"></div>
+        </div>
+      </div>
+
       <!-- Leyenda -->
       <div class="cal-leyenda">
         <span class="cal-badge cal-aprobado">≥ 70 Aprobado</span>
@@ -3529,6 +3540,24 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v18.62<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: menú de la celda (Instrumento / Ícono / Comentario / Recursos)</div>
+              <ul class="about-ver-items">
+                <li>Al hacer clic en la nota de un estudiante en una actividad con instrumento, ahora se abre un menú con 4 opciones -- ya no salta directo al instrumento.</li>
+                <li><strong>Llenar el Instrumento</strong>: abre el modal de siempre (Lista de Cotejo/Rúbrica) con ese estudiante seleccionado.</li>
+                <li><strong>Ícono</strong>: pega o escribe cualquier emoji (hay atajos rápidos) para marcar rápido cómo va ese estudiante en esa actividad -- aparece en la esquina de la celda.</li>
+                <li><strong>Comentario</strong>: un texto libre explicando por qué se puso esa nota, con un punto azul en la celda para saber que tiene comentario.</li>
+                <li><strong>Recursos</strong>: sube una foto como evidencia (se reduce sola si pesa más de 5 MB) -- se guarda en Firestore igual que el resto de adjuntos de la app.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9335,9 +9364,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.61"></script>
+  <script src="app.js?v=18.62"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.61"></script>
+  <script src="auth.js?v=18.62"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

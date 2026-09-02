@@ -323,6 +323,22 @@ service cloud.firestore {
       }
     }
 
+    // Evidencia adjunta a una celda del Libro de Calificaciones (foto de
+    // apoyo a la nota de un estudiante en una actividad) -- un documento por
+    // (curso, RA, actividad, estudiante), mismo criterio y mismo patrón de
+    // chunks que asistencia_evidencias.
+    match /users/{userId}/calif_evidencias/{itemId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                     (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+
+      match /archivo/{chunkId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+        allow read: if isSuperadminByEmail() || currentRole() == 'superadmin' ||
+                       (hasRole(['coordinadora', 'director', 'admin_centro']) && mismoCentro(userId));
+      }
+    }
+
     // Autoevaluación / plan de mejora del Portafolio Docente, un documento por año escolar.
     match /users/{userId}/portafolio_reflexion/{yearId} {
       allow read, write: if signedIn() && request.auth.uid == userId;

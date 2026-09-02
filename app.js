@@ -15312,10 +15312,17 @@ function renderizarTablaCalificaciones() {
         const tdStyleInstr = tdStyle
           ? tdStyle.replace('style="', 'style="cursor:pointer;text-align:center;font-weight:700;')
           : ' style="cursor:pointer;text-align:center;font-weight:700;"';
+        const extraEst = curso.celdaExtra?.[raKey]?.[a.id]?.[est.id] || {};
+        const iconoChip = extraEst.icono
+          ? '<span style="position:absolute;top:1px;left:2px;font-size:11px;line-height:1;pointer-events:none;">' + escapeHTML(extraEst.icono) + '</span>'
+          : '';
+        const comentDot = extraEst.comentario
+          ? '<span style="position:absolute;bottom:2px;left:2px;width:5px;height:5px;border-radius:50%;background:#1565C0;pointer-events:none;" title="Tiene un comentario"></span>'
+          : '';
         cells += '<td' + tdStyleInstr + ' class="td-nota-instr ' + cls + '"'
-          + ' onclick="abrirInstrumentoActividad(\'' + a.id + '\',\'' + est.id + '\')"'
-          + ' title="Click para llenar el instrumento de evaluación | Máx: ' + max + ' pts">'
-          + (val !== '' ? val : '—') + recupDot + '</td>';
+          + ' onclick="abrirMenuCeldaActividad(\'' + a.id + '\',\'' + est.id + '\')"'
+          + ' title="Click para ver opciones (instrumento, ícono, comentario, recursos) | Máx: ' + max + ' pts">'
+          + iconoChip + (val !== '' ? val : '—') + comentDot + recupDot + '</td>';
       } else {
         cells += '<td' + tdStyle + '><input type="number" class="input-nota ' + cls + '"'
           + ' id="nota-' + est.id + '-' + a.id + '"'
@@ -15776,6 +15783,292 @@ function _renderInstrumentoModal() {
   const btnNext = document.getElementById('instr-modal-next');
   if (btnPrev) btnPrev.disabled = s.idx === 0;
   if (btnNext) btnNext.disabled = s.idx === s.estudiantes.length - 1;
+}
+
+// ── Menú de la celda (Instrumento / Ícono / Comentario / Recursos) ──────
+// Al hacer clic en la celda de un estudiante en una actividad instrumentada
+// (antes saltaba directo al instrumento), ahora se abre este menú chico con
+// 4 opciones -- "Llenar el Instrumento" lleva al modal ya existente; Ícono y
+// Comentario son datos ligeros que viven directo en curso.celdaExtra (como
+// instrumentoResp, se guardan solos con guardarCalificaciones()); Recursos
+// (foto de evidencia) usa la MISMA colección/patrón de chunks ya probado en
+// asistencia_evidencias/portafolio_evidencias (_guardarArchivoEvidenciaChunks,
+// _cargarArchivoEvidenciaBase64, _eliminarArchivoEvidenciaChunks,
+// _comprimirImagenParaLimite), solo con su propia colección en Firestore.
+let _celdaMenuState = null; // { actId, estId, raKey, cursoId, vista: 'menu'|'icono'|'comentario'|'recursos', evidencia }
+const CALIF_EVID_MAX_BYTES = 5 * 1024 * 1024;
+
+function _celdaExtra(curso, raKey, actId, estId, crear) {
+  if (crear) {
+    if (!curso.celdaExtra) curso.celdaExtra = {};
+    if (!curso.celdaExtra[raKey]) curso.celdaExtra[raKey] = {};
+    if (!curso.celdaExtra[raKey][actId]) curso.celdaExtra[raKey][actId] = {};
+    if (!curso.celdaExtra[raKey][actId][estId]) curso.celdaExtra[raKey][actId][estId] = {};
+    return curso.celdaExtra[raKey][actId][estId];
+  }
+  return curso.celdaExtra?.[raKey]?.[actId]?.[estId] || {};
+}
+
+function abrirMenuCeldaActividad(actId, estId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const est = curso.estudiantes?.find(e => e.id === estId);
+  if (!est) return;
+  _celdaMenuState = {
+    actId, estId,
+    raKey: _getRaKey(),
+    cursoId: calState.cursoActivoId,
+    vista: 'menu',
+    evidencia: null
+  };
+  document.getElementById('celda-menu-overlay')?.classList.remove('hidden');
+  _renderMenuCeldaActividad();
+}
+
+function cerrarMenuCeldaActividad() {
+  document.getElementById('celda-menu-overlay')?.classList.add('hidden');
+  _celdaMenuState = null;
+}
+
+function _menuCeldaIrVista(vista) {
+  const s = _celdaMenuState;
+  if (!s) return;
+  s.vista = vista;
+  if (vista === 'recursos' && s.evidencia === null) {
+    s.evidencia = 'cargando';
+    _renderMenuCeldaActividad();
+    _califCargarEvidencia(s.cursoId, s.raKey, s.actId, s.estId).then(ev => {
+      if (_celdaMenuState === s) { s.evidencia = ev || 'ninguna'; _renderMenuCeldaActividad(); }
+    });
+    return;
+  }
+  _renderMenuCeldaActividad();
+}
+
+function _menuCeldaLlenarInstrumento() {
+  const s = _celdaMenuState;
+  if (!s) return;
+  cerrarMenuCeldaActividad();
+  abrirInstrumentoActividad(s.actId, s.estId);
+}
+
+function _menuCeldaGuardarIcono() {
+  const s = _celdaMenuState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  if (!curso) return;
+  const valor = (document.getElementById('celda-menu-icono-input')?.value || '').trim();
+  const extra = _celdaExtra(curso, s.raKey, s.actId, s.estId, true);
+  if (valor) extra.icono = valor; else delete extra.icono;
+  registrarCambio('Ícono de celda actualizado');
+  guardarCalificaciones();
+  renderizarTablaCalificaciones();
+  mostrarToast(valor ? 'Ícono guardado' : 'Ícono quitado', 'success');
+  _menuCeldaIrVista('menu');
+}
+
+function _menuCeldaGuardarComentario() {
+  const s = _celdaMenuState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  if (!curso) return;
+  const valor = (document.getElementById('celda-menu-comentario-input')?.value || '').trim();
+  const extra = _celdaExtra(curso, s.raKey, s.actId, s.estId, true);
+  if (valor) extra.comentario = valor; else delete extra.comentario;
+  registrarCambio('Comentario de celda actualizado');
+  guardarCalificaciones();
+  renderizarTablaCalificaciones();
+  mostrarToast(valor ? 'Comentario guardado' : 'Comentario quitado', 'success');
+  _menuCeldaIrVista('menu');
+}
+
+function _califEvidenciasColeccion() {
+  if (!window.currentUser || typeof db === 'undefined') return null;
+  return db.collection('users').doc(window.currentUser.uid).collection('calif_evidencias');
+}
+
+function _califEvidenciaDocId(cursoId, raKey, actId, estId) {
+  // raKey puede traer caracteres raros (viene de moduloFormativo+descripcion) --
+  // se resume a un hash corto para no romper el id del documento.
+  let h = 0;
+  for (let i = 0; i < raKey.length; i++) h = ((h << 5) - h + raKey.charCodeAt(i)) | 0;
+  return String(cursoId) + '__' + Math.abs(h).toString(36) + '__' + String(actId) + '__' + String(estId);
+}
+
+async function _califCargarEvidencia(cursoId, raKey, actId, estId) {
+  const ref = _califEvidenciasColeccion();
+  if (!ref) return null;
+  try {
+    const docId = _califEvidenciaDocId(cursoId, raKey, actId, estId);
+    const doc = await ref.doc(docId).get();
+    return doc.exists ? { id: docId, ...doc.data() } : null;
+  } catch (e) {
+    console.warn('Error cargando evidencia de calificación:', e);
+    return null;
+  }
+}
+
+async function _menuCeldaSubirRecurso() {
+  const s = _celdaMenuState;
+  if (!s) return;
+  const errEl = document.getElementById('celda-menu-recurso-error');
+  if (errEl) errEl.textContent = '';
+  const fileInput = document.getElementById('celda-menu-recurso-archivo');
+  let file = fileInput?.files?.[0];
+  if (!file) { if (errEl) errEl.textContent = 'Selecciona una imagen.'; return; }
+
+  if (file.size > CALIF_EVID_MAX_BYTES) {
+    if (file.type && file.type.startsWith('image/')) {
+      try { file = await _comprimirImagenParaLimite(file, CALIF_EVID_MAX_BYTES); }
+      catch { if (errEl) errEl.textContent = 'La imagen no debe superar 5 MB.'; return; }
+    }
+    if (file.size > CALIF_EVID_MAX_BYTES) { if (errEl) errEl.textContent = 'La imagen no debe superar 5 MB (no se pudo reducir más).'; return; }
+  }
+
+  const ref = _califEvidenciasColeccion();
+  if (!ref) { if (errEl) errEl.textContent = 'No se pudo guardar: inicia sesión de nuevo.'; return; }
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('Error leyendo archivo'));
+      reader.readAsDataURL(file);
+    });
+
+    const docId = _califEvidenciaDocId(s.cursoId, s.raKey, s.actId, s.estId);
+    const docRef = ref.doc(docId);
+    const previo = s.evidencia && s.evidencia !== 'ninguna' && s.evidencia !== 'cargando' ? s.evidencia : null;
+    if (previo && previo.archivoChunks) await _eliminarArchivoEvidenciaChunks(docRef, previo.archivoChunks);
+
+    await docRef.set({
+      cursoId: s.cursoId, raKey: s.raKey, actividadId: s.actId, estudianteId: s.estId,
+      archivoNombre: file.name,
+      archivoMime: file.type || 'application/octet-stream',
+      archivoChunks: 0,
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await _guardarArchivoEvidenciaChunks(docRef, base64);
+    const docGuardado = await docRef.get();
+    s.evidencia = { id: docId, ...docGuardado.data() };
+
+    mostrarToast('Recurso guardado', 'success');
+    _renderMenuCeldaActividad();
+  } catch (e) {
+    if (errEl) errEl.textContent = 'Error al guardar: ' + (e.message || e);
+  }
+}
+
+async function _menuCeldaDescargarRecurso() {
+  const s = _celdaMenuState;
+  const ev = s?.evidencia;
+  if (!ev || ev === 'ninguna' || ev === 'cargando') return;
+  try {
+    const ref = _califEvidenciasColeccion();
+    const docRef = ref.doc(ev.id);
+    const base64 = await _cargarArchivoEvidenciaBase64(docRef, ev);
+    if (!base64) { mostrarToast('Este recurso no tiene archivo adjunto', 'error'); return; }
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: ev.archivoMime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = ev.archivoNombre || 'recurso';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    mostrarToast('Error al descargar: ' + (e.message || e), 'error');
+  }
+}
+
+async function _menuCeldaEliminarRecurso() {
+  const s = _celdaMenuState;
+  const ev = s?.evidencia;
+  if (!ev || ev === 'ninguna' || ev === 'cargando') return;
+  if (!confirm('¿Quitar este recurso adjunto?')) return;
+  try {
+    const ref = _califEvidenciasColeccion();
+    const docRef = ref.doc(ev.id);
+    if (ev.archivoChunks) await _eliminarArchivoEvidenciaChunks(docRef, ev.archivoChunks);
+    await docRef.delete();
+    s.evidencia = 'ninguna';
+    mostrarToast('Recurso eliminado', 'success');
+    _renderMenuCeldaActividad();
+  } catch (e) {
+    mostrarToast('Error al eliminar: ' + (e.message || e), 'error');
+  }
+}
+
+function _renderMenuCeldaActividad() {
+  const s = _celdaMenuState;
+  const body = document.getElementById('celda-menu-body');
+  const titulo = document.getElementById('celda-menu-titulo');
+  if (!s || !body) return;
+
+  const curso = calState.cursos[s.cursoId];
+  const est = curso?.estudiantes?.find(e => e.id === s.estId);
+  const planActiva = _getPlanActivaDeCurso();
+  const act = (planActiva?.actividades || []).find(a => a.id === s.actId);
+  const extra = _celdaExtra(curso, s.raKey, s.actId, s.estId, false);
+
+  if (titulo) titulo.textContent = est?.nombre || '';
+
+  const volver = '<button onclick="_menuCeldaIrVista(\'menu\')" style="background:none;border:none;color:#1565C0;font-size:0.82rem;font-weight:600;cursor:pointer;padding:0;margin-bottom:12px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:16px;">arrow_back</span>Volver</button>';
+
+  if (s.vista === 'icono') {
+    body.innerHTML = volver
+      + '<label style="font-size:0.82rem;font-weight:600;color:#546E7A;display:block;margin-bottom:6px;">Ícono para esta casilla</label>'
+      + '<input id="celda-menu-icono-input" type="text" value="' + escapeHTML(extra.icono || '') + '" placeholder="Pega o escribe un emoji…" maxlength="8" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:1.3rem;text-align:center;box-sizing:border-box;">'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">'
+      + ['😊', '😐', '☹️', '⚠️', '✅', '❗', '📌', '⭐'].map(e => '<button onclick="document.getElementById(\'celda-menu-icono-input\').value=\'' + e + '\';" style="font-size:1.2rem;background:#F5F5F5;border:none;border-radius:8px;padding:6px 9px;cursor:pointer;">' + e + '</button>').join('')
+      + '</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
+      + '<button onclick="_menuCeldaGuardarIcono()" style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Guardar</button>'
+      + '</div>';
+  } else if (s.vista === 'comentario') {
+    body.innerHTML = volver
+      + '<label style="font-size:0.82rem;font-weight:600;color:#546E7A;display:block;margin-bottom:6px;">Comentario sobre esta nota</label>'
+      + '<textarea id="celda-menu-comentario-input" rows="4" placeholder="Ej: Entregó tarde, se descontaron puntos por eso." style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.88rem;box-sizing:border-box;font-family:inherit;">' + escapeHTML(extra.comentario || '') + '</textarea>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
+      + '<button onclick="_menuCeldaGuardarComentario()" style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Guardar</button>'
+      + '</div>';
+  } else if (s.vista === 'recursos') {
+    const ev = s.evidencia;
+    let contenidoEv;
+    if (ev === 'cargando') {
+      contenidoEv = '<div style="text-align:center;padding:16px;color:#9E9E9E;font-size:0.85rem;">Cargando…</div>';
+    } else if (ev && ev !== 'ninguna') {
+      contenidoEv = '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#F5F5F5;border-radius:8px;margin-bottom:12px;">'
+        + '<span class="material-icons" style="color:#546E7A;font-size:18px;">image</span>'
+        + '<span style="font-size:0.85rem;color:#37474F;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(ev.archivoNombre || 'Archivo adjunto') + '</span>'
+        + '<button onclick="_menuCeldaDescargarRecurso()" title="Descargar" style="background:none;border:none;color:#1565C0;cursor:pointer;display:flex;"><span class="material-icons" style="font-size:18px;">download</span></button>'
+        + '<button onclick="_menuCeldaEliminarRecurso()" title="Quitar" style="background:none;border:none;color:#C62828;cursor:pointer;display:flex;"><span class="material-icons" style="font-size:18px;">delete</span></button>'
+        + '</div>';
+    } else {
+      contenidoEv = '';
+    }
+    body.innerHTML = volver
+      + '<label style="font-size:0.82rem;font-weight:600;color:#546E7A;display:block;margin-bottom:6px;">Recursos (foto como evidencia)</label>'
+      + contenidoEv
+      + '<input id="celda-menu-recurso-archivo" type="file" accept="image/*" style="font-size:0.85rem;">'
+      + '<div style="font-size:0.72rem;color:#9E9E9E;margin-top:4px;">Máximo 5 MB -- las imágenes grandes se reducen solas.</div>'
+      + '<div id="celda-menu-recurso-error" style="color:#C62828;font-size:0.8rem;min-height:18px;margin-top:6px;"></div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">'
+      + '<button onclick="_menuCeldaSubirRecurso()" style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Subir</button>'
+      + '</div>';
+  } else {
+    // vista 'menu'
+    const filaBtn = (icono, color, texto, onclick, extra2) => '<button onclick="' + onclick + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;background:#fff;border:1.5px solid #E8EDF2;border-radius:10px;margin-bottom:8px;cursor:pointer;text-align:left;">'
+      + '<span class="material-icons" style="color:' + color + ';font-size:22px;">' + icono + '</span>'
+      + '<span style="flex:1;font-size:0.9rem;font-weight:600;color:#1A1A2E;">' + texto + '</span>'
+      + (extra2 || '')
+      + '<span class="material-icons" style="color:#BDBDBD;font-size:18px;">chevron_right</span>'
+      + '</button>';
+    body.innerHTML = '<div style="font-size:0.78rem;color:#78909C;margin-bottom:12px;">' + escapeHTML(act?.enunciado || '') + '</div>'
+      + filaBtn('fact_check', '#00695C', 'Llenar el Instrumento', '_menuCeldaLlenarInstrumento()')
+      + filaBtn('mood', '#F9A825', 'Ícono', '_menuCeldaIrVista(\'icono\')', extra.icono ? '<span style="font-size:1.1rem;">' + escapeHTML(extra.icono) + '</span>' : '')
+      + filaBtn('comment', '#1565C0', 'Comentario', '_menuCeldaIrVista(\'comentario\')', extra.comentario ? '<span class="material-icons" style="font-size:14px;color:#1565C0;">circle</span>' : '')
+      + filaBtn('attach_file', '#6A1B9A', 'Recursos', '_menuCeldaIrVista(\'recursos\')');
+  }
 }
 
 /** Exporta la tabla de calificaciones del curso/RA activo a Word.
