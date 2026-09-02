@@ -1218,6 +1218,11 @@ const TOTAL_PASOS_ACADEMICO = 5;
 function _mostrarWizardAcademico() {
   document.getElementById('main-content-etp')?.classList.add('hidden');
   document.getElementById('wizard-academico')?.classList.remove('hidden');
+  // El stepper de 6 pasos de ETP (#stepper) vive FUERA de #main-content-etp como
+  // hermano suyo en el HTML, así que ocultar #main-content-etp no lo oculta a él --
+  // sin esto quedaba visible encima del stepper propio (de 5 pasos, con otro
+  // vocabulario) del wizard académico, mostrando los dos a la vez.
+  document.querySelector('.stepper-container')?.classList.add('hidden');
 }
 
 /** Oculta el wizard de Modo Académico y muestra el de ETP (comportamiento
@@ -1225,6 +1230,7 @@ function _mostrarWizardAcademico() {
 function _mostrarWizardEtp() {
   document.getElementById('wizard-academico')?.classList.add('hidden');
   document.getElementById('main-content-etp')?.classList.remove('hidden');
+  document.querySelector('.stepper-container')?.classList.remove('hidden');
 }
 
 /** Análogo a _ocultarPaneles() (app.js) pero para Modo Académico -- cierra
