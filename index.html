@@ -3509,6 +3509,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.55<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cambio: "Generar Planificación" ya no cae a generación local si la IA falla</div>
+              <ul class="about-ver-items">
+                <li>Antes, si no había ninguna clave de IA configurada o los 4 proveedores fallaban, el sistema generaba la planificación con un método local (sin IA) sin avisar claramente. Ahora, en ambos casos se detiene y muestra un mensaje -- "Configura al menos una clave de IA" si no hay ninguna configurada, o "Todos los modelos están ocupados ahora, inténtalo más tarde" si los 4 proveedores fallaron -- en vez de generar algo sin que el docente lo pidiera.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#0D47A1;">v18.54<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9205,9 +9219,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.54"></script>
+  <script src="app.js?v=18.55"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.54"></script>
+  <script src="auth.js?v=18.55"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

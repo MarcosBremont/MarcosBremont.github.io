@@ -32231,9 +32231,7 @@ generarPlanificacion = async function () {
   const claudeKey = getClaudeKey();
 
   if (!groqKey && !getGeminiKey() && !openrouterKey && !claudeKey) {
-    mostrarToast('💡 Sin claves de IA: usando generación local. Configura la IA con el botón ⚙️ para mejores resultados.', 'info');
-    _generarPlanificacionLocal();
-    _mostrarLabelGeneracion('local');
+    mostrarToast('Configura al menos una clave de IA (botón ⚙️) para poder generar la planificación.', 'error');
     return;
   }
 
@@ -32332,7 +32330,7 @@ generarPlanificacion = async function () {
     }
 
     if (!aiData || !aiData.elementosCapacidad) {
-      console.log('[IA] ⚠️ Ningún proveedor devolvió datos. Usando generación LOCAL.');
+      console.log('[IA] ⚠️ Ningún proveedor devolvió datos.');
       throw new Error('Ningún proveedor de IA devolvió datos válidos');
     }
 
@@ -32380,17 +32378,15 @@ generarPlanificacion = async function () {
     console.error('Error IA:', err);
     const msg = err.message || String(err);
 
+    // Ya no hay respaldo de generación local -- si ningún proveedor de IA
+    // respondió (los 4 fallaron, agotaron cuota, o no devolvieron datos
+    // válidos), se avisa y se detiene, en vez de generar algo con el
+    // generador local sin que el docente lo pidiera.
     if (msg.includes('401') || msg.includes('invalid_api_key') || msg.includes('API_KEY_INVALID')) {
       mostrarToast('❌ Clave inválida. Ve a ⚙️ Config. IA y verifica tus claves.', 'error');
-    } else if (msg.includes('429') || msg.includes('rate_limit') || msg.includes('QUOTA')) {
-      mostrarToast('⏳ Cuota agotada en todos los proveedores. Usando generación local.', 'error');
     } else {
-      mostrarToast('Error IA: ' + msg.substring(0, 120), 'error');
+      mostrarToast('Todos los modelos están ocupados ahora, inténtalo más tarde.', 'error');
     }
-    // Siempre usar generacion local como fallback
-    console.log('[IA] 🔄 Fallback: usando generación LOCAL');
-    _mostrarLabelGeneracion('local');
-    _generarPlanificacionLocal();
   } finally {
     // Restaurar botón
     if (btnGenerar) btnGenerar.classList.remove('btn-generando');
