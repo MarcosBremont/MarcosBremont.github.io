@@ -15546,7 +15546,7 @@ function _renderFotoGrupalCrop() {
     + '</div>'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">'
     + '<span class="material-icons" style="color:#9E9E9E;font-size:18px;">zoom_out</span>'
-    + '<input type="range" min="100" max="400" value="' + zoomPct + '" oninput="_fotoGrupalZoom(this.value)" style="flex:1;">'
+    + '<input type="range" min="100" max="800" value="' + zoomPct + '" oninput="_fotoGrupalZoom(this.value)" style="flex:1;">'
     + '<span class="material-icons" style="color:#9E9E9E;font-size:18px;">zoom_in</span>'
     + '</div>'
     + '<p style="font-size:0.75rem;color:#9E9E9E;text-align:center;margin:0 0 14px;">Arrastra la foto para centrar la cara dentro del círculo</p>'
@@ -15596,7 +15596,7 @@ function _fotoGrupalZoom(pctStr) {
   const s = _fotoGrupalState;
   if (!s) return;
   const zoomMin = Math.max(FOTO_GRUPAL_WRAP / s.naturalW, FOTO_GRUPAL_WRAP / s.naturalH);
-  const pct = Math.max(100, Math.min(400, Number(pctStr) || 100));
+  const pct = Math.max(100, Math.min(800, Number(pctStr) || 100));
   const centerXimg = (FOTO_GRUPAL_WRAP / 2 - s.left) / s.scale;
   const centerYimg = (FOTO_GRUPAL_WRAP / 2 - s.top) / s.scale;
   s.scale = zoomMin * (pct / 100);
