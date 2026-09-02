@@ -2133,6 +2133,15 @@
         </div>
       </div>
 
+      <!-- ===== MODAL VER FOTO DE ESTUDIANTE EN GRANDE ===== -->
+      <div id="foto-est-preview-overlay" class="modal-overlay hidden" onclick="cerrarFotoEstudianteGrande()">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;" onclick="event.stopPropagation()">
+          <img id="foto-est-preview-img" src="" style="width:260px;height:260px;border-radius:50%;object-fit:cover;border:4px solid #fff;box-shadow:0 6px 24px rgba(0,0,0,0.35);">
+          <div id="foto-est-preview-nombre" style="color:#fff;font-weight:700;font-size:0.95rem;text-align:center;"></div>
+          <button onclick="cerrarFotoEstudianteGrande()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:20px;padding:6px 16px;font-size:0.8rem;cursor:pointer;">Cerrar</button>
+        </div>
+      </div>
+
       <!-- Leyenda -->
       <div class="cal-leyenda">
         <span class="cal-badge cal-aprobado">≥ 70 Aprobado</span>
@@ -3583,6 +3592,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#37474F;">v18.71<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ajuste: ver la foto de un estudiante en grande</div>
+              <ul class="about-ver-items">
+                <li>Al hacer clic en la foto de un estudiante en el listado de Calificaciones, ahora se abre en grande para verla mejor.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9524,9 +9547,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.70"></script>
+  <script src="app.js?v=18.71"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.70"></script>
+  <script src="auth.js?v=18.71"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

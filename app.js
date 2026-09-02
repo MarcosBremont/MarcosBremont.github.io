@@ -15197,6 +15197,22 @@ let _fotosEstCache = {};
 // en cada re-render de la tabla (renderizarTablaCalificaciones se llama muy seguido).
 let _fotosEstCursoCargado = new Set();
 
+function abrirFotoEstudianteGrande(estId) {
+  const foto = _fotosEstCache[estId];
+  if (!foto?.fotoBase64) return;
+  const curso = calState.cursos[calState.cursoActivoId];
+  const est = curso?.estudiantes?.find(e => e.id === estId);
+  const img = document.getElementById('foto-est-preview-img');
+  const nombre = document.getElementById('foto-est-preview-nombre');
+  if (img) img.src = 'data:' + (foto.fotoMime || 'image/jpeg') + ';base64,' + foto.fotoBase64;
+  if (nombre) nombre.textContent = est?.nombre || '';
+  document.getElementById('foto-est-preview-overlay')?.classList.remove('hidden');
+}
+
+function cerrarFotoEstudianteGrande() {
+  document.getElementById('foto-est-preview-overlay')?.classList.add('hidden');
+}
+
 function _fotosEstColeccion() {
   if (!window.currentUser || typeof db === 'undefined') return null;
   return db.collection('users').doc(window.currentUser.uid).collection('est_fotos');
@@ -15777,7 +15793,7 @@ function renderizarTablaCalificaciones() {
       return count + (reg?.intentos || []).filter(i => i?.estado === 'pendiente').length;
     }, 0);
     const fotoEst = _fotosEstCache[est.id];
-    const avatarHtml = '<span class="est-avatar">' + (fotoEst?.fotoBase64
+    const avatarHtml = '<span class="est-avatar"' + (fotoEst?.fotoBase64 ? ' onclick="event.stopPropagation();abrirFotoEstudianteGrande(\'' + est.id + '\')" style="cursor:zoom-in;" title="Ver foto más grande"' : '') + '>' + (fotoEst?.fotoBase64
       ? '<img src="data:' + escapeHTML(fotoEst.fotoMime || 'image/jpeg') + ';base64,' + fotoEst.fotoBase64 + '">'
       : '<span class="material-icons">person</span>') + '</span>';
     let cells = '<td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;min-width:32px;width:32px;">' + (estIdx + 1) + '</td>'
