@@ -15195,10 +15195,12 @@ function renderizarTablaCalificaciones() {
       const numInEC = _idxEC[a.ecCodigo || ''];
       const labelEC = _cntEC[a.ecCodigo || ''] > 1 ? ecCorto + '.' + numInEC : ecCorto;
       h2 += '<th class="th-act" title="' + escapeHTML(a.enunciado) + '" data-act-nombre="' + escapeHTML(a.enunciado) + '" data-act-id="' + a.id + '" onclick="_mostrarTooltipAct(event,this)" style="min-width:80px;cursor:pointer;">'
-        + '<div style="font-size:0.72rem;font-weight:600;position:relative;text-align:center;">'
+        + '<div style="display:flex;align-items:center;justify-content:center;gap:5px;height:16px;">'
+        + (['cotejo', 'rubrica'].includes(a.instrumento?.tipo) ? '<button onclick="event.stopPropagation();abrirInstrumentoActividad(\'' + a.id + '\')" title="Llenar instrumento de evaluación (' + escapeHTML(a.instrumento.tipoLabel || '') + ')" style="background:none;border:none;cursor:pointer;padding:0;color:#4DD0E1;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:14px;">fact_check</span></button>' : '')
+        + '<button onclick="event.stopPropagation();_copiarColumnaNotas(\'' + a.id + '\',this)" title="Copiar notas de esta columna" style="background:none;border:none;cursor:pointer;padding:0;color:#90CAF9;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:14px;">content_copy</span></button>'
+        + '</div>'
+        + '<div style="font-size:0.72rem;font-weight:600;text-align:center;">'
         + '<span>Act.' + actNum + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></span>'
-        + '<button onclick="event.stopPropagation();_copiarColumnaNotas(\'' + a.id + '\',this)" title="Copiar notas de esta columna" style="position:absolute;top:50%;right:-2px;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 1px;color:#90CAF9;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button>'
-        + (['cotejo', 'rubrica'].includes(a.instrumento?.tipo) ? '<button onclick="event.stopPropagation();abrirInstrumentoActividad(\'' + a.id + '\')" title="Llenar instrumento de evaluación (' + escapeHTML(a.instrumento.tipoLabel || '') + ')" style="position:absolute;top:50%;left:-2px;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 1px;color:#00695C;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">fact_check</span></button>' : '')
         + '</div>'
         + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
