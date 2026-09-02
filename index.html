@@ -480,6 +480,11 @@
           <span class="material-icons">add_circle_outline</span>
           <span>Nueva Planificación</span>
         </button>
+        <button class="dash-nav-btn" id="btn-dash-nueva-planif-academica" onclick="nuevaPlanificacionAcademica()"
+          style="--accent:#00695C;display:none;" title="Planificación por Unidad de Aprendizaje para áreas académicas (Matemática, Español, Ciencias, etc.)">
+          <span class="material-icons">school</span>
+          <span>Nueva Planif. Académica</span>
+        </button>
         <button class="dash-nav-btn" id="btn-dash-planificaciones" onclick="abrirPlanificaciones()"
           style="--accent:#4527A0;">
           <span class="material-icons">folder_special</span>
@@ -3505,6 +3510,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v18.59<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Mejora: acceso directo a Planificación Académica en el dashboard + Word de Calificaciones en horizontal</div>
+              <ul class="about-ver-items">
+                <li>El botón "Nueva Planificación Académica" (Modo Académico, activable en Ajustes) antes solo vivía dentro de "Mis Planificaciones" -- ahora también aparece como acceso directo en el dashboard, junto a "Nueva Planificación", con el mismo interruptor.</li>
+                <li>El Word exportado del Libro de Calificaciones ahora sale en hoja horizontal (landscape) en vez de vertical -- con muchas actividades, la tabla se cortaba a la mitad de la página. Reportado por el usuario con captura mostrando la tabla cortada.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9266,9 +9286,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.58"></script>
+  <script src="app.js?v=18.59"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.58"></script>
+  <script src="auth.js?v=18.59"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

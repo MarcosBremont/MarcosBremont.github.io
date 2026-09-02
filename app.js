@@ -15726,9 +15726,20 @@ function exportarCalificacionesWord() {
     + '<tr>' + footCells + '</tr>'
     + '</table>';
 
+  // La tabla suele tener muchas columnas (una por actividad + Total RA +
+  // 3 de Recuperación + Total final) -- en vertical se corta a la mitad de
+  // la hoja (reportado por el usuario con captura). La regla @page Section1
+  // con mso-page-orientation:landscape es el patrón estándar que Word
+  // reconoce en un documento HTML-como-.doc para forzar hoja horizontal;
+  // "size" va en landscape también (ancho y alto invertidos) porque Word
+  // ignora mso-page-orientation si el tamaño de página sigue siendo vertical.
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
-    + '<head><meta charset="utf-8"/><style>body{font-family:Calibri,Arial;font-size:11pt;margin:1.2cm;} h2{color:#0D47A1;}</style></head>'
-    + '<body>'
+    + '<head><meta charset="utf-8"/><style>'
+    + '@page Section1 { size:29.7cm 21cm; mso-page-orientation:landscape; margin:1.2cm; }'
+    + 'div.Section1 { page:Section1; }'
+    + 'body{font-family:Calibri,Arial;font-size:11pt;} h2{color:#0D47A1;}'
+    + '</style></head>'
+    + '<body><div class="Section1">'
     + '<h2>Calificaciones &ndash; ' + escapeHTML(curso.nombre) + '</h2>'
     + '<p><strong>M&oacute;dulo:</strong> ' + escapeHTML(dg.moduloFormativo || '&mdash;') + '</p>'
     + '<p><strong>Docente:</strong> ' + escapeHTML(dg.nombreDocente || '&mdash;') + '</p>'
@@ -15736,7 +15747,7 @@ function exportarCalificacionesWord() {
     + '<p><strong>Fecha:</strong> ' + hoy + '</p>'
     + '<hr/>'
     + tabla
-    + '</body></html>';
+    + '</div></body></html>';
 
   const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
@@ -35239,6 +35250,10 @@ function _aplicarModoAcademico() {
   const activo = localStorage.getItem('cfg_modo_academico') === 'true';
   const btn = document.getElementById('btn-nueva-planificacion-academica');
   if (btn) btn.style.display = activo ? '' : 'none';
+  // Mismo interruptor también revela el acceso directo en el dashboard (antes
+  // solo estaba dentro de "Mis Planificaciones", el docente no lo encontraba).
+  const btnDash = document.getElementById('btn-dash-nueva-planif-academica');
+  if (btnDash) btnDash.style.display = activo ? '' : 'none';
 }
 
 function _aplicarAsistenciaActiva() {
