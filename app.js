@@ -34105,17 +34105,25 @@ async function _precargarDatosCentroPlanificacion() {
   // Nombre del Docente: se toma del perfil (displayName de la cuenta), igual
   // que ya se usa en otras partes de la app (ej. autor de un aviso) -- no
   // depende de Firestore ni del centro, así que se rellena aparte del resto.
-  const docenteEl = document.getElementById('nombre-docente');
-  if (docenteEl && !docenteEl.value.trim() && window.currentUser?.displayName) {
-    docenteEl.value = window.currentUser.displayName;
+  // Se hace para los campos de ETP y los del asistente académico (ac-*) por
+  // igual -- solo uno de los dos juegos de campos existe en el DOM a la vez
+  // (según el wizard que esté montado), así que rellenar ambos es inofensivo.
+  if (window.currentUser?.displayName) {
+    ['nombre-docente', 'ac-nombre-docente'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value.trim()) el.value = window.currentUser.displayName;
+    });
   }
 
   try {
     const nombreEl = document.getElementById('nombre-institucion');
     const politecnicoEl = document.getElementById('politecnico');
     const regionalEl = document.getElementById('regional-distrito');
-    if (!nombreEl && !politecnicoEl && !regionalEl) return;
-    if ((nombreEl?.value || '').trim() && (politecnicoEl?.value || '').trim() && (regionalEl?.value || '').trim()) return;
+    const acNombreEl = document.getElementById('ac-nombre-institucion');
+    const acRegionalEl = document.getElementById('ac-regional');
+    const campos = [nombreEl, politecnicoEl, regionalEl, acNombreEl, acRegionalEl];
+    if (campos.every(el => !el)) return;
+    if (campos.every(el => !el || el.value.trim())) return;
     if (!window.currentUser || typeof db === 'undefined') return;
 
     const centroId = await _obtenerCentroIdDeUsuarioActual();
@@ -34126,10 +34134,10 @@ async function _precargarDatosCentroPlanificacion() {
 
     if (nombreEl && !nombreEl.value.trim() && centro.nombre) nombreEl.value = centro.nombre;
     if (politecnicoEl && !politecnicoEl.value.trim() && centro.nombre) politecnicoEl.value = centro.nombre;
-    if (regionalEl && !regionalEl.value.trim()) {
-      const partes = [centro.regional, centro.distrito].filter(Boolean);
-      if (partes.length) regionalEl.value = partes.join(' · ');
-    }
+    if (acNombreEl && !acNombreEl.value.trim() && centro.nombre) acNombreEl.value = centro.nombre;
+    const regionalTexto = [centro.regional, centro.distrito].filter(Boolean).join(' · ');
+    if (regionalEl && !regionalEl.value.trim() && regionalTexto) regionalEl.value = regionalTexto;
+    if (acRegionalEl && !acRegionalEl.value.trim() && regionalTexto) acRegionalEl.value = regionalTexto;
   } catch (e) {
     console.warn('No se pudieron precargar los datos del centro en Datos Generales:', e);
   }
