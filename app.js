@@ -32252,23 +32252,25 @@ generarPlanificacion = async function () {
 
     console.log('[IA] Claves disponibles — Claude:', !!claudeKey, '| Groq:', !!groqKey, '| Gemini:', !!getGeminiKey(), '| OpenRouter:', !!openrouterKey);
 
-    // 0. Claude va primero si hay clave configurada -- de pago, suele ser más
-    // confiable que las capas gratuitas de abajo.
-    if (claudeKey) {
+    // 0. OpenRouter va primero (orden pedido por el usuario: OpenRouter →
+    // Groq → Gemini → Claude, en vez del original Claude → Groq → Gemini →
+    // OpenRouter).
+    if (openrouterKey) {
       try {
-        console.log('[IA] Intentando generar con CLAUDE...');
-        aiData = await generarConClaude(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        console.log('[IA] Intentando generar con OPENROUTER...');
+        mostrarToast('🔵 Consultando OpenRouter...', 'info');
+        aiData = await generarConOpenRouter(planificacion.datosGenerales, planificacion.ra, fechasClase);
         if (aiData) {
-          proveedorUsado = 'Claude';
-          console.log('[IA] ✅ Generado exitosamente con CLAUDE — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+          proveedorUsado = 'OpenRouter';
+          console.log('[IA] ✅ Generado exitosamente con OPENROUTER — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
         }
-      } catch (errClaude) {
-        console.warn('[IA] ❌ Claude falló:', errClaude.message);
-        mostrarToast('⏳ Claude no respondió. Probando el resto de proveedores...', 'warning');
+      } catch (errOpenRouter) {
+        console.warn('[IA] ❌ OpenRouter falló:', errOpenRouter.message);
+        mostrarToast('⏳ OpenRouter no respondió. Probando el resto de proveedores...', 'warning');
       }
     }
 
-    // 1. Si Claude no devolvió datos (o no hay clave), intentar con Groq
+    // 1. Si OpenRouter no devolvió datos (o no hay clave), intentar con Groq
     if (!aiData && groqKey) {
       try {
         console.log('[IA] Intentando generar con GROQ...');
@@ -32282,12 +32284,12 @@ generarPlanificacion = async function () {
         console.warn('[IA] ❌ Groq falló:', errGroq.message);
         const msg = errGroq.message || '';
         if (msg.includes('rate_limit') || msg.includes('429') || msg.includes('todos los modelos')) {
-          if (openrouterKey) {
-            mostrarToast('⏳ Groq sin cuota. Cambiando a OpenRouter...', 'warning');
+          if (getGeminiKey()) {
+            mostrarToast('⏳ Groq sin cuota. Cambiando a Gemini...', 'warning');
           } else {
-            mostrarToast('⏳ Groq sin cuota y no hay clave de OpenRouter. Usando generación local.', 'warning');
+            mostrarToast('⏳ Groq sin cuota y no hay clave de Gemini. Probando el resto de proveedores...', 'warning');
           }
-        } else if (!openrouterKey) {
+        } else if (!getGeminiKey() && !claudeKey) {
           throw errGroq;
         } else {
           // Falló por algo que NO es cuota (clave inválida, error del servidor, etc.)
@@ -32309,24 +32311,23 @@ generarPlanificacion = async function () {
         }
       } catch (errGemini) {
         console.warn('[IA] ❌ Gemini falló:', errGemini.message);
-        mostrarToast('⏳ Gemini no respondió. Probando OpenRouter...', 'warning');
+        mostrarToast('⏳ Gemini no respondió. Probando Claude...', 'warning');
       }
     }
 
-    // 3. Si Gemini no devolvió datos, intentar con OpenRouter
-    if (!aiData && openrouterKey) {
+    // 3. Si Gemini no devolvió datos, intentar con Claude
+    if (!aiData && claudeKey) {
       try {
-        console.log('[IA] Intentando generar con OPENROUTER...');
-        mostrarToast('🔵 Consultando OpenRouter...', 'info');
-        if (btnTexto) btnTexto.textContent = 'Generando con OpenRouter...';
-        aiData = await generarConOpenRouter(planificacion.datosGenerales, planificacion.ra, fechasClase);
+        console.log('[IA] Intentando generar con CLAUDE...');
+        if (btnTexto) btnTexto.textContent = 'Generando con Claude...';
+        aiData = await generarConClaude(planificacion.datosGenerales, planificacion.ra, fechasClase);
         if (aiData) {
-          proveedorUsado = 'OpenRouter';
-          console.log('[IA] ✅ Generado exitosamente con OPENROUTER — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
+          proveedorUsado = 'Claude';
+          console.log('[IA] ✅ Generado exitosamente con CLAUDE — ECs:', aiData.elementosCapacidad?.length, '| Acts:', aiData.actividades?.length);
         }
-      } catch (errOpenRouter) {
-        console.warn('[IA] ❌ OpenRouter falló:', errOpenRouter.message);
-        mostrarToast('⏳ OpenRouter tampoco respondió. Usando generación local.', 'warning');
+      } catch (errClaude) {
+        console.warn('[IA] ❌ Claude falló:', errClaude.message);
+        mostrarToast('⏳ Claude tampoco respondió. Usando generación local.', 'warning');
       }
     }
 

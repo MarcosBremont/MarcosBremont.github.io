@@ -3509,6 +3509,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#0D47A1;">v18.54<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cambio: nuevo orden de proveedores de IA en "Generar Planificación"</div>
+              <ul class="about-ver-items">
+                <li>La cascada de proveedores del botón "Generar Planificación" (Módulo &gt; paso 2) cambió de Claude → Groq → Gemini → OpenRouter a <strong>OpenRouter → Groq → Gemini → Claude</strong>, a pedido del usuario. Sigue funcionando igual: si un proveedor no tiene clave configurada, falla, o no responde, se pasa al siguiente; si los 4 fallan, cae a la generación local (sin IA).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v18.53<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9191,9 +9205,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.53"></script>
+  <script src="app.js?v=18.54"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.53"></script>
+  <script src="auth.js?v=18.54"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
