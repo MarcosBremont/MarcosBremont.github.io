@@ -487,6 +487,23 @@ async function eliminarEstudiante(estudianteId) {
   renderizarTablaCalificaciones();
 }
 
+/** Sube (delta=-1) o baja (delta=1) a un estudiante un puesto en la lista del
+ *  curso -- ej. si Samuel quedó de 19 pero en realidad va de 18. Solo cambia
+ *  el orden en curso.estudiantes; no toca notas ni ningún otro dato. */
+function _moverEstudiante(estudianteId, delta) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.estudiantes) return;
+  const idx = curso.estudiantes.findIndex(e => e.id === estudianteId);
+  if (idx === -1) return;
+  const nuevoIdx = idx + delta;
+  if (nuevoIdx < 0 || nuevoIdx >= curso.estudiantes.length) return;
+  const [est] = curso.estudiantes.splice(idx, 1);
+  curso.estudiantes.splice(nuevoIdx, 0, est);
+  registrarCambio('Estudiante reordenado: ' + est.nombre);
+  guardarCalificaciones();
+  renderizarTablaCalificaciones();
+}
+
 // ── Confirmación con contraseña para acciones sensibles (ej. eliminar un
 // estudiante) -- reautentica al docente contra Firebase Auth antes de dejar
 // pasar la acción. Cuentas con contraseña (registro normal) ven un modal
@@ -15345,6 +15362,9 @@ function renderizarTablaCalificaciones() {
       + '<button id="btn-padre-perfil-' + est.id + '" onclick="_copiarLinkPadre(\'' + est.id + '\',\'' + calState.cursoActivoId + '\',document.getElementById(\'btn-padre-perfil-' + est.id + '\'))" style="color:#AD1457;">'
       + '<span class="material-icons">supervisor_account</span> Link padres'
       + '</button>'
+      + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'
+      + (estIdx > 0 ? '<button onclick="_moverEstudiante(\'' + est.id + '\',-1)" style="color:#37474F;"><span class="material-icons">arrow_upward</span> Subir</button>' : '')
+      + (estIdx < curso.estudiantes.length - 1 ? '<button onclick="_moverEstudiante(\'' + est.id + '\',1)" style="color:#37474F;"><span class="material-icons">arrow_downward</span> Bajar</button>' : '')
       + '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>'
       + '<button onclick="eliminarEstudiante(\'' + est.id + '\')" style="color:#EF5350;">'
       + '<span class="material-icons">delete</span> Eliminar'
