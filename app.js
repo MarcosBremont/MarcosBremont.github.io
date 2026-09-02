@@ -15375,8 +15375,7 @@ async function _fotoGrupalIntentarDeteccion() {
     _renderFotoGrupalDeteccion();
   } else {
     mostrarToast((motivoFallo || 'No se detectó ninguna cara en la foto') + ' -- recórtalas a mano', 'info');
-    _fotoGrupalIniciarEncuadre();
-    _renderFotoGrupalCrop();
+    _fotoGrupalIniciarModoManual();
   }
 }
 
@@ -15460,12 +15459,27 @@ function _fotoGrupalElegirAlumno(i, estId) {
   _renderFotoGrupalDeteccion();
 }
 
-function _fotoGrupalUsarManual() {
+// Estudiantes del curso que todavía no tienen foto guardada -- es la lista que usa el
+// modo manual, tanto si se entra directo (sin intentar detección) como si se entra
+// después de importar las caras detectadas (para completar solo las que faltaron).
+function _fotoGrupalPendientes() {
+  const s = _fotoGrupalState;
+  if (!s) return [];
+  return s.estudiantes.filter(e => !_fotosEstCache[e.id]?.fotoBase64);
+}
+
+function _fotoGrupalIniciarModoManual() {
   const s = _fotoGrupalState;
   if (!s) return;
+  s.manualLista = _fotoGrupalPendientes();
   s.idx = 0;
+  if (!s.manualLista.length) { mostrarToast('Todos los estudiantes de este curso ya tienen foto', 'success'); cerrarFotoGrupal(); return; }
   _fotoGrupalIniciarEncuadre();
   _renderFotoGrupalCrop();
+}
+
+function _fotoGrupalUsarManual() {
+  _fotoGrupalIniciarModoManual();
 }
 
 async function _fotoGrupalImportarDeteccion() {
@@ -15479,8 +15493,29 @@ async function _fotoGrupalImportarDeteccion() {
     if (await _fotoGrupalGuardarRecorte(c.estId, s.img, c.sx, c.sy, c.sSize)) ok++;
   }
   renderizarTablaCalificaciones();
-  mostrarToast(ok + ' foto(s) guardada(s)' + (ok < asignadas.length ? ' (' + (asignadas.length - ok) + ' fallaron)' : ''), ok ? 'success' : 'error');
-  if (ok) cerrarFotoGrupal();
+  if (!_fotoGrupalState) return; // el docente cerró el modal mientras se guardaba
+  _renderFotoGrupalResultadoImport(ok, asignadas.length);
+}
+
+// Tras importar, ofrece seguir a mano con los estudiantes que la detección automática
+// no logró vincular (no detectados, o detectados pero sin nombre asignado) -- sobre la
+// MISMA foto ya subida, sin tener que volver a elegir el archivo.
+function _renderFotoGrupalResultadoImport(guardadas, intentadas) {
+  const body = document.getElementById('foto-grupal-body');
+  if (!body) return;
+  const pendientes = _fotoGrupalPendientes();
+  body.innerHTML =
+    '<div style="text-align:center;padding:8px 0 4px;">'
+    + '<span class="material-icons" style="font-size:40px;color:#43A047;">check_circle</span>'
+    + '<p style="margin:10px 0 4px;font-weight:700;">' + guardadas + ' de ' + intentadas + ' foto(s) guardada(s)</p>'
+    + (pendientes.length
+        ? '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 18px;">Quedan <strong>' + pendientes.length + '</strong> estudiante(s) sin foto (no se detectaron o no se vincularon). ¿Quieres recortarlas a mano, sobre esta misma foto?</p>'
+        : '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 18px;">Todos los estudiantes de este curso ya tienen foto.</p>')
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+    + (pendientes.length ? '<button class="btn-siguiente" onclick="_fotoGrupalIniciarModoManual()">Recortar las que faltan (' + pendientes.length + ')</button>' : '')
+    + '<button class="btn-secundario" onclick="cerrarFotoGrupal()">Terminar</button>'
+    + '</div>';
 }
 
 // Encuadre inicial "cover": la imagen cubre todo el círculo sin dejar bordes vacíos, centrada.
@@ -15496,14 +15531,15 @@ function _fotoGrupalIniciarEncuadre() {
 function _renderFotoGrupalCrop() {
   const s = _fotoGrupalState;
   if (!s) return;
-  const est = s.estudiantes[s.idx];
+  const lista = s.manualLista || s.estudiantes;
+  const est = lista[s.idx];
   const body = document.getElementById('foto-grupal-body');
   if (!body || !est) return;
   const dispW = s.naturalW * s.scale, dispH = s.naturalH * s.scale;
   const zoomMin = Math.max(FOTO_GRUPAL_WRAP / s.naturalW, FOTO_GRUPAL_WRAP / s.naturalH);
   const zoomPct = Math.round((s.scale / zoomMin) * 100);
   body.innerHTML =
-    '<div style="text-align:center;font-size:0.8rem;color:#78909C;margin-bottom:4px;">Estudiante ' + (s.idx + 1) + ' de ' + s.estudiantes.length + '</div>'
+    '<div style="text-align:center;font-size:0.8rem;color:#78909C;margin-bottom:4px;">Estudiante ' + (s.idx + 1) + ' de ' + lista.length + '</div>'
     + '<div style="text-align:center;font-weight:700;margin-bottom:12px;">' + escapeHTML(est.nombre) + '</div>'
     + '<div id="foto-grupal-wrap" style="width:' + FOTO_GRUPAL_WRAP + 'px;height:' + FOTO_GRUPAL_WRAP + 'px;border-radius:50%;overflow:hidden;position:relative;margin:0 auto 14px;background:#ECEFF1;border:3px solid #B39DDB;cursor:grab;touch-action:none;">'
     + '<img id="foto-grupal-img" src="' + s.img.src + '" draggable="false" style="position:absolute;left:' + s.left + 'px;top:' + s.top + 'px;width:' + dispW + 'px;height:' + dispH + 'px;max-width:none;user-select:none;pointer-events:none;">'
@@ -15517,7 +15553,7 @@ function _renderFotoGrupalCrop() {
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
     + (s.idx > 0 ? '<button class="btn-secundario" onclick="_fotoGrupalAnterior()"><span class="material-icons" style="vertical-align:middle;font-size:16px;">arrow_back</span> Anterior</button>' : '')
     + '<button class="btn-secundario" onclick="_fotoGrupalSaltar()" style="margin-left:auto;">Saltar</button>'
-    + '<button class="btn-siguiente" onclick="_fotoGrupalGuardarYSiguiente()"><span class="material-icons" style="vertical-align:middle;font-size:16px;">check</span> Guardar' + (s.idx < s.estudiantes.length - 1 ? ' y siguiente' : '') + '</button>'
+    + '<button class="btn-siguiente" onclick="_fotoGrupalGuardarYSiguiente()"><span class="material-icons" style="vertical-align:middle;font-size:16px;">check</span> Guardar' + (s.idx < lista.length - 1 ? ' y siguiente' : '') + '</button>'
     + '</div>'
     + '<div style="text-align:center;margin-top:14px;"><button onclick="cerrarFotoGrupal()" style="background:none;border:none;color:#9E9E9E;font-size:0.8rem;cursor:pointer;text-decoration:underline;">Terminar por ahora</button></div>';
 
@@ -15572,7 +15608,8 @@ function _fotoGrupalZoom(pctStr) {
 function _fotoGrupalSaltar() {
   const s = _fotoGrupalState;
   if (!s) return;
-  if (s.idx < s.estudiantes.length - 1) { s.idx++; _fotoGrupalIniciarEncuadre(); _renderFotoGrupalCrop(); }
+  const lista = s.manualLista || s.estudiantes;
+  if (s.idx < lista.length - 1) { s.idx++; _fotoGrupalIniciarEncuadre(); _renderFotoGrupalCrop(); }
   else cerrarFotoGrupal();
 }
 
@@ -15620,7 +15657,8 @@ async function _fotoGrupalGuardarRecorte(estId, img, sx, sy, sSize) {
 async function _fotoGrupalGuardarYSiguiente() {
   const s = _fotoGrupalState;
   if (!s) return;
-  const est = s.estudiantes[s.idx];
+  const lista = s.manualLista || s.estudiantes;
+  const est = lista[s.idx];
 
   // Recorta exactamente lo que se ve dentro del círculo (en coordenadas de la imagen original).
   const sSize = FOTO_GRUPAL_WRAP / s.scale;
@@ -15629,7 +15667,7 @@ async function _fotoGrupalGuardarYSiguiente() {
   if (!ok) { mostrarToast('No se pudo guardar la foto', 'error'); return; }
   renderizarTablaCalificaciones();
 
-  if (s.idx < s.estudiantes.length - 1) {
+  if (s.idx < lista.length - 1) {
     s.idx++;
     _fotoGrupalIniciarEncuadre();
     _renderFotoGrupalCrop();
