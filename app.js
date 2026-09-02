@@ -15309,9 +15309,14 @@ function renderizarTablaCalificaciones() {
         // puede simplemente pegarle otro style="" al lado (HTML no permite
         // dos atributos style en el mismo tag, el segundo se ignora), así que
         // se inserta cursor/centrado DENTRO del mismo atributo con replace.
+        // position:relative es obligatorio SIEMPRE (no solo cuando ya venía en
+        // tdStyle por recup/complementario) -- sin él, el ícono/punto de
+        // comentario de abajo (position:absolute) no tiene contra qué anclarse
+        // dentro de la celda y terminan flotando en cualquier otro lugar de la
+        // página, invisibles. Reportado por el usuario: el emoji no aparecía.
         const tdStyleInstr = tdStyle
-          ? tdStyle.replace('style="', 'style="cursor:pointer;text-align:center;font-weight:700;')
-          : ' style="cursor:pointer;text-align:center;font-weight:700;"';
+          ? tdStyle.replace('style="', 'style="position:relative;cursor:pointer;text-align:center;font-weight:700;')
+          : ' style="position:relative;cursor:pointer;text-align:center;font-weight:700;"';
         const extraEst = curso.celdaExtra?.[raKey]?.[a.id]?.[est.id] || {};
         const iconoChip = extraEst.icono
           ? '<span style="position:absolute;top:1px;left:2px;font-size:11px;line-height:1;pointer-events:none;">' + escapeHTML(extraEst.icono) + '</span>'

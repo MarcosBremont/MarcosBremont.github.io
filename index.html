@@ -3544,6 +3544,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.63<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corregido: el ícono de la celda no se veía</div>
+              <ul class="about-ver-items">
+                <li>La celda solo tenía <code>position:relative</code> cuando ya traía color de fondo por recuperación/complementario -- en una celda normal faltaba, así que el ícono (position:absolute) no tenía contra qué anclarse dentro de la celda y quedaba invisible en otra parte de la página. Reportado por el usuario con captura mostrando la celda sin el emoji. Ahora la celda siempre lo tiene.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#6A1B9A;">v18.62<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9364,9 +9378,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.62"></script>
+  <script src="app.js?v=18.63"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.62"></script>
+  <script src="auth.js?v=18.63"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
