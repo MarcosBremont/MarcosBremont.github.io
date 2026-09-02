@@ -15262,7 +15262,7 @@ function _renderFotoGrupalSeleccion() {
   const body = document.getElementById('foto-grupal-body');
   if (!body) return;
   body.innerHTML =
-    '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 14px;">Sube UNA foto donde salga todo el curso. Luego, estudiante por estudiante, vas a mover y hacer zoom sobre esa misma foto para recortar la cara de cada quien -- no es reconocimiento automático, tú ubicas cada cara a mano.</p>'
+    '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 14px;">Sube UNA foto donde salga todo el curso. TinClass va a intentar detectar las caras automáticamente para que solo tengas que escribir el nombre de cada quien; si no logra detectarlas, podrás recortarlas a mano una por una.</p>'
     + '<label class="btn-siguiente" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">'
     + '<span class="material-icons">upload_file</span> Elegir foto grupal'
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="_fotoGrupalArchivoSeleccionado(this)">'
@@ -15279,11 +15279,181 @@ function _fotoGrupalArchivoSeleccionado(inputEl) {
     _fotoGrupalState.objectUrl = url;
     _fotoGrupalState.naturalW = img.naturalWidth;
     _fotoGrupalState.naturalH = img.naturalHeight;
-    _fotoGrupalIniciarEncuadre();
-    _renderFotoGrupalCrop();
+    _fotoGrupalIntentarDeteccion();
   };
   img.onerror = () => { URL.revokeObjectURL(url); mostrarToast('No se pudo cargar esa imagen', 'error'); };
   img.src = url;
+}
+
+// ─── Detección automática de caras (face-api.js + TinyFaceDetector, self-hosted) ───
+// Se carga bajo demanda (script + modelo ~850 KB) solo cuando el docente abre "Fotos",
+// para no pesarle la carga inicial de la app a nadie que nunca use esta función. Si
+// falla (sin red, modelo no disponible, 0 caras detectadas) se cae al modo manual ya
+// existente -- el docente nunca se queda sin poder asignar las fotos.
+let _faceApiCargando = null;
+function _cargarFaceApiScript() {
+  if (window.faceapi) return Promise.resolve(true);
+  if (_faceApiCargando) return _faceApiCargando;
+  _faceApiCargando = new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'face-api.min.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+  return _faceApiCargando;
+}
+
+let _faceApiModeloListo = false;
+async function _cargarModeloFaceApi() {
+  if (_faceApiModeloListo) return true;
+  const ok = await _cargarFaceApiScript();
+  if (!ok || !window.faceapi) return false;
+  try {
+    await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+    _faceApiModeloListo = true;
+    return true;
+  } catch (e) {
+    console.warn('[FotosEst] No se pudo cargar el modelo de detección de caras:', e);
+    return false;
+  }
+}
+
+function _renderFotoGrupalCargando() {
+  const body = document.getElementById('foto-grupal-body');
+  if (!body) return;
+  body.innerHTML = '<div style="text-align:center;padding:36px 0;color:#78909C;">'
+    + '<span class="material-icons" style="font-size:34px;animation:spin 1s linear infinite;">autorenew</span>'
+    + '<p style="margin-top:10px;font-size:0.85rem;">Buscando caras en la foto...</p></div>';
+}
+
+async function _fotoGrupalIntentarDeteccion() {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  _renderFotoGrupalCargando();
+  let detecciones = [];
+  try {
+    const listo = await _cargarModeloFaceApi();
+    if (listo) {
+      const resultados = await faceapi.detectAllFaces(s.img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }));
+      detecciones = resultados || [];
+    }
+  } catch (e) {
+    console.warn('[FotosEst] Detección de caras falló, se usará el recorte manual:', e);
+  }
+  if (!_fotoGrupalState) return; // el docente cerró el modal mientras se procesaba
+
+  if (detecciones.length > 0) {
+    _fotoGrupalPrepararDeteccion(detecciones);
+    _renderFotoGrupalDeteccion();
+  } else {
+    mostrarToast('No se detectaron caras automáticamente, recórtalas a mano', 'info');
+    _fotoGrupalIniciarEncuadre();
+    _renderFotoGrupalCrop();
+  }
+}
+
+// Agranda la caja de la cara detectada (ajustada muy a los rasgos) a un recuadro
+// cuadrado con margen -- para que el avatar incluya algo de cabeza/hombros, no solo ojos-nariz-boca.
+function _expandirCajaCara(box, naturalW, naturalH, factor) {
+  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  let size = Math.max(box.width, box.height) * factor;
+  size = Math.min(size, naturalW, naturalH);
+  const x = Math.max(0, Math.min(naturalW - size, cx - size / 2));
+  const y = Math.max(0, Math.min(naturalH - size, cy - size / 2));
+  return { sx: x, sy: y, sSize: size };
+}
+
+function _recortarThumbnail(img, sx, sy, sSize, salida) {
+  const canvas = document.createElement('canvas');
+  canvas.width = salida; canvas.height = salida;
+  canvas.getContext('2d').drawImage(img, sx, sy, sSize, sSize, 0, 0, salida, salida);
+  return canvas.toDataURL('image/jpeg', 0.8);
+}
+
+function _fotoGrupalPrepararDeteccion(detecciones) {
+  const s = _fotoGrupalState;
+  s.caras = detecciones.map(d => {
+    const { sx, sy, sSize } = _expandirCajaCara(d.box, s.naturalW, s.naturalH, 1.8);
+    return { sx, sy, sSize, thumb: _recortarThumbnail(s.img, sx, sy, sSize, 96), estId: null, texto: '' };
+  });
+}
+
+function _renderFotoGrupalDeteccion() {
+  const s = _fotoGrupalState;
+  if (!s?.caras) return;
+  const body = document.getElementById('foto-grupal-body');
+  if (!body) return;
+  const asignadas = s.caras.filter(c => c.estId).length;
+  body.innerHTML =
+    '<p style="font-size:0.85rem;color:#546E7A;margin:0 0 12px;">Se detectaron <strong>' + s.caras.length + '</strong> cara(s). Escribe el nombre del estudiante junto a cada una para vincularla (' + asignadas + ' vinculada' + (asignadas === 1 ? '' : 's') + ').</p>'
+    + '<div>' + s.caras.map((c, i) => _renderFilaDeteccion(c, i)).join('') + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center;">'
+    + '<button class="btn-secundario" onclick="_fotoGrupalUsarManual()">Prefiero hacerlo a mano</button>'
+    + '<button class="btn-siguiente" style="margin-left:auto;" onclick="_fotoGrupalImportarDeteccion()"><span class="material-icons" style="vertical-align:middle;font-size:16px;">check</span> Importar' + (asignadas ? ' (' + asignadas + ')' : '') + '</button>'
+    + '</div>';
+}
+
+function _renderFilaDeteccion(c, i) {
+  return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #ECEFF1;">'
+    + '<img src="' + c.thumb + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:1.5px solid #E0E0E0;flex-shrink:0;">'
+    + '<div style="flex:1;position:relative;">'
+    + '<input type="text" id="foto-grupal-input-' + i + '" value="' + escapeHTML(c.texto) + '" placeholder="Alumno" autocomplete="off"'
+    + ' oninput="_fotoGrupalBuscarAlumno(' + i + ',this.value)" onfocus="_fotoGrupalBuscarAlumno(' + i + ',this.value)"'
+    + ' onblur="setTimeout(function(){var el=document.getElementById(\'foto-grupal-sugerencias-' + i + '\');if(el)el.style.display=\'none\';},150)"'
+    + ' style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid ' + (c.estId ? '#81C784' : '#CFD8DC') + ';border-radius:8px;font-size:0.85rem;">'
+    + '<div id="foto-grupal-sugerencias-' + i + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--color-fondo,#fff);border:1px solid #E0E0E0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:20;max-height:200px;overflow-y:auto;margin-top:2px;"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function _fotoGrupalBuscarAlumno(i, texto) {
+  const s = _fotoGrupalState;
+  if (!s?.caras) return;
+  s.caras[i].texto = texto;
+  s.caras[i].estId = null;
+  const cont = document.getElementById('foto-grupal-sugerencias-' + i);
+  if (!cont) return;
+  const q = _normalizarNombreEst(texto);
+  if (!q) { cont.style.display = 'none'; return; }
+  const asignadosEnOtras = new Set(s.caras.filter((c, j) => j !== i && c.estId).map(c => c.estId));
+  const candidatos = s.estudiantes.filter(e => !asignadosEnOtras.has(e.id) && _normalizarNombreEst(e.nombre).includes(q)).slice(0, 8);
+  if (!candidatos.length) { cont.style.display = 'none'; return; }
+  cont.innerHTML = candidatos.map(e => '<div onclick="_fotoGrupalElegirAlumno(' + i + ',\'' + e.id + '\')" style="padding:8px 10px;cursor:pointer;font-size:0.85rem;" onmouseover="this.style.background=\'rgba(0,0,0,0.05)\'" onmouseout="this.style.background=\'none\'">' + escapeHTML(e.nombre) + '</div>').join('');
+  cont.style.display = 'block';
+}
+
+function _fotoGrupalElegirAlumno(i, estId) {
+  const s = _fotoGrupalState;
+  if (!s?.caras) return;
+  const est = s.estudiantes.find(e => e.id === estId);
+  if (!est) return;
+  s.caras[i].estId = estId;
+  s.caras[i].texto = est.nombre;
+  _renderFotoGrupalDeteccion();
+}
+
+function _fotoGrupalUsarManual() {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  s.idx = 0;
+  _fotoGrupalIniciarEncuadre();
+  _renderFotoGrupalCrop();
+}
+
+async function _fotoGrupalImportarDeteccion() {
+  const s = _fotoGrupalState;
+  if (!s?.caras) return;
+  const asignadas = s.caras.filter(c => c.estId);
+  if (!asignadas.length) { mostrarToast('Vincula al menos una cara con un estudiante', 'error'); return; }
+  mostrarToast('Guardando fotos...', 'info');
+  let ok = 0;
+  for (const c of asignadas) {
+    if (await _fotoGrupalGuardarRecorte(c.estId, s.img, c.sx, c.sy, c.sSize)) ok++;
+  }
+  renderizarTablaCalificaciones();
+  mostrarToast(ok + ' foto(s) guardada(s)' + (ok < asignadas.length ? ' (' + (asignadas.length - ok) + ' fallaron)' : ''), ok ? 'success' : 'error');
+  if (ok) cerrarFotoGrupal();
 }
 
 // Encuadre inicial "cover": la imagen cubre todo el círculo sin dejar bordes vacíos, centrada.
@@ -15385,19 +15555,13 @@ function _fotoGrupalAnterior() {
   s.idx--; _fotoGrupalIniciarEncuadre(); _renderFotoGrupalCrop();
 }
 
-async function _fotoGrupalGuardarYSiguiente() {
-  const s = _fotoGrupalState;
-  if (!s) return;
-  const est = s.estudiantes[s.idx];
-
-  // Recorta exactamente lo que se ve dentro del círculo (en coordenadas de la imagen
-  // original) y lo redibuja en un canvas cuadrado de resolución fija para el avatar.
-  const sSize = FOTO_GRUPAL_WRAP / s.scale;
-  const sx = -s.left / s.scale, sy = -s.top / s.scale;
+// Recorta el rectángulo [sx,sy,sSize,sSize] (coordenadas de la imagen original) a un
+// avatar cuadrado comprimido y lo guarda en Firestore. Compartida por el flujo manual
+// (recorte dentro del círculo) y por la importación de caras detectadas automáticamente.
+async function _fotoGrupalGuardarRecorte(estId, img, sx, sy, sSize) {
   const canvas = document.createElement('canvas');
   canvas.width = FOTO_GRUPAL_SALIDA; canvas.height = FOTO_GRUPAL_SALIDA;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(s.img, sx, sy, sSize, sSize, 0, 0, FOTO_GRUPAL_SALIDA, FOTO_GRUPAL_SALIDA);
+  canvas.getContext('2d').drawImage(img, sx, sy, sSize, sSize, 0, 0, FOTO_GRUPAL_SALIDA, FOTO_GRUPAL_SALIDA);
 
   let calidad = 0.85;
   let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', calidad));
@@ -15405,7 +15569,7 @@ async function _fotoGrupalGuardarYSiguiente() {
     calidad -= 0.15;
     blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', calidad));
   }
-  if (!blob) { mostrarToast('No se pudo procesar el recorte', 'error'); return; }
+  if (!blob) return false;
 
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -15415,15 +15579,28 @@ async function _fotoGrupalGuardarYSiguiente() {
   });
 
   const col = _fotosEstColeccion();
-  if (!col) { mostrarToast('Debes iniciar sesión para guardar fotos', 'error'); return; }
+  if (!col) return false;
   try {
-    await col.doc(est.id).set({ fotoBase64: base64, fotoMime: 'image/jpeg', actualizadoEn: new Date().toISOString() });
-    _fotosEstCache[est.id] = { fotoBase64: base64, fotoMime: 'image/jpeg' };
-    renderizarTablaCalificaciones();
+    await col.doc(estId).set({ fotoBase64: base64, fotoMime: 'image/jpeg', actualizadoEn: new Date().toISOString() });
+    _fotosEstCache[estId] = { fotoBase64: base64, fotoMime: 'image/jpeg' };
+    return true;
   } catch (e) {
-    mostrarToast('No se pudo guardar la foto: ' + (e.message || e), 'error');
-    return;
+    console.warn('[FotosEst] Error guardando foto:', e);
+    return false;
   }
+}
+
+async function _fotoGrupalGuardarYSiguiente() {
+  const s = _fotoGrupalState;
+  if (!s) return;
+  const est = s.estudiantes[s.idx];
+
+  // Recorta exactamente lo que se ve dentro del círculo (en coordenadas de la imagen original).
+  const sSize = FOTO_GRUPAL_WRAP / s.scale;
+  const sx = -s.left / s.scale, sy = -s.top / s.scale;
+  const ok = await _fotoGrupalGuardarRecorte(est.id, s.img, sx, sy, sSize);
+  if (!ok) { mostrarToast('No se pudo guardar la foto', 'error'); return; }
+  renderizarTablaCalificaciones();
 
   if (s.idx < s.estudiantes.length - 1) {
     s.idx++;
