@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.36" />
+  <link rel="stylesheet" href="styles.css?v=18.60" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -2060,6 +2060,25 @@
         </table>
       </div>
 
+      <!-- ===== MODAL LLENAR INSTRUMENTO (Lista de Cotejo / Rúbrica, por estudiante) ===== -->
+      <div id="instr-modal-overlay" class="modal-overlay hidden" onclick="if(event.target.id==='instr-modal-overlay')cerrarInstrumentoModal()">
+        <div class="modal-box" style="max-width:520px;width:96%;max-height:88vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <h3 id="instr-modal-titulo" style="font-size:1rem;">
+              <span class="material-icons" style="vertical-align:middle;margin-right:6px;font-size:20px;">fact_check</span>
+              Instrumento de evaluación
+            </h3>
+            <button class="modal-close" onclick="cerrarInstrumentoModal()"><span class="material-icons">close</span></button>
+          </div>
+          <div class="modal-body" id="instr-modal-body" style="overflow-y:auto;flex:1;padding:16px 18px;"></div>
+          <div class="modal-footer">
+            <button id="instr-modal-prev" class="btn-secundario" onclick="_instrIrEstudiante(-1)"><span class="material-icons" style="vertical-align:middle;font-size:16px;">arrow_back</span> Anterior</button>
+            <button id="instr-modal-next" class="btn-secundario" onclick="_instrIrEstudiante(1)">Siguiente <span class="material-icons" style="vertical-align:middle;font-size:16px;">arrow_forward</span></button>
+            <button class="btn-secundario" onclick="cerrarInstrumentoModal()" style="margin-left:auto;">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Leyenda -->
       <div class="cal-leyenda">
         <span class="cal-badge cal-aprobado">≥ 70 Aprobado</span>
@@ -3510,6 +3529,22 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v18.60<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: llenar el instrumento de evaluación por estudiante (como Additio)</div>
+              <ul class="about-ver-items">
+                <li>Cada actividad del Libro de Calificaciones ya trae un instrumento generado (Lista de Cotejo o Rúbrica, con sus criterios reales) que antes solo servía para exportar/imprimir. Ahora hay un ícono nuevo en el encabezado de cada actividad ("Llenar instrumento de evaluación") que abre un modal, un estudiante a la vez: marcas SÍ/NO en cada criterio (o el nivel logrado en una rúbrica) y la nota se calcula sola, proporcional al valor de la actividad.</li>
+                <li>"Saltar al siguiente alumno" avanza automáticamente al terminar de marcar todos los criterios del estudiante actual, para poder calificar todo el curso sin cerrar el modal -- mismo flujo que Additio.</li>
+                <li>La celda de nota de esas actividades deja de ser editable a mano directamente y pasa a ser un acceso directo al instrumento (clic para abrirlo con ese estudiante seleccionado); sigue mostrando el número calculado, con los mismos colores de aprobado/regular/reprobado de siempre.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9286,9 +9321,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.59"></script>
+  <script src="app.js?v=18.60"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.59"></script>
+  <script src="auth.js?v=18.60"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

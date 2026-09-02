@@ -15198,6 +15198,7 @@ function renderizarTablaCalificaciones() {
         + '<div style="font-size:0.72rem;font-weight:600;position:relative;text-align:center;">'
         + '<span>Act.' + actNum + ' <span style="opacity:0.65;font-weight:400;">' + labelEC + '</span></span>'
         + '<button onclick="event.stopPropagation();_copiarColumnaNotas(\'' + a.id + '\',this)" title="Copiar notas de esta columna" style="position:absolute;top:50%;right:-2px;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 1px;color:#90CAF9;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button>'
+        + (['cotejo', 'rubrica'].includes(a.instrumento?.tipo) ? '<button onclick="event.stopPropagation();abrirInstrumentoActividad(\'' + a.id + '\')" title="Llenar instrumento de evaluación (' + escapeHTML(a.instrumento.tipoLabel || '') + ')" style="position:absolute;top:50%;left:-2px;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 1px;color:#00695C;display:flex;align-items:center;" tabindex="-1"><span class="material-icons" style="font-size:13px;">fact_check</span></button>' : '')
         + '</div>'
         + '<div style="font-size:0.68rem;opacity:0.7;margin:1px 0;">' + escapeHTML(fechaCorta) + (fechaNum ? ' ' + fechaNum : '') + '</div>'
         + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
@@ -15297,18 +15298,36 @@ function renderizarTablaCalificaciones() {
           + ';pointer-events:none;" title="' + (tienePendienteAct ? 'Recuperación pendiente' : 'Recuperación completada') + (intentosAct.length > 1 ? ' (' + intentosAct.length + ' intentos)' : '') + '"></span>'
         : '';
       const isTouchMode = document.body.classList.contains('touch-mode');
-      cells += '<td' + tdStyle + '><input type="number" class="input-nota ' + cls + '"'
-        + ' id="nota-' + est.id + '-' + a.id + '"'
-        + ' data-act-id="' + a.id + '"'
-        + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
-        + (isTouchMode ? ' inputmode="none" readonly' : '')
-        + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
-        + ' onkeydown="_notaKeyNav(event,this)"'
-        + ' onwheel="event.preventDefault()"'
-        + ' onfocus="_focusNotaInput(this)"'
-        + ' onblur="_limpiarHighlightCeldas()"'
-        + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado || '').substring(0, 40)) + '"'
-        + '/>' + recupDot + '</td>';
+      const esInstrumentado = !esCompCol && ['cotejo', 'rubrica'].includes(a.instrumento?.tipo);
+      if (esInstrumentado) {
+        // El instrumento (Lista de Cotejo/Rúbrica) reemplaza la celda editable
+        // a mano -- la única forma de poner nota es llenándolo por estudiante
+        // (ver abrirInstrumentoActividad), igual que Additio. tdStyle ya trae
+        // su propio atributo style="..." completo (o cadena vacía) -- no se
+        // puede simplemente pegarle otro style="" al lado (HTML no permite
+        // dos atributos style en el mismo tag, el segundo se ignora), así que
+        // se inserta cursor/centrado DENTRO del mismo atributo con replace.
+        const tdStyleInstr = tdStyle
+          ? tdStyle.replace('style="', 'style="cursor:pointer;text-align:center;font-weight:700;')
+          : ' style="cursor:pointer;text-align:center;font-weight:700;"';
+        cells += '<td' + tdStyleInstr + ' class="td-nota-instr ' + cls + '"'
+          + ' onclick="abrirInstrumentoActividad(\'' + a.id + '\',\'' + est.id + '\')"'
+          + ' title="Click para llenar el instrumento de evaluación | Máx: ' + max + ' pts">'
+          + (val !== '' ? val : '—') + recupDot + '</td>';
+      } else {
+        cells += '<td' + tdStyle + '><input type="number" class="input-nota ' + cls + '"'
+          + ' id="nota-' + est.id + '-' + a.id + '"'
+          + ' data-act-id="' + a.id + '"'
+          + ' value="' + val + '" min="0" max="' + max + '" step="0.5" placeholder="—"'
+          + (isTouchMode ? ' inputmode="none" readonly' : '')
+          + ' onchange="registrarNota(\'' + est.id + '\',\'' + a.id + '\',this.value)"'
+          + ' onkeydown="_notaKeyNav(event,this)"'
+          + ' onwheel="event.preventDefault()"'
+          + ' onfocus="_focusNotaInput(this)"'
+          + ' onblur="_limpiarHighlightCeldas()"'
+          + ' title="Máx: ' + max + ' pts | ' + escapeHTML((a.enunciado || '').substring(0, 40)) + '"'
+          + '/>' + recupDot + '</td>';
+      }
     });
 
     const notaRA = _calcNotaRA(curso, est.id, raKey, actividades);
@@ -15550,7 +15569,212 @@ function actualizarValorActividad(actividadId, nuevoValor, inputEl) {
   renderizarTablaCalificaciones();
 }
 
+// ── Llenar el instrumento de evaluación por estudiante (Lista de Cotejo / Rúbrica) ──
+// Cada actividad ya trae un instrumento generado (act.instrumento: Lista de
+// Cotejo o Rúbrica, con sus criterios reales) que antes solo servía para
+// exportar/imprimir -- la nota se escribía a mano en la celda. Ahora, para
+// actividades con instrumento tipo 'cotejo' o 'rubrica' (los únicos que se
+// generan en la práctica), la celda deja de ser un <input> editable: se abre
+// este modal, un estudiante a la vez, para marcar cada criterio (Logrado/No
+// logrado, o el nivel de la rúbrica) y la nota se calcula sola. Mismo patrón
+// que Additio: "Saltar al siguiente alumno" avanza automáticamente al
+// terminar de marcar todos los criterios del estudiante actual.
+let _instrModalState = null; // { actId, raKey, cursoId, instrumento, maxValor, estudiantes, idx, saltarAuto }
 
+/** Respuestas guardadas de TODOS los estudiantes para una actividad, creando
+ *  la estructura anidada (curso.instrumentoResp[raKey][actId]) si hace falta. */
+function _instrRespuestasActividad(curso, raKey, actId) {
+  if (!curso.instrumentoResp) curso.instrumentoResp = {};
+  if (!curso.instrumentoResp[raKey]) curso.instrumentoResp[raKey] = {};
+  if (!curso.instrumentoResp[raKey][actId]) curso.instrumentoResp[raKey][actId] = {};
+  return curso.instrumentoResp[raKey][actId];
+}
+
+/** Nota de un estudiante a partir de sus respuestas del instrumento --
+ *  proporcional al valor de la actividad: (logrado / máximo posible) × valor
+ *  de la actividad. Para 'cotejo' cada criterio vale 1 (logrado) o 0 (no
+ *  logrado); para instrumentos con niveles (rúbrica) cada criterio vale los
+ *  puntos del nivel elegido, sobre el máximo posible (nivel de más puntos ×
+ *  cantidad de criterios). Devuelve null si el estudiante no tiene ninguna
+ *  respuesta todavía (para no registrar 0 antes de empezar a marcar). */
+function _calcNotaDesdeInstrumento(instrumento, respEst, maxValor) {
+  const criterios = instrumento?.criterios || [];
+  if (!criterios.length) return null;
+  const resp = respEst || {};
+  let sumaLogrado = 0, sumaMax = 0, algunaRespuesta = false;
+
+  if (instrumento.tipo === 'cotejo') {
+    criterios.forEach(c => {
+      sumaMax += 1;
+      const v = resp[c.numero];
+      if (v === 'si') { sumaLogrado += 1; algunaRespuesta = true; }
+      else if (v === 'no') { algunaRespuesta = true; }
+    });
+  } else if (Array.isArray(instrumento.niveles) && instrumento.niveles.length) {
+    const maxNivel = Math.max(...instrumento.niveles.map(n => n.puntos || 0), 0);
+    criterios.forEach(c => {
+      sumaMax += maxNivel;
+      const nivelIdx = resp[c.numero];
+      const nivel = (nivelIdx !== undefined && nivelIdx !== null) ? instrumento.niveles[nivelIdx] : null;
+      if (nivel) { sumaLogrado += (nivel.puntos || 0); algunaRespuesta = true; }
+    });
+  } else {
+    return null;
+  }
+
+  if (!algunaRespuesta || sumaMax <= 0) return null;
+  return Math.round((sumaLogrado / sumaMax) * maxValor * 10) / 10;
+}
+
+/** Abre el modal del instrumento para una actividad, opcionalmente
+ *  arrancando en un estudiante específico (ej. al hacer clic en su celda). */
+function abrirInstrumentoActividad(actId, estudianteIdInicial) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso) return;
+  const planActiva = _getPlanActivaDeCurso();
+  const actividades = (planActiva && planActiva.actividades) || [];
+  const act = actividades.find(a => a.id === actId);
+  const instrumento = act?.instrumento;
+  if (!instrumento || !['cotejo', 'rubrica'].includes(instrumento.tipo) || !instrumento.criterios?.length) {
+    mostrarToast('Esta actividad no tiene un instrumento con criterios para llenar aquí.', 'error');
+    return;
+  }
+  if (!curso.estudiantes?.length) { mostrarToast('Agrega estudiantes primero', 'error'); return; }
+
+  const raKey = _getRaKey();
+  const raInfo = _ensureRA(curso, raKey);
+  const idxInicial = estudianteIdInicial ? curso.estudiantes.findIndex(e => e.id === estudianteIdInicial) : 0;
+
+  _instrModalState = {
+    actId,
+    raKey,
+    cursoId: calState.cursoActivoId,
+    instrumento,
+    maxValor: raInfo.valores[actId] || 100,
+    estudiantes: curso.estudiantes,
+    idx: idxInicial >= 0 ? idxInicial : 0,
+    saltarAuto: true
+  };
+
+  document.getElementById('instr-modal-overlay')?.classList.remove('hidden');
+  _renderInstrumentoModal();
+}
+
+function cerrarInstrumentoModal() {
+  document.getElementById('instr-modal-overlay')?.classList.add('hidden');
+  _instrModalState = null;
+}
+
+function _instrIrEstudiante(delta) {
+  const s = _instrModalState;
+  if (!s) return;
+  const nuevo = s.idx + delta;
+  if (nuevo < 0 || nuevo >= s.estudiantes.length) return;
+  s.idx = nuevo;
+  _renderInstrumentoModal();
+}
+
+/** Marca (o desmarca, si se hace clic en la misma opción ya seleccionada) la
+ *  respuesta de un criterio para el estudiante actual, recalcula su nota y
+ *  la guarda con registrarNota() -- el mismo camino que ya usa la celda
+ *  manual, así toda la lógica de totales/recuperaciones/sincronización sigue
+ *  funcionando igual sin duplicar nada. */
+function _instrMarcarCriterio(numero, valor) {
+  const s = _instrModalState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  if (!curso) return;
+  const est = s.estudiantes[s.idx];
+  if (!est) return;
+
+  const respActividad = _instrRespuestasActividad(curso, s.raKey, s.actId);
+  if (!respActividad[est.id]) respActividad[est.id] = {};
+  const respEst = respActividad[est.id];
+  respEst[numero] = (respEst[numero] === valor) ? undefined : valor;
+  if (respEst[numero] === undefined) delete respEst[numero];
+
+  const nota = _calcNotaDesdeInstrumento(s.instrumento, respEst, s.maxValor);
+  registrarNota(est.id, s.actId, nota === null ? '' : String(nota));
+
+  const todasRespondidas = s.instrumento.criterios.every(c => respEst[c.numero] !== undefined);
+  _renderInstrumentoModal();
+
+  if (s.saltarAuto && todasRespondidas && s.idx < s.estudiantes.length - 1) {
+    setTimeout(() => { if (_instrModalState === s) _instrIrEstudiante(1); }, 450);
+  }
+}
+
+function _instrToggleSaltarAuto(checked) {
+  if (_instrModalState) _instrModalState.saltarAuto = checked;
+}
+
+function _renderInstrumentoModal() {
+  const s = _instrModalState;
+  const body = document.getElementById('instr-modal-body');
+  const titulo = document.getElementById('instr-modal-titulo');
+  if (!s || !body) return;
+
+  const curso = calState.cursos[s.cursoId];
+  const est = s.estudiantes[s.idx];
+  const respActividad = _instrRespuestasActividad(curso, s.raKey, s.actId);
+  const respEst = respActividad[est.id] || {};
+  const nota = _calcNotaDesdeInstrumento(s.instrumento, respEst, s.maxValor);
+  const esCotejo = s.instrumento.tipo === 'cotejo';
+
+  if (titulo) titulo.textContent = (s.instrumento.tipoLabel || 'Instrumento') + ' — ' + (s.instrumento.actividad || '');
+
+  const pct = s.maxValor > 0 ? ((nota || 0) / s.maxValor * 100) : 0;
+  const colorNota = nota === null ? '#BDBDBD' : (pct >= 70 ? '#2E7D32' : (pct >= 60 ? '#E65100' : '#C62828'));
+
+  const filasCriterios = s.instrumento.criterios.map(c => {
+    const label = esCotejo ? (c.indicador || '') : (c.criterio || '');
+    const seleccion = respEst[c.numero];
+    let opciones;
+    if (esCotejo) {
+      opciones = ['si', 'no'].map(v => {
+        const activo = seleccion === v;
+        const color = v === 'si' ? '#2E7D32' : '#C62828';
+        const bg = activo ? color : '#F5F5F5';
+        const fg = activo ? '#fff' : '#616161';
+        return '<button onclick="_instrMarcarCriterio(' + c.numero + ',\'' + v + '\')" '
+          + 'style="flex:1;padding:10px;border:1.5px solid ' + (activo ? color : '#E0E0E0') + ';border-radius:8px;background:' + bg + ';color:' + fg + ';font-weight:700;font-size:0.85rem;cursor:pointer;">'
+          + (v === 'si' ? 'SÍ' : 'NO') + '</button>';
+      }).join('');
+    } else {
+      opciones = (s.instrumento.niveles || []).map((n, ni) => {
+        const activo = seleccion === ni;
+        return '<button onclick="_instrMarcarCriterio(' + c.numero + ',' + ni + ')" '
+          + 'style="flex:1;padding:8px 4px;border:1.5px solid ' + (activo ? '#1565C0' : '#E0E0E0') + ';border-radius:8px;background:' + (activo ? '#1565C0' : '#F5F5F5') + ';color:' + (activo ? '#fff' : '#616161') + ';font-weight:700;font-size:0.75rem;cursor:pointer;">'
+          + escapeHTML(n.nombre) + '<br><span style="font-weight:400;opacity:0.85;">' + n.puntos + ' pts</span></button>';
+      }).join('');
+    }
+    return '<div style="border:1px solid #E8EDF2;border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
+      + '<div style="font-weight:700;font-size:0.85rem;color:#1A1A2E;margin-bottom:8px;">' + c.numero + '. ' + escapeHTML(label) + '</div>'
+      + '<div style="display:flex;gap:8px;">' + opciones + '</div>'
+      + '</div>';
+  }).join('');
+
+  body.innerHTML = ''
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+    + '<div>'
+    + '<div style="font-size:0.72rem;color:#9E9E9E;">Estudiante ' + (s.idx + 1) + ' / ' + s.estudiantes.length + '</div>'
+    + '<div style="font-weight:800;font-size:1.05rem;color:#1A1A2E;">' + escapeHTML(est.nombre) + '</div>'
+    + '</div>'
+    + '<div style="text-align:center;">'
+    + '<div style="font-size:0.72rem;color:#9E9E9E;">Nota</div>'
+    + '<div style="font-weight:800;font-size:1.3rem;color:' + colorNota + ';">' + (nota !== null ? nota.toFixed(1) : '—') + ' <span style="font-size:0.85rem;font-weight:400;color:#9E9E9E;">/ ' + s.maxValor + '</span></div>'
+    + '</div>'
+    + '</div>'
+    + filasCriterios
+    + '<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:#546E7A;margin-top:6px;cursor:pointer;">'
+    + '<input type="checkbox" ' + (s.saltarAuto ? 'checked' : '') + ' onchange="_instrToggleSaltarAuto(this.checked)"> Saltar al siguiente alumno al terminar'
+    + '</label>';
+
+  const btnPrev = document.getElementById('instr-modal-prev');
+  const btnNext = document.getElementById('instr-modal-next');
+  if (btnPrev) btnPrev.disabled = s.idx === 0;
+  if (btnNext) btnNext.disabled = s.idx === s.estudiantes.length - 1;
+}
 
 /** Exporta la tabla de calificaciones del curso/RA activo a Word.
  *  Antes esto capturaba el innerHTML EN VIVO de #cal-tabla-wrap (la tabla
