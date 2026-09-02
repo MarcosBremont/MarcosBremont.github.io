@@ -1995,39 +1995,42 @@
 
       <!-- Añadir estudiantes -->
       <div class="cal-add-estudiantes" id="cal-add-estudiantes-area">
-        <div class="cal-add-estudiantes-header">
+        <div class="cal-add-estudiantes-header" onclick="_toggleAgregarEstudiantes()" style="cursor:pointer;">
           <span class="material-icons cal-add-estudiantes-icon">person_add</span>
           <div>
             <div class="cal-add-estudiantes-title">Agregar estudiantes</div>
             <div class="cal-add-estudiantes-sub">Uno por línea, o importa desde un archivo CSV</div>
           </div>
+          <span class="material-icons" id="cal-add-estudiantes-chevron" style="margin-left:auto;color:#9E9E9E;transition:transform 0.2s;">expand_more</span>
         </div>
-        <textarea id="input-estudiantes" rows="3"
-          placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
-        <div class="cal-add-estudiantes-actions">
-          <button class="btn-siguiente" onclick="agregarEstudiantes()">
-            <span class="material-icons">group_add</span> Agregar
-          </button>
-          <label class="btn-export btn-sm"
-            style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;"
-            title="Importar desde archivo CSV o Excel guardado como CSV">
-            <span class="material-icons">upload_file</span> Importar CSV
-            <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none"
-              onchange="importarAlumnosCSV(this)">
-          </label>
-          <button class="btn-export btn-sm" onclick="descargarPlantillaEstudiantesCSV()"
-            style="background:#FFF8E1;border:1.5px solid #FFD54F;color:#F57F17;"
-            title="Descarga un archivo CSV de ejemplo con el formato correcto para importar estudiantes">
-            <span class="material-icons">description</span> Descargar plantilla
-          </button>
+        <div id="cal-add-estudiantes-contenido" style="display:none;">
+          <textarea id="input-estudiantes" rows="3"
+            placeholder="Escribe los nombres de los estudiantes, uno por línea. Ej:&#10;María García&#10;Juan Pérez&#10;Ana López"></textarea>
+          <div class="cal-add-estudiantes-actions">
+            <button class="btn-siguiente" onclick="agregarEstudiantes()">
+              <span class="material-icons">group_add</span> Agregar
+            </button>
+            <label class="btn-export btn-sm"
+              style="cursor:pointer;background:#E8F5E9;border:1.5px solid #81C784;color:#2E7D32;"
+              title="Importar desde archivo CSV o Excel guardado como CSV">
+              <span class="material-icons">upload_file</span> Importar CSV
+              <input type="file" id="csv-import-input" accept=".csv,.txt" style="display:none"
+                onchange="importarAlumnosCSV(this)">
+            </label>
+            <button class="btn-export btn-sm" onclick="descargarPlantillaEstudiantesCSV()"
+              style="background:#FFF8E1;border:1.5px solid #FFD54F;color:#F57F17;"
+              title="Descarga un archivo CSV de ejemplo con el formato correcto para importar estudiantes">
+              <span class="material-icons">description</span> Descargar plantilla
+            </button>
+          </div>
+          <p class="subsection-hint" style="margin-top:10px;">
+            También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
+            <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
+            El archivo CSV debe tener <strong>un nombre completo por línea</strong> (la primera fila puede ser un
+            encabezado como "Nombre", se detecta e ignora sola); si lo abres en Excel, guárdalo como
+            <strong>CSV (.csv)</strong> antes de subirlo. Usa <strong>Descargar plantilla</strong> para ver un ejemplo listo para editar.
+          </p>
         </div>
-        <p class="subsection-hint" style="margin-top:10px;">
-          También puedes hacer clic en <strong>Editar nombre</strong> en la tabla para corregir un nombre, o en
-          <strong style="color:#C62828;">✕</strong> para eliminar un estudiante.
-          El archivo CSV debe tener <strong>un nombre completo por línea</strong> (la primera fila puede ser un
-          encabezado como "Nombre", se detecta e ignora sola); si lo abres en Excel, guárdalo como
-          <strong>CSV (.csv)</strong> antes de subirlo. Usa <strong>Descargar plantilla</strong> para ver un ejemplo listo para editar.
-        </p>
       </div>
 
       <!-- Planificaciones del curso activo -->
@@ -3561,6 +3564,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v18.67<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ajuste: "Agregar estudiantes" ahora es retráctil</div>
+              <ul class="about-ver-items">
+                <li>El bloque de "Agregar estudiantes" del Libro de Calificaciones ya no queda siempre abierto ocupando espacio -- ahora empieza colapsado y se abre con un clic en su encabezado (flechita a la derecha). Recuerda si lo dejaste abierto, para no tener que abrirlo cada vez.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9442,9 +9459,9 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.66"></script>
+  <script src="app.js?v=18.67"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.66"></script>
+  <script src="auth.js?v=18.67"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

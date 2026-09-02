@@ -292,6 +292,20 @@ function _normalizarNombreEst(nombre) {
   return String(nombre || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/** Colapsa/expande el bloque "Agregar estudiantes" del Libro de Calificaciones
+ *  -- antes quedaba siempre abierto ocupando espacio aunque el docente ya
+ *  tuviera el curso lleno. Recuerda el estado (localStorage) para no tener
+ *  que volver a abrirlo cada vez si el docente lo deja abierto a propósito. */
+function _toggleAgregarEstudiantes() {
+  const cont = document.getElementById('cal-add-estudiantes-contenido');
+  const chevron = document.getElementById('cal-add-estudiantes-chevron');
+  if (!cont) return;
+  const abrir = cont.style.display === 'none';
+  cont.style.display = abrir ? '' : 'none';
+  if (chevron) chevron.style.transform = abrir ? 'rotate(180deg)' : '';
+  try { localStorage.setItem('cal_add_est_abierto', abrir ? 'true' : 'false'); } catch {}
+}
+
 function agregarEstudiantes() {
   const raw = document.getElementById('input-estudiantes')?.value || '';
   const nombres = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
@@ -14112,6 +14126,16 @@ function renderizarCalificaciones() {
   // Limpiar textarea de estudiantes al cambiar curso (bug fix)
   const inputEst = document.getElementById('input-estudiantes');
   if (inputEst) inputEst.value = '';
+  // Restaurar si "Agregar estudiantes" quedó abierto la última vez (por
+  // defecto colapsado, ver _toggleAgregarEstudiantes).
+  const contAddEst = document.getElementById('cal-add-estudiantes-contenido');
+  if (contAddEst) {
+    let abierto = false;
+    try { abierto = localStorage.getItem('cal_add_est_abierto') === 'true'; } catch {}
+    contAddEst.style.display = abierto ? '' : 'none';
+    const chevron = document.getElementById('cal-add-estudiantes-chevron');
+    if (chevron) chevron.style.transform = abierto ? 'rotate(180deg)' : '';
+  }
   renderizarTabsCursos();
   renderizarPanelCursosArchivados();
   _actualizarBadgePapelera();
