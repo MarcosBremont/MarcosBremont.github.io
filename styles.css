@@ -716,6 +716,24 @@ body.dark-mode .info-tip {
   color: #90CAF9 !important;
 }
 
+/* Selector de fecha personalizado (_abrirDgFechaPicker/_renderDgFpMes en
+   app.js): su contenedor se crea con popup.style.cssText = '...', y esa
+   asignación via JS hace que el navegador reserialice el atributo style
+   (ej. "#fff" -> "rgb(255, 255, 255)"), por lo que los selectores
+   [style*="background:#fff;"] de más abajo no lo detectan aunque sí
+   detectan las celdas de días (esas sí quedan con el string original
+   porque se generan como HTML plano vía innerHTML). Por eso este necesita
+   su propia regla dirigida por id en vez de depender del atrapa-color. */
+body.dark-mode #_dg-fp-popup {
+  background: var(--color-superficie) !important;
+  border-color: #1E3A5F !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .6) !important;
+}
+
+body.dark-mode #_dg-fp-popup [style*="border-top:1px solid #F0F4F8;"] {
+  border-top-color: var(--color-borde) !important;
+}
+
 body.dark-mode .info-tip .material-icons {
   color: #90CAF9 !important;
 }

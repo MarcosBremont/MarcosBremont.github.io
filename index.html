@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=19.03" />
+  <link rel="stylesheet" href="styles.css?v=19.04" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -3599,6 +3599,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#5C6BC0;">v19.04<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Modo oscuro: selector de fecha (calendario) se veía en blanco</div>
+              <ul class="about-ver-items">
+                <li>El calendario emergente para elegir "Fecha de Inicio"/"Fecha de Término" (Nueva Planificación por RA) se creaba con JavaScript asignando su color directamente (popup.style.cssText), y esa forma de asignar estilos hace que el navegador reescriba el color de fondo internamente (de "#fff" a su equivalente en rgb), por lo que la regla que normalmente oscurece los fondos blancos del sistema no lo reconocía como tal y el recuadro se quedaba blanco encima del resto de la pantalla en modo oscuro. Se agregó una regla dirigida específicamente a ese calendario.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10004,9 +10018,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.03"></script>
+  <script src="app.js?v=19.04"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.03"></script>
+  <script src="auth.js?v=19.04"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
