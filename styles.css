@@ -711,6 +711,19 @@ body {
   margin-top: 2px;
 }
 
+body.dark-mode .info-tip {
+  background: #1A2A4A !important;
+  color: #90CAF9 !important;
+}
+
+body.dark-mode .info-tip .material-icons {
+  color: #90CAF9 !important;
+}
+
+body.dark-mode .info-tip strong {
+  color: #BBDEFB !important;
+}
+
 /* ---------- Bloom Badge (Detección RA) ---------- */
 .bloom-badge {
   display: inline-flex;
