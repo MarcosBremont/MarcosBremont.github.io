@@ -23752,33 +23752,47 @@ async function _extraerTextoPdf(arrayBuffer, moduloBuscado) {
       if (Math.abs(ya - yb) > 2) return yb - ya;
       return a.transform[4] - b.transform[4];
     });
-    // Unir con un espacio SIEMPRE (como se hacía antes) rompe documentos donde una
-    // misma palabra llega partida en varios fragmentos de texto consecutivos que se
-    // TOCAN sin hueco real entre ellos -- visto en un currículo real: "RA01:" llegaba
-    // como 3 fragmentos ("RA"/"0"/"1:", cada uno en un font distinto, común en PDFs
-    // generados desde InDesign/Word con los dígitos en otro estilo) y terminaba como
-    // "RA 0 1:" en el texto, un token que ningún regex de "RA01"/"RA\d+" reconoce --
-    // eso le costó 6 de 8 Resultados de Aprendizaje de un módulo (el resto de la
-    // extracción funcionaba bien, solo el número quedaba roto). Se decide el espacio
-    // por posición real en vez de a ciegas: si el siguiente fragmento empieza donde
-    // termina el anterior (se tocan, sin hueco real -- confirmado con datos reales:
-    // ~0 unidades entre fragmentos partidos, contra ~3.7 en un espacio real), se pegan
-    // directo; si hay un hueco de verdad (o cambia de línea), se separan con un espacio.
-    let textoPagina = '';
-    let prevItem = null;
+    // Fusiona fragmentos de texto consecutivos que se TOCAN (sin hueco real entre
+    // ellos) en una sola "palabra" -- necesario porque algunos PDFs (fuentes con
+    // subconjuntos distintos para letras/dígitos, común en documentos generados
+    // desde InDesign/Word) parten una misma palabra en varios fragmentos de texto
+    // seguidos. Visto en un currículo real: "RA01:" llegaba como 3 fragmentos
+    // ("RA"/"0"/"1:") que unir siempre con un espacio (como se hacía antes)
+    // convertía en "RA 0 1:", un token que ningún regex de "RA01"/"RA\d+"
+    // reconoce -- le costó 6 de 8 Resultados de Aprendizaje de un módulo.
+    // Se decide por posición real (medido en ese mismo documento: ~0 unidades
+    // entre fragmentos partidos de una palabra, contra ~3.7 en un espacio real):
+    // si el siguiente fragmento empieza donde termina el anterior, se fusionan
+    // en un solo "run"; si hay hueco real o cambia de línea, quedan separados.
+    //
+    // Esta fusión no es solo cosmética para el texto lineal: `paginas[].items`
+    // (usado por _reconstruirColumnasTabla para separar la columna de RA de la
+    // de Criterios por posición X) también debe traer cada marcador "RA01"/
+    // "CE1.1" ENTERO en un solo item -- si quedan repartidos como antes, ningún
+    // item individual calza con el patrón que busca esa función, la separación
+    // de columnas falla por completo (vuelve null) y el llamador cae al texto
+    // lineal SIN separar columnas, donde cada descripción de RA se corta en el
+    // primer "CE" que aparece después sin importar la columna real -- visto en
+    // el mismo documento real: RA08 perdía su primera palabra ("Utilizar"), y
+    // RA07 perdía varias palabras completas de en medio.
+    const runs = [];
     items.forEach(it => {
       const x = it.transform[4], y = it.transform[5];
-      if (prevItem) {
-        const mismaLinea = Math.abs(y - prevItem.y) <= 2;
-        const brecha = mismaLinea ? x - prevItem.xFin : Infinity;
+      const prev = runs[runs.length - 1];
+      if (prev) {
+        const mismaLinea = Math.abs(y - prev.y) <= 2;
+        const brecha = mismaLinea ? x - prev.xFin : Infinity;
         const umbral = Math.max(0.6, (it.height || 10) * 0.12);
-        if (!mismaLinea || brecha > umbral) textoPagina += ' ';
+        if (mismaLinea && brecha <= umbral) {
+          prev.str += it.str;
+          prev.xFin = x + (it.width || 0);
+          return;
+        }
       }
-      textoPagina += it.str;
-      prevItem = { xFin: x + (it.width || 0), y };
+      runs.push({ str: it.str, x, y, xFin: x + (it.width || 0) });
     });
-    textoCompleto += textoPagina + '\n\n';
-    paginas.push({ numero: p, items: items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] })) });
+    textoCompleto += runs.map(r => r.str).join(' ') + '\n\n';
+    paginas.push({ numero: p, items: runs.map(r => ({ str: r.str, x: r.x, y: r.y })) });
 
     // Si ya se conoce el código del módulo que se busca (el docente lo escribe
     // ANTES de subir el PDF), no hace falta esperar a leer el documento
@@ -24099,8 +24113,19 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   const xCE = itemsRelevantes.filter(it => esCE(it.str)).map(it => it.x);
   if (!xRA.length || !xCE.length) return null;
 
+  // El límite entre columnas NO es el punto medio entre el marcador de RA y el
+  // de CE -- la celda de RA suele ser bastante ancha, y su texto de
+  // continuación en la MISMA fila que el marcador ("RA01: Realizar...") puede
+  // quedar mucho más a la derecha que el propio "RA01:" sin por eso dejar de
+  // ser parte de la columna de RA (confirmado con datos reales: "Realizar"
+  // en x≈145, con "RA01:" en x≈78 y "CE1.1" en x≈191 -- el punto medio
+  // quedaba en x≈134, clasificando MAL a "Realizar" como columna de CE y
+  // perdiéndolo de la descripción del RA). El límite real de la columna es
+  // el borde izquierdo de la columna de CE (donde arrancan sus marcadores,
+  // que en un currículo real no varía nunca de fila a fila) -- todo lo que
+  // esté a la izquierda de eso, sin importar cuánto, es de la columna de RA.
   const promedio = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
-  const xSplit = (promedio(xRA) + promedio(xCE)) / 2;
+  const xSplit = promedio(xCE);
 
   const ordenados = itemsRelevantes.slice().sort((a, b) => {
     if (a.pagina !== b.pagina) return a.pagina - b.pagina;

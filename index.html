@@ -3597,6 +3597,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.88<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: descripción de RA con la primera palabra cortada</div>
+              <ul class="about-ver-items">
+                <li>Al importar un currículo, algunos Resultados de Aprendizaje perdían su primera palabra (ej. "RA08: herramientas colaborativas..." en vez de "RA08: Utilizar herramientas..."). El sistema separa la columna de "Resultados de Aprendizaje" de la de "Criterios de Evaluación" calculando un punto medio entre ambas -- pero la celda de RA es ancha, y esa primera palabra (que sigue al marcador "RA0X:" en la misma línea) caía justo del lado equivocado del punto medio, así que se perdía. Ahora el límite se calcula contra el borde real de la columna de Criterios, no un punto medio.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v18.87<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9773,9 +9787,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.87"></script>
+  <script src="app.js?v=18.88"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.87"></script>
+  <script src="auth.js?v=18.88"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
