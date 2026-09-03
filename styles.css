@@ -1349,6 +1349,22 @@ body {
   color: #212121 !important;
 }
 
+/* .vp-datos-grid y .vp-ra-box usan variables de tema (--color-fondo,
+   --color-primario-surface) que sí cambian con el modo oscuro -- se
+   quedaban sin la anulación de color fijo que ya tiene el resto de la
+   vista previa (encabezados, tabla), así que en modo oscuro aparecían
+   como una caja oscura suelta dentro del documento blanco. Este es el
+   único lugar donde se usa .vp-ra-box (ver renderizarVistaPrevia en
+   app.js), así que no hace falta que siga el tema en ningún otro caso. */
+.vista-previa .vp-datos-grid {
+  background: #F5F7FA !important;
+}
+
+.vista-previa .vp-ra-box {
+  background: #E3EAF6 !important;
+  color: #1A237E !important;
+}
+
 .vista-previa code {
   color: #1565C0 !important;
   background: #E3F2FD !important;
@@ -6939,6 +6955,27 @@ body.dark-mode .cal-tab {
   color: var(--color-texto-primario) !important;
 }
 
+/* .backup-section-title y .backup-desc traen su propio color fijo
+   (#212121 casi negro, #616161 gris medio) -- al tener su propia regla de
+   color, no heredan el color forzado del .backup-section de arriba (la
+   herencia solo aplica cuando el elemento no tiene su propia regla de
+   color), así que se quedaban casi ilegibles sobre el modal ya oscuro. */
+body.dark-mode .backup-section-title {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .backup-desc {
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .backup-divider {
+  border-top-color: var(--color-borde) !important;
+}
+
+body.dark-mode #backup-resumen {
+  color: var(--color-texto-secundario) !important;
+}
+
 /* Estado de cursos (tarjetas del dashboard) */
 body.dark-mode .dash-curso-modulo {
   color: var(--color-texto-secundario) !important;
@@ -7011,11 +7048,6 @@ body.dark-mode .pd-panel {
 
 body.dark-mode .pd-ec-chip {
   color: #fff !important;
-}
-
-body.dark-mode .vp-ra-box {
-  background: #1A2744 !important;
-  color: #90CAF9 !important;
 }
 
 body.dark-mode .dash-main {
