@@ -15889,7 +15889,7 @@ function renderizarTablaCalificaciones() {
       + '<td class="td-nombre" id="nombre-' + est.id + '">'
       + '<div class="td-nombre-inner">'
       + avatarHtml
-      + '<span onclick="_toggleNombreMobile(this)" ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Toca para ver opciones · Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
+      + '<span class="est-nombre-texto" onclick="_toggleNombreMobile(this)" ondblclick="editarNombreEstudiante(\'' + est.id + '\')" title="Toca para ver opciones · Doble clic para editar" style="cursor:pointer;flex:1;">' + escapeHTML(est.nombre) + '</span>'
       + '<div class="est-overflow-wrap" style="position:relative;">'
       + '<button class="btn-coment-est" onclick="_toggleEstMenu(event,\'' + est.id + '\')" title="Opciones" style="font-size:18px;font-weight:700;padding:2px 4px;">'
       + '<span class="material-icons" style="font-size:18px;">more_vert</span>'
