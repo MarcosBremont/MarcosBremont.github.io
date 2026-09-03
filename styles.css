@@ -7100,6 +7100,68 @@ body.dark-mode .tarea-no-entregada {
   border-left-color: #78909C !important;
 }
 
+/* Fila "Hoy | Mañana | Pasado mañana | Tareas próximas" del Dashboard -- estas
+   piezas se agregaron después del bloque de dark-mode de arriba y se quedaron
+   sin cubrir, por eso se veían con su fondo/colores de modo claro (blanco,
+   rosado, verde pálido...) sobre el resto de la página ya oscura -- un parche
+   inconsistente en vez del mismo azul/gris oscuro del resto del Dashboard. */
+body.dark-mode .dash-grid-4col > div {
+  background: var(--color-superficie) !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .dash-clase-ahora {
+  background: #1A2E1A !important;
+  color: #81C784 !important;
+}
+
+body.dark-mode .dash-clase-mover-btn {
+  border-color: var(--color-borde) !important;
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .dash-clase-mover-btn:hover {
+  background: #1A2A4A !important;
+  border-color: #3A5A8A !important;
+  color: #90CAF9 !important;
+}
+
+body.dark-mode .dt-seccion {
+  background: #1A2A4A !important;
+  color: #90CAF9 !important;
+}
+
+body.dark-mode .dt-dias {
+  background: #1A1F3A !important;
+  color: #9FA8DA !important;
+}
+
+body.dark-mode .dt-dias.hoy {
+  background: #2E1A24 !important;
+  color: #F48FB1 !important;
+}
+
+body.dark-mode .dt-dias.pronto {
+  background: #2E2010 !important;
+  color: #FFB74D !important;
+}
+
+body.dark-mode .dt-dias.venc {
+  background: #2E1A1A !important;
+  color: #EF9A9A !important;
+}
+
+body.dark-mode .dt-check {
+  background: #1A2E1A !important;
+  border-color: #2E5A2E !important;
+  color: #81C784 !important;
+}
+
+body.dark-mode .dt-check:hover {
+  background: #2E7D32 !important;
+  color: #fff !important;
+}
+
 /* Banner "Próximos avisos del calendario escolar" -- en modo claro es un
    amarillo/crema muy vivo a propósito (llama la atención), pero en oscuro se veía
    como un parche blanco brillante sobre el fondo oscuro. Se oscurece el tono en
