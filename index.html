@@ -3603,6 +3603,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.01<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: RA sin criterios al importar un currículo con formato mixto</div>
+              <ul class="about-ver-items">
+                <li>Reportado con un módulo real: 3 RA salían con "0 criterios de evaluación" pese a tenerlos en el PDF. Causa: el módulo mezclaba dos formatos de numeración de Criterios de Evaluación en la misma tabla (unos de 2 niveles por RA, otros de 3 niveles agrupados) -- el sistema solo sabía reconocer un formato a la vez para todo el módulo, así que la mitad de los RA quedaban sin sus criterios reales (o, peor, con los de otro RA). Se agregó una forma de emparejar más robusta que ya no depende de adivinar el formato de numeración.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v19.00<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9962,9 +9976,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.00"></script>
+  <script src="app.js?v=19.01"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.00"></script>
+  <script src="auth.js?v=19.01"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

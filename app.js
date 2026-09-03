@@ -24498,11 +24498,39 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   const emparejarPorOrdinalDosNiveles = ordinal => posicionesCE.filter(ce => ce.ordinalRA === ordinal);
   const emparejarPorOrdinalMedio = ordinal => posicionesCE.filter(ce => ce.ordinalMedio === ordinal);
 
+  // Cuarta estrategia, más robusta que las tres de arriba: agrupa los CE en
+  // bloques consecutivos por su propio numeroRA (clave de familia -- "1",
+  // "2"... para 2 niveles, o "4.1", "4.2"... para 3 niveles), sin importar
+  // qué número use cada bloque, y empareja cada bloque -- EN EL ORDEN EN QUE
+  // APARECE -- con el RA que le toca en ese mismo orden. Cubre un caso real
+  // donde el módulo MEZCLA formatos: los primeros RA con CE de 2 niveles
+  // (CE1.X, CE2.X, CE3.X, uno por RA) y los siguientes con CE de 3 niveles
+  // con el primer número CONSTANTE (CE4.1.X, CE4.2.X...). Ahí las tres
+  // estrategias de arriba fallan: "número propio" nunca calza (RA son
+  // códigos de catálogo de 4 dígitos sin relación con el CE), y tanto
+  // "ordinal de 2 niveles" como "ordinal medio" asumen que TODO el módulo
+  // usa un solo formato -- "ordinal medio" además cuenta el número medio
+  // como ordinal GLOBAL (1er RA del módulo, 2do, 3ro...) en vez de LOCAL a
+  // su propia familia de 3 niveles, así que emparejaba por pura coincidencia
+  // numérica (el 1er RA del módulo con "CE4.1.X", que en realidad era del
+  // 4to RA), dejando en 0 a los RA que sí le correspondían esos criterios.
+  const gruposCE = [];
+  posicionesCE.forEach(ce => {
+    const ultimo = gruposCE[gruposCE.length - 1];
+    if (ultimo && ultimo.numeroRA === ce.numeroRA) ultimo.items.push(ce);
+    else gruposCE.push({ numeroRA: ce.numeroRA, items: [ce] });
+  });
+  const emparejarPorPosicion = ordinal => {
+    const grupo = gruposCE[parseInt(ordinal, 10) - 1];
+    return grupo ? grupo.items : [];
+  };
+
   const contarCobertura = fn => posicionesRAModulo.filter((ra, i) => fn(ra, String(i + 1)).length > 0).length;
   const estrategias = [
     { emparejar: (ra) => emparejarPorNumeroPropio(ra), cobertura: contarCobertura((ra) => emparejarPorNumeroPropio(ra)) },
     { emparejar: (ra, ordinal) => emparejarPorOrdinalDosNiveles(ordinal), cobertura: contarCobertura((ra, ordinal) => emparejarPorOrdinalDosNiveles(ordinal)) },
-    { emparejar: (ra, ordinal) => emparejarPorOrdinalMedio(ordinal), cobertura: contarCobertura((ra, ordinal) => emparejarPorOrdinalMedio(ordinal)) }
+    { emparejar: (ra, ordinal) => emparejarPorOrdinalMedio(ordinal), cobertura: contarCobertura((ra, ordinal) => emparejarPorOrdinalMedio(ordinal)) },
+    { emparejar: (ra, ordinal) => emparejarPorPosicion(ordinal), cobertura: contarCobertura((ra, ordinal) => emparejarPorPosicion(ordinal)) }
   ];
   const mejorEstrategia = estrategias.reduce((mejor, actual) => actual.cobertura > mejor.cobertura ? actual : mejor, estrategias[0]);
 
