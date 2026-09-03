@@ -7194,6 +7194,50 @@ body.dark-mode .dt-check:hover {
   color: #fff !important;
 }
 
+/* Colores de estado de nota (aprobado/regular/reprobado) en el Libro de
+   Calificaciones -- ninguno de estos tenia cobertura de modo oscuro, asi que
+   las celdas de nota, el promedio y el encabezado de columna complementaria
+   se quedaban con sus colores de fondo clarito (verde/naranja/rojo pastel)
+   sobre el resto de la tabla ya oscura -- un parche desteñido en vez de un
+   acento de color consistente con el tema. */
+body.dark-mode .input-nota.nota-aprobado {
+  color: #81C784 !important;
+}
+
+body.dark-mode .input-nota.nota-regular {
+  color: #FFB74D !important;
+}
+
+body.dark-mode .input-nota.nota-reprobado {
+  color: #EF9A9A !important;
+}
+
+body.dark-mode .prom-aprobado,
+body.dark-mode .td-total-ra.nota-aprobado,
+body.dark-mode .td-nota-instr.nota-aprobado {
+  background: #1A2E1A !important;
+  color: #81C784 !important;
+}
+
+body.dark-mode .prom-regular,
+body.dark-mode .td-total-ra.nota-regular,
+body.dark-mode .td-nota-instr.nota-regular {
+  background: #2E2010 !important;
+  color: #FFB74D !important;
+}
+
+body.dark-mode .prom-reprobado,
+body.dark-mode .td-total-ra.nota-reprobado,
+body.dark-mode .td-nota-instr.nota-reprobado {
+  background: #2E1A1A !important;
+  color: #EF9A9A !important;
+}
+
+body.dark-mode .th-act--comp {
+  background: #2E2010 !important;
+  color: #FFB74D !important;
+}
+
 /* Tarjeta de saludo y pastillas de estadísticas del Dashboard -- estos
    textos usaban colores fijos pensados solo para el fondo claro (#141414
    casi negro, #9A9587 gris cálido) y nunca se cubrieron para el fondo oscuro
