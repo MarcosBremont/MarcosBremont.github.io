@@ -2025,6 +2025,11 @@
             title="Agrega una columna extra al final de la tabla (Actitudes, Cuaderno, Participación u otra personalizada) que suma al total del RA activo">
             <span class="material-icons">view_column</span> Agregar columna
           </button>
+          <button class="btn-export btn-sm" onclick="_calAbrirColumnaSuma()"
+            style="background:#E0F2F1;border:1.5px solid #80CBC4;color:#00695C;"
+            title="Agrega una columna calculada que suma las notas de otras actividades del RA activo, para cada estudiante">
+            <span class="material-icons">functions</span> Columna de suma
+          </button>
           <button class="btn-export btn-sm" onclick="exportarAlumnosCSV()"
             style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;"
             title="Exporta las notas del RA activo a Excel (o la lista de alumnos si no hay RA activo)">
@@ -3646,6 +3651,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v19.09<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "Columna de suma" en Calificaciones</div>
+              <ul class="about-ver-items">
+                <li>Botón "Columna de suma" en el Libro de Calificaciones (inspirado en la pestaña "Cálculos" de Additio): elige qué actividades del RA activo sumar y se agrega al final una columna calculada -- para cada estudiante muestra automáticamente la suma de esas notas. No se califica a mano y no cuenta para el total de puntos del RA, es solo un resumen.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10122,9 +10141,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.08"></script>
+  <script src="app.js?v=19.09"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.08"></script>
+  <script src="auth.js?v=19.09"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

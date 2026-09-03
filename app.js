@@ -3991,6 +3991,97 @@ function _calConfirmarItemComplementario() {
   mostrarToast(msg, 'success');
 }
 
+/** Columna de "Cálculo: Suma" (inspirada en la pestaña "Cálculos" de Additio)
+ *  -- a diferencia de las columnas normales/complementarias, esta no se
+ *  califica a mano: para cada estudiante muestra la suma de las notas que ya
+ *  tiene en las actividades que el docente eligió al crearla
+ *  (a.calculoFuentes, un array de ids de actividades del mismo RA). No tiene
+ *  "valor máximo" propio (queda en 0, igual que las columnas de texto) y por
+ *  lo tanto NO participa en el presupuesto de puntos del RA -- es un resumen
+ *  derivado, no un ítem evaluable independiente. */
+function _calAbrirColumnaSuma() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) { mostrarToast('Selecciona un curso con una planificación activa', 'error'); return; }
+  const planActiva = _getPlanActivaDeCurso();
+  const actividades = (planActiva && planActiva.actividades) || [];
+  // Una columna de suma no puede sumar OTRA columna de suma (evita ciclos de
+  // auto-referencia); sí puede sumar actividades normales y complementarias.
+  const candidatas = actividades.filter(a => !a.esCalculo);
+  if (!candidatas.length) {
+    mostrarToast('Todavía no hay actividades en este RA para sumar.', 'error');
+    return;
+  }
+
+  const opciones = candidatas.map(a => {
+    const icono = a.esComplementario ? (a.complementarioIcono || 'star') : 'assignment';
+    const label = (a.enunciado || 'Actividad').substring(0, 70);
+    return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#FAFAFA;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;">
+      <input type="checkbox" name="calc-suma-fuente" value="${a.id}" style="accent-color:#00695C;width:16px;height:16px;flex-shrink:0;">
+      <span class="material-icons" style="font-size:18px;color:#00695C;flex-shrink:0;">${icono}</span>
+      <span style="font-size:0.85rem;">${escapeHTML(label)}</span>
+    </label>`;
+  }).join('');
+
+  document.getElementById('modal-title').textContent = 'Nueva columna de suma';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <p style="color:#78909C;font-size:0.82rem;margin:0;">
+        Se agrega al final de la tabla y muestra, por estudiante, la suma de las notas de las actividades que elijas abajo.
+        No se califica a mano y no cuenta para el total de puntos del RA -- es solo un resumen.
+      </p>
+      <div class="form-group">
+        <label for="calc-suma-nombre">Nombre de la columna</label>
+        <input type="text" id="calc-suma-nombre" value="Suma" maxlength="40"
+          style="width:100%;padding:9px 12px;border:1.5px solid #80CBC4;border-radius:8px;font-size:0.88rem;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:6px;">Actividades a sumar</label>
+        <div style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:4px;">${opciones}</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" style="background:#00695C;" onclick="_calConfirmarColumnaSuma()">
+          <span class="material-icons">functions</span> Agregar
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function _calConfirmarColumnaSuma() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) { mostrarToast('Selecciona un curso con una planificación activa', 'error'); return; }
+
+  const nombre = (document.getElementById('calc-suma-nombre')?.value || '').trim() || 'Suma';
+  const fuentes = Array.from(document.querySelectorAll('input[name="calc-suma-fuente"]:checked')).map(el => el.value);
+  if (!fuentes.length) { mostrarToast('Selecciona al menos una actividad para sumar', 'error'); return; }
+
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === curso.planActivaId);
+  if (!reg || !reg.planificacion) { mostrarToast('No se encontró la planificación activa', 'error'); return; }
+  if (!reg.planificacion.actividades) reg.planificacion.actividades = [];
+
+  reg.planificacion.actividades.push({
+    id: 'calc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    ecCodigo: 'CALC',
+    enunciado: nombre,
+    fecha: '',
+    fechaStr: '',
+    esComplementario: true,
+    esCalculo: true,
+    calculoTipo: 'suma',
+    calculoFuentes: fuentes,
+    complementarioIcono: 'functions',
+    valor: 0,
+    instrumento: { tipo: 'calculo', tipoLabel: nombre, titulo: nombre }
+  });
+
+  persistirBiblioteca(biblio);
+  cerrarModalBtn();
+  renderizarTablaCalificaciones();
+  mostrarToast(`Columna "${nombre}" agregada ✓ (suma de ${fuentes.length} actividad${fuentes.length !== 1 ? 'es' : ''})`, 'success');
+}
+
 // ════════════════════════════════════════════════════════════════════
 // MÓDULO: BIBLIOTECA DE RÚBRICAS
 // Biblioteca reutilizable de rúbricas (cuadrícula criterios x niveles),
@@ -16268,7 +16359,19 @@ function renderizarTablaCalificaciones() {
     const esComp = a.esComplementario === true;
     if (!esComp) actNum++;
 
-    if (esComp) {
+    if (a.esCalculo) {
+      // Columna calculada (Cálculos > Suma en Additio): no se califica a mano,
+      // no tiene valor máximo propio -- se recalcula sola en el cuerpo de la
+      // tabla a partir de las notas de a.calculoFuentes.
+      const calcLabel = (a.enunciado || 'Suma').substring(0, 20);
+      const nombresFuentes = (a.calculoFuentes || [])
+        .map(fid => (actividades.find(x => x.id === fid)?.enunciado || '').substring(0, 30))
+        .filter(Boolean);
+      h2 += '<th class="th-act th-act--calc" title="Suma de: ' + escapeHTML(nombresFuentes.join(', ')) + '" style="min-width:80px;background:#E0F2F1;color:#00695C;">'
+        + '<div style="font-size:0.72rem;font-weight:600;color:#00695C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">functions</span> ' + escapeHTML(calcLabel) + '</div>'
+        + '<div style="font-size:0.68rem;color:#00695C;opacity:0.75;margin:1px 0;">Suma (' + (a.calculoFuentes || []).length + ')</div>'
+        + '</th>';
+    } else if (esComp) {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
       const compLabel = (a.enunciado || '').substring(0, 20);
@@ -16410,7 +16513,18 @@ function renderizarTablaCalificaciones() {
       const esInstrumentado = !esCompCol && ['cotejo', 'rubrica'].includes(a.instrumento?.tipo);
       const tipoEvalCelda = a.tipoEvaluacion || 'puntos';
       const esTipoEspecial = esCompCol && ['escala', 'caritas', 'posneg', 'texto'].includes(tipoEvalCelda);
-      if (esTipoEspecial) {
+      if (a.esCalculo) {
+        // No se califica a mano: se recalcula cada vez a partir de las notas
+        // ya guardadas de a.calculoFuentes (no lee/escribe curso.notas para
+        // esta propia columna, no participa en el presupuesto de puntos del RA).
+        const sumaCalc = (a.calculoFuentes || []).reduce((s, fid) => {
+          const v = curso.notas?.[est.id]?.[raKey]?.[fid];
+          return s + (v !== undefined && v !== '' ? (parseFloat(v) || 0) : 0);
+        }, 0);
+        const sumaCalcRed = Math.round(sumaCalc * 100) / 100;
+        cells += '<td style="text-align:center;font-weight:700;font-style:italic;color:#00695C;background:rgba(0,105,92,0.05);" title="Calculado automáticamente (suma de las actividades seleccionadas), no editable">'
+          + sumaCalcRed + '</td>';
+      } else if (esTipoEspecial) {
         // Mismo patrón visual/click que las celdas instrumentadas (celda no
         // editable a mano, se abre un modal por estudiante) -- ver
         // abrirInstrumentoActividad(), que ahora también sabe manejar estos
