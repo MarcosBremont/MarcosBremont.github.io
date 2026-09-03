@@ -3296,7 +3296,7 @@
             <span class="material-icons" style="font-size:16px;">grid_on</span>Exportar a Excel
           </button>
           <button onclick="exportarInformeExamenWord()" style="background:#E3F2FD;color:#1565C0;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
-            <span class="material-icons" style="font-size:16px;">description</span>Exportar a Word
+            <span class="material-icons" style="font-size:16px;">description</span>Exportar Tabulación
           </button>
           <button onclick="exportarInstrumentoExamenWord()" hidden style="display:none;background:#E0F2F1;color:#00695C;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;align-items:center;gap:6px;">
             <span class="material-icons" style="font-size:16px;">checklist</span>Exportar Instrumento
@@ -3651,6 +3651,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#5C6BC0;">v19.10<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cambio de nombre: "Exportar a Word" → "Exportar Tabulación" en el informe de examen</div>
+              <ul class="about-ver-items">
+                <li>El botón junto a "Exportar a Excel" y "Exportar Plan Reforzamiento" en el informe de un examen se renombró para dejar claro qué genera (el Instrumento/Tabulación por grado, no un documento genérico).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10141,9 +10155,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.09"></script>
+  <script src="app.js?v=19.10"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.09"></script>
+  <script src="auth.js?v=19.10"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
