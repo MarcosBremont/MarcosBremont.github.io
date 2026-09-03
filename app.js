@@ -34277,6 +34277,59 @@ async function _precargarDatosCentroPlanificacion() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════
+// MODO SIN CONEXIÓN — indicador + aviso de reconexión
+// ════════════════════════════════════════════════════════════════════
+// Complementa la persistencia offline de Firestore (ver firebase-config.js,
+// db.enablePersistence) -- eso ya encola las escrituras solo; esto se
+// encarga de que el docente SEPA que está sin conexión (antes no había
+// ningún aviso en toda la app) y le confirme cuando sus cambios ya
+// llegaron al servidor al volver la señal.
+function _actualizarIndicadorConexion() {
+  const el = document.getElementById('conexion-indicador');
+  if (!el) return;
+  el.classList.toggle('hidden', navigator.onLine);
+}
+
+window.addEventListener('offline', () => {
+  _actualizarIndicadorConexion();
+  mostrarToast('Sin conexión -- tus cambios se guardan en este dispositivo y se sincronizan solos cuando vuelva el internet', 'info');
+});
+
+window.addEventListener('online', () => {
+  _actualizarIndicadorConexion();
+  mostrarToast('Conexión restablecida, sincronizando tus cambios...', 'info');
+  // waitForPendingWrites() resuelve cuando TODO lo que quedó en cola mientras
+  // se estaba offline ya llegó al servidor -- se protege con try/catch por si
+  // el navegador/versión del SDK no lo trae (no es crítico, solo cosmético).
+  try {
+    if (typeof db !== 'undefined' && typeof db.waitForPendingWrites === 'function') {
+      db.waitForPendingWrites()
+        .then(() => mostrarToast('Todo sincronizado', 'success'))
+        .catch(() => {});
+    }
+  } catch (e) {}
+});
+
+// Estado inicial: si la página se abre YA sin conexión, mostrar el indicador
+// desde el primer momento (no solo cuando se pierda la señal más tarde).
+_actualizarIndicadorConexion();
+
+// Aviso pasivo en la pantalla de carga (#splash-loader/#splash-texto, ver
+// index.html) si sigue visible después de un rato y no hay conexión -- NO
+// toca para nada el flujo real de autenticación/carga (que ya se vuelve
+// mucho más rápido offline gracias a la persistencia de Firestore para
+// cualquier docente que ya haya abierto la app antes, ver
+// firebase-config.js), solo evita dejar al docente mirando "Cargando..."
+// sin ninguna pista de qué puede estar pasando en el caso raro de un primer
+// arranque sin conexión y sin caché local todavía.
+setTimeout(() => {
+  const splash = document.getElementById('splash-loader');
+  const texto = document.getElementById('splash-texto');
+  if (!texto || !splash || splash.classList.contains('oculto')) return;
+  if (!navigator.onLine) texto.textContent = 'Sin conexión -- puede tardar un poco más...';
+}, 8000);
+
 function _arrancarApp() {
   if (window._appArranada) return;
   window._appArranada = true;

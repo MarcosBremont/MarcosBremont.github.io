@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=18.98" />
+  <link rel="stylesheet" href="styles.css?v=18.99" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -155,6 +155,11 @@
           <h1 class="header-title">TinClass</h1>
           <p class="header-subtitle">Planificador Educativo por RA · ETP Rep. Dom.</p>
         </div>
+      </div>
+      <div id="conexion-indicador" class="btn-config-ia hidden" style="background:#FFF3E0;border-color:#FFB74D;color:#E65100;cursor:default;"
+        title="Sin conexión a internet -- tus cambios se guardan en este dispositivo y se sincronizan solos cuando vuelva la conexión">
+        <span class="material-icons">cloud_off</span>
+        <span class="btn-nueva-label">Sin conexión</span>
       </div>
       <button id="btn-notificaciones" class="btn-config-ia" onclick="abrirNotificaciones()"
         title="Notificaciones y recordatorios" style="position:relative;">
@@ -3594,6 +3599,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v18.99<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: uso sin conexión, con sincronización automática al volver internet</div>
+              <ul class="about-ver-items">
+                <li>TinClass ya guardaba todo primero en este dispositivo antes de subirlo a la nube, pero si la subida fallaba por falta de internet, el cambio se perdía en silencio sin ningún aviso ni reintento. Ahora se activa la cola sin conexión de Firestore: cualquier cambio que no pueda salir por falta de red se guarda en cola y se envía solo en cuanto vuelva la señal.</li>
+                <li>Aparece un aviso "Sin conexión" en la barra superior mientras no haya internet, y un mensaje de "sincronizando" seguido de "todo sincronizado" al reconectar.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -9905,7 +9925,7 @@
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=17.85"></script>
+  <script src="firebase-config.js?v=18.99"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -9928,9 +9948,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.98"></script>
+  <script src="app.js?v=18.99"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.98"></script>
+  <script src="auth.js?v=18.99"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

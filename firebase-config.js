@@ -148,3 +148,26 @@ firebase.initializeApp(firebaseConfig);
 const db      = firebase.firestore();
 const auth    = firebase.auth();
 const storage = firebase.storage();
+
+// ── Modo sin conexión ────────────────────────────────────────────────────
+// Guarda en IndexedDB una copia local de lo leído y pone en cola cualquier
+// escritura que no pueda salir por falta de red (_syncFirebase, subida de
+// fotos/evidencias, etc.), reenviándola sola en cuanto vuelva la conexión --
+// sin esto, _syncFirebase() (ver auth.js) simplemente descartaba el cambio
+// en silencio (solo un console.warn) si fallaba por estar offline, sin
+// ninguna cola ni reintento. synchronizeTabs:true porque es realista tener
+// TinClass abierto en más de una pestaña o dispositivo a la vez -- sin esa
+// opción, la segunda pestaña simplemente falla al activar la persistencia
+// (código 'failed-precondition') y queda funcionando sin caché local, no
+// truena. Debe llamarse ANTES de cualquier otra operación de Firestore (por
+// eso va aquí, justo después de crear `db`) -- pero no hace falta esperar
+// esta promesa para seguir usando `db` normalmente: Firestore encola las
+// operaciones que le lleguen mientras esto termina de activarse.
+db.enablePersistence({ synchronizeTabs: true }).catch(e => {
+  // 'failed-precondition': ya hay otra pestaña con persistencia de una sola
+  // pestaña activa (no debería pasar con synchronizeTabs, pero por si acaso).
+  // 'unimplemented': el navegador no soporta IndexedDB (ej. algunos modos
+  // de navegación privada) -- la app sigue funcionando igual, solo sin la
+  // cola offline.
+  console.warn('[TinClass] No se pudo activar el modo sin conexión de Firestore (' + (e.code || e.message || e) + ') -- la app sigue funcionando normal, solo sin cola de sincronización offline.');
+});

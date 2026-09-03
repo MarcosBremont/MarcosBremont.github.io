@@ -7238,6 +7238,12 @@ body.dark-mode .th-act--comp {
   color: #FFB74D !important;
 }
 
+body.dark-mode #conexion-indicador {
+  background: #2E2010 !important;
+  border-color: #5D4200 !important;
+  color: #FFB74D !important;
+}
+
 /* Historial de Asistencia (tabla) -- la celda de nombre trae su propio fondo
    blanco fijo, que pinta por encima del fondo oscuro que ya tiene la tabla
    -- el texto (heredado, ya claro por el tema) quedaba casi invisible sobre
