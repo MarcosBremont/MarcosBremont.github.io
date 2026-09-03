@@ -3695,6 +3695,44 @@ const ITEMS_COMPLEMENTARIOS = [
   { id: 'otro', label: 'Otro (personalizado)', icono: 'add_box' }
 ];
 
+/** Tipos de evaluación disponibles al agregar una columna al Libro de
+ *  Calificaciones (inspirado en el selector de Additio). 'puntos' es el
+ *  comportamiento original (el docente escribe los puntos directo) y sigue
+ *  siendo el valor por defecto de cualquier actividad sin este campo (todas
+ *  las creadas antes de que existiera). Los demás traducen su selección a
+ *  una fracción fija de los puntos máximos de la columna, EXCEPTO 'texto',
+ *  que no puntúa -- es solo un comentario por estudiante (reutiliza
+ *  curso.celdaExtra[...].comentario, el mismo campo que ya usa el menú de
+ *  celda de actividades instrumentadas). */
+const TIPOS_EVALUACION_COLUMNA = [
+  { id: 'puntos', label: 'Numérico (puntos)', icono: 'pin' },
+  { id: 'escala', label: 'Escala (Insuficiente → Sobresaliente)', icono: 'linear_scale' },
+  { id: 'caritas', label: 'Caritas', icono: 'sentiment_satisfied' },
+  { id: 'posneg', label: 'Positivos y negativos', icono: 'thumbs_up_down' },
+  { id: 'texto', label: 'Texto (comentario, sin puntos)', icono: 'chat' }
+];
+
+const TIPO_EVAL_NIVELES = {
+  escala: [
+    { label: 'Sobresaliente', frac: 1 },
+    { label: 'Notable', frac: 0.8 },
+    { label: 'Bien', frac: 0.6 },
+    { label: 'Suficiente', frac: 0.4 },
+    { label: 'Insuficiente', frac: 0.2 }
+  ],
+  caritas: [
+    { label: 'Excelente', frac: 1, icono: 'sentiment_very_satisfied' },
+    { label: 'Bien', frac: 0.8, icono: 'sentiment_satisfied' },
+    { label: 'Regular', frac: 0.6, icono: 'sentiment_neutral' },
+    { label: 'Mal', frac: 0.4, icono: 'sentiment_dissatisfied' },
+    { label: 'Muy mal', frac: 0.2, icono: 'sentiment_very_dissatisfied' }
+  ],
+  posneg: [
+    { label: 'Positivo', frac: 1, icono: 'thumb_up' },
+    { label: 'Negativo', frac: 0, icono: 'thumb_down' }
+  ]
+};
+
 function _agregarItemComplementario() {
   const opciones = ITEMS_COMPLEMENTARIOS.map(it =>
     `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FAFAFA;border:1.5px solid #E0E0E0;border-radius:10px;cursor:pointer;transition:all 0.15s;"
@@ -3819,11 +3857,15 @@ function _calAgregarItemComplementario() {
     </label>`
   ).join('');
 
+  const opcionesTipoEval = TIPOS_EVALUACION_COLUMNA.map(t =>
+    `<option value="${t.id}">${t.label}</option>`
+  ).join('');
+
   document.getElementById('modal-title').textContent = 'Agregar columna';
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px;">
       <p style="color:#78909C;font-size:0.82rem;margin:0;">
-        Se agrega como una columna más al final del Libro de Calificaciones y suma al total del RA activo.
+        Se agrega como una columna más al final del Libro de Calificaciones.
         Puedes seleccionar varias a la vez -- se agregarán cada una por separado.
       </p>
       <div style="display:flex;flex-direction:column;gap:8px;">${opciones}</div>
@@ -3831,6 +3873,13 @@ function _calAgregarItemComplementario() {
         <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Nombre de la columna</label>
         <input type="text" id="cal-comp-custom-nombre" placeholder="Ej: Proyecto final, Exposición..."
           style="width:100%;padding:9px 12px;border:1.5px solid #FFCC80;border-radius:8px;font-size:0.88rem;">
+      </div>
+      <div style="margin-top:4px;padding-top:10px;border-top:1px solid #E0E0E0;">
+        <label for="cal-comp-tipo-eval" style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Tipo de evaluación</label>
+        <select id="cal-comp-tipo-eval" style="width:100%;padding:9px 12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:0.88rem;background:#fff;">${opcionesTipoEval}</select>
+        <p id="cal-comp-tipo-eval-hint" style="color:#78909C;font-size:0.76rem;margin:5px 0 0;">
+          El docente escribe los puntos obtenidos directamente. Suma al total de puntos del RA.
+        </p>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
@@ -3849,6 +3898,18 @@ function _calAgregarItemComplementario() {
         if (wrap) wrap.classList.toggle('hidden', !otroMarcado);
       });
     });
+    const hints = {
+      puntos: 'El docente escribe los puntos obtenidos directamente. Suma al total de puntos del RA.',
+      escala: 'Al calificar eliges un nivel (Sobresaliente…Insuficiente); cada uno equivale a una fracción de los puntos máximos de la columna. Suma al total del RA.',
+      caritas: 'Al calificar eliges una carita; cada una equivale a una fracción de los puntos máximos de la columna. Suma al total del RA.',
+      posneg: 'Al calificar marcas Positivo o Negativo; Positivo da el total de puntos de la columna, Negativo da 0. Suma al total del RA.',
+      texto: 'Al calificar escribes un comentario libre por estudiante. NO suma puntos al RA -- es solo una observación.'
+    };
+    const selTipo = document.getElementById('cal-comp-tipo-eval');
+    selTipo?.addEventListener('change', () => {
+      const hintEl = document.getElementById('cal-comp-tipo-eval-hint');
+      if (hintEl) hintEl.textContent = hints[selTipo.value] || '';
+    });
   }, 50);
 }
 
@@ -3864,6 +3925,8 @@ function _calConfirmarItemComplementario() {
     mostrarToast('Escribe el nombre de la columna personalizada', 'error');
     return;
   }
+
+  const tipoEvaluacion = document.getElementById('cal-comp-tipo-eval')?.value || 'puntos';
 
   const biblio = cargarBiblioteca();
   const reg = (biblio.items || []).find(i => i.id === curso.planActivaId);
@@ -3890,7 +3953,7 @@ function _calConfirmarItemComplementario() {
     );
     if (yaExiste) { yaExistentes.push(label); return; }
 
-    reg.planificacion.actividades.push({
+    const nuevaAct = {
       id: 'comp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
       ecCodigo: 'COMP',
       enunciado: label,
@@ -3899,8 +3962,15 @@ function _calConfirmarItemComplementario() {
       esComplementario: true,
       complementarioTipo: tipo,
       complementarioIcono: icono,
+      tipoEvaluacion,
       instrumento: { tipo: 'complementario', tipoLabel: label, titulo: label }
-    });
+    };
+    // Las columnas de texto no puntúan -- valor fijo en 0 para que _ensureRA
+    // nunca les reparta parte del presupuesto de puntos del RA (ver comentario
+    // de TIPOS_EVALUACION_COLUMNA).
+    if (tipoEvaluacion === 'texto') nuevaAct.valor = 0;
+
+    reg.planificacion.actividades.push(nuevaAct);
     agregados.push(label);
   });
 
@@ -3913,9 +3983,10 @@ function _calConfirmarItemComplementario() {
   cerrarModalBtn();
   renderizarTablaCalificaciones();
 
+  const puntuable = tipoEvaluacion !== 'texto';
   let msg = agregados.length > 1
-    ? `${agregados.length} columnas agregadas ✓ (${agregados.join(', ')}) — Asígnales un valor en puntos`
-    : `Columna "${agregados[0]}" agregada ✓ — Asígnale un valor en puntos`;
+    ? `${agregados.length} columnas agregadas ✓ (${agregados.join(', ')})` + (puntuable ? ' — Asígnales un valor en puntos' : '')
+    : `Columna "${agregados[0]}" agregada ✓` + (puntuable ? ' — Asígnale un valor en puntos' : '');
   if (yaExistentes.length) msg += `. Ya existía${yaExistentes.length > 1 ? 'n' : ''}: ${yaExistentes.join(', ')}`;
   mostrarToast(msg, 'success');
 }
@@ -16201,13 +16272,17 @@ function renderizarTablaCalificaciones() {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
       const compLabel = (a.enunciado || '').substring(0, 20);
+      const tipoEvalCol = a.tipoEvaluacion || 'puntos';
+      const valorInputHtml = tipoEvalCol === 'texto'
+        ? '<div style="font-size:0.62rem;color:#BF360C;opacity:0.7;margin-top:2px;">Sin puntos</div>'
+        : '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
+          + ' title="Valor máximo de este ítem" placeholder="pts"'
+          + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
+          + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">';
       h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;">'
         + '<div style="font-size:0.72rem;font-weight:600;color:#BF360C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
         + '<div style="font-size:0.68rem;color:#BF360C;opacity:0.75;margin:1px 0;">Complementario</div>'
-        + '<input type="number" class="input-valor-act" value="' + val + '" min="0.1" max="100" step="0.5"'
-        + ' title="Valor máximo de este ítem" placeholder="pts"'
-        + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
-        + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">'
+        + valorInputHtml
         + '</th>';
     } else {
       // Columna de actividad normal
@@ -16333,7 +16408,35 @@ function renderizarTablaCalificaciones() {
         : '';
       const isTouchMode = document.body.classList.contains('touch-mode');
       const esInstrumentado = !esCompCol && ['cotejo', 'rubrica'].includes(a.instrumento?.tipo);
-      if (esInstrumentado) {
+      const tipoEvalCelda = a.tipoEvaluacion || 'puntos';
+      const esTipoEspecial = esCompCol && ['escala', 'caritas', 'posneg', 'texto'].includes(tipoEvalCelda);
+      if (esTipoEspecial) {
+        // Mismo patrón visual/click que las celdas instrumentadas (celda no
+        // editable a mano, se abre un modal por estudiante) -- ver
+        // abrirInstrumentoActividad(), que ahora también sabe manejar estos
+        // 4 tipos además de cotejo/rúbrica.
+        const tdStyleEsp = tdStyle
+          ? tdStyle.replace('style="', 'style="position:relative;cursor:pointer;text-align:center;font-weight:700;')
+          : ' style="position:relative;cursor:pointer;text-align:center;font-weight:700;"';
+        let contenidoEsp;
+        if (tipoEvalCelda === 'texto') {
+          const extraEst = curso.celdaExtra?.[raKey]?.[a.id]?.[est.id] || {};
+          const coment = (extraEst.comentario || '').trim();
+          contenidoEsp = coment
+            ? '<span class="material-icons" style="font-size:16px;vertical-align:middle;color:#1565C0;" title="' + escapeHTML(coment.substring(0, 140)) + '">chat</span>'
+            : '<span class="material-icons" style="font-size:16px;vertical-align:middle;color:#BDBDBD;">chat_bubble_outline</span>';
+        } else {
+          const niveles = TIPO_EVAL_NIVELES[tipoEvalCelda] || [];
+          const nivelActivo = val !== '' ? niveles.find(n => Math.abs(parseFloat(val) - Math.round(n.frac * max * 10) / 10) < 0.05) : null;
+          contenidoEsp = nivelActivo
+            ? (nivelActivo.icono ? '<span class="material-icons" style="font-size:17px;vertical-align:middle;">' + nivelActivo.icono + '</span>' : nivelActivo.label.substring(0, 3))
+            : '—';
+        }
+        cells += '<td' + tdStyleEsp + ' class="td-nota-instr ' + cls + '"'
+          + ' onclick="abrirInstrumentoActividad(\'' + a.id + '\',\'' + est.id + '\')"'
+          + ' title="Click para calificar | ' + (tipoEvalCelda === 'texto' ? 'Comentario (no suma puntos)' : 'Máx: ' + max + ' pts') + '">'
+          + contenidoEsp + recupDot + '</td>';
+      } else if (esInstrumentado) {
         // El instrumento (Lista de Cotejo/Rúbrica) reemplaza la celda editable
         // a mano -- la única forma de poner nota es llenándolo por estudiante
         // (ver abrirInstrumentoActividad), igual que Additio. tdStyle ya trae
@@ -16673,29 +16776,54 @@ function _calcNotaDesdeInstrumento(instrumento, respEst, maxValor) {
 }
 
 /** Abre el modal del instrumento para una actividad, opcionalmente
- *  arrancando en un estudiante específico (ej. al hacer clic en su celda). */
+ *  arrancando en un estudiante específico (ej. al hacer clic en su celda).
+ *  Además de cotejo/rúbrica, también maneja los 4 tipos de evaluación de
+ *  columna (escala/caritas/posneg/texto, ver TIPOS_EVALUACION_COLUMNA) --
+ *  todos comparten el mismo modal (título, navegación anterior/siguiente,
+ *  "saltar al siguiente alumno"), solo cambia el cuerpo según `modo`. */
 function abrirInstrumentoActividad(actId, estudianteIdInicial) {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) return;
   const planActiva = _getPlanActivaDeCurso();
   const actividades = (planActiva && planActiva.actividades) || [];
   const act = actividades.find(a => a.id === actId);
-  const instrumento = act?.instrumento;
-  if (!instrumento || !['cotejo', 'rubrica'].includes(instrumento.tipo) || !instrumento.criterios?.length) {
-    mostrarToast('Esta actividad no tiene un instrumento con criterios para llenar aquí.', 'error');
-    return;
-  }
+  if (!act) return;
   if (!curso.estudiantes?.length) { mostrarToast('Agrega estudiantes primero', 'error'); return; }
 
   const raKey = _getRaKey();
   const raInfo = _ensureRA(curso, raKey);
   const idxInicial = estudianteIdInicial ? curso.estudiantes.findIndex(e => e.id === estudianteIdInicial) : 0;
+  const tipoEval = act.tipoEvaluacion || 'puntos';
+
+  if (act.esComplementario && ['escala', 'caritas', 'posneg', 'texto'].includes(tipoEval)) {
+    _instrModalState = {
+      actId,
+      raKey,
+      cursoId: calState.cursoActivoId,
+      instrumento: null,
+      modo: tipoEval,
+      maxValor: raInfo.valores[actId] || 0,
+      estudiantes: curso.estudiantes,
+      idx: idxInicial >= 0 ? idxInicial : 0,
+      saltarAuto: true
+    };
+    document.getElementById('instr-modal-overlay')?.classList.remove('hidden');
+    _renderInstrumentoModal();
+    return;
+  }
+
+  const instrumento = act.instrumento;
+  if (!instrumento || !['cotejo', 'rubrica'].includes(instrumento.tipo) || !instrumento.criterios?.length) {
+    mostrarToast('Esta actividad no tiene un instrumento con criterios para llenar aquí.', 'error');
+    return;
+  }
 
   _instrModalState = {
     actId,
     raKey,
     cursoId: calState.cursoActivoId,
     instrumento,
+    modo: 'instrumento',
     maxValor: raInfo.valores[actId] || 100,
     estudiantes: curso.estudiantes,
     idx: idxInicial >= 0 ? idxInicial : 0,
@@ -16759,6 +16887,50 @@ function _instrToggleSaltarAuto(checked) {
   if (_instrModalState) _instrModalState.saltarAuto = checked;
 }
 
+/** Selecciona un nivel (escala/caritas/posneg) para el estudiante actual --
+ *  convierte la fracción del nivel a puntos sobre el máximo de la columna y
+ *  guarda con registrarNota(), el mismo camino que usa la celda manual. */
+function _instrSeleccionarNivel(frac) {
+  const s = _instrModalState;
+  if (!s) return;
+  const est = s.estudiantes[s.idx];
+  if (!est) return;
+  const nota = Math.round(frac * s.maxValor * 10) / 10;
+  registrarNota(est.id, s.actId, String(nota));
+  _renderInstrumentoModal();
+  if (s.saltarAuto && s.idx < s.estudiantes.length - 1) {
+    setTimeout(() => { if (_instrModalState === s) _instrIrEstudiante(1); }, 400);
+  }
+}
+
+function _instrQuitarNota() {
+  const s = _instrModalState;
+  if (!s) return;
+  const est = s.estudiantes[s.idx];
+  if (!est) return;
+  registrarNota(est.id, s.actId, '');
+  _renderInstrumentoModal();
+}
+
+/** Guarda el comentario de texto libre (columnas tipo 'texto', sin puntos)
+ *  del estudiante actual -- reutiliza curso.celdaExtra, el mismo campo que
+ *  ya usa el menú de celda de actividades instrumentadas (_menuCeldaGuardarComentario). */
+function _instrGuardarComentario(valor) {
+  const s = _instrModalState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  const est = s.estudiantes[s.idx];
+  if (!curso || !est) return;
+  const extra = _celdaExtra(curso, s.raKey, s.actId, est.id, true);
+  if (valor) extra.comentario = valor; else delete extra.comentario;
+  registrarCambio('Comentario de celda actualizado');
+  guardarCalificaciones();
+  _renderInstrumentoModal();
+  if (s.saltarAuto && valor && s.idx < s.estudiantes.length - 1) {
+    setTimeout(() => { if (_instrModalState === s) _instrIrEstudiante(1); }, 350);
+  }
+}
+
 function _renderInstrumentoModal() {
   const s = _instrModalState;
   const body = document.getElementById('instr-modal-body');
@@ -16767,6 +16939,16 @@ function _renderInstrumentoModal() {
 
   const curso = calState.cursos[s.cursoId];
   const est = s.estudiantes[s.idx];
+
+  if (s.modo && s.modo !== 'instrumento') {
+    _renderInstrumentoModalTipoEspecial(s, body, titulo, curso, est);
+    const btnPrev = document.getElementById('instr-modal-prev');
+    const btnNext = document.getElementById('instr-modal-next');
+    if (btnPrev) btnPrev.disabled = s.idx === 0;
+    if (btnNext) btnNext.disabled = s.idx === s.estudiantes.length - 1;
+    return;
+  }
+
   const respActividad = _instrRespuestasActividad(curso, s.raKey, s.actId);
   const respEst = respActividad[est.id] || {};
   const nota = _calcNotaDesdeInstrumento(s.instrumento, respEst, s.maxValor);
@@ -16825,6 +17007,61 @@ function _renderInstrumentoModal() {
   const btnNext = document.getElementById('instr-modal-next');
   if (btnPrev) btnPrev.disabled = s.idx === 0;
   if (btnNext) btnNext.disabled = s.idx === s.estudiantes.length - 1;
+}
+
+/** Cuerpo del modal para columnas escala/caritas/posneg/texto (ver
+ *  TIPOS_EVALUACION_COLUMNA) -- comparte el mismo overlay/título/navegación
+ *  anterior-siguiente que el modal de instrumento (cotejo/rúbrica), solo
+ *  cambia lo que se pinta dentro de #instr-modal-body. */
+function _renderInstrumentoModalTipoEspecial(s, body, titulo, curso, est) {
+  const planActiva = _getPlanActivaDeCurso();
+  const act = ((planActiva && planActiva.actividades) || []).find(a => a.id === s.actId);
+  if (titulo) titulo.textContent = (act?.enunciado || 'Columna') + ' — ' + escapeHTML(est.nombre);
+
+  const cabecera = '<div style="margin-bottom:14px;">'
+    + '<div style="font-size:0.72rem;color:#9E9E9E;">Estudiante ' + (s.idx + 1) + ' / ' + s.estudiantes.length + '</div>'
+    + '<div style="font-weight:800;font-size:1.05rem;color:#1A1A2E;">' + escapeHTML(est.nombre) + '</div>'
+    + '</div>';
+
+  const saltarCheckbox = '<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:#546E7A;cursor:pointer;">'
+    + '<input type="checkbox" ' + (s.saltarAuto ? 'checked' : '') + ' onchange="_instrToggleSaltarAuto(this.checked)"> Saltar al siguiente alumno'
+    + '</label>';
+
+  if (s.modo === 'texto') {
+    const extra = _celdaExtra(curso, s.raKey, s.actId, est.id, false);
+    body.innerHTML = cabecera
+      + '<textarea id="instr-comentario-input" rows="6" placeholder="Escribe un comentario..."'
+      + ' style="width:100%;border:1.5px solid #90CAF9;border-radius:8px;padding:10px 12px;font-size:0.9rem;box-sizing:border-box;resize:vertical;font-family:inherit;">'
+      + escapeHTML(extra.comentario || '') + '</textarea>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px;">'
+      + saltarCheckbox
+      + '<div style="display:flex;gap:8px;">'
+      + '<button class="btn-secundario" onclick="_instrGuardarComentario(\'\')">Ninguno</button>'
+      + '<button class="btn-siguiente" onclick="_instrGuardarComentario(document.getElementById(\'instr-comentario-input\').value.trim())">OK</button>'
+      + '</div></div>';
+    return;
+  }
+
+  // escala / caritas / posneg
+  const niveles = TIPO_EVAL_NIVELES[s.modo] || [];
+  const notaActual = curso.notas?.[est.id]?.[s.raKey]?.[s.actId];
+  const opciones = niveles.map(n => {
+    const valorNivel = Math.round(n.frac * s.maxValor * 10) / 10;
+    const activo = notaActual !== undefined && Math.abs(notaActual - valorNivel) < 0.05;
+    return '<button onclick="_instrSeleccionarNivel(' + n.frac + ')" '
+      + 'style="flex:1;min-width:88px;padding:12px 6px;border:1.5px solid ' + (activo ? '#1565C0' : '#E0E0E0') + ';border-radius:10px;'
+      + 'background:' + (activo ? '#1565C0' : '#F5F5F5') + ';color:' + (activo ? '#fff' : '#616161') + ';'
+      + 'font-weight:700;font-size:0.8rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;">'
+      + (n.icono ? '<span class="material-icons" style="font-size:26px;">' + n.icono + '</span>' : '')
+      + escapeHTML(n.label) + '<span style="font-weight:400;opacity:0.85;font-size:0.7rem;">' + valorNivel + ' pts</span></button>';
+  }).join('');
+
+  body.innerHTML = cabecera
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' + opciones + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'
+    + saltarCheckbox
+    + '<button class="btn-secundario" onclick="_instrQuitarNota()" style="font-size:0.8rem;">Quitar nota</button>'
+    + '</div>';
 }
 
 // ── Menú de la celda (Instrumento / Ícono / Comentario / Recursos) ──────
