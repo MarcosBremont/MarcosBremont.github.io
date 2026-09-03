@@ -23179,15 +23179,30 @@ function guardarHorarioColoresOverride(data) {
   if (window._syncFirebase) _syncFirebase('horario_colores', data);
 }
 
+/** Clave de color de una entrada del horario: materia + curso, no solo
+ *  materia -- un docente que da la misma materia a dos cursos distintos (ej.
+ *  "Diseño de Portales Web" en 4to A y 4to B) necesita distinguirlos por
+ *  color, no verlos como si fueran la misma clase repetida. Si la entrada no
+ *  tiene sección (caso raro/legado), cae a la materia sola. */
+function _horarioColorKey(materia, seccion) {
+  const m = (materia || '').trim();
+  const s = (seccion || '').trim();
+  return s ? m + ' — ' + s : m;
+}
+
 function _horarioColores() {
   const h = cargarHorario();
   const overrides = cargarHorarioColoresOverride();
   const mapa = {};
   let ci = 0;
   h.forEach(e => {
-    const key = (e.materia || '').trim();
+    const key = _horarioColorKey(e.materia, e.seccion);
     if (!key || mapa[key]) return;
     if (overrides[key]) { mapa[key] = overrides[key]; return; }
+    // Compatibilidad con overrides guardados antes de que el color se
+    // separara por curso (v19.14, guardados solo por nombre de materia).
+    const materiaSola = (e.materia || '').trim();
+    if (overrides[materiaSola]) { mapa[key] = overrides[materiaSola]; return; }
     mapa[key] = MATERIA_COLORES[ci % MATERIA_COLORES.length];
     ci++;
   });
@@ -23306,7 +23321,7 @@ async function imprimirHorario() {
     PERIODOS.forEach(p => {
       const e = mapa[`${di}-${p.id}`];
       if (e && e.materia) {
-        const color = colores[e.materia.trim()] || '#78909C';
+        const color = colores[_horarioColorKey(e.materia, e.seccion)] || '#78909C';
         tabla += `<td style="border-left:3px solid ${color};">`
           + `<div class="materia" style="color:${color};">${escapeHTML(e.materia)}</div>`
           + (e.seccion ? `<div class="seccion">${escapeHTML(e.seccion)}</div>` : '')
@@ -23391,7 +23406,7 @@ function renderizarHorario() {
     PERIODOS.forEach(p => {
       const key = `${di}-${p.id}`;
       const e = mapa[key];
-      const color = e && e.materia ? (colores[e.materia.trim()] || '#78909C') : null;
+      const color = e && e.materia ? (colores[_horarioColorKey(e.materia, e.seccion)] || '#78909C') : null;
       const bg = color ? color + '22' : '';
       const border = color ? `2px solid ${color}` : '1px solid #E0E0E0';
       const draggable = e && e.materia ? 'draggable="true"' : '';
