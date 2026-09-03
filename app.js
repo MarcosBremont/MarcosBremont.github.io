@@ -29580,7 +29580,7 @@ async function _generarInstrumentoExamenConPlantilla(plantilla, datos) {
       coordinador: plantilla.coordinador || '',
       docente: datos.ex.docenteNombre || '',
       grado_seccion: datos.ex.curso || '',
-      modulo_formativo: datos.ex.titulo || '',
+      modulo_formativo: datos.ex.materia || datos.ex.titulo || '',
       asignatura: datos.ex.materia || '',
       estudiantes: datos.estudiantes.map(e => ({
         num: e.num, nombre: e.nombre, nivel4: e.nivel4, nivel3: e.nivel3, nivel2: e.nivel2, nivel1: e.nivel1
@@ -29629,7 +29629,7 @@ function _descargarInstrumentoExamenGenerico(datos, plantilla) {
   const encabezadoHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;margin-bottom:10px;">'
     + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Centro:</strong> ' + escapeHTML(p.centroNombre || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Código:</strong> ' + escapeHTML(p.centroCodigo || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Distrito:</strong> ' + escapeHTML(p.centroDistrito || '') + '</td></tr>'
     + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Director/a:</strong> ' + escapeHTML(p.director || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Docente:</strong> ' + escapeHTML(ex.docenteNombre || '') + '</td><td style="' + tdStyle + 'text-align:left;"><strong>Grado/Sección:</strong> ' + escapeHTML(ex.curso || '') + '</td></tr>'
-    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Coordinador/a:</strong> ' + escapeHTML(p.coordinador || '') + '</td><td colspan="2" style="' + tdStyle + 'text-align:left;"><strong>Módulo formativo:</strong> ' + escapeHTML(ex.titulo || '') + '</td></tr>'
+    + '<tr><td style="' + tdStyle + 'text-align:left;"><strong>Coordinador/a:</strong> ' + escapeHTML(p.coordinador || '') + '</td><td colspan="2" style="' + tdStyle + 'text-align:left;"><strong>Módulo formativo:</strong> ' + escapeHTML(ex.materia || ex.titulo || '') + '</td></tr>'
     + '</table>';
 
   const tablaHtml = '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;">'
@@ -29690,7 +29690,7 @@ function abrirPlanReforzamiento() {
     planificacionId: '',
     familiaProfesional: '',
     bachillerTecnico: '',
-    moduloFormativo: info.ex.titulo || '',
+    moduloFormativo: info.ex.materia || info.ex.titulo || '',
     docente: info.ex.docenteNombre || '',
     periodoInicio: '',
     periodoFin: '',
