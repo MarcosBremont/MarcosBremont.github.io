@@ -29889,6 +29889,153 @@ function _analizarDesempenoPreguntas(respuestas, preguntas, preguntasCalificable
     .sort((a, b) => a.pct - b.pct);
 }
 
+/** Botón "Análisis FODA" del informe de examen -- pide a la IA un análisis
+ *  Fortalezas/Oportunidades/Debilidades/Amenazas del grupo, dándole como
+ *  contexto los datos REALES del examen (promedio, distribución de
+ *  calificaciones, preguntas de peor/mejor desempeño) para que escriba algo
+ *  fundamentado en cifras concretas en vez de frases genéricas, y lo
+ *  descarga como Word (mismo truco HTML-con-extensión .doc que ya usa el
+ *  resto del sistema, ver _descargarAnalisisFodaWord). */
+async function generarAnalisisFodaExamen() {
+  const info = _examenInformeActual;
+  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
+  if (!info.respuestas.length) { mostrarToast('Este examen todavía no tiene respuestas', 'error'); return; }
+  if (info.puntosPosiblesAuto === 0) {
+    mostrarToast('Este examen no tiene preguntas calificables automáticamente todavía.', 'error');
+    return;
+  }
+  if (!getGroqKey() && !getGeminiKey() && !getOpenRouterKey()) {
+    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Groq, Gemini u OpenRouter).', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-generar-foda');
+  if (btn) { btn.disabled = true; btn.dataset._origText = btn.innerHTML; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 0.7s linear infinite;">refresh</span> Generando...'; }
+
+  try {
+    const { respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto, ex } = info;
+    const puntajes = respuestas.map(r => preguntasCalificables.reduce((s, p) =>
+      s + (((r.respuestas || {})[p.id] === p.respuestaCorrecta) ? (p.puntos || 1) : 0), 0) / puntosPosiblesAuto * 100);
+    const total = puntajes.length;
+    const promedio = Math.round(puntajes.reduce((a, b) => a + b, 0) / total);
+    const maximo = Math.round(Math.max(...puntajes));
+    const minimo = Math.round(Math.min(...puntajes));
+    const aprobados = puntajes.filter(v => v >= 70).length;
+
+    const rangos = [
+      { label: '90-100', min: 90, max: 100.001 },
+      { label: '80-89', min: 80, max: 90 },
+      { label: '70-79', min: 70, max: 80 },
+      { label: '60-69', min: 60, max: 70 },
+      { label: '0-59', min: 0, max: 60 }
+    ];
+    const distribucionTxt = rangos
+      .map(r => r.label + '%: ' + puntajes.filter(v => v >= r.min && v < r.max).length + ' estudiante(s)')
+      .join(', ');
+
+    const analisisPreguntas = _analizarDesempenoPreguntas(respuestas, preguntas, preguntasCalificables);
+    const peores = analisisPreguntas.slice(0, 3).map(a => '- P' + a.numero + ' (' + a.pct + '% de aciertos): ' + a.enunciado).join('\n') || '(sin datos)';
+    const mejores = analisisPreguntas.slice(-3).reverse().map(a => '- P' + a.numero + ' (' + a.pct + '% de aciertos): ' + a.enunciado).join('\n') || '(sin datos)';
+
+    const datosResumen = 'Materia/Módulo: ' + (ex.materia || ex.titulo || 'Sin especificar') + '\n'
+      + 'Curso: ' + (ex.curso || 'Sin especificar') + '\n'
+      + 'Total de estudiantes evaluados: ' + total + '\n'
+      + 'Promedio general: ' + promedio + '/100\n'
+      + 'Nota más alta: ' + maximo + '/100\n'
+      + 'Nota más baja: ' + minimo + '/100\n'
+      + 'Aprobados (>=70%): ' + aprobados + ' de ' + total + '\n'
+      + 'Distribución de calificaciones: ' + distribucionTxt + '\n'
+      + 'Preguntas con PEOR desempeño:\n' + peores + '\n'
+      + 'Preguntas con MEJOR desempeño:\n' + mejores;
+
+    const prompt = 'Eres un asesor pedagógico dominicano (sistema ETP/MINERD). A partir de estos resultados REALES de una evaluación diagnóstica, escribe un análisis FODA (Fortalezas, Oportunidades, Debilidades, Amenazas) del grupo.\n\n'
+      + datosResumen + '\n\n'
+      + 'Instrucciones:\n'
+      + '- Escribe en español, tono profesional y constructivo, dirigido a un docente dominicano de educación técnico profesional.\n'
+      + '- Cada categoría (fortalezas, oportunidades, debilidades, amenazas) debe tener EXACTAMENTE 3 puntos, cada uno de 1-2 oraciones cortas.\n'
+      + '- Fundamenta los puntos en los datos concretos de arriba (menciona números reales -- promedio, cantidad de aprobados, preguntas específicas por número, etc.) en vez de frases genéricas.\n'
+      + '- Resalta con **negrita** (markdown) la frase clave de cada punto (máximo 4 palabras).\n'
+      + '- Fortalezas y Debilidades son internas al grupo (lo que el grupo YA demostró en el examen). Oportunidades y Amenazas son externas/a futuro (qué se puede aprovechar o qué riesgo hay si no se actúa).\n'
+      + '- Responde SOLO con JSON válido, sin texto adicional, con esta forma exacta:\n'
+      + '{"fortalezas":["...","...","..."],"oportunidades":["...","...","..."],"debilidades":["...","...","..."],"amenazas":["...","...","..."]}';
+
+    const sysMsg = 'Eres un generador de contenido educativo. Responde UNICAMENTE con JSON valido (puede llevar **negrita** estilo markdown DENTRO de los strings). Sin HTML, sin texto extra fuera del JSON. El primer y ultimo caracter de tu respuesta deben ser { y }.';
+    const raw = await _llamarIATextoLibre(prompt, 1400, sysMsg, '{');
+    if (!raw) throw new Error('Sin respuesta de la IA.');
+    const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    if (s === -1 || e <= s) throw new Error('La IA no devolvió un JSON válido.');
+    const foda = JSON.parse(raw.substring(s, e + 1));
+    if (!foda.fortalezas || !foda.oportunidades || !foda.debilidades || !foda.amenazas) {
+      throw new Error('El JSON de la IA no trae las 4 categorías esperadas.');
+    }
+
+    _descargarAnalisisFodaWord(ex, foda);
+    mostrarToast('Análisis FODA generado ✓', 'success');
+  } catch (e) {
+    console.error('[FODA]', e);
+    mostrarToast('Error al generar el FODA: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset._origText || btn.innerHTML; }
+  }
+}
+
+/** Descarga el análisis FODA como Word (.doc vía HTML, sin depender de
+ *  ningún archivo de plantilla) -- tabla 2x2 con los mismos colores por
+ *  cuadrante que usa el formato de referencia (verde/rosa arriba,
+ *  azul/azul abajo), viñetas con "➤" y las frases clave en negrita que la
+ *  IA marcó con **...**. */
+function _descargarAnalisisFodaWord(ex, foda) {
+  const negrita = t => escapeHTML(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const listaHtml = arr => '<ul style="margin:0;padding-left:16px;list-style:none;">'
+    + (arr || []).map(t => '<li style="margin-bottom:8px;font-size:11px;line-height:1.4;">&#10148;&nbsp;' + negrita(t) + '</li>').join('')
+    + '</ul>';
+
+  const hoy = new Date();
+  const anioInicio = (hoy.getMonth() + 1) >= 8 ? hoy.getFullYear() : hoy.getFullYear() - 1;
+  const anioEscolarLargo = anioInicio + ' - ' + (anioInicio + 1);
+
+  const thStyle = 'padding:8px 10px;font-weight:bold;font-size:12px;text-align:center;border:1px solid #999;';
+  const tdStyle = 'padding:10px;border:1px solid #999;vertical-align:top;width:50%;';
+
+  const bodyHTML = '<div style="font-family:Calibri,Arial,sans-serif;">'
+    + '<h2 style="text-align:center;font-size:15px;margin-bottom:2px;">Análisis FODA de los Resultados de la Evaluación Diagnóstica</h2>'
+    + '<p style="text-align:center;font-size:12px;margin-top:0;">Año Escolar ' + anioEscolarLargo + '</p>'
+    + '<p style="font-size:12px;"><strong>Docente:</strong> ' + escapeHTML(ex.docenteNombre || '') + '</p>'
+    + '<p style="font-size:12px;"><strong>Módulo Formativo:</strong> ' + escapeHTML(ex.materia || ex.titulo || '') + '</p>'
+    + '<table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">'
+      + '<tr><td colspan="2" style="' + thStyle + 'background:#1565C0;color:#ffffff;">FODA Evaluación Diagnóstica</td></tr>'
+      + '<tr>'
+        + '<td style="' + thStyle + 'background:#A5D6A7;">Fortalezas</td>'
+        + '<td style="' + thStyle + 'background:#F48FB1;">Oportunidades</td>'
+      + '</tr>'
+      + '<tr>'
+        + '<td style="' + tdStyle + '">' + listaHtml(foda.fortalezas) + '</td>'
+        + '<td style="' + tdStyle + '">' + listaHtml(foda.oportunidades) + '</td>'
+      + '</tr>'
+      + '<tr>'
+        + '<td style="' + thStyle + 'background:#4FC3F7;">Debilidades</td>'
+        + '<td style="' + thStyle + 'background:#4FC3F7;">Amenazas</td>'
+      + '</tr>'
+      + '<tr>'
+        + '<td style="' + tdStyle + '">' + listaHtml(foda.debilidades) + '</td>'
+        + '<td style="' + tdStyle + '">' + listaHtml(foda.amenazas) + '</td>'
+      + '</tr>'
+    + '</table>'
+    + '</div>';
+
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"></head><body>' + bodyHTML + '</body></html>';
+
+  const filename = ('FODA_' + (ex.curso || ex.titulo || 'examen'))
+    .replace(/[\\/:*?"<>|]+/g, '').trim().replace(/\s+/g, '_').slice(0, 80) + '.doc';
+  const blob = new Blob(['\uFEFF' + html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, puntosPosiblesAuto) {
   if (puntosPosiblesAuto === 0) {
     return `<div style="font-size:.85rem;color:#546E7A;background:#FFF3E0;border-radius:8px;padding:14px 16px;line-height:1.6;">

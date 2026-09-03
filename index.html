@@ -3304,6 +3304,10 @@
           <button onclick="abrirPlanReforzamiento()" style="background:#FFF3E0;color:#E65100;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
             <span class="material-icons" style="font-size:16px;">fact_check</span>Exportar Plan Reforzamiento
           </button>
+          <button id="btn-generar-foda" onclick="generarAnalisisFodaExamen()" style="background:#F3E5F5;color:#6A1B9A;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
+            title="Genera con IA un análisis FODA de los resultados de este examen, con base en el promedio, la distribución de calificaciones y las preguntas de peor/mejor desempeño">
+            <span class="material-icons" style="font-size:16px;">grid_view</span>Análisis FODA
+          </button>
         </div>
         <button class="btn-secundario" onclick="cerrarResultadosExamen()">Cerrar</button>
       </div>
@@ -3651,6 +3655,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#AD1457;">v19.11<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "Análisis FODA" en el informe de examen (generado con IA)</div>
+              <ul class="about-ver-items">
+                <li>Botón "Análisis FODA" junto a "Exportar Plan Reforzamiento" en el informe de un examen: le pide a la IA (Groq/Gemini/OpenRouter, el que tengas configurado en Ajustes) un análisis Fortalezas/Oportunidades/Debilidades/Amenazas del grupo, dándole como contexto los datos REALES del examen (promedio, nota más alta/baja, aprobados, distribución de calificaciones, y las preguntas de peor y mejor desempeño) para que escriba algo fundamentado en cifras concretas, no genérico. Se descarga como Word con el mismo formato de tabla 2x2 por colores que ya se usaba en otros análisis FODA del centro.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10155,9 +10173,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.10"></script>
+  <script src="app.js?v=19.11"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.10"></script>
+  <script src="auth.js?v=19.11"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
