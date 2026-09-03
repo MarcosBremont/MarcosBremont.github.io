@@ -3597,6 +3597,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.83<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: importar preguntas de examen dejaba de reconocerlas a mitad de texto</div>
+              <ul class="about-ver-items">
+                <li>Al pegar un examen con preguntas numeradas de forma no estándar (ej. "2 ¿Pregunta...?" sin punto, o "11- Pregunta..." con guion, en vez de "2." o "11)"), esas preguntas -- y todas las que venían después -- se perdían en silencio sin aviso. Ahora se reconocen esos formatos de numeración, y como respaldo, cualquier pregunta con una numeración no anticipada ya no se descarta: se detecta igual a partir del texto. También se reconoce el encabezado "Verdadero o falso" (antes solo se reconocía "Verdadero y Falso" o "V/F").</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#2E7D32;">v18.82<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9702,9 +9716,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.82"></script>
+  <script src="app.js?v=18.83"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.82"></script>
+  <script src="auth.js?v=18.83"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

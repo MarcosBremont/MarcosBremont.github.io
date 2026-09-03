@@ -28453,19 +28453,24 @@ function _parsearPreguntasTexto(texto) {
   // ("\)\s*"), porque un cierre de paréntesis nunca es parte de un número
   // real, y en la práctica el texto pegado desde Word suele traer el
   // enunciado pegado directo al número ("10)Si ti y t2..." sin espacio).
+  // También se acepta un guion ("11- La higiene...") o directamente un
+  // espacio sin puntuación ("2 ¿Cuál..."), formatos vistos en exámenes
+  // reales pegados desde Word -- antes de esto, cualquier número que no
+  // viniera seguido de "." o ")" no se reconocía como pregunta EN ABSOLUTO
+  // (ver el respaldo más abajo para cuando ni así se reconoce).
   // El prefijo opcional "P"/"Pregunta" (ej. "P2.") también se tolera --
   // algunos exámenes numeran así en vez de usar el número solo.
-  const regexPregunta = /^\s*(?:(?:preg(?:unta)?|p)\.?\s*)?(\d{1,3})(?:\.\s+|\)\s*)(.+)$/i;
+  const regexPregunta = /^\s*(?:(?:preg(?:unta)?|p)\.?\s*)?(\d{1,3})(?:\.\s+|\)\s*|-\s*|\s+)(.+)$/i;
   const regexOpcion = /^[\s•·o○▪\-]*([A-Da-d])(?:\.\s+|\)\s*)(.+)$/;
   // Algunos exámenes agrupan sus preguntas de Verdadero/Falso bajo un
-  // encabezado de sección ("V y F", "Verdadero y Falso", "V/F") en vez de
-  // repetir "A) Verdadero B) Falso" en cada pregunta -- se detecta ese
-  // encabezado y se recuerda mientras dure la sección, para clasificar como
-  // V/F a las preguntas sin opciones propias que caen dentro de ella. Un
-  // encabezado de otra sección reconocible ("Selección múltiple", "Completación",
-  // "Respuesta abierta"...) cierra la sección V/F.
+  // encabezado de sección ("V y F", "Verdadero y Falso", "V/F", "Verdadero o
+  // falso") en vez de repetir "A) Verdadero B) Falso" en cada pregunta -- se
+  // detecta ese encabezado y se recuerda mientras dure la sección, para
+  // clasificar como V/F a las preguntas sin opciones propias que caen dentro
+  // de ella. Un encabezado de otra sección reconocible ("Selección múltiple",
+  // "Completación", "Respuesta abierta"...) cierra la sección V/F.
   let seccionActual = null;
-  const regexSeccionVF = /^\s*(v\s*(?:y|\/|-)\s*f|verdadero\s*(?:y|\/|-)\s*falso)\.?\s*$/i;
+  const regexSeccionVF = /^\s*(v\s*(?:y|\/|-|o)\s*f|verdadero\s*(?:y|\/|-|o)\s*falso)\.?\s*$/i;
   const regexSeccionOtra = /^\s*(selecci[oó]n\s*m[uú]ltiple|opci[oó]n\s*m[uú]ltiple|completaci[oó]n|respuesta\s*abierta|preguntas?\s*abiertas?)\.?\s*$/i;
 
   lineas.forEach(linea => {
@@ -28483,20 +28488,41 @@ function _parsearPreguntasTexto(texto) {
         if (!enunciadoImplicito) return; // sin texto previo, no hay de dónde sacar la pregunta
         actual = { enunciado: enunciadoImplicito, opciones: [], seccion: seccionActual };
         pendienteInicial = [];
+      } else if (actual.opciones.length >= 4) {
+        // La pregunta activa ya tiene sus 4 opciones y aparece OTRA letra --
+        // casi seguro es la primera opción de la pregunta SIGUIENTE, cuyo
+        // número no calzó con regexPregunta (numeración que no se anticipó),
+        // no una 5ta opción de la actual. Se cierra la actual y se abre una
+        // implícita, en vez de descartar esta línea en silencio.
+        bloques.push(actual);
+        actual = { enunciado: '', opciones: [], seccion: seccionActual };
       }
       if (actual.opciones.length < 4) actual.opciones.push(mO[2].trim());
       return;
     }
     if (regexSeccionVF.test(linea)) { seccionActual = 'vf'; return; }
     if (regexSeccionOtra.test(linea)) { seccionActual = null; return; }
-    // Una línea que no es ni "N." ni "letra)" ni un encabezado de sección --
-    // si la pregunta actual todavía no tiene opciones, es la continuación
-    // del enunciado (preguntas largas que ocupan más de una línea antes de
-    // llegar a las opciones). Si todavía no hay ninguna pregunta activa, se
-    // guarda por si la primera pregunta del texto no trae número (ver arriba).
     const t = linea.trim();
-    if (actual && !actual.opciones.length && t) actual.enunciado += ' ' + t;
-    else if (!actual && t) pendienteInicial.push(t);
+    if (actual && actual.opciones.length > 0 && t) {
+      // Ya se habían empezado a recoger opciones para la pregunta activa y
+      // aparece una línea que no es ni número reconocible ni letra -- lo más
+      // probable es el enunciado de la pregunta SIGUIENTE, cuyo número no
+      // calzó con ninguna de las formas de regexPregunta (ej. numeración con
+      // otro símbolo). Antes esta línea (y sus opciones a)/b).. de después)
+      // se perdían en silencio porque la pregunta activa "ya estaba completa"
+      // -- ahora se cierra la actual y se abre una nueva a partir de este texto.
+      bloques.push(actual);
+      actual = { enunciado: t, opciones: [], seccion: seccionActual };
+    } else if (actual && !actual.opciones.length && t) {
+      // Todavía sin opciones: sí es continuación del enunciado de la pregunta
+      // activa (preguntas largas que ocupan más de una línea antes de llegar
+      // a las opciones).
+      actual.enunciado += ' ' + t;
+    } else if (!actual && t) {
+      // Todavía no hay ninguna pregunta activa: se guarda por si la primera
+      // pregunta del texto no trae número (ver pendienteInicial arriba).
+      pendienteInicial.push(t);
+    }
   });
   if (actual) bloques.push(actual);
 
