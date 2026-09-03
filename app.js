@@ -29100,11 +29100,11 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
     const n = puntajes.filter(v => v >= r.min && v < r.max).length;
     const anchoPct = Math.round(n / maxEnRango * 100);
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-      <span style="font-size:.75rem;color:#616161;width:64px;flex-shrink:0;">${r.label}</span>
-      <div style="flex:1;background:#F0F4F8;border-radius:5px;overflow:hidden;height:16px;">
+      <span class="ie-dist-lbl" style="font-size:.75rem;color:#616161;width:64px;flex-shrink:0;">${r.label}</span>
+      <div class="ie-dist-track" style="flex:1;background:#F0F4F8;border-radius:5px;overflow:hidden;height:16px;">
         <div style="width:${n ? Math.max(anchoPct, 4) : 0}%;background:${r.color};height:100%;"></div>
       </div>
-      <span style="font-size:.75rem;color:#616161;width:56px;flex-shrink:0;text-align:right;">${n} est.</span>
+      <span class="ie-dist-lbl" style="font-size:.75rem;color:#616161;width:56px;flex-shrink:0;text-align:right;">${n} est.</span>
     </div>`;
   }).join('');
 
@@ -29112,18 +29112,18 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
 
   const colorPct = pct => pct < 50 ? '#C62828' : (pct < 70 ? '#E65100' : '#2E7D32');
   const preguntasHtml = analisisPreguntas.map(a => `
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F4F8;">
-      <span style="font-size:.7rem;font-weight:700;background:#F5F5F5;color:#616161;padding:3px 7px;border-radius:4px;flex-shrink:0;">P${a.numero}</span>
-      <span style="flex:1;min-width:0;font-size:.82rem;color:#424242;line-height:1.4;">${_eHtml(a.enunciado)}</span>
+    <div class="ie-preg-row" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F4F8;">
+      <span class="ie-preg-badge" style="font-size:.7rem;font-weight:700;background:#F5F5F5;color:#616161;padding:3px 7px;border-radius:4px;flex-shrink:0;">P${a.numero}</span>
+      <span class="ie-preg-texto" style="flex:1;min-width:0;font-size:.82rem;color:#424242;line-height:1.4;">${_eHtml(a.enunciado)}</span>
       <div style="flex-shrink:0;text-align:right;">
         <div style="font-size:.85rem;font-weight:700;color:${colorPct(a.pct)};">${a.pct}%</div>
-        <div style="font-size:.68rem;color:#9E9E9E;">${a.correctas}/${a.total} correctas</div>
+        <div class="ie-preg-sub" style="font-size:.68rem;color:#9E9E9E;">${a.correctas}/${a.total} correctas</div>
       </div>
     </div>`).join('');
 
   const peorPregunta = analisisPreguntas[0];
   const alertaPeor = (peorPregunta && peorPregunta.pct < 60)
-    ? `<div style="display:flex;gap:8px;align-items:flex-start;background:#FFEBEE;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.82rem;color:#B71C1C;line-height:1.5;">
+    ? `<div class="ie-alerta" style="display:flex;gap:8px;align-items:flex-start;background:#FFEBEE;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:.82rem;color:#B71C1C;line-height:1.5;">
         <span class="material-icons" style="font-size:18px;flex-shrink:0;">lightbulb</span>
         <span>La pregunta P${peorPregunta.numero} tuvo el desempeño más bajo (${peorPregunta.pct}% de aciertos) -- puede valer la pena repasar ese tema con el curso.</span>
       </div>`
@@ -29147,28 +29147,28 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
   const filasEstudiantes = estudiantesData.map(e => {
     const completado = e.precision >= 70;
     return `<tr>
-      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;font-size:.83rem;color:#1A1A2E;">${_eHtml(e.nombre)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:#2E7D32;font-weight:700;">${e.correctas}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:#C62828;font-weight:700;">${e.incorrectas}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:${colorPct(e.precision)};font-weight:700;">${e.precision}%</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;">
-        <span style="font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:20px;background:${completado ? '#E8F5E9' : '#FFEBEE'};color:${completado ? '#2E7D32' : '#C62828'};">${completado ? 'Completado' : 'Necesita apoyo'}</span>
+      <td class="ie-tabla-td ie-tabla-td-nombre" style="padding:8px 10px;border-bottom:1px solid #F0F4F8;font-size:.83rem;color:#1A1A2E;">${_eHtml(e.nombre)}</td>
+      <td class="ie-tabla-td" style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:#2E7D32;font-weight:700;">${e.correctas}</td>
+      <td class="ie-tabla-td" style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:#C62828;font-weight:700;">${e.incorrectas}</td>
+      <td class="ie-tabla-td" style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;font-size:.83rem;color:${colorPct(e.precision)};font-weight:700;">${e.precision}%</td>
+      <td class="ie-tabla-td" style="padding:8px 10px;border-bottom:1px solid #F0F4F8;text-align:center;">
+        <span class="${completado ? 'ie-badge-completado' : 'ie-badge-apoyo'}" style="font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:20px;background:${completado ? '#E8F5E9' : '#FFEBEE'};color:${completado ? '#2E7D32' : '#C62828'};">${completado ? 'Completado' : 'Necesita apoyo'}</span>
       </td>
     </tr>`;
   }).join('');
 
   const tablaEstudiantesHtml = `
-    <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;margin-top:22px;">Estudiantes</div>
-    <div style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">Respuestas correctas e incorrectas de cada uno, sobre ${totalCalificables} pregunta${totalCalificables !== 1 ? 's' : ''} calificable${totalCalificables !== 1 ? 's' : ''} -- ordenado de menor a mayor precisión.</div>
-    <div style="max-height:340px;overflow-y:auto;border:1px solid #E8EDF2;border-radius:8px;">
+    <div class="ie-seccion-titulo" style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;margin-top:22px;">Estudiantes</div>
+    <div class="ie-preg-sub" style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">Respuestas correctas e incorrectas de cada uno, sobre ${totalCalificables} pregunta${totalCalificables !== 1 ? 's' : ''} calificable${totalCalificables !== 1 ? 's' : ''} -- ordenado de menor a mayor precisión.</div>
+    <div class="ie-tabla-wrap" style="max-height:340px;overflow-y:auto;border:1px solid #E8EDF2;border-radius:8px;">
       <table style="width:100%;border-collapse:collapse;">
         <thead style="position:sticky;top:0;">
-          <tr style="background:#F5F5F5;">
-            <th style="padding:8px 10px;text-align:left;font-size:.72rem;color:#546E7A;font-weight:700;">Nombre</th>
-            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Correctas</th>
-            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Incorrectas</th>
-            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Precisión</th>
-            <th style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Estado</th>
+          <tr class="ie-tabla-thead">
+            <th class="ie-tabla-th" style="padding:8px 10px;text-align:left;font-size:.72rem;color:#546E7A;font-weight:700;">Nombre</th>
+            <th class="ie-tabla-th" style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Correctas</th>
+            <th class="ie-tabla-th" style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Incorrectas</th>
+            <th class="ie-tabla-th" style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Precisión</th>
+            <th class="ie-tabla-th" style="padding:8px 10px;text-align:center;font-size:.72rem;color:#546E7A;font-weight:700;">Estado</th>
           </tr>
         </thead>
         <tbody>${filasEstudiantes}</tbody>
@@ -29177,28 +29177,28 @@ function _construirInformeExamen(respuestas, preguntas, preguntasCalificables, p
 
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px;">
-      <div style="background:#E3F2FD;border-radius:10px;padding:12px 14px;text-align:center;">
-        <div style="font-size:1.4rem;font-weight:800;color:#1565C0;">${Math.round(promedio)}%</div>
-        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Promedio</div>
+      <div class="ie-stat-box ie-stat-azul" style="background:#E3F2FD;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div class="ie-stat-num" style="font-size:1.4rem;font-weight:800;color:#1565C0;">${Math.round(promedio)}%</div>
+        <div class="ie-stat-lbl" style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Promedio</div>
       </div>
-      <div style="background:#E8F5E9;border-radius:10px;padding:12px 14px;text-align:center;">
-        <div style="font-size:1.4rem;font-weight:800;color:#2E7D32;">${Math.round(maximo)}%</div>
-        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Nota más alta</div>
+      <div class="ie-stat-box ie-stat-verde" style="background:#E8F5E9;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div class="ie-stat-num" style="font-size:1.4rem;font-weight:800;color:#2E7D32;">${Math.round(maximo)}%</div>
+        <div class="ie-stat-lbl" style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Nota más alta</div>
       </div>
-      <div style="background:#FFEBEE;border-radius:10px;padding:12px 14px;text-align:center;">
-        <div style="font-size:1.4rem;font-weight:800;color:#C62828;">${Math.round(minimo)}%</div>
-        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Nota más baja</div>
+      <div class="ie-stat-box ie-stat-rojo" style="background:#FFEBEE;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div class="ie-stat-num" style="font-size:1.4rem;font-weight:800;color:#C62828;">${Math.round(minimo)}%</div>
+        <div class="ie-stat-lbl" style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Nota más baja</div>
       </div>
-      <div style="background:#F3E5F5;border-radius:10px;padding:12px 14px;text-align:center;">
-        <div style="font-size:1.4rem;font-weight:800;color:#6A1B9A;">${aprobados}/${puntajes.length}</div>
-        <div style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Aprobados (≥70%)</div>
+      <div class="ie-stat-box ie-stat-morado" style="background:#F3E5F5;border-radius:10px;padding:12px 14px;text-align:center;">
+        <div class="ie-stat-num" style="font-size:1.4rem;font-weight:800;color:#6A1B9A;">${aprobados}/${puntajes.length}</div>
+        <div class="ie-stat-lbl" style="font-size:.7rem;color:#546E7A;font-weight:600;margin-top:2px;">Aprobados (≥70%)</div>
       </div>
     </div>
     ${alertaPeor}
-    <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:10px;">Distribución de calificaciones</div>
+    <div class="ie-seccion-titulo" style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:10px;">Distribución de calificaciones</div>
     <div style="margin-bottom:22px;">${distribucionHtml}</div>
-    <div style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;">Desempeño por pregunta</div>
-    <div style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">De menor a mayor porcentaje de aciertos -- las primeras son las que más le costaron al curso.</div>
+    <div class="ie-seccion-titulo" style="font-size:.85rem;font-weight:700;color:#1A1A2E;margin-bottom:4px;">Desempeño por pregunta</div>
+    <div class="ie-preg-sub" style="font-size:.74rem;color:#9E9E9E;margin-bottom:8px;">De menor a mayor porcentaje de aciertos -- las primeras son las que más le costaron al curso.</div>
     <div>${preguntasHtml}</div>
     ${tablaEstudiantesHtml}`;
 }

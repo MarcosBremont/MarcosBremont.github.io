@@ -7238,6 +7238,97 @@ body.dark-mode .th-act--comp {
   color: #FFB74D !important;
 }
 
+/* Historial de Asistencia (tabla) -- la celda de nombre trae su propio fondo
+   blanco fijo, que pinta por encima del fondo oscuro que ya tiene la tabla
+   -- el texto (heredado, ya claro por el tema) quedaba casi invisible sobre
+   ese blanco suelto. */
+body.dark-mode .asist-hist-td-nombre {
+  background: var(--color-superficie) !important;
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .asist-hist-td-estado:hover {
+  background: #1A2A4A !important;
+}
+
+/* Informe de examen (Evaluación Diagnóstica y similares) -- todo este panel
+   se arma con estilos inline de colores pastel fijos (pensados solo para
+   fondo claro) sin ninguna cobertura de modo oscuro; se les agregaron clases
+   para poder oscurecerlos aquí. */
+body.dark-mode .ie-stat-box {
+  background: var(--color-superficie) !important;
+}
+
+body.dark-mode .ie-stat-azul .ie-stat-num { color: #90CAF9 !important; }
+body.dark-mode .ie-stat-verde .ie-stat-num { color: #81C784 !important; }
+body.dark-mode .ie-stat-rojo .ie-stat-num { color: #EF9A9A !important; }
+body.dark-mode .ie-stat-morado .ie-stat-num { color: #CE93D8 !important; }
+
+body.dark-mode .ie-stat-lbl,
+body.dark-mode .ie-dist-lbl,
+body.dark-mode .ie-preg-sub {
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .ie-alerta {
+  background: #2E1A1A !important;
+  color: #EF9A9A !important;
+}
+
+body.dark-mode .ie-dist-track {
+  background: #12151F !important;
+}
+
+body.dark-mode .ie-seccion-titulo {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .ie-preg-row {
+  border-bottom-color: var(--color-borde) !important;
+}
+
+body.dark-mode .ie-preg-badge {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .ie-preg-texto {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .ie-tabla-wrap {
+  border-color: var(--color-borde) !important;
+}
+
+body.dark-mode .ie-tabla-thead {
+  background: var(--color-superficie) !important;
+}
+
+body.dark-mode .ie-tabla-th {
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .ie-tabla-td {
+  border-bottom-color: var(--color-borde) !important;
+}
+
+/* Solo la columna Nombre usa el color de texto "plano" -- Correctas/
+   Incorrectas/Precisión tienen su propio color con significado (verde/rojo/
+   según desempeño) que no debe aplanarse a un solo tono. */
+body.dark-mode .ie-tabla-td-nombre {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .ie-badge-completado {
+  background: #1A2E1A !important;
+  color: #81C784 !important;
+}
+
+body.dark-mode .ie-badge-apoyo {
+  background: #2E1A1A !important;
+  color: #EF9A9A !important;
+}
+
 /* Tarjeta de saludo y pastillas de estadísticas del Dashboard -- estos
    textos usaban colores fijos pensados solo para el fondo claro (#141414
    casi negro, #9A9587 gris cálido) y nunca se cubrieron para el fondo oscuro
