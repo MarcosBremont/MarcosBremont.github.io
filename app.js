@@ -23435,6 +23435,8 @@ function editarCeldaHorario(diaIdx, periodoId) {
   const datalistOpts = materiasUsadas.map(m => `<option value="${escapeHTML(m)}">`).join('');
   const diasOpts = DIAS.map((d, i) => `<option value="${i}" ${i === defaultDupDia ? 'selected' : ''}>${escapeHTML(d)}</option>`).join('');
   const periodosOpts = PERIODOS.map(p => `<option value="${p.id}" ${p.id === periodoId ? 'selected' : ''}>Período ${p.id} (${p.hora})</option>`).join('');
+  const periodosFinOpts = PERIODOS.filter(p => p.id >= periodoId)
+    .map(p => `<option value="${p.id}" ${p.id === periodoId ? 'selected' : ''}>${p.id === periodoId ? 'Sin bloque (solo este período)' : 'Hasta período ' + p.id + ' (' + p.hora + ')'}</option>`).join('');
 
   document.getElementById('modal-title').textContent = `${DIAS[diaIdx]} — Período ${periodoId} (${periodo.hora})`;
   document.getElementById('modal-body').innerHTML = `
@@ -23446,6 +23448,15 @@ function editarCeldaHorario(diaIdx, periodoId) {
         </label>
         <input id="hor-inp-materia" list="dl-materias" placeholder="Ej: Diseño de Portales Web" value="${escapeHTML(existente.materia || '')}"
           style="width:100%;padding:9px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
+      </div>
+      <div style="background:#FFF3E0;border:1px solid #FFCC80;border-radius:10px;padding:10px 12px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#E65100;display:block;margin-bottom:5px;">
+          Bloque de períodos (opcional)
+        </label>
+        <select id="hor-inp-periodo-fin" style="width:100%;padding:8px 10px;border:1px solid #FFCC80;border-radius:8px;font-size:0.85rem;background:#fff;">
+          ${periodosFinOpts}
+        </select>
+        <p style="font-size:0.72rem;color:#78909C;margin:6px 0 0;">Si esta clase ocupa varios períodos seguidos (ej. 1 y 2 juntos), elige hasta cuál se extiende -- se llenan todos con estos mismos datos de una vez.</p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
@@ -23496,18 +23507,41 @@ function editarCeldaHorario(diaIdx, periodoId) {
   });
 }
 
+/** Guarda la celda que se abrió y, si se eligió un "Bloque de períodos", TODOS
+ *  los períodos seguidos entre periodoId y el elegido -- el horario sigue
+ *  guardando una entrada independiente por período (mismo modelo de siempre,
+ *  sin "celdas fusionadas"), simplemente se escribe la misma materia/sección
+ *  en cada uno de una sola vez en vez de tener que abrir cada período por
+ *  separado. Pedido del docente: la mayoría de sus clases reales ocupan 2+
+ *  períodos consecutivos (ver captura de su horario real). */
 function guardarCeldaHorario(diaIdx, periodoId) {
   const materia = document.getElementById('hor-inp-materia')?.value.trim();
   const seccion = document.getElementById('hor-inp-seccion')?.value.trim();
   const aula = document.getElementById('hor-inp-aula')?.value.trim();
   const notas = document.getElementById('hor-inp-notas')?.value.trim();
-  const data = cargarHorario().filter(e => !(e.dia === diaIdx && e.periodo === periodoId));
-  if (materia) data.push({ dia: diaIdx, periodo: periodoId, materia, seccion, aula, notas });
+  const periodoFin = Number(document.getElementById('hor-inp-periodo-fin')?.value) || periodoId;
+  const periodosDestino = PERIODOS.filter(p => p.id >= periodoId && p.id <= periodoFin).map(p => p.id);
+
+  let data = cargarHorario();
+
+  if (materia && periodosDestino.length > 1) {
+    const sobrescribe = periodosDestino
+      .filter(p => p !== periodoId)
+      .map(p => data.find(e => e.dia === diaIdx && e.periodo === p))
+      .filter(e => e && e.materia && e.materia !== materia);
+    if (sobrescribe.length && !confirm(
+      `Ya hay otra clase en ese rango de períodos (${sobrescribe.map(e => 'P' + e.periodo + ': ' + e.materia).join(', ')}). ¿Reemplazarla con "${materia}"?`
+    )) return;
+  }
+
+  data = data.filter(e => !(e.dia === diaIdx && periodosDestino.includes(e.periodo)));
+  if (materia) periodosDestino.forEach(p => data.push({ dia: diaIdx, periodo: p, materia, seccion, aula, notas }));
   guardarHorario(data);
   cerrarModalBtn();
   renderizarHorario();
-  registrarCambio(materia ? 'Período de horario guardado' : 'Período de horario borrado');
-  mostrarToast(materia ? 'Período guardado' : 'Período borrado', 'success');
+  const rangoTxt = periodosDestino.length > 1 ? ` (P${periodosDestino[0]}–P${periodosDestino[periodosDestino.length - 1]})` : '';
+  registrarCambio(materia ? 'Período de horario guardado' + rangoTxt : 'Período de horario borrado');
+  mostrarToast(materia ? 'Guardado' + rangoTxt : 'Período borrado', 'success');
 }
 
 function duplicarCeldaHorario(diaOrigen, periodoOrigen) {
