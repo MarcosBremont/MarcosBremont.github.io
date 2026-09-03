@@ -20714,9 +20714,15 @@ function _renderAsistenciaPerfilEst(cursoId, estId) {
   const cont = document.getElementById('perfil-asistencia-detalle');
   if (!cont) return;
 
-  // Buscar registros de asistencia del estudiante
-  const asistKey = `planificadorRA_asistencia_${cursoId}`;
-  const data = JSON.parse(localStorage.getItem(asistKey) || '{}');
+  // Buscar registros de asistencia del estudiante -- reutiliza cargarAsistencia()
+  // (la misma fuente que ya usa _statsAsistencia() para el conteo de arriba) en
+  // vez de leer localStorage a mano: esta función buscaba en dos claves que
+  // nunca existieron ("planificadorRA_asistencia_" + cursoId, que ningún código
+  // del proyecto escribe, y "planificadorRA_asistencias_v1" con una "s" de más
+  // -- la clave real es ASIST_KEY = "planificadorRA_asistencia_v1", singular,
+  // sin el cursoId pegado al nombre) -- por eso esta sección siempre salía
+  // "Sin registros" aunque el conteo de arriba SÍ mostrara los registros reales.
+  const data = cargarAsistencia()[cursoId] || {};
   const registros = [];
 
   Object.entries(data).forEach(([fecha, info]) => {
@@ -20725,18 +20731,6 @@ function _renderAsistenciaPerfilEst(cursoId, estId) {
       registros.push({ fecha, estado });
     }
   });
-
-  // También buscar en el formato alternativo
-  const asistKey2 = `planificadorRA_asistencias_v1`;
-  const data2 = JSON.parse(localStorage.getItem(asistKey2) || '{}');
-  if (data2[cursoId]) {
-    Object.entries(data2[cursoId]).forEach(([fecha, info]) => {
-      const estado = info?.[estId];
-      if (estado && !registros.find(r => r.fecha === fecha)) {
-        registros.push({ fecha, estado });
-      }
-    });
-  }
 
   registros.sort((a, b) => b.fecha.localeCompare(a.fecha));
 
