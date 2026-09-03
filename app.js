@@ -24102,10 +24102,11 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   // cual. Se tolera esa "XX" (con o sin punto/espacio) entre "RA" y el
   // dígito, en vez de no reconocer el marcador en absoluto.
   const esRA = s => /RAE?\s*(?:XX\.?\s*)?\d+(?:\.\d+)?/.test(s);
-  const esCE = s => /CE\s*\d+\.\d+(?:\.\d+)?/.test(s);
-  const xRA = itemsRelevantes.filter(it => esRA(it.str)).map(it => it.x);
-  const xCE = itemsRelevantes.filter(it => esCE(it.str)).map(it => it.x);
-  if (!xRA.length || !xCE.length) return null;
+  // "X" opcional entre "CE" y el primer número: un documento real trae el
+  // marcador como "CEX.2.1" en vez de "CE2.1" -- la plantilla oficial dejó
+  // "X" sin rellenar con el número real (mismo problema que "RAXX", ver
+  // arriba), y el propio PDF trae ese texto tal cual.
+  const esCE = s => /CEX?\.?\s*\d+\.\d+(?:\.\d+)?/.test(s);
 
   // El límite entre columnas NO es el punto medio entre el marcador de RA y el
   // de CE -- la celda de RA suele ser bastante ancha, y su texto de
@@ -24116,10 +24117,49 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
   // quedaba en x≈134, clasificando MAL a "Realizar" como columna de CE y
   // perdiéndolo de la descripción del RA). El límite real de la columna es
   // el borde izquierdo de la columna de CE (donde arrancan sus marcadores,
-  // que en un currículo real no varía nunca de fila a fila) -- todo lo que
-  // esté a la izquierda de eso, sin importar cuánto, es de la columna de RA.
-  const promedio = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
-  const xSplit = promedio(xCE);
+  // que en un currículo real no varía nunca de fila a fila DENTRO de una
+  // misma página) -- todo lo que esté a la izquierda de eso, sin importar
+  // cuánto, es de la columna de RA.
+  //
+  // OJO: el límite se calcula POR PÁGINA, no una sola vez para todo el
+  // módulo -- un módulo real que abarca varias páginas puede tener el ancho
+  // de columna ligeramente distinto de una página a otra (visto: el
+  // marcador de CE empezaba en x≈188 en una página del módulo y x≈234 en
+  // otra página del MISMO módulo). Un límite global promediado entre ambas
+  // quedaba mal para las DOS páginas a la vez (ni 188 ni 234, sino algo
+  // intermedio que no representaba a ninguna), clasificando de vuelta el
+  // marcador de CE (y el principio de su propio criterio) como si fuera
+  // columna de RA -- el resultado final: RA con "0 criterios de
+  // evaluación" pese a tenerlos, y su descripción con fragmentos de
+  // criterios pegados en medio. Las páginas sin marcadores propios (solo
+  // texto de continuación envuelto de la fila anterior) heredan el último
+  // límite calculado.
+  // Se usa el MÍNIMO de xCE (el borde real más a la izquierda que alcanza a
+  // tocar cualquier marcador de esa página), no el promedio -- un promedio
+  // de valores casi idénticos puede quedar, por puro error de redondeo de
+  // punto flotante, un poquito POR ENCIMA del valor real (visto en un
+  // documento real: promedio 188.15990400000004 contra el marcador real en
+  // 188.15990399999998, una diferencia de una diezmilmillonésima) -- alcanza
+  // para que el propio marcador de CE, que está exactamente en ese punto,
+  // quede clasificado como columna de RA por una fracción de pixel. Restar
+  // un margen chico (2 unidades) al mínimo evita este empate por completo,
+  // sin riesgo de tragarse contenido real de la columna de RA (que en la
+  // práctica queda decenas de unidades más a la izquierda).
+  const minimo = arr => Math.min(...arr) - 2;
+  const splitsPorPagina = {};
+  let ultimoSplit = null;
+  [...new Set(itemsRelevantes.map(it => it.pagina))].sort((a, b) => a - b).forEach(pagIdx => {
+    const itemsPag = itemsRelevantes.filter(it => it.pagina === pagIdx);
+    const xRAPag = itemsPag.filter(it => esRA(it.str)).map(it => it.x);
+    const xCEPag = itemsPag.filter(it => esCE(it.str)).map(it => it.x);
+    if (xRAPag.length && xCEPag.length) ultimoSplit = minimo(xCEPag);
+    splitsPorPagina[pagIdx] = ultimoSplit;
+  });
+  if (Object.values(splitsPorPagina).every(v => v === null)) return null;
+  // Las páginas que anteceden a la primera con marcadores propios (si las
+  // hay) usan ese primer límite calculado, en vez de quedarse sin ninguno.
+  const primerSplitValido = Object.values(splitsPorPagina).find(v => v !== null);
+  Object.keys(splitsPorPagina).forEach(k => { if (splitsPorPagina[k] === null) splitsPorPagina[k] = primerSplitValido; });
 
   const ordenados = itemsRelevantes.slice().sort((a, b) => {
     if (a.pagina !== b.pagina) return a.pagina - b.pagina;
@@ -24129,7 +24169,7 @@ function _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin) {
 
   let textoRA = '', textoCE = '';
   ordenados.forEach(it => {
-    if (it.x < xSplit) textoRA += it.str + ' ';
+    if (it.x < splitsPorPagina[it.pagina]) textoRA += it.str + ' ';
     else textoCE += it.str + ' ';
   });
 
@@ -24448,7 +24488,12 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   //   tres candidatos de asociación por CE; más abajo se elige por votación
   //   cuál de los tres interpreta mejor TODO el módulo, en vez de asumir
   //   siempre el mismo formato.
-  const regexCE = /CE\s*(\d+)\.(\d+)(?:\.(\d+))?[:.\-]?\s*/g;
+  // "X" opcional (con un punto opcional detrás, ej. "CEX.2.1") entre "CE" y
+  // el primer número (ver esCE en _reconstruirColumnasTabla más arriba): un
+  // documento real trae el marcador así -- se tolera igual que "RAXX", en
+  // vez de no reconocer el marcador en absoluto y dejar a ese RA en 0
+  // criterios.
+  const regexCE = /CEX?\.?\s*(\d+)\.(\d+)(?:\.(\d+))?[:.\-]?\s*/g;
   const posicionesCE = [];
   while ((m = regexCE.exec(textoCE)) !== null) {
     const esTresNiveles = m[3] !== undefined;
