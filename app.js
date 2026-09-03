@@ -23752,7 +23752,32 @@ async function _extraerTextoPdf(arrayBuffer, moduloBuscado) {
       if (Math.abs(ya - yb) > 2) return yb - ya;
       return a.transform[4] - b.transform[4];
     });
-    textoCompleto += items.map(it => it.str).join(' ') + '\n\n';
+    // Unir con un espacio SIEMPRE (como se hacía antes) rompe documentos donde una
+    // misma palabra llega partida en varios fragmentos de texto consecutivos que se
+    // TOCAN sin hueco real entre ellos -- visto en un currículo real: "RA01:" llegaba
+    // como 3 fragmentos ("RA"/"0"/"1:", cada uno en un font distinto, común en PDFs
+    // generados desde InDesign/Word con los dígitos en otro estilo) y terminaba como
+    // "RA 0 1:" en el texto, un token que ningún regex de "RA01"/"RA\d+" reconoce --
+    // eso le costó 6 de 8 Resultados de Aprendizaje de un módulo (el resto de la
+    // extracción funcionaba bien, solo el número quedaba roto). Se decide el espacio
+    // por posición real en vez de a ciegas: si el siguiente fragmento empieza donde
+    // termina el anterior (se tocan, sin hueco real -- confirmado con datos reales:
+    // ~0 unidades entre fragmentos partidos, contra ~3.7 en un espacio real), se pegan
+    // directo; si hay un hueco de verdad (o cambia de línea), se separan con un espacio.
+    let textoPagina = '';
+    let prevItem = null;
+    items.forEach(it => {
+      const x = it.transform[4], y = it.transform[5];
+      if (prevItem) {
+        const mismaLinea = Math.abs(y - prevItem.y) <= 2;
+        const brecha = mismaLinea ? x - prevItem.xFin : Infinity;
+        const umbral = Math.max(0.6, (it.height || 10) * 0.12);
+        if (!mismaLinea || brecha > umbral) textoPagina += ' ';
+      }
+      textoPagina += it.str;
+      prevItem = { xFin: x + (it.width || 0), y };
+    });
+    textoCompleto += textoPagina + '\n\n';
     paginas.push({ numero: p, items: items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] })) });
 
     // Si ya se conoce el código del módulo que se busca (el docente lo escribe
@@ -23860,7 +23885,16 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
   // El lookahead negativo "(?![a-záéíóúñ])" evita que "MÓDULOS" (plural, en
   // un título de sección como "7. MÓDULOS COMUNES") se confunda con un
   // encabezado real ahora que ya no se exige un espacio+dígito después.
-  const regexEncabezado = /m[oó]dulo(?![a-záéíóúñ])\s*(\d+)?\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo(?![a-záéíóúñ])\s*\d*\s*[:.\-]|\n|$)/gi;
+  // OJO: el número y la puntuación NO pueden ser AMBOS opcionales a la vez --
+  // eso hacía que la frase "Módulo formativo asociado a la Competencia..."
+  // (texto normal que aparece en TODAS las páginas de módulo, justo después
+  // del "Código:") calzara como si fuera el encabezado del módulo SIGUIENTE,
+  // cortando el módulo actual casi de inmediato y perdiendo casi todos sus RA
+  // (visto en un currículo real: de 8 RA solo sobrevivían 2). Por eso la
+  // alternancia exige que pase UNA de las dos cosas: o hay un número, o hay
+  // puntuación -- nunca ninguna de las dos, que es exactamente lo que pasa en
+  // una mención normal de la palabra "módulo" dentro de una oración.
+  const regexEncabezado = /m[oó]dulo(?![a-záéíóúñ])(?:\s*(\d+)\s*[:.\-]?|\s*[:.\-])\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo(?![a-záéíóúñ])(?:\s*\d+\s*[:.\-]?|\s*[:.\-])|\n|$)/gi;
   const encabezados = [];
   let m;
   while ((m = regexEncabezado.exec(textoCompleto)) !== null) {

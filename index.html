@@ -3597,6 +3597,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.87<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: "Cargar Currículo (PDF)" solo traía algunos RA del módulo</div>
+              <ul class="about-ver-items">
+                <li>Dos fallas encontradas revisando un currículo real (un módulo con 8 RA, solo se reconocían 2): (1) en algunos PDF, marcadores como "RA01:" llegan partidos en fragmentos de texto separados ("RA", "0", "1:") que se unían con espacios de más ("RA 0 1:"), un texto que ningún RA reconocía. Ahora se detecta si los fragmentos están pegados de verdad o hay un espacio real entre ellos. (2) La corrección de la v18.86 (permitir módulos sin número) hizo que la frase "Módulo formativo asociado a..." -- texto normal que aparece en TODAS las páginas de módulo -- se confundiera con el encabezado del módulo siguiente, cortando el contenido del módulo actual casi de inmediato.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v18.86<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9759,9 +9773,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.86"></script>
+  <script src="app.js?v=18.87"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.86"></script>
+  <script src="auth.js?v=18.87"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
