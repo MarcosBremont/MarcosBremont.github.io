@@ -7875,6 +7875,25 @@ body.dark-mode .ec-texto:focus {
   border-color: #90CAF9 !important;
 }
 
+body.dark-mode .ec-codigo {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--color-texto-secundario) !important;
+}
+
+body.dark-mode .ec-move-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: var(--color-texto-secundario) !important;
+}
+
+/* Alerta "EC sin actividades" -- trae su color inline (pensado solo para
+   fondo claro), no una clase, así que se sobreescribe por ID. */
+body.dark-mode #alerta-ec-sin-act {
+  background: #2E2010 !important;
+  border-color: #5D4200 !important;
+  color: #FFB74D !important;
+}
+
 body.dark-mode .ec-card-header {
   color: var(--color-texto-primario) !important;
 }
