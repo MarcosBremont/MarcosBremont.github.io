@@ -12,6 +12,7 @@ const FIREBASE_STORES = [
   { store: 'asistencia',    key: 'planificadorRA_asistencia_v1' },
   { store: 'comentarios',   key: 'planificadorRA_comentarios_v1' },
   { store: 'horario',       key: 'planificadorRA_horario_v1' },
+  { store: 'horario_colores', key: 'planificadorRA_horario_colores_v1' },
   { store: 'tareas',        key: 'planificadorRA_tareas_v1' },
   { store: 'diarias',       key: 'planificadorRA_diarias_v1' },
   { store: 'notas',         key: 'planificadorRA_notas_docente_v1' },

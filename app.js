@@ -23169,15 +23169,86 @@ const MATERIA_COLORES = [
   '#880E4F', '#0D47A1', '#1A237E', '#006064', '#33691E',
 ];
 
+const HORARIO_COLORES_KEY = 'planificadorRA_horario_colores_v1';
+
+function cargarHorarioColoresOverride() {
+  try { return JSON.parse(localStorage.getItem(HORARIO_COLORES_KEY) || '{}'); } catch { return {}; }
+}
+function guardarHorarioColoresOverride(data) {
+  localStorage.setItem(HORARIO_COLORES_KEY, JSON.stringify(data));
+  if (window._syncFirebase) _syncFirebase('horario_colores', data);
+}
+
 function _horarioColores() {
   const h = cargarHorario();
+  const overrides = cargarHorarioColoresOverride();
   const mapa = {};
   let ci = 0;
   h.forEach(e => {
     const key = (e.materia || '').trim();
-    if (key && !mapa[key]) mapa[key] = MATERIA_COLORES[ci++ % MATERIA_COLORES.length];
+    if (!key || mapa[key]) return;
+    if (overrides[key]) { mapa[key] = overrides[key]; return; }
+    mapa[key] = MATERIA_COLORES[ci % MATERIA_COLORES.length];
+    ci++;
   });
   return mapa;
+}
+
+/** Abre el selector de color para una materia del horario (clic en su chip
+ *  de la leyenda) -- paleta fija de MATERIA_COLORES + un color personalizado
+ *  vía <input type="color">. El color elegido se guarda como override
+ *  persistente (HORARIO_COLORES_KEY) para que no cambie cada vez que se
+ *  reordenan/agregan materias (a diferencia de la asignación automática,
+ *  que depende del orden de aparición). */
+function _abrirColorMateria(materia) {
+  const overrides = cargarHorarioColoresOverride();
+  const actual = overrides[materia] || _horarioColores()[materia] || MATERIA_COLORES[0];
+  const matEsc = materia.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+  const swatches = MATERIA_COLORES.map(c => {
+    const activo = c.toLowerCase() === actual.toLowerCase();
+    return `<button onclick="_elegirColorMateria('${matEsc}','${c}')" title="${c}"
+      style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer;
+      border:${activo ? '3px solid #1A1A2E' : '2px solid #fff'};box-shadow:0 0 0 1px #E0E0E0;"></button>`;
+  }).join('');
+
+  document.getElementById('modal-title').textContent = 'Color de "' + materia + '"';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:8px;">Paleta</label>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;justify-items:center;">${swatches}</div>
+      </div>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">O elige un color personalizado</label>
+        <input type="color" id="hor-color-custom" value="${actual}" style="width:100%;height:42px;border:1.5px solid #E0E0E0;border-radius:8px;cursor:pointer;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:10px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="_quitarColorMateria('${matEsc}')">Restablecer</button>
+        <button class="btn-siguiente" onclick="_elegirColorMateria('${matEsc}', document.getElementById('hor-color-custom').value)">
+          <span class="material-icons">palette</span> Usar este color
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function _elegirColorMateria(materia, color) {
+  const overrides = cargarHorarioColoresOverride();
+  overrides[materia] = color;
+  guardarHorarioColoresOverride(overrides);
+  cerrarModalBtn();
+  renderizarHorario();
+  mostrarToast('Color de "' + materia + '" actualizado', 'success');
+}
+
+function _quitarColorMateria(materia) {
+  const overrides = cargarHorarioColoresOverride();
+  delete overrides[materia];
+  guardarHorarioColoresOverride(overrides);
+  cerrarModalBtn();
+  renderizarHorario();
+  mostrarToast('Color restablecido al automático', 'success');
 }
 
 function cargarHorario() {
@@ -23351,12 +23422,13 @@ function renderizarHorario() {
     const entries = Object.entries(colores);
     if (entries.length === 0) { leyenda.innerHTML = ''; return; }
     leyenda.innerHTML = '<div class="hor-leyenda-wrap">'
-      + entries.map(([mat, col]) =>
-        `<span class="hor-leyenda-item" style="border-color:${col};color:${col};">
+      + entries.map(([mat, col]) => {
+          const matEsc = mat.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          return `<span class="hor-leyenda-item" style="border-color:${col};color:${col};cursor:pointer;" onclick="_abrirColorMateria('${matEsc}')" title="Cambiar color de esta materia">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col};margin-right:5px;"></span>
             ${escapeHTML(mat)}
-          </span>`
-      ).join('')
+          </span>`;
+        }).join('')
       + '</div>';
   }
 }
