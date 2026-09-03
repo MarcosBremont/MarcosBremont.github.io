@@ -6439,7 +6439,8 @@ const PLANTILLA_CENTRO_CAMPOS = {
   impacto: { base64: 'plantillaImpactoVinculacionBase64', nombre: 'plantillaImpactoVinculacionNombre', fallback: 'plantilla_reporte_impacto.docx' },
   informeExamen: { base64: 'plantillaInformeExamenBase64', nombre: 'plantillaInformeExamenNombre', fallback: 'plantilla_informe_examen.docx' },
   instrumentoExamen: { base64: 'plantillaInstrumentoExamenBase64', nombre: 'plantillaInstrumentoExamenNombre', fallback: 'plantilla_instrumento_examen.docx' },
-  planReforzamiento: { base64: 'plantillaPlanReforzamientoBase64', nombre: 'plantillaPlanReforzamientoNombre', fallback: 'plantilla_plan_reforzamiento.docx' }
+  planReforzamiento: { base64: 'plantillaPlanReforzamientoBase64', nombre: 'plantillaPlanReforzamientoNombre', fallback: 'plantilla_plan_reforzamiento.docx' },
+  analisisFoda: { base64: 'plantillaAnalisisFodaBase64', nombre: 'plantillaAnalisisFodaNombre', fallback: 'plantilla_analisis_foda.docx' }
 };
 
 function _plantillasCentroChunksRef(centroId) {
@@ -7102,6 +7103,49 @@ async function _getPlantillaInstrumentoExamenCentro() {
       centroDistrito: centro.distrito || '',
       director: centro.directorNombre || '',
       coordinador: centro.coordinadorNombre || ''
+    };
+  }
+  return null;
+}
+
+/** Igual que _getPlantillaInstrumentoExamenCentro() pero para el "Análisis
+ *  FODA de los Resultados de la Evaluación Diagnóstica" -- no necesita
+ *  Director/a ni Coordinador/a (no van en ese documento), solo los datos
+ *  institucionales básicos para el encabezado de texto (el membrete/logos
+ *  ya van dibujados a mano en la plantilla .docx que sube el superadmin). */
+async function _getPlantillaAnalisisFodaCentro() {
+  if (!window.currentUser) return null;
+  let centroId = null;
+  const userDoc = await db.collection('perfiles').doc(window.currentUser.uid).get();
+  if (userDoc.exists && userDoc.data().centroId) centroId = userDoc.data().centroId;
+  if (!centroId) {
+    const userDoc2 = await db.collection('usuarios').doc(window.currentUser.uid).get();
+    if (userDoc2.exists && userDoc2.data().centroId) centroId = userDoc2.data().centroId;
+  }
+  if (centroId) {
+    const centroDoc = await db.collection(CENTROS_COLLECTION).doc(centroId).get();
+    if (centroDoc.exists) {
+      const centro = centroDoc.data();
+      const result = await _cargarPlantillaCentroChunked(centroId, 'analisisFoda');
+      return {
+        base64: result ? result.base64 : null,
+        centroId,
+        centroNombre: centro.nombre || '',
+        centroCodigo: centro.codigo || '',
+        centroDistrito: centro.distrito || ''
+      };
+    }
+  }
+  const snap = await db.collection(CENTROS_COLLECTION).where('tienePlantilla_analisisFoda', '==', true).limit(1).get();
+  if (!snap.empty) {
+    const centro = snap.docs[0].data();
+    const result = await _cargarPlantillaCentroChunked(snap.docs[0].id, 'analisisFoda');
+    if (result) return {
+      base64: result.base64,
+      centroId: snap.docs[0].id,
+      centroNombre: centro.nombre || '',
+      centroCodigo: centro.codigo || '',
+      centroDistrito: centro.distrito || ''
     };
   }
   return null;
@@ -29969,13 +30013,90 @@ async function generarAnalisisFodaExamen() {
       throw new Error('El JSON de la IA no trae las 4 categorías esperadas.');
     }
 
-    _descargarAnalisisFodaWord(ex, foda);
+    const datosStats = { promedio, maximo, minimo, aprobados, total };
+
+    let plantilla = null;
+    try { plantilla = await _getPlantillaAnalisisFodaCentro(); } catch (e) {
+      console.warn('[FODA] No se pudo resolver el centro/plantilla:', e.message);
+    }
+
+    let generadoConPlantilla = false;
+    if (plantilla && plantilla.base64) {
+      try {
+        generadoConPlantilla = await _generarAnalisisFodaConPlantilla(plantilla, ex, foda, datosStats);
+      } catch (e) {
+        console.warn('[FODA] No se pudo usar la plantilla del centro, se usa el formato genérico:', e.message);
+      }
+    }
+    if (!generadoConPlantilla) _descargarAnalisisFodaWord(ex, foda);
+
     mostrarToast('Análisis FODA generado ✓', 'success');
   } catch (e) {
     console.error('[FODA]', e);
     mostrarToast('Error al generar el FODA: ' + e.message, 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset._origText || btn.innerHTML; }
+  }
+}
+
+/** Intenta generar el Análisis FODA con la plantilla .docx del centro
+ *  (docxtemplater, mismo patrón que Instrumento/Informe combinado).
+ *  Placeholders ver _mostrarGuiaPlaceholdersAnalisisFoda(). Devuelve true si
+ *  lo logró (y ya disparó la descarga), false si falló, para que el
+ *  llamador caiga al formato genérico. */
+async function _generarAnalisisFodaConPlantilla(plantilla, ex, foda, stats) {
+  const DocxModule = window.docxtemplater || window.Docxtemplater;
+  const Docxtemplater = DocxModule?.default || DocxModule;
+  if (typeof PizZip === 'undefined' || !Docxtemplater) return false;
+
+  const limpiarNegrita = t => (t || '').replace(/\*\*(.+?)\*\*/g, '$1');
+  const hoy = new Date();
+  const anioInicio = (hoy.getMonth() + 1) >= 8 ? hoy.getFullYear() : hoy.getFullYear() - 1;
+
+  try {
+    const binaryStr = atob(plantilla.base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    const zip = new PizZip(bytes.buffer);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      delimiters: { start: '{', end: '}' },
+      nullGetter: () => ''
+    });
+
+    doc.render({
+      centro: plantilla.centroNombre || '',
+      codigo_centro: plantilla.centroCodigo || '',
+      distrito: plantilla.centroDistrito || '',
+      docente: ex.docenteNombre || '',
+      grado_seccion: ex.curso || '',
+      modulo_formativo: ex.materia || ex.titulo || '',
+      anio_escolar: anioInicio + ' - ' + (anioInicio + 1),
+      promedio: stats.promedio, nota_maxima: stats.maximo, nota_minima: stats.minimo,
+      aprobados: stats.aprobados, total_estudiantes: stats.total,
+      fortaleza_1: limpiarNegrita(foda.fortalezas[0]), fortaleza_2: limpiarNegrita(foda.fortalezas[1]), fortaleza_3: limpiarNegrita(foda.fortalezas[2]),
+      oportunidad_1: limpiarNegrita(foda.oportunidades[0]), oportunidad_2: limpiarNegrita(foda.oportunidades[1]), oportunidad_3: limpiarNegrita(foda.oportunidades[2]),
+      debilidad_1: limpiarNegrita(foda.debilidades[0]), debilidad_2: limpiarNegrita(foda.debilidades[1]), debilidad_3: limpiarNegrita(foda.debilidades[2]),
+      amenaza_1: limpiarNegrita(foda.amenazas[0]), amenaza_2: limpiarNegrita(foda.amenazas[1]), amenaza_3: limpiarNegrita(foda.amenazas[2])
+    });
+
+    const out = doc.getZip().generate({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const filename = ('FODA_' + (ex.curso || ex.titulo || 'examen'))
+      .replace(/[\\/:*?"<>|]+/g, '').trim().replace(/\s+/g, '_').slice(0, 80) + '.docx';
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (e) {
+    console.error('[FODA] Error renderizando la plantilla del centro:', e);
+    mostrarToast('La plantilla del centro tiene un error (revisa los placeholders) -- se generó con el formato genérico.', 'error');
+    return false;
   }
 }
 
@@ -45367,7 +45488,7 @@ async function _renderCentrosEducativos() {
 async function _mostrarFormCentro(centroId) {
   let centro = { nombre: '', codigo: '', direccion: '', regional: '', distrito: '', telefono: '', email: '', logoUrl: '', admins: [], emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '', lema: '', mision: '', vision: '', valores: '', propositoAnual: '', directorNombre: '', coordinadorNombre: '' };
 
-  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false }, instrumentoExamen: { existe: false }, planReforzamiento: { existe: false } };
+  let plantillasInfo = { planificacion: { existe: false }, diaria: { existe: false }, psicologia: { existe: false }, impacto: { existe: false }, informeExamen: { existe: false }, instrumentoExamen: { existe: false }, planReforzamiento: { existe: false }, analisisFoda: { existe: false } };
 
   if (centroId) {
     try {
@@ -45378,16 +45499,17 @@ async function _mostrarFormCentro(centroId) {
     // El base64 de cada plantilla ya no vive en este documento (se guarda en
     // chunks aparte, ver PLANTILLA_CENTRO_CAMPOS) -- se consulta si existe sin
     // traer el archivo completo, solo para mostrar el indicador "Plantilla cargada".
-    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen, pInstrumentoExamen, pPlanReforzamiento] = await Promise.all([
+    const [pPlan, pDiaria, pPsico, pImpacto, pInformeExamen, pInstrumentoExamen, pPlanReforzamiento, pAnalisisFoda] = await Promise.all([
       _tienePlantillaCentroChunked(centroId, 'planificacion', centro),
       _tienePlantillaCentroChunked(centroId, 'diaria', centro),
       _tienePlantillaCentroChunked(centroId, 'psicologia', centro),
       _tienePlantillaCentroChunked(centroId, 'impacto', centro),
       _tienePlantillaCentroChunked(centroId, 'informeExamen', centro),
       _tienePlantillaCentroChunked(centroId, 'instrumentoExamen', centro),
-      _tienePlantillaCentroChunked(centroId, 'planReforzamiento', centro)
+      _tienePlantillaCentroChunked(centroId, 'planReforzamiento', centro),
+      _tienePlantillaCentroChunked(centroId, 'analisisFoda', centro)
     ]);
-    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen, instrumentoExamen: pInstrumentoExamen, planReforzamiento: pPlanReforzamiento };
+    plantillasInfo = { planificacion: pPlan, diaria: pDiaria, psicologia: pPsico, impacto: pImpacto, informeExamen: pInformeExamen, instrumentoExamen: pInstrumentoExamen, planReforzamiento: pPlanReforzamiento, analisisFoda: pAnalisisFoda };
   }
 
   const cont = document.getElementById('sa-contenido');
@@ -45541,6 +45663,21 @@ async function _mostrarFormCentro(centroId) {
       : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el Plan de Reforzamiento se genera igual, pero con un formato genérico sin membrete.</div>')
     + '<input type="file" id="sa-centro-plantilla-plan-reforzamiento" accept=".docx" style="font-size:0.85rem;">'
     + '</div>'
+    + '<div style="margin-top:16px;padding:16px;border:1.5px dashed #AD1457;border-radius:10px;background:#FCE4EC;">'
+    + '<label style="font-size:0.82rem;font-weight:600;color:#880E4F;display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+    + '<span class="material-icons" style="font-size:18px;">grid_view</span> Plantilla Word para Análisis FODA (.docx)</label>'
+    + '<p style="font-size:0.75rem;color:#78909C;margin:0 0 10px;">Sube la plantilla .docx (con el membrete/logos del centro, como el de la imagen de referencia) para el "Análisis FODA" de los resultados de la evaluación diagnóstica, generado con IA desde el informe de cada examen. '
+    + '<a href="#" onclick="event.preventDefault();_mostrarGuiaPlaceholdersAnalisisFoda();" style="color:#AD1457;font-weight:600;">Ver lista de placeholders</a></p>'
+    + (plantillasInfo.analisisFoda.existe
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #E0E0E0;">'
+        + '<span class="material-icons" style="color:#4CAF50;font-size:20px;">check_circle</span>'
+        + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;font-weight:600;">Plantilla cargada: ' + (plantillasInfo.analisisFoda.nombre || 'plantilla_analisis_foda.docx') + '</span>'
+        + '<button onclick="_descargarPlantillaCentro(\'' + centroId + '\',\'analisisFoda\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:none;border-radius:6px;background:#E3F2FD;color:#1565C0;font-size:0.75rem;cursor:pointer;font-weight:600;"><span class="material-icons" style="font-size:14px;">download</span>Descargar</button>'
+        + '<button onclick="_eliminarPlantillaAnalisisFodaCentro(\'' + centroId + '\')" style="padding:4px 10px;border:none;border-radius:6px;background:#FFEBEE;color:#C62828;font-size:0.75rem;cursor:pointer;font-weight:600;">Eliminar</button>'
+        + '</div>'
+      : '<div style="font-size:0.75rem;color:#78909C;margin-bottom:8px;">Sin plantilla: el Análisis FODA se genera igual, pero con un formato genérico sin membrete.</div>')
+    + '<input type="file" id="sa-centro-plantilla-analisis-foda" accept=".docx" style="font-size:0.85rem;">'
+    + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:18px;">'
     + '<button onclick="_guardarCentro(' + (centroId ? "'" + centroId + "'" : '') + ')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;">'
     + '<span class="material-icons" style="font-size:18px;">save</span> Guardar</button>'
@@ -45682,6 +45819,19 @@ async function _guardarCentro(centroId) {
     }
   }
 
+  const fileInputAnalisisFoda = document.getElementById('sa-centro-plantilla-analisis-foda');
+  const fileAnalisisFoda = fileInputAnalisisFoda?.files?.[0];
+  if (fileAnalisisFoda) {
+    if (!fileAnalisisFoda.name.endsWith('.docx')) {
+      mostrarToast('Solo se permiten archivos .docx para la plantilla de Análisis FODA', 'error');
+      return;
+    }
+    if (fileAnalisisFoda.size > 5 * 1024 * 1024) {
+      mostrarToast('La plantilla de Análisis FODA no debe superar 5MB', 'error');
+      return;
+    }
+  }
+
   try {
     let finalId = centroId;
     if (centroId) {
@@ -45776,6 +45926,17 @@ async function _guardarCentro(centroId) {
       await _guardarPlantillaCentroChunked(finalId, 'planReforzamiento', base64R, filePlanReforzamiento.name);
     }
 
+    if (fileAnalisisFoda && finalId) {
+      mostrarToast('Guardando plantilla de Análisis FODA...', 'info');
+      const readerF = new FileReader();
+      const base64F = await new Promise((resolve, reject) => {
+        readerF.onload = () => resolve(readerF.result.split(',')[1]);
+        readerF.onerror = () => reject(new Error('Error leyendo archivo'));
+        readerF.readAsDataURL(fileAnalisisFoda);
+      });
+      await _guardarPlantillaCentroChunked(finalId, 'analisisFoda', base64F, fileAnalisisFoda.name);
+    }
+
     registrarCambio(centroId ? `Centro educativo actualizado: "${nombre}"` : `Centro educativo creado: "${nombre}"`);
     mostrarToast(centroId ? 'Centro actualizado correctamente' : 'Centro creado correctamente', 'success');
     _renderCentrosEducativos();
@@ -45866,6 +46027,18 @@ async function _eliminarPlantillaPlanReforzamientoCentro(centroId) {
     _mostrarFormCentro(centroId);
   } catch (e) {
     mostrarToast('Error eliminando plantilla de Plan de Reforzamiento: ' + e.message, 'error');
+  }
+}
+
+/** Elimina plantilla de Análisis FODA del centro */
+async function _eliminarPlantillaAnalisisFodaCentro(centroId) {
+  if (!confirm('¿Eliminar la plantilla Word de Análisis FODA de este centro?')) return;
+  try {
+    await _eliminarPlantillaCentroChunked(centroId, 'analisisFoda');
+    mostrarToast('Plantilla de Análisis FODA eliminada', 'success');
+    _mostrarFormCentro(centroId);
+  } catch (e) {
+    mostrarToast('Error eliminando plantilla de Análisis FODA: ' + e.message, 'error');
   }
 }
 
@@ -46214,6 +46387,62 @@ function _mostrarGuiaPlaceholdersInstrumentoExamen() {
     + '<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
     + '<strong style="color:#E65100;font-size:0.82rem;">Si no subes ninguna plantilla:</strong>'
     + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">El instrumento se sigue generando igual, con un formato genérico (sin membrete). Subir esta plantilla es opcional, solo para que el documento salga con la identidad visual real del centro.</p>'
+    + '</div>';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+/** Placeholders para la plantilla Word del Análisis FODA (ver
+ *  generarAnalisisFodaExamen/_generarAnalisisFodaConPlantilla). A diferencia
+ *  del Instrumento (que trae una tabla-loop por estudiante), acá cada punto
+ *  del FODA es un placeholder individual -- la IA siempre entrega EXACTAMENTE
+ *  3 puntos por categoría, así que no hace falta loop. */
+function _mostrarGuiaPlaceholdersAnalisisFoda() {
+  const placeholders = [
+    ['{centro}', 'Nombre del centro educativo'],
+    ['{codigo_centro}', 'Código del centro (Superadmin > Centro Educativo)'],
+    ['{distrito}', 'Distrito Educativo del centro'],
+    ['{docente}', 'Nombre del docente que creó el examen'],
+    ['{grado_seccion}', 'Curso/sección del examen que se está exportando'],
+    ['{modulo_formativo}', 'Materia del examen (o su título, si no se completó materia)'],
+    ['{anio_escolar}', 'Año escolar actual, ej. "2025 - 2026" (se calcula solo)'],
+    ['{promedio}', 'Promedio general del grupo (0-100)'],
+    ['{nota_maxima}', 'Nota más alta del grupo (0-100)'],
+    ['{nota_minima}', 'Nota más baja del grupo (0-100)'],
+    ['{aprobados}', 'Cantidad de estudiantes con >=70%'],
+    ['{total_estudiantes}', 'Total de estudiantes evaluados'],
+    ['{fortaleza_1}', '1er punto de Fortalezas (generado por IA)'],
+    ['{fortaleza_2}', '2do punto de Fortalezas'],
+    ['{fortaleza_3}', '3er punto de Fortalezas'],
+    ['{oportunidad_1}', '1er punto de Oportunidades'],
+    ['{oportunidad_2}', '2do punto de Oportunidades'],
+    ['{oportunidad_3}', '3er punto de Oportunidades'],
+    ['{debilidad_1}', '1er punto de Debilidades'],
+    ['{debilidad_2}', '2do punto de Debilidades'],
+    ['{debilidad_3}', '3er punto de Debilidades'],
+    ['{amenaza_1}', '1er punto de Amenazas'],
+    ['{amenaza_2}', '2do punto de Amenazas'],
+    ['{amenaza_3}', '3er punto de Amenazas']
+  ];
+
+  const rows = placeholders.map(([ph, desc]) =>
+    '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#880E4F;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
+    + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Placeholders para Análisis FODA';
+  document.getElementById('modal-body').innerHTML =
+    '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Usa estos placeholders en tu plantilla Word (con el membrete/logos del centro ya puestos a mano, como en la imagen de referencia) para que el Análisis FODA, generado con IA desde el informe de cada examen, los rellene con los datos reales. Los 12 puntos del FODA (3 por categoría) vienen SIEMPRE completos -- la IA nunca entrega más ni menos de 3 por celda -- así que no hace falta usar loops de docxtemplater, cada punto es su propio placeholder de texto plano.</p>'
+    + '<div style="max-height:320px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th style="padding:6px 10px;background:#AD1457;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #AD1457;">Placeholder</th>'
+    + '<th style="padding:6px 10px;background:#AD1457;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #AD1457;">Dato que inserta</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + '<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
+    + '<strong style="color:#E65100;font-size:0.82rem;">Nota sobre el formato de texto:</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">Cada {fortaleza_N}/{oportunidad_N}/{debilidad_N}/{amenaza_N} se inserta como texto plano (sin negrita, aunque la IA resalta una frase clave internamente, esa marca se quita antes de rellenar la plantilla) -- si quieres que toda la celda se vea en negrita o con cierto estilo, aplícaselo tú al placeholder directamente en Word.</p>'
+    + '</div>'
+    + '<div style="margin-top:10px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">'
+    + '<strong style="color:#E65100;font-size:0.82rem;">Si no subes ninguna plantilla:</strong>'
+    + '<p style="font-size:0.78rem;color:#616161;margin:6px 0 0;">El Análisis FODA se sigue generando igual, con un formato genérico (tabla 2x2 de colores, sin membrete). Subir esta plantilla es opcional, solo para que el documento salga con la identidad visual real del centro.</p>'
     + '</div>';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
