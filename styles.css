@@ -7162,6 +7162,37 @@ body.dark-mode .dt-check:hover {
   color: #fff !important;
 }
 
+/* Tarjeta de saludo y pastillas de estadísticas del Dashboard -- estos
+   textos usaban colores fijos pensados solo para el fondo claro (#141414
+   casi negro, #9A9587 gris cálido) y nunca se cubrieron para el fondo oscuro
+   del resto de la tarjeta -- quedaban casi invisibles encima. */
+body.dark-mode .dash-greeting-title {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .dash-greeting-date,
+body.dark-mode .dash-greeting-sub {
+  color: #9FA8DA !important;
+}
+
+body.dark-mode .dash-version-badge {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #C5CAE9 !important;
+}
+
+body.dark-mode .dash-version-badge:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.dark-mode .dash-stat-num {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .dash-stat-lbl {
+  color: var(--color-texto-secundario) !important;
+}
+
 /* Banner "Próximos avisos del calendario escolar" -- en modo claro es un
    amarillo/crema muy vivo a propósito (llama la atención), pero en oscuro se veía
    como un parche blanco brillante sobre el fondo oscuro. Se oscurece el tono en
