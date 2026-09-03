@@ -3597,6 +3597,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00695C;">v18.86<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: "Cargar Currículo (PDF)" no encontraba módulos comunes</div>
+              <ul class="about-ver-items">
+                <li>Los "Módulos Comunes" del currículo (ej. "MÓDULO: Tecnologías Digitales") no llevan número, a diferencia de los módulos técnicos ("MÓDULO 3: ..."). El detector exigía ese número siempre, así que nunca reconocía esos encabezados y el código buscado (ej. "MFC004_3") nunca se llegaba a comparar, aunque estuviera bien escrito. Ahora reconoce ambos formatos.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v18.85<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9745,9 +9759,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.85"></script>
+  <script src="app.js?v=18.86"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.85"></script>
+  <script src="auth.js?v=18.86"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

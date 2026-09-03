@@ -23852,7 +23852,15 @@ function _ubicarModulo(textoCompleto, moduloBuscado) {
   // SIGUIENTE completo como si fuera parte del nombre del módulo actual --
   // eso hacía que ese módulo nunca quedara registrado en `encabezados`, y el
   // recorte del módulo anterior se extendía de más, arrastrando sus RA.
-  const regexEncabezado = /m[oó]dulo\s+(\d+)\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo\s+\d+|\n|$)/gi;
+  // El número también es OPCIONAL ("(\d+)?") porque los "Módulos Comunes"
+  // (ej. "MÓDULO: TECNOLOGÍAS DIGITALES") no lo traen, a diferencia de los
+  // módulos técnicos numerados ("MÓDULO 3: ...") -- sin esto, un currículo con
+  // esa sección no generaba NINGÚN encabezado reconocible para esos módulos,
+  // y el código buscado (ej. "MFC004_3") nunca se llegaba ni a comparar.
+  // El lookahead negativo "(?![a-záéíóúñ])" evita que "MÓDULOS" (plural, en
+  // un título de sección como "7. MÓDULOS COMUNES") se confunda con un
+  // encabezado real ahora que ya no se exige un espacio+dígito después.
+  const regexEncabezado = /m[oó]dulo(?![a-záéíóúñ])\s*(\d+)?\s*[:.\-]?\s*(.+?)(?=\s+nivel\s*[:.\-]|\s+c[oó]digo\s*[:.\-]|\s+m[oó]dulo(?![a-záéíóúñ])\s*\d*\s*[:.\-]|\n|$)/gi;
   const encabezados = [];
   let m;
   while ((m = regexEncabezado.exec(textoCompleto)) !== null) {
