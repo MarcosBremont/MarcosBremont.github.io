@@ -16339,6 +16339,11 @@ function abrirInstrumentoActividad(actId, estudianteIdInicial) {
 function cerrarInstrumentoModal() {
   document.getElementById('instr-modal-overlay')?.classList.add('hidden');
   _instrModalState = null;
+  // registrarNota() (llamado en cada criterio marcado) guarda la nota pero no
+  // repinta la tabla de por sí -- sin esto, la celda se quedaba mostrando el
+  // valor viejo hasta el próximo re-render por otro motivo (cambiar de RA,
+  // de curso, etc.), aunque la nota nueva ya estuviera guardada.
+  renderizarTablaCalificaciones();
 }
 
 function _instrIrEstudiante(delta) {
@@ -16549,6 +16554,20 @@ function _menuCeldaGuardarComentario() {
   _menuCeldaIrVista('menu');
 }
 
+// Sobrescribe a mano la nota que normalmente calcula el instrumento (ej. para sumar
+// puntos extra) -- reutiliza registrarNota() tal cual, el mismo camino de guardado que
+// usa el instrumento, así que totales/recuperaciones/sync quedan consistentes igual.
+function _menuCeldaGuardarValor() {
+  const s = _celdaMenuState;
+  if (!s) return;
+  const input = document.getElementById('celda-menu-valor-input');
+  const valor = input ? input.value : '';
+  registrarNota(s.estId, s.actId, valor);
+  renderizarTablaCalificaciones();
+  mostrarToast(valor !== '' ? 'Nota actualizada' : 'Nota borrada', 'success');
+  _menuCeldaIrVista('menu');
+}
+
 function _califEvidenciasColeccion() {
   if (!window.currentUser || typeof db === 'undefined') return null;
   return db.collection('users').doc(window.currentUser.uid).collection('calif_evidencias');
@@ -16691,6 +16710,17 @@ function _renderMenuCeldaActividad() {
       + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
       + '<button onclick="_menuCeldaGuardarIcono()" style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Guardar</button>'
       + '</div>';
+  } else if (s.vista === 'valor') {
+    const raInfo = curso?.ras?.[s.raKey];
+    const max = raInfo?.valores?.[s.actId] || 100;
+    const notaActual = curso?.notas?.[s.estId]?.[s.raKey]?.[s.actId];
+    body.innerHTML = volver
+      + '<label style="font-size:0.82rem;font-weight:600;color:#546E7A;display:block;margin-bottom:6px;">Valor personalizado para esta nota</label>'
+      + '<input id="celda-menu-valor-input" type="number" min="0" max="' + max + '" step="0.5" value="' + (notaActual !== undefined ? notaActual : '') + '" placeholder="Ej: puntos extra" style="width:100%;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.95rem;box-sizing:border-box;">'
+      + '<div style="font-size:0.72rem;color:#9E9E9E;margin-top:6px;">Reemplaza la nota calculada por el instrumento (máx. ' + max + ' pts). Déjalo vacío para borrar la nota. Si vuelves a Llenar el Instrumento y cambias una respuesta, se recalcula de nuevo y este valor se pierde.</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
+      + '<button onclick="_menuCeldaGuardarValor()" style="background:#1565C0;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:0.85rem;cursor:pointer;font-weight:700;">Guardar</button>'
+      + '</div>';
   } else if (s.vista === 'comentario') {
     body.innerHTML = volver
       + '<label style="font-size:0.82rem;font-weight:600;color:#546E7A;display:block;margin-bottom:6px;">Comentario sobre esta nota</label>'
@@ -16732,6 +16762,7 @@ function _renderMenuCeldaActividad() {
       + '</button>';
     body.innerHTML = '<div style="font-size:0.78rem;color:#78909C;margin-bottom:12px;">' + escapeHTML(act?.enunciado || '') + '</div>'
       + filaBtn('fact_check', '#00695C', 'Llenar el Instrumento', '_menuCeldaLlenarInstrumento()')
+      + filaBtn('edit', '#37474F', 'Valor personalizado', '_menuCeldaIrVista(\'valor\')')
       + filaBtn('mood', '#F9A825', 'Ícono', '_menuCeldaIrVista(\'icono\')', extra.icono ? '<span style="font-size:1.1rem;">' + escapeHTML(extra.icono) + '</span>' : '')
       + filaBtn('comment', '#1565C0', 'Comentario', '_menuCeldaIrVista(\'comentario\')', extra.comentario ? '<span class="material-icons" style="font-size:14px;color:#1565C0;">circle</span>' : '')
       + filaBtn('attach_file', '#6A1B9A', 'Recursos', '_menuCeldaIrVista(\'recursos\')');
