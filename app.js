@@ -17045,9 +17045,24 @@ function _renderInstrumentoModalTipoEspecial(s, body, titulo, curso, est) {
   // escala / caritas / posneg
   const niveles = TIPO_EVAL_NIVELES[s.modo] || [];
   const notaActual = curso.notas?.[est.id]?.[s.raKey]?.[s.actId];
-  const opciones = niveles.map(n => {
+  // Un solo nivel puede quedar "activo" a la vez -- se busca el MÁS CERCANO a
+  // la nota guardada (por índice) en vez de que cada botón se autoevalúe por
+  // separado, porque con maxValor en 0 (columna sin puntos asignados todavía)
+  // varios niveles redondean al mismo valor (ej. Positivo y Negativo ambos en
+  // 0 pts) y sin esto los dos se marcaban como seleccionados a la vez.
+  let nivelActivoIdx = -1;
+  if (notaActual !== undefined) {
+    let mejorDist = Infinity;
+    niveles.forEach((n, i) => {
+      const dist = Math.abs(notaActual - Math.round(n.frac * s.maxValor * 10) / 10);
+      if (dist < mejorDist) { mejorDist = dist; nivelActivoIdx = i; }
+    });
+    if (mejorDist >= 0.05) nivelActivoIdx = -1;
+  }
+
+  const opciones = niveles.map((n, i) => {
     const valorNivel = Math.round(n.frac * s.maxValor * 10) / 10;
-    const activo = notaActual !== undefined && Math.abs(notaActual - valorNivel) < 0.05;
+    const activo = i === nivelActivoIdx;
     return '<button onclick="_instrSeleccionarNivel(' + n.frac + ')" '
       + 'style="flex:1;min-width:88px;padding:12px 6px;border:1.5px solid ' + (activo ? '#1565C0' : '#E0E0E0') + ';border-radius:10px;'
       + 'background:' + (activo ? '#1565C0' : '#F5F5F5') + ';color:' + (activo ? '#fff' : '#616161') + ';'
@@ -17056,7 +17071,15 @@ function _renderInstrumentoModalTipoEspecial(s, body, titulo, curso, est) {
       + escapeHTML(n.label) + '<span style="font-weight:400;opacity:0.85;font-size:0.7rem;">' + valorNivel + ' pts</span></button>';
   }).join('');
 
+  const avisoSinPuntos = s.maxValor <= 0
+    ? '<div style="background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;border-radius:8px;padding:8px 10px;font-size:0.78rem;margin-bottom:10px;">'
+      + '<span class="material-icons" style="font-size:14px;vertical-align:middle;margin-right:4px;">warning</span>'
+      + 'Esta columna todavía no tiene puntos asignados (0 pts) -- cierra este modal y escribe un valor en el encabezado de la columna para que la selección cuente para el total del RA.'
+      + '</div>'
+    : '';
+
   body.innerHTML = cabecera
+    + avisoSinPuntos
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' + opciones + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'
     + saltarCheckbox
