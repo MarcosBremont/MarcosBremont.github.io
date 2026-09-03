@@ -1945,7 +1945,9 @@
       <div class="section-header">
         <span class="material-icons section-icon" style="background:#E8F5E9;color:#2E7D32;">grade</span>
         <h2>Libro de Calificaciones</h2>
-        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
           <button class="btn-export btn-sm" id="btn-toggle-asistencia" onclick="toggleVistaAsistencia()"
             style="background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;">
             <span class="material-icons">how_to_reg</span> Asistencia
@@ -1976,7 +1978,6 @@
             title="Exporta las notas del RA activo a Excel (o la lista de alumnos si no hay RA activo)">
             <span class="material-icons">grid_on</span> Exportar Excel
           </button>
-        </div>
       </div>
 
       <!-- Selector / creador de cursos -->
@@ -3593,6 +3594,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#37474F;">v18.89<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Ajuste: botones de Calificaciones en su propia fila</div>
+              <ul class="about-ver-items">
+                <li>Los botones (Asistencia, Participación, Aleatorio, Pendientes, Exportar Word, Fotos, Exportar Excel) ya no comparten fila con el título "Libro de Calificaciones" -- ahora van debajo, en su propia fila horizontal, con más espacio para acomodarse sin amontonarse.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
