@@ -3598,6 +3598,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.91<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: "Cargar Currículo (PDF)" perdía RA de numeración irregular</div>
+              <ul class="about-ver-items">
+                <li>Reportado con un módulo real (RA2.1, RA2.2, RAE3.1, RA4): solo se reconocían 2 de los 4 RA, y esos 2 salían con textos "CE2.1.1 fundamentales..." mezclados a mitad de oración. Dos causas: (1) un filtro de seguridad descartaba cualquier RA cuyo número no empezara con el número del módulo -- pero en un módulo real, no todos sus RA siguen esa numeración (RAE3.1 y RA4 no tienen relación con "Módulo 2"), así que se perdían aunque sí eran del módulo correcto. (2) Al calcular hasta qué página del PDF revisar, se usaba el largo del texto ya limpiado de pie de página repetido -- ese recorte hacía que la cuenta de páginas se quedara corta, y a la separación de columnas (RA vs Criterios) le faltaban páginas, mezclando texto de ambas columnas. Ambas causas corregidas.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#0D47A1;">v18.90<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9816,9 +9830,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.90"></script>
+  <script src="app.js?v=18.91"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.90"></script>
+  <script src="auth.js?v=18.91"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

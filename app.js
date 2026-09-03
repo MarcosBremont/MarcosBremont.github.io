@@ -24345,11 +24345,25 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   let textoRA = textoModulo, textoCE = textoModulo, columnasSeparadas = false;
   if (paginas && paginas.length) {
     const paginaInicio = _paginaDeIndice(textoCompleto, ubicacion.idxInicio);
-    // Usa el largo real de textoModulo (puede haberse acortado arriba por el
-    // recorte de "otro código institucional"), no ubicacion.idxFin a secas --
-    // si no, se seguirían incluyendo páginas del módulo siguiente en la
-    // reconstrucción de columnas aunque el texto lineal ya se haya recortado.
-    const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxInicio + textoModulo.length);
+    // OJO: usar ubicacion.idxFin directo (no el largo de textoModulo) a
+    // propósito. Antes se usaba textoModulo.length para no incluir páginas
+    // del módulo siguiente cuando el corte de "otro código institucional" (ver
+    // _indiceCorteExtra) recortaba textoModulo -- pero textoModulo YA pasó por
+    // _quitarPieDePagina() en ese punto, que BORRA el pie de página repetido
+    // de cada hoja (varias veces dentro del mismo módulo, una por página) --
+    // su longitud ya no corresponde 1:1 con las posiciones reales de
+    // textoCompleto, así que "idxInicio + textoModulo.length" podía caer
+    // páginas ANTES de donde el módulo de verdad termina, dejando afuera de
+    // _reconstruirColumnasTabla() paginas con contenido legítimo -- visto en
+    // un documento real: la columna de RA salía con marcadores "CE" pegados
+    // en medio de las oraciones (ej. "Aplicar los principios CE2.1.1
+    // fundamentales..."), porque a la reconstrucción de columnas le faltaban
+    // páginas y su separación por posición X quedaba poco confiable. Pasarse
+    // de largo unas páginas de más SÍ es seguro: el corte de
+    // _indiceCorteExtra se vuelve a aplicar, ahora sobre cada columna ya
+    // reconstruida (ver más abajo), así que cualquier contenido del módulo
+    // siguiente que se cuele igual se recorta ahí.
+    const paginaFin = _paginaDeIndice(textoCompleto, ubicacion.idxFin);
     const columnas = _reconstruirColumnasTabla(paginas, paginaInicio, paginaFin);
     if (columnas) {
       // El pie de página repetido también reaparece dentro de las columnas
@@ -24393,36 +24407,23 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   }
   if (!posicionesRA.length) return null;
 
-  // Defensa adicional además del acotado de _ubicarModulo: si por cualquier
-  // motivo el recorte se pasó de largo (ej. un caso de borde no cubierto en
-  // el límite de encabezados), un RA cuyo número no empiece con el número del
-  // módulo buscado (ej. "RA4.2" al buscar el módulo 3) NUNCA es del módulo
-  // correcto y se descarta del resultado final -- pero se mantiene en
-  // `posicionesRA` para el cálculo de límites de abajo, porque SÍ sirve como
-  // frontera válida (la descripción del último RA correcto debe parar ahí,
-  // sea o no del mismo módulo).
-  // Esta defensa asume que el RA se numera RELATIVO al módulo (ej. módulo 5 =>
-  // "RA5.1", "RA5.2"...) -- pero algunos currículos (ej. catálogo nacional
-  // DETP/INFOTEP) usan códigos de RA GLOBALES de 4 dígitos ("RA0090",
-  // "RA0091"...) sin ninguna relación con el número secuencial del módulo, y
-  // ahí el filtro descartaría TODOS los RA reales aunque el módulo se haya
-  // ubicado bien -- ese caso ya lo cubre el "si queda vacío, usar todo" de
-  // abajo. Pero hay un caso más sutil, visto en un documento real: un RA
-  // "RAXX1".."RAXX7" (numeración ordinal de la tabla, sin relación con el
-  // módulo -- ver regexRA) puede tener UNO de sus números coincidir por pura
-  // casualidad con el número del módulo (ej. módulo 3 y existe un "RAXX3")
-  // -- ahí el filtro NO queda vacío, deja pasar solo ese RA "coincidencia" y
-  // descarta los otros 6 reales, sin que el respaldo de "vacío -> usar todo"
-  // se active. Por eso el respaldo no es "¿quedó vacío?" sino "¿el filtro
-  // dejó menos de la mitad?": una fuga real de un módulo vecino (el caso que
-  // este filtro sí debe atrapar) normalmente son 1 o 2 RA sueltos que se
-  // "pegaron" en el borde, nunca la mayoría de la lista.
-  const posicionesRAFiltradas = ubicacion.numeroModulo
-    ? posicionesRA.filter(ra => ra.numero.split('.')[0] === ubicacion.numeroModulo)
-    : posicionesRA;
-  const posicionesRAModulo = posicionesRAFiltradas.length >= posicionesRA.length / 2
-    ? posicionesRAFiltradas
-    : posicionesRA;
+  // ANTES había acá un filtro adicional que descartaba cualquier RA cuyo
+  // número no empezara con el número del módulo buscado (ej. "RA4.2" al
+  // buscar el módulo 3), pensado como defensa extra por si el acotado de
+  // _ubicarModulo se pasaba de largo hacia el módulo siguiente. Se retiró:
+  // asumía que el RA se numera RELATIVO al módulo, pero un currículo real
+  // demostró que NO siempre es así ni siquiera DENTRO de un mismo módulo --
+  // un módulo 2 con RA2.1, RA2.2, RAE3.1 y RA4 (los últimos dos sin ninguna
+  // relación numérica con "2") -- el filtro descartaba esos dos RA reales
+  // porque su "mitad sobrevive" (2 de 4 -- justo el límite) no alcanzaba a
+  // disparar el respaldo de "si queda muy corto, usar todo sin filtrar".
+  // Cualquier umbral fijo iba a fallar tarde o temprano con algún documento
+  // real. El acotado de _ubicarModulo (que exige encontrar el encabezado real
+  // del módulo SIGUIENTE, no solo un número que coincida) ya es la defensa
+  // confiable contra que se cuele contenido de otro módulo -- no hace falta
+  // una segunda defensa basada en numeración, que resulta más frágil que el
+  // problema que trata de evitar.
+  const posicionesRAModulo = posicionesRA;
   if (!posicionesRAModulo.length) return null;
 
   // Tres formatos vistos en documentos reales:
