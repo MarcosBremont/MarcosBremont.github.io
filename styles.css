@@ -7238,6 +7238,18 @@ body.dark-mode .th-act--comp {
   color: #FFB74D !important;
 }
 
+/* Título de cada sección ("Libro de Calificaciones", "Datos Generales",
+   "Mi Horario"...) -- .section-header h2 usa var(--color-primario-dark),
+   que NUNCA se redefine para modo oscuro (solo existe el valor de modo
+   claro, #163E7D, un azul marino) -- sobre el fondo ya oscuro de la app
+   (#0F1117/#1A1D27, un azul-gris igual de oscuro) el título casi
+   desaparece por la falta de contraste. Este selector se usa en
+   prácticamente todos los paneles principales de la app, así que este
+   único fix corrige el título de todos ellos a la vez. */
+body.dark-mode .section-header h2 {
+  color: #90CAF9 !important;
+}
+
 body.dark-mode #conexion-indicador {
   background: #2E2010 !important;
   border-color: #5D4200 !important;
