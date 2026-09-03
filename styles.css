@@ -9545,6 +9545,218 @@ body.dark-mode .pln-grupo-cards {
   background: #13151F;
 }
 
+/* ---------- Editor de Rúbricas ---------- */
+.rub-editor-box {
+  max-width: 1100px;
+  width: 96%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rub-editor-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-lg);
+  margin-bottom: 16px;
+}
+
+.rub-grid-wrap {
+  overflow-x: auto;
+  border: 1.5px solid var(--color-borde);
+  border-radius: var(--radio-md);
+}
+
+.rub-grid {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+}
+
+.rub-grid th,
+.rub-grid td {
+  border: 1px solid var(--color-borde);
+  vertical-align: top;
+  padding: 8px;
+}
+
+.rub-th-criterio {
+  background: var(--color-primario-surface);
+  min-width: 160px;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--color-primario-dark);
+  padding: 8px 10px;
+}
+
+.rub-th-col {
+  background: #F3E5F5;
+  min-width: 190px;
+  position: relative;
+}
+
+.rub-th-add {
+  background: var(--color-fondo);
+  width: 44px;
+  text-align: center;
+}
+
+.rub-th-add button,
+.rub-col-del,
+.rub-fila-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6A1B9A;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+}
+
+.rub-th-add button:hover,
+.rub-col-del:hover,
+.rub-fila-del:hover {
+  color: #EF5350;
+}
+
+.rub-col-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+.rub-col-titulo {
+  width: 100%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  background: transparent;
+  color: #4A148C;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+}
+
+.rub-col-nota {
+  width: 60px;
+  border: 1px solid #CE93D8;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  background: #fff;
+}
+
+.rub-td-criterio {
+  background: #FAFAFA;
+  position: relative;
+}
+
+.rub-fila-criterio {
+  width: 100%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  margin-bottom: 4px;
+}
+
+.rub-fila-desc {
+  width: 100%;
+  min-height: 44px;
+  font-size: 0.78rem;
+  color: #757575;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.rub-fila-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+.rub-td-celda textarea {
+  width: 100%;
+  min-height: 64px;
+  font-size: 0.8rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  padding: 5px 7px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+
+.rub-add-fila-btn {
+  margin-top: 10px;
+  background: #F3E5F5;
+  color: #6A1B9A;
+  border: 1.5px dashed #CE93D8;
+  border-radius: var(--radio-md);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rub-add-fila-btn:hover {
+  background: #E1BEE7;
+}
+
+body.dark-mode .rub-th-criterio {
+  background: #1A2A4A !important;
+  color: #90CAF9 !important;
+}
+
+body.dark-mode .rub-th-col {
+  background: #2A1A3A !important;
+}
+
+body.dark-mode .rub-col-titulo {
+  color: #E1BEE7 !important;
+}
+
+body.dark-mode .rub-col-nota {
+  background: #12151F !important;
+  border-color: #4A2E5A !important;
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .rub-td-criterio {
+  background: #1A1D27 !important;
+}
+
+body.dark-mode .rub-fila-criterio {
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .rub-fila-desc,
+body.dark-mode .rub-td-celda textarea {
+  background: #12151F !important;
+  border-color: var(--color-borde) !important;
+  color: var(--color-texto-primario) !important;
+}
+
+body.dark-mode .rub-th-add {
+  background: var(--color-fondo) !important;
+}
+
+body.dark-mode .rub-add-fila-btn {
+  background: #2A1A3A !important;
+  border-color: #4A2E5A !important;
+  color: #E1BEE7 !important;
+}
+
+body.dark-mode .rub-add-fila-btn:hover {
+  background: #3A2050 !important;
+}
+
 body.dark-mode .pln-badge-activa {
   background: #0D2E0D;
   color: #81C784;

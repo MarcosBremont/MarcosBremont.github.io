@@ -30,6 +30,7 @@ const FIREBASE_STORES = [
   { store: 'geminiKey',            key: 'planificadorRA_geminiKey' },
   { store: 'openrouterKey',        key: 'planificadorRA_openrouterKey' },
   { store: 'stickies',             key: 'planificadorRA_stickies_v1' },
+  { store: 'rubricas',             key: 'planificadorRA_rubricas_v1' },
   { store: 'notas_clase',          key: 'planificadorRA_notas_clase_v1' },
   { store: 'obs_estudiantes',      key: 'planificadorRA_obs_estudiantes_v1' },
   { store: 'eval_formas',          key: 'planificadorRA_eval_formas_v1' },

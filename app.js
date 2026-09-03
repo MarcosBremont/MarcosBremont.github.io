@@ -1239,7 +1239,7 @@ function _mostrarWizardEtp() {
  *  ni irAlPaso() de ETP. */
 function _ocultarPanelesAcademico() {
   _mostrarWizardAcademico();
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil', 'panel-rubricas'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   irAlPasoAcademico(pasoActualAcademico || 1, false);
@@ -3799,6 +3799,376 @@ function _confirmarItemComplementario() {
     : `Ítem "${agregados[0]}" agregado ✓ — Asígnale un valor en puntos`;
   if (yaExistentes.length) msg += `. Ya existía${yaExistentes.length > 1 ? 'n' : ''}: ${yaExistentes.join(', ')}`;
   mostrarToast(msg, 'success');
+}
+
+/** Igual que _agregarItemComplementario(), pero para invocarse directamente desde
+ *  el Libro de Calificaciones (botón "Agregar columna"), no desde el editor de
+ *  Planificación Académica -- por eso escribe en la planificación GUARDADA en la
+ *  biblioteca (curso.planActivaId) en vez de en la variable global `planificacion`
+ *  (que solo existe mientras el docente tiene el editor abierto). */
+function _calAgregarItemComplementario() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) { mostrarToast('Selecciona un curso con una planificación activa', 'error'); return; }
+
+  const opciones = ITEMS_COMPLEMENTARIOS.map(it =>
+    `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FAFAFA;border:1.5px solid #E0E0E0;border-radius:10px;cursor:pointer;transition:all 0.15s;"
+       onmouseover="this.style.borderColor='#E65100'" onmouseout="this.style.borderColor='#E0E0E0'">
+      <input type="checkbox" name="cal-comp-tipo" value="${it.id}" style="accent-color:#E65100;width:17px;height:17px;">
+      <span class="material-icons" style="font-size:22px;color:#E65100;">${it.icono}</span>
+      <span style="font-weight:600;font-size:0.9rem;">${it.label}</span>
+    </label>`
+  ).join('');
+
+  document.getElementById('modal-title').textContent = 'Agregar columna';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <p style="color:#78909C;font-size:0.82rem;margin:0;">
+        Se agrega como una columna más al final del Libro de Calificaciones y suma al total del RA activo.
+        Puedes seleccionar varias a la vez -- se agregarán cada una por separado.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;">${opciones}</div>
+      <div id="cal-comp-custom-wrap" class="hidden" style="margin-top:4px;">
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">Nombre de la columna</label>
+        <input type="text" id="cal-comp-custom-nombre" placeholder="Ej: Proyecto final, Exposición..."
+          style="width:100%;padding:9px 12px;border:1.5px solid #FFCC80;border-radius:8px;font-size:0.88rem;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" style="background:#E65100;" onclick="_calConfirmarItemComplementario()">
+          <span class="material-icons">add</span> Agregar
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+
+  setTimeout(() => {
+    document.querySelectorAll('input[name="cal-comp-tipo"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const wrap = document.getElementById('cal-comp-custom-wrap');
+        const otroMarcado = document.querySelector('input[name="cal-comp-tipo"][value="otro"]')?.checked;
+        if (wrap) wrap.classList.toggle('hidden', !otroMarcado);
+      });
+    });
+  }, 50);
+}
+
+function _calConfirmarItemComplementario() {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) { mostrarToast('Selecciona un curso con una planificación activa', 'error'); return; }
+
+  const seleccionados = Array.from(document.querySelectorAll('input[name="cal-comp-tipo"]:checked'));
+  if (!seleccionados.length) { mostrarToast('Selecciona al menos un tipo de columna', 'error'); return; }
+
+  const nombreCustom = document.getElementById('cal-comp-custom-nombre')?.value?.trim();
+  if (seleccionados.some(sel => sel.value === 'otro') && (!nombreCustom || nombreCustom.length < 2)) {
+    mostrarToast('Escribe el nombre de la columna personalizada', 'error');
+    return;
+  }
+
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === curso.planActivaId);
+  if (!reg || !reg.planificacion) { mostrarToast('No se encontró la planificación activa', 'error'); return; }
+  if (!reg.planificacion.actividades) reg.planificacion.actividades = [];
+
+  const agregados = [];
+  const yaExistentes = [];
+
+  seleccionados.forEach(sel => {
+    const tipo = sel.value;
+    let label, icono;
+    if (tipo === 'otro') {
+      label = nombreCustom;
+      icono = 'add_box';
+    } else {
+      const def = ITEMS_COMPLEMENTARIOS.find(i => i.id === tipo);
+      label = def.label;
+      icono = def.icono;
+    }
+
+    const yaExiste = tipo !== 'otro' && reg.planificacion.actividades.some(a =>
+      a.esComplementario && a.complementarioTipo === tipo
+    );
+    if (yaExiste) { yaExistentes.push(label); return; }
+
+    reg.planificacion.actividades.push({
+      id: 'comp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      ecCodigo: 'COMP',
+      enunciado: label,
+      fecha: '',
+      fechaStr: '',
+      esComplementario: true,
+      complementarioTipo: tipo,
+      complementarioIcono: icono,
+      instrumento: { tipo: 'complementario', tipoLabel: label, titulo: label }
+    });
+    agregados.push(label);
+  });
+
+  if (!agregados.length) {
+    mostrarToast(`Ya existe${yaExistentes.length > 1 ? 'n' : ''}: ${yaExistentes.join(', ')}`, 'error');
+    return;
+  }
+
+  persistirBiblioteca(biblio);
+  cerrarModalBtn();
+  renderizarTablaCalificaciones();
+
+  let msg = agregados.length > 1
+    ? `${agregados.length} columnas agregadas ✓ (${agregados.join(', ')}) — Asígnales un valor en puntos`
+    : `Columna "${agregados[0]}" agregada ✓ — Asígnale un valor en puntos`;
+  if (yaExistentes.length) msg += `. Ya existía${yaExistentes.length > 1 ? 'n' : ''}: ${yaExistentes.join(', ')}`;
+  mostrarToast(msg, 'success');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: BIBLIOTECA DE RÚBRICAS
+// Biblioteca reutilizable de rúbricas (cuadrícula criterios x niveles),
+// independiente de la rúbrica que ya se autogenera por actividad dentro de un
+// instrumento (INSTRUMENTOS.rubrica) -- esta es para guardar, organizar por
+// carpeta y reutilizar rúbricas propias del docente, igual que la biblioteca
+// de planificaciones.
+// ════════════════════════════════════════════════════════════════════
+const RUBRICAS_KEY = 'planificadorRA_rubricas_v1';
+const RUBRICA_NIVELES_DEFECTO = [
+  { titulo: 'Excelente', nota: 5 },
+  { titulo: 'Muy Bien', nota: 4 },
+  { titulo: 'Bien', nota: 3 },
+  { titulo: 'Suficiente', nota: 2 },
+  { titulo: 'Insuficiente', nota: 1 }
+];
+
+let _rubricaEditorActual = null;
+let _rubricaEditorEsNueva = false;
+
+function cargarRubricas() {
+  try {
+    const datos = JSON.parse(localStorage.getItem(RUBRICAS_KEY) || '{"items":[]}');
+    if (!Array.isArray(datos.items)) datos.items = [];
+    return datos;
+  } catch (e) { return { items: [] }; }
+}
+
+function guardarRubricas(datos) {
+  localStorage.setItem(RUBRICAS_KEY, JSON.stringify(datos));
+  if (window._syncFirebase) _syncFirebase('rubricas', datos);
+}
+
+function abrirRubricas() {
+  _mostrarPanel('panel-rubricas');
+  renderizarListaRubricas();
+}
+
+function cerrarRubricas() {
+  abrirDashboard();
+}
+
+function renderizarListaRubricas() {
+  const cont = document.getElementById('rub-lista');
+  if (!cont) return;
+  const items = cargarRubricas().items;
+
+  if (!items.length) {
+    cont.innerHTML = '<p style="text-align:center;color:#9E9E9E;padding:2rem;">Todavía no tienes rúbricas guardadas. Crea la primera con el botón de arriba.</p>';
+    return;
+  }
+
+  const porCarpeta = {};
+  items.forEach(r => {
+    const carpeta = (r.carpeta || '').trim() || 'Sin carpeta';
+    if (!porCarpeta[carpeta]) porCarpeta[carpeta] = [];
+    porCarpeta[carpeta].push(r);
+  });
+
+  cont.innerHTML = Object.keys(porCarpeta).sort((a, b) => a.localeCompare(b, 'es')).map(carpeta => {
+    const rubricas = porCarpeta[carpeta];
+    const cards = rubricas.map(r => `
+      <div class="pln-card" style="cursor:default;">
+        <div class="pln-card-modulo" style="cursor:pointer;" onclick="_rubricaAbrirEditor('${r.id}')">
+          <span class="material-icons" style="font-size:16px;vertical-align:middle;color:#6A1B9A;">table_chart</span>
+          ${escapeHTML(r.nombre || 'Sin nombre')}
+        </div>
+        <div class="pln-card-meta"><span>${(r.filas || []).length} criterio${(r.filas || []).length !== 1 ? 's' : ''} · ${(r.columnas || []).length} nivel${(r.columnas || []).length !== 1 ? 'es' : ''}</span></div>
+        <div class="pln-card-actions">
+          <button onclick="_rubricaAbrirEditor('${r.id}')" title="Editar" style="color:#1565C0;"><span class="material-icons">edit</span></button>
+          <button onclick="_rubricaDuplicar('${r.id}')" title="Duplicar" style="color:#00695C;"><span class="material-icons">content_copy</span></button>
+          <button class="btn-pln-del" onclick="_rubricaEliminar('${r.id}')" title="Eliminar"><span class="material-icons">delete_outline</span></button>
+        </div>
+      </div>`).join('');
+
+    return `<div class="pln-grupo">
+      <div class="pln-grupo-header" onclick="this.parentElement.classList.toggle('pln-grupo-collapsed')">
+        <span class="material-icons" style="color:#6A1B9A;">folder</span>
+        <span class="pln-grupo-nombre">${escapeHTML(carpeta)}</span>
+        <span class="pln-grupo-count">${rubricas.length} rúbrica${rubricas.length !== 1 ? 's' : ''}</span>
+        <span class="material-icons pln-grupo-chevron">expand_more</span>
+      </div>
+      <div class="pln-grupo-cards">${cards}</div>
+    </div>`;
+  }).join('');
+}
+
+function _rubricaNueva() {
+  const datos = cargarRubricas();
+  const nueva = {
+    id: 'rub-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    nombre: 'Nueva rúbrica',
+    carpeta: '',
+    creadaEn: new Date().toISOString(),
+    actualizadaEn: new Date().toISOString(),
+    columnas: RUBRICA_NIVELES_DEFECTO.map(n => ({ ...n })),
+    filas: [{ criterio: '', descripcion: '', celdas: RUBRICA_NIVELES_DEFECTO.map(() => '') }]
+  };
+  datos.items.push(nueva);
+  guardarRubricas(datos);
+  _rubricaEditorEsNueva = true;
+  _rubricaAbrirEditor(nueva.id);
+}
+
+function _rubricaAbrirEditor(id) {
+  const reg = cargarRubricas().items.find(r => r.id === id);
+  if (!reg) { mostrarToast('No se encontró la rúbrica', 'error'); return; }
+  _rubricaEditorActual = JSON.parse(JSON.stringify(reg));
+  document.getElementById('rubrica-editor-overlay')?.classList.remove('hidden');
+  _renderEditorRubrica();
+}
+
+function _rubricaCerrarEditor(descartarSiEsNueva) {
+  if (descartarSiEsNueva && _rubricaEditorEsNueva && _rubricaEditorActual) {
+    const datos = cargarRubricas();
+    datos.items = datos.items.filter(r => r.id !== _rubricaEditorActual.id);
+    guardarRubricas(datos);
+  }
+  _rubricaEditorActual = null;
+  _rubricaEditorEsNueva = false;
+  document.getElementById('rubrica-editor-overlay')?.classList.add('hidden');
+  renderizarListaRubricas();
+}
+
+function _renderEditorRubrica() {
+  const r = _rubricaEditorActual;
+  if (!r) return;
+
+  const titEl = document.getElementById('rub-ed-titulo');
+  if (titEl) titEl.textContent = r.nombre || 'Nueva rúbrica';
+
+  const cont = document.getElementById('rub-ed-body');
+  if (!cont) return;
+
+  const encabezadoCols = r.columnas.map((c, ci) => `
+    <th class="rub-th-col">
+      <input type="text" class="rub-col-titulo" value="${escapeHTML(c.titulo)}" placeholder="Nivel"
+        oninput="_rubricaEditorActual.columnas[${ci}].titulo=this.value">
+      <input type="number" class="rub-col-nota" value="${c.nota}" step="0.5"
+        oninput="_rubricaEditorActual.columnas[${ci}].nota=parseFloat(this.value)||0">
+      ${r.columnas.length > 1 ? `<button class="rub-col-del" onclick="_rubricaEliminarColumna(${ci})" title="Eliminar nivel"><span class="material-icons">close</span></button>` : ''}
+    </th>`).join('');
+
+  const filasHtml = r.filas.map((f, fi) => `
+    <tr>
+      <td class="rub-td-criterio">
+        <input type="text" class="rub-fila-criterio" value="${escapeHTML(f.criterio)}" placeholder="Criterio"
+          oninput="_rubricaEditorActual.filas[${fi}].criterio=this.value">
+        <textarea class="rub-fila-desc" placeholder="Descripción breve del criterio"
+          oninput="_rubricaEditorActual.filas[${fi}].descripcion=this.value">${escapeHTML(f.descripcion)}</textarea>
+        ${r.filas.length > 1 ? `<button class="rub-fila-del" onclick="_rubricaEliminarFila(${fi})" title="Eliminar criterio"><span class="material-icons">delete_outline</span></button>` : ''}
+      </td>
+      ${r.columnas.map((c, ci) => `
+        <td class="rub-td-celda">
+          <textarea placeholder="Descripción para este nivel"
+            oninput="_rubricaEditorActual.filas[${fi}].celdas[${ci}]=this.value">${escapeHTML(f.celdas[ci] || '')}</textarea>
+        </td>`).join('')}
+    </tr>`).join('');
+
+  cont.innerHTML = `
+    <div class="rub-editor-meta">
+      <div class="form-group">
+        <label for="rub-ed-nombre">Nombre</label>
+        <input type="text" id="rub-ed-nombre" value="${escapeHTML(r.nombre)}" placeholder="Ej: Rúbrica de corrección del cuaderno"
+          oninput="_rubricaEditorActual.nombre=this.value;document.getElementById('rub-ed-titulo').textContent=this.value||'Nueva rúbrica';">
+      </div>
+      <div class="form-group">
+        <label for="rub-ed-carpeta">Carpeta (materia)</label>
+        <input type="text" id="rub-ed-carpeta" value="${escapeHTML(r.carpeta)}" placeholder="Ej: Tecnologías Digitales"
+          oninput="_rubricaEditorActual.carpeta=this.value">
+      </div>
+    </div>
+    <div class="rub-grid-wrap">
+      <table class="rub-grid">
+        <thead><tr>
+          <th class="rub-th-criterio">Criterio</th>
+          ${encabezadoCols}
+          <th class="rub-th-add"><button onclick="_rubricaAgregarColumna()" title="Agregar nivel"><span class="material-icons">add</span></button></th>
+        </tr></thead>
+        <tbody>${filasHtml}</tbody>
+      </table>
+    </div>
+    <button class="rub-add-fila-btn" onclick="_rubricaAgregarFila()"><span class="material-icons">add</span> Agregar criterio</button>`;
+}
+
+function _rubricaAgregarColumna() {
+  _rubricaEditorActual.columnas.push({ titulo: 'Nuevo nivel', nota: 0 });
+  _rubricaEditorActual.filas.forEach(f => f.celdas.push(''));
+  _renderEditorRubrica();
+}
+
+function _rubricaEliminarColumna(ci) {
+  if (_rubricaEditorActual.columnas.length <= 1) return;
+  _rubricaEditorActual.columnas.splice(ci, 1);
+  _rubricaEditorActual.filas.forEach(f => f.celdas.splice(ci, 1));
+  _renderEditorRubrica();
+}
+
+function _rubricaAgregarFila() {
+  _rubricaEditorActual.filas.push({ criterio: '', descripcion: '', celdas: _rubricaEditorActual.columnas.map(() => '') });
+  _renderEditorRubrica();
+}
+
+function _rubricaEliminarFila(fi) {
+  if (_rubricaEditorActual.filas.length <= 1) return;
+  _rubricaEditorActual.filas.splice(fi, 1);
+  _renderEditorRubrica();
+}
+
+function _rubricaGuardar() {
+  const r = _rubricaEditorActual;
+  if (!r) return;
+  if (!r.nombre || !r.nombre.trim()) { mostrarToast('Escribe un nombre para la rúbrica', 'error'); return; }
+
+  r.actualizadaEn = new Date().toISOString();
+  const datos = cargarRubricas();
+  const idx = datos.items.findIndex(i => i.id === r.id);
+  if (idx === -1) datos.items.push(r); else datos.items[idx] = r;
+  guardarRubricas(datos);
+
+  _rubricaEditorEsNueva = false;
+  mostrarToast('Rúbrica guardada ✓', 'success');
+  _rubricaCerrarEditor(false);
+}
+
+function _rubricaDuplicar(id) {
+  const datos = cargarRubricas();
+  const reg = datos.items.find(r => r.id === id);
+  if (!reg) return;
+  const copia = JSON.parse(JSON.stringify(reg));
+  copia.id = 'rub-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  copia.nombre = (reg.nombre || 'Rúbrica') + ' (copia)';
+  copia.creadaEn = new Date().toISOString();
+  copia.actualizadaEn = copia.creadaEn;
+  datos.items.push(copia);
+  guardarRubricas(datos);
+  renderizarListaRubricas();
+  mostrarToast('Rúbrica duplicada ✓', 'success');
+}
+
+function _rubricaEliminar(id) {
+  const datos = cargarRubricas();
+  const reg = datos.items.find(r => r.id === id);
+  if (!reg) return;
+  if (!confirm('¿Eliminar la rúbrica "' + reg.nombre + '"? Esta acción no se puede deshacer.')) return;
+  datos.items = datos.items.filter(r => r.id !== id);
+  guardarRubricas(datos);
+  renderizarListaRubricas();
+  mostrarToast('Rúbrica eliminada', 'info');
 }
 
 function distribuirPuntosAutomatico() {
@@ -11392,7 +11762,7 @@ function _mostrarPanel(panelId) {
   // la impresión de que el clic no hizo nada y "regresó" solo a la planificación.
   document.getElementById('wizard-academico')?.classList.add('hidden');
   // Ocultar otros paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil', 'panel-rubricas'].forEach(id => {
     if (id !== panelId) document.getElementById(id)?.classList.add('hidden');
   });
   // Mostrar panel deseado
@@ -11408,7 +11778,7 @@ function _ocultarPaneles() {
   });
   _stepSectionsOcultas = false;
   // Ocultar paneles
-  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil'].forEach(id => {
+  ['panel-calificaciones', 'panel-planificaciones', 'panel-diarias', 'panel-dashboard', 'panel-horario', 'panel-tareas', 'panel-notas', 'panel-libreta', 'panel-portafolio', 'panel-rendimiento', 'panel-blog', 'panel-recuperaciones', 'panel-auditoria', 'panel-calendario-escolar', 'panel-cumpleanos', 'panel-compartidos', 'panel-reportes-comp', 'panel-denuncias', 'panel-coordinadora', 'panel-director', 'panel-admin-centro', 'panel-pagos', 'panel-superadmin', 'panel-tutorial', 'panel-examenes', 'panel-psicologia', 'panel-vinculacion', 'panel-perfil', 'panel-rubricas'].forEach(id => {
     document.getElementById(id)?.classList.add('hidden');
   });
   // Re-aplicar visibilidad de pasos segun el paso actual
