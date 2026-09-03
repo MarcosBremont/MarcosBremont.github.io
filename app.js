@@ -24309,7 +24309,13 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // módulo real usa "UC_ETP_02_3" en vez de "UC01_3" -- así que se captura el
   // código completo tal como aparece (letras/dígitos/guion bajo terminando en
   // "_dígito") en vez de asumir un formato fijo y reconstruirlo mal.
-  const regexUC = /\b(UC[A-Za-z0-9_]*_\d)\b\s*[:.\-]?\s*/gi;
+  // Los "Módulos Comunes" (ej. "MÓDULO: TECNOLOGÍAS DIGITALES") no usan
+  // "Unidad de Competencia UC01_3" -- usan "Competencia Básica CB0004" en su
+  // lugar (formato distinto: sin guion bajo, solo letras+dígitos). Sin
+  // aceptar también ese prefijo, esos módulos nunca traían nada en el campo
+  // -- se reconocen ambos formatos con la misma lógica (no dos campos aparte),
+  // porque cumplen el mismo rol en el documento.
+  const regexUC = /\b(UC[A-Za-z0-9_]*_\d|CB\d+)\b\s*[:.\-]?\s*/gi;
   const posicionesUC = [];
   let mUC;
   while ((mUC = regexUC.exec(textoModulo)) !== null) {
@@ -24323,8 +24329,17 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // posicionesUC[1] que la acote), el límite caía directo en el primer RA --
   // pero entre la UC y el primer RA suele estar el encabezado de la tabla
   // ("Resultados de Aprendizaje" / "Criterios de Evaluación"), que sin este
-  // límite quedaba pegado al final de la descripción de la UC.
-  const matchEncabezadoTabla = /Resultados\s+de\s+Aprendizaje/i.exec(textoModulo);
+  // límite quedaba pegado al final de la descripción de la UC. Las dos
+  // columnas del encabezado no siempre quedan juntas en el texto lineal --
+  // en un currículo real (los "Módulos Comunes") el orden salía intercalado
+  // ("Resultados de Criterios de Evaluación (CE) Aprendizaje (RA)"), así que
+  // "Resultados de Aprendizaje" tal cual nunca calzaba y el límite se
+  // quedaba en el primer RA, arrastrando todo el encabezado de la tabla
+  // dentro de la descripción de la Competencia. Por eso "Resultados de" ya
+  // basta solo (sin exigir "Aprendizaje" pegado detrás), y se agrega
+  // "Criterios de Evaluación" como señal aparte -- cualquiera de las dos
+  // frases que aparezca primero es la frontera real.
+  const matchEncabezadoTabla = /Resultados\s+de\b|Criterios\s+de\s+Evaluaci[oó]n/i.exec(textoModulo);
   let limiteUC = matchPrimerRA ? matchPrimerRA.index : textoModulo.length;
   if (matchEncabezadoTabla) limiteUC = Math.min(limiteUC, matchEncabezadoTabla.index);
   let unidadCompetencia = '', codigoUC = '';

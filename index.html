@@ -3598,6 +3598,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v18.95<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: "Cargar Currículo" no traía la Unidad/Competencia en Módulos Comunes</div>
+              <ul class="about-ver-items">
+                <li>Los "Módulos Comunes" del currículo usan "Competencia Básica CB0004" en vez de "Unidad de Competencia UC01_3" -- el sistema solo reconocía el formato "UC", así que ese campo salía vacío. Ahora reconoce ambos. De paso se corrigió que, cuando el encabezado de la tabla ("Resultados de Aprendizaje" / "Criterios de Evaluación") aparecía intercalado en el texto, se colaba entero dentro de la descripción de la Competencia.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#5C6BC0;">v18.94<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -9872,9 +9886,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=18.94"></script>
+  <script src="app.js?v=18.95"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=18.94"></script>
+  <script src="auth.js?v=18.95"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
