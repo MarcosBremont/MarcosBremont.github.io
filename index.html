@@ -1521,12 +1521,20 @@
             <input type="text" id="ac-grado" placeholder="Ej: 2do de Secundaria" required />
           </div>
           <div class="form-group">
+            <label for="ac-seccion">Sección</label>
+            <input type="text" id="ac-seccion" placeholder="Ej: A, B, C, D, E Y F" />
+          </div>
+          <div class="form-group">
             <label for="ac-area-curricular">Área Curricular *</label>
             <input type="text" id="ac-area-curricular" placeholder="Ej: Matemática" required />
           </div>
           <div class="form-group">
             <label for="ac-ano-escolar">Año Escolar</label>
             <input type="text" id="ac-ano-escolar" placeholder="Ej: 2026-2027" />
+          </div>
+          <div class="form-group form-group--full">
+            <label for="ac-eje-tematico">Eje Temático Transversal</label>
+            <textarea id="ac-eje-tematico" rows="2" placeholder="Ej: Salud y bienestar: Instrumentación en Medicina para análisis..."></textarea>
           </div>
           <div class="form-group" id="grupo-curso-asignado-ac">
             <label for="ac-sel-curso">Curso</label>
@@ -3655,6 +3663,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v19.25<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Datos Generales (Planificación Académica): campos "Sección" y "Eje Temático Transversal"</div>
+              <ul class="about-ver-items">
+                <li>Comparando con una plantilla real de "Planificación Unidad de Aprendizaje", faltaban dos campos que sí trae el currículo: "Sección" (junto a Grado) y "Eje Temático Transversal". Ya se pueden llenar, se guardan con el resto de los Datos Generales, y el Eje Temático también se le pasa a la IA como contexto extra al generar los Indicadores de Logro.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10356,9 +10378,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.24"></script>
+  <script src="app.js?v=19.25"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.24"></script>
+  <script src="auth.js?v=19.25"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

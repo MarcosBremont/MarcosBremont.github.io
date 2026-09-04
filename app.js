@@ -1335,8 +1335,10 @@ function guardarDatosFormularioAcademico() {
     nombreDocente: getVal('ac-nombre-docente'),
     nivelEducativo: getVal('ac-nivel-educativo'),
     grado: getVal('ac-grado'),
+    seccion: getVal('ac-seccion'),
     areaCurricular: getVal('ac-area-curricular'),
     anoEscolar: getVal('ac-ano-escolar'),
+    ejeTematico: getVal('ac-eje-tematico'),
     valorRA: getVal('ac-valor-unidad'),
     horasSemana: getVal('ac-horas-semana'),
     fechaInicio: getVal('ac-fecha-inicio'),
@@ -1371,8 +1373,10 @@ function poblarFormularioAcademicoDesdeEstado() {
   setVal('ac-nombre-docente', dg.nombreDocente);
   setVal('ac-nivel-educativo', dg.nivelEducativo);
   setVal('ac-grado', dg.grado);
+  setVal('ac-seccion', dg.seccion);
   setVal('ac-area-curricular', dg.areaCurricular);
   setVal('ac-ano-escolar', dg.anoEscolar);
+  setVal('ac-eje-tematico', dg.ejeTematico);
   setVal('ac-valor-unidad', dg.valorRA);
   setVal('ac-horas-semana', dg.horasSemana);
   setVal('ac-fecha-inicio', dg.fechaInicio);
@@ -1525,7 +1529,7 @@ function construirPromptAcademico(dg, unidad) {
 Área Curricular: ${dg.areaCurricular || ''}
 Grado: ${dg.grado || ''} (Nivel ${dg.nivelEducativo || ''})
 Título de la Unidad de Aprendizaje: ${dg.unidadAprendizaje || ''}
-Descripción/Propósito de la Unidad: ${unidad.descripcion || ''}
+${dg.ejeTematico ? `Eje Temático Transversal: ${dg.ejeTematico}\n` : ''}Descripción/Propósito de la Unidad: ${unidad.descripcion || ''}
 Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
 Competencias Específicas del Área: ${unidad.competenciasEspecificas || 'no especificadas'}
 Contenidos Conceptuales: ${unidad.contenidosConceptuales || 'no especificados'}
