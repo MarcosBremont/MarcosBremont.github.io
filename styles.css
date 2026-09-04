@@ -1512,6 +1512,28 @@ body.dark-mode .info-tip strong {
   background: var(--color-fondo);
 }
 
+/* Tabla "Actividades de Aprendizaje y Evaluación": 6 columnas con textos de
+   largo muy distinto (fechas cortas junto a enunciados largos) se salían del
+   ancho de la página en vez de ajustarse -- con table-layout:fixed + anchos
+   por columna, el texto largo se envuelve en vez de forzar la tabla más
+   ancha que su contenedor. Clase aparte de .vp-table (que también usan otras
+   tablas de Vista Previa con distinta cantidad de columnas) para no afectar
+   esas otras. */
+.vp-table-actividades {
+  table-layout: fixed;
+}
+.vp-table-actividades th,
+.vp-table-actividades td {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.vp-table-actividades th:nth-child(1), .vp-table-actividades td:nth-child(1) { width: 13%; }
+.vp-table-actividades th:nth-child(2), .vp-table-actividades td:nth-child(2) { width: 9%; }
+.vp-table-actividades th:nth-child(3), .vp-table-actividades td:nth-child(3) { width: 30%; }
+.vp-table-actividades th:nth-child(4), .vp-table-actividades td:nth-child(4) { width: 12%; }
+.vp-table-actividades th:nth-child(5), .vp-table-actividades td:nth-child(5) { width: 16%; }
+.vp-table-actividades th:nth-child(6), .vp-table-actividades td:nth-child(6) { width: 20%; }
+
 .vp-instrumento-box {
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-md);

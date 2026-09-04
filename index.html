@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=19.19" />
+  <link rel="stylesheet" href="styles.css?v=19.20" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -1743,7 +1743,7 @@
             <span class="material-icons">upload_file</span>
             <span class="btn-nueva-label">Importar planificación</span>
           </button>
-          <button class="btn-nueva" style="background:rgba(69,39,160,0.18);border-color:rgba(179,157,219,0.6);"
+          <button class="btn-nueva" style="background:rgba(69,39,160,0.18);border-color:rgba(179,157,219,0.6);color:#4527A0;"
             onclick="nuevaPlanificacion()">
             <span class="material-icons">add_circle_outline</span>
             <span class="btn-nueva-label">Nueva planificación</span>
@@ -3655,6 +3655,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.20<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: botón "Nueva planificación" casi invisible + tabla de Actividades desbordada en Vista Previa</div>
+              <ul class="about-ver-items">
+                <li>El botón "Nueva planificación" (Mis Planificaciones Guardadas) no tenía color de texto propio -- heredaba el blanco por defecto de .btn-nueva (pensado para fondos oscuros) sobre un fondo lavanda claro, quedando casi ilegible. Los otros 3 botones de esa fila sí lo tenían.</li>
+                <li>La tabla "Actividades de Aprendizaje y Evaluación" de Vista Previa (6 columnas con textos de largo muy distinto: fechas cortas junto a enunciados largos) se salía del ancho de la página en vez de ajustarse. Ahora usa anchos fijos por columna y el texto largo se envuelve en vez de forzar la tabla más ancha que su contenedor -- ya no requiere scroll horizontal, ni en pantalla ni al exportar/imprimir.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10285,9 +10300,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.19"></script>
+  <script src="app.js?v=19.20"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.19"></script>
+  <script src="auth.js?v=19.20"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

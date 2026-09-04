@@ -6059,7 +6059,7 @@ function renderizarVistaPrevia() {
     _actsSeqVP[code]++;
   });
 
-  let tablaActs = `<table class="vp-table">
+  let tablaActs = `<table class="vp-table vp-table-actividades">
     <thead><tr>
       <th>Elemento de Capacidad (EC)</th>
       <th>Nivel de Dominio de los EC</th>
