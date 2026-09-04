@@ -45023,6 +45023,12 @@ const PROMPTS_IA_DEFS = [
     label: 'Prompt — Detalle Completo (Instrumento + Sesión)',
     icono: 'description',
     desc: 'Prompt para generar el detalle completo de una sola actividad. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{raDescripcion}}, {{actividad}}, {{ecEnunciado}}, {{nivelBloom}}, {{recursos}}, {{minTotal}}, {{minInicio}}, {{minDesarrollo}}, {{minCierre}}, {{instrPrompt}}'
+  },
+  {
+    key: 'prompt_secuencia_academica',
+    label: 'Prompt — Secuencia Didáctica (Planificación Académica)',
+    icono: 'event_note',
+    desc: 'Prompt para generar la Secuencia didáctica (Inicio/Desarrollo/Cierre, Evidencias, Instrumentos, Recursos) de UNA sesión dentro de una Unidad de Aprendizaje académica (Matemática, Español, Ciencias, etc. -- no ETP). Variables: {{areaCurricular}}, {{grado}}, {{unidadTitulo}}, {{situacionAprendizaje}}, {{estrategiaEnsenanza}}, {{tema}}, {{minTotal}}, {{minInicio}}, {{minDesarrollo}}, {{minCierre}}, {{contenidosConceptuales}}, {{contenidosProcedimentales}}, {{contenidosActitudinales}}'
   }
 ];
 
@@ -45068,6 +45074,7 @@ function _getPromptDefaultByKey(key) {
   if (key === 'prompt_base') return _DEFAULT_PROMPT_BASE;
   if (key === 'prompt_instrumentos') return _DEFAULT_PROMPT_INSTRUMENTOS;
   if (key === 'prompt_detalle_uno') return _DEFAULT_PROMPT_DETALLE_UNO;
+  if (key === 'prompt_secuencia_academica') return _DEFAULT_PROMPT_SECUENCIA_ACADEMICA;
   return '';
 }
 
@@ -45529,6 +45536,47 @@ Genera exactamente este JSON:
     "sintesis": "CIERRE ({{minCierre}} minutos)...",
     "estrategias": "Estrategias didácticas con justificación..."
   }
+}`;
+
+/** A diferencia de _DEFAULT_PROMPT_SESION/_DETALLE_UNO (guion narrativo largo,
+ *  pensado para la Planificación Diaria de ETP), este prompt es DELIBERADAMENTE
+ *  compacto -- la "Secuencia didáctica" de una Unidad de Aprendizaje académica
+ *  (Matemática, Español, Ciencias...) va en celdas angostas de una tabla, con
+ *  frases cortas de una línea cada una (ver plantilla real del usuario:
+ *  "Saludo, pase de lista y organización del aula.", no un párrafo). */
+const _DEFAULT_PROMPT_SECUENCIA_ACADEMICA = `Eres un docente experto en el Diseño Curricular Dominicano de educación regular (Inicial/Primaria/Secundaria) -- NO es educación técnico-profesional, no uses vocabulario de "Resultado de Aprendizaje", "Elemento de Capacidad" ni Taxonomía de Bloom.
+
+Área Curricular: {{areaCurricular}}
+Grado: {{grado}}
+Unidad de Aprendizaje: {{unidadTitulo}}
+Situación de Aprendizaje (contexto general de toda la unidad): {{situacionAprendizaje}}
+Estrategia de enseñanza y de aprendizaje de esta sesión: {{estrategiaEnsenanza}}
+Tema de esta sesión: {{tema}}
+Duración total: {{minTotal}} minutos (Inicio: {{minInicio}} min, Desarrollo: {{minDesarrollo}} min, Cierre: {{minCierre}} min)
+
+Contenidos de referencia de la Unidad (úsalos como guía temática, no inventes contenidos fuera de estos):
+- Conceptuales: {{contenidosConceptuales}}
+- Procedimentales: {{contenidosProcedimentales}}
+- Actitudinales: {{contenidosActitudinales}}
+
+TAREA: Genera la "Secuencia didáctica" de esta sesión de clase en el formato COMPACTO real de una planificación dominicana -- frases cortas de UNA LÍNEA cada una, con viñetas. NADA de guion narrativo largo ni párrafos.
+
+REGLAS:
+- "inicio": lista de 2-4 frases cortas. SIEMPRE empieza con saludo/pase de lista/organización del aula y retroalimentación de la clase anterior, y termina con 1-2 frases de introducción específica al tema "{{tema}}".
+- "desarrollo": lista de 2-5 frases cortas, específicas al tema "{{tema}}" -- conceptos, procedimientos o ejercicios concretos de esta sesión (conecta con la Situación de Aprendizaje cuando aplique).
+- "cierre": lista de 1-3 frases cortas. Debe incluir un resumen/socialización de lo aprendido.
+- "evidencias": lista de 2-4 frases cortas de evidencias de aprendizaje observables (ej. "Participación en la discusión y en las actividades en clase.").
+- "instrumentos": elige entre 2 y 4 de esta lista EXACTA, sin inventar otros nombres: "Observación", "Registro anecdótico", "Lista de cotejo", "Rúbrica", "Escala de valoración", "Cuadernos del estudiante", "Cuaderno".
+- "recursos": lista de 4 a 7 recursos cortos y realistas para un aula dominicana (ej. "Calculadora", "Cuadernos", "Cuaderno de trabajo del docente", "Pizarra", "Marcadores", "Lápiz", "Lapiceros", "Libros"), adaptados al área curricular indicada.
+
+Responde SOLO con este JSON exacto, sin markdown ni texto adicional:
+{
+  "inicio": ["...", "..."],
+  "desarrollo": ["...", "..."],
+  "cierre": ["...", "..."],
+  "evidencias": ["...", "..."],
+  "instrumentos": ["...", "..."],
+  "recursos": ["...", "..."]
 }`;
 
 /** Construye bloque de contenidos para el prompt (solo si hay datos) */
