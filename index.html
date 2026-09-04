@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=19.06" />
+  <link rel="stylesheet" href="styles.css?v=19.19" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -3655,6 +3655,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.19<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: columnas del Libro de Calificaciones "saltaban" de lugar al hacer scroll lateral</div>
+              <ul class="about-ver-items">
+                <li>Con tablas anchas (muchas columnas de actividades/complementarias), al hacer scroll hacia el lado las columnas fijas (Estudiante, encabezados) podían aparecer superpuestas o en la posición de otra columna en vez de quedarse ancladas. Causa raíz: bug conocido de Chrome/WebKit donde position:sticky en celdas de tabla deja de funcionar bien si la tabla usa border-collapse:collapse. Se cambió a border-collapse:separate con border-spacing:0 (se ve igual, cada celda ya tenía su propio borde) y el anclado ahora es estable.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10271,9 +10285,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.18"></script>
+  <script src="app.js?v=19.19"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.18"></script>
+  <script src="auth.js?v=19.19"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

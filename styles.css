@@ -2569,7 +2569,15 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
 /* Tabla de calificaciones */
 .tabla-cal {
   width: 100%;
-  border-collapse: collapse;
+  /* separate + border-spacing:0 (no collapse) a propósito: Chrome/WebKit
+     tiene un bug conocido donde position:sticky en <th>/<td> dentro de una
+     tabla con border-collapse:collapse deja de funcionar bien apenas la
+     tabla se pone ancha y hay que hacer scroll -- las columnas fijas
+     (Estudiante, encabezados) "saltan" a la posición de otra columna en vez
+     de quedarse ancladas. Con separate+0 se ve igual (cada celda ya define
+     su propio border de 1px) pero el sticky sí funciona bien. */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.85rem;
   background: #fff;
   min-width: 600px;
