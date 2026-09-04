@@ -4082,6 +4082,46 @@ function _calConfirmarColumnaSuma() {
   mostrarToast(`Columna "${nombre}" agregada ✓ (suma de ${fuentes.length} actividad${fuentes.length !== 1 ? 'es' : ''})`, 'success');
 }
 
+/** Elimina una columna complementaria o de cálculo (ítem/columna de suma
+ *  agregada desde el Libro de Calificaciones) directamente desde el botón
+ *  "✕" en su encabezado. Solo se ofrece para este tipo de columnas -- las
+ *  actividades normales ligadas a un EC de la planificación se editan/quitan
+ *  desde el editor de Planificación Académica, no desde acá, porque forman
+ *  parte del plan real de clases, no son "extras" sueltos. Limpia también
+ *  las notas/comentarios/respuestas de instrumento que ya tuviera guardados
+ *  en cualquier RA del curso, para no dejar datos huérfanos referenciando un
+ *  id que ya no existe en la planificación. */
+function _calEliminarColumnaComplementaria(actId) {
+  const curso = calState.cursos[calState.cursoActivoId];
+  if (!curso || !curso.planActivaId) return;
+
+  const biblio = cargarBiblioteca();
+  const reg = (biblio.items || []).find(i => i.id === curso.planActivaId);
+  if (!reg || !reg.planificacion?.actividades) return;
+
+  const act = reg.planificacion.actividades.find(a => a.id === actId);
+  if (!act) return;
+  if (!confirm(`¿Eliminar la columna "${act.enunciado || 'esta actividad'}"? Se perderán las notas/comentarios que tenga registrados.`)) return;
+
+  reg.planificacion.actividades = reg.planificacion.actividades.filter(a => a.id !== actId);
+  persistirBiblioteca(biblio);
+
+  Object.values(curso.ras || {}).forEach(raInfo => {
+    if (raInfo.actividades) raInfo.actividades = raInfo.actividades.filter(id => id !== actId);
+    if (raInfo.valores) delete raInfo.valores[actId];
+    if (raInfo._actividadesSnapshot) raInfo._actividadesSnapshot = raInfo._actividadesSnapshot.filter(s => s.id !== actId);
+  });
+  Object.values(curso.notas || {}).forEach(porRaKey => {
+    Object.values(porRaKey || {}).forEach(porActId => { delete porActId[actId]; });
+  });
+  Object.values(curso.celdaExtra || {}).forEach(porActId => { delete porActId[actId]; });
+  Object.values(curso.instrumentoResp || {}).forEach(porActId => { delete porActId[actId]; });
+
+  guardarCalificaciones();
+  renderizarTablaCalificaciones();
+  mostrarToast('Columna eliminada', 'success');
+}
+
 // ════════════════════════════════════════════════════════════════════
 // MÓDULO: BIBLIOTECA DE RÚBRICAS
 // Biblioteca reutilizable de rúbricas (cuadrícula criterios x niveles),
@@ -16411,7 +16451,9 @@ function renderizarTablaCalificaciones() {
       const nombresFuentes = (a.calculoFuentes || [])
         .map(fid => (actividades.find(x => x.id === fid)?.enunciado || '').substring(0, 30))
         .filter(Boolean);
-      h2 += '<th class="th-act th-act--calc" title="Suma de: ' + escapeHTML(nombresFuentes.join(', ')) + '" style="min-width:80px;background:#E0F2F1;color:#00695C;">'
+      const idEsc1 = a.id.replace(/'/g, "\\'");
+      h2 += '<th class="th-act th-act--calc" title="Suma de: ' + escapeHTML(nombresFuentes.join(', ')) + '" style="min-width:80px;background:#E0F2F1;color:#00695C;position:relative;">'
+        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc1 + '\')" title="Eliminar esta columna" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;color:#00695C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
         + '<div style="font-size:0.72rem;font-weight:600;color:#00695C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">functions</span> ' + escapeHTML(calcLabel) + '</div>'
         + '<div style="font-size:0.68rem;color:#00695C;opacity:0.75;margin:1px 0;">Suma (' + (a.calculoFuentes || []).length + ')</div>'
         + '</th>';
@@ -16426,7 +16468,9 @@ function renderizarTablaCalificaciones() {
           + ' title="Valor máximo de este ítem" placeholder="pts"'
           + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
           + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">';
-      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;">'
+      const idEsc2 = a.id.replace(/'/g, "\\'");
+      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;position:relative;">'
+        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc2 + '\')" title="Eliminar esta columna" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;color:#BF360C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
         + '<div style="font-size:0.72rem;font-weight:600;color:#BF360C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
         + '<div style="font-size:0.68rem;color:#BF360C;opacity:0.75;margin:1px 0;">Complementario</div>'
         + valorInputHtml
