@@ -1365,18 +1365,23 @@ body.dark-mode .info-tip strong {
   color: #212121;
 }
 
+.vista-previa .vp-table-wrap {
+  border-color: #E1E8F5 !important;
+}
+
 .vista-previa .vp-table th {
-  background: #1565C0 !important;
-  color: #fff !important;
+  background: #EAF2FF !important;
+  color: #1A3E7A !important;
+  border-bottom: 2px solid #C9DCFA !important;
 }
 
 .vista-previa .vp-table td {
   color: #212121 !important;
-  border-bottom: 1px solid #E0E0E0;
+  border-bottom: 1px solid #EEF2FA;
 }
 
 .vista-previa .vp-table tbody tr:nth-child(even) td {
-  background: #F5F7FA !important;
+  background: #F8FAFF !important;
   color: #212121 !important;
 }
 
@@ -1486,30 +1491,47 @@ body.dark-mode .info-tip strong {
   margin-bottom: var(--espacio-md);
 }
 
+/* Envoltorio con esquinas redondeadas -- separate+spacing:0 (no collapse) es
+   necesario para que el radio se vea limpio con overflow:hidden; cada
+   td/th ya define su propio borde de 1px, así que no depende de que
+   collapse fusione bordes con la celda vecina. */
+.vp-table-wrap {
+  border: 1px solid #E1E8F5;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: var(--espacio-xl);
+}
+
 .vp-table {
   width: 100%;
-  border-collapse: collapse;
-  margin-bottom: var(--espacio-xl);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 0;
   font-size: 0.88rem;
 }
 
 .vp-table th {
-  background: var(--color-primario);
-  color: #fff;
-  padding: 10px 12px;
+  background: #EAF2FF;
+  color: #1A3E7A;
+  padding: 11px 14px;
   text-align: left;
-  font-weight: 600;
-  font-size: 0.82rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border-bottom: 2px solid #C9DCFA;
 }
 
 .vp-table td {
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--color-borde);
+  padding: 11px 14px;
+  border-bottom: 1px solid #EEF2FA;
   vertical-align: top;
 }
 
+.vp-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .vp-table tbody tr:nth-child(even) td {
-  background: var(--color-fondo);
+  background: #F8FAFF;
 }
 
 /* Tabla "Actividades de Aprendizaje y Evaluación": 6 columnas con textos de
@@ -2169,7 +2191,20 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
   }
 
   .vp-table th {
-    background: #1565C0 !important;
+    background: #EAF2FF !important;
+    color: #1A3E7A !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .vp-table tbody tr:nth-child(even) td {
+    background: #F8FAFF !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .vp-table-wrap {
+    border-color: #E1E8F5 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
