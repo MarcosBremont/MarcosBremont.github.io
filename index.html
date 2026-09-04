@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=19.22" />
+  <link rel="stylesheet" href="styles.css?v=19.23" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -3655,6 +3655,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.23<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: texto superpuesto en la tabla de Actividades de Vista Previa</div>
+              <ul class="about-ver-items">
+                <li>El ancho fijo por columna agregado en v19.22 hacía que la fecha (que no se envuelve, va en una sola línea) se saliera de su celda angosta y se superpusiera con la columna vecina ("Instrumento de evaluación"), y el resto del texto se envolvía palabra por palabra. Ahora la tabla vuelve a su ancho natural por columna y, si no cabe completa, aparece scroll horizontal dentro de su propio recuadro en vez de comprimir el texto -- tanto en pantalla como al exportar/imprimir (donde el scroll se desactiva solo y la tabla fluye a su ancho natural).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10328,9 +10342,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.22"></script>
+  <script src="app.js?v=19.23"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.22"></script>
+  <script src="auth.js?v=19.23"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

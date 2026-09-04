@@ -1494,12 +1494,20 @@ body.dark-mode .info-tip strong {
 /* Envoltorio con esquinas redondeadas -- separate+spacing:0 (no collapse) es
    necesario para que el radio se vea limpio con overflow:hidden; cada
    td/th ya define su propio borde de 1px, así que no depende de que
-   collapse fusione bordes con la celda vecina. */
+   collapse fusione bordes con la celda vecina. El scroll horizontal vive en
+   un DIV INTERNO aparte (.vp-table-scroll) en vez de en este mismo -- si el
+   overflow-x:auto estuviera aquí, cortaría las esquinas redondeadas del lado
+   por donde se hace scroll. */
 .vp-table-wrap {
   border: 1px solid #E1E8F5;
   border-radius: 14px;
   overflow: hidden;
   margin-bottom: var(--espacio-xl);
+}
+
+.vp-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .vp-table {
@@ -1535,26 +1543,19 @@ body.dark-mode .info-tip strong {
 }
 
 /* Tabla "Actividades de Aprendizaje y Evaluación": 6 columnas con textos de
-   largo muy distinto (fechas cortas junto a enunciados largos) se salían del
-   ancho de la página en vez de ajustarse -- con table-layout:fixed + anchos
-   por columna, el texto largo se envuelve en vez de forzar la tabla más
-   ancha que su contenedor. Clase aparte de .vp-table (que también usan otras
-   tablas de Vista Previa con distinta cantidad de columnas) para no afectar
-   esas otras. */
+   largo muy distinto (fechas cortas junto a enunciados largos). Intentar
+   forzarla a 100% con table-layout:fixed + anchos por columna hacía que el
+   contenido con white-space:nowrap (la fecha) se saliera de su celda
+   angosta y se superpusiera con la columna vecina en vez de envolverse --
+   table-layout:fixed no permite que una celda crezca para hacerle espacio a
+   su propio contenido. Ahora se deja con table-layout:auto (cada columna
+   toma el ancho que su contenido necesita) con un mínimo razonable, y si el
+   total no cabe en el contenedor, .vp-table-scroll (el div que la envuelve)
+   se encarga con scroll horizontal en vez de comprimir el texto palabra por
+   palabra. */
 .vp-table-actividades {
-  table-layout: fixed;
+  min-width: 900px;
 }
-.vp-table-actividades th,
-.vp-table-actividades td {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-.vp-table-actividades th:nth-child(1), .vp-table-actividades td:nth-child(1) { width: 13%; }
-.vp-table-actividades th:nth-child(2), .vp-table-actividades td:nth-child(2) { width: 9%; }
-.vp-table-actividades th:nth-child(3), .vp-table-actividades td:nth-child(3) { width: 30%; }
-.vp-table-actividades th:nth-child(4), .vp-table-actividades td:nth-child(4) { width: 12%; }
-.vp-table-actividades th:nth-child(5), .vp-table-actividades td:nth-child(5) { width: 16%; }
-.vp-table-actividades th:nth-child(6), .vp-table-actividades td:nth-child(6) { width: 20%; }
 
 .vp-instrumento-box {
   border: 1px solid var(--color-borde);
@@ -2207,6 +2208,17 @@ body.dark-mode .act-card-footer { border-top-color: var(--color-borde); }
     border-color: #E1E8F5 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Al imprimir no debe haber scroll (no existe en papel) -- se deja que la
+     tabla fluya a su ancho natural en vez de quedar confinada al div de
+     scroll, así ninguna columna se corta. */
+  .vp-table-scroll {
+    overflow: visible !important;
+  }
+
+  .vp-table-actividades {
+    min-width: 0;
   }
 
   .vp-datos-grid {

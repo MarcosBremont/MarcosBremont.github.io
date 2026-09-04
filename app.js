@@ -5972,7 +5972,7 @@ function renderizarVistaPrevia() {
 
 
 
-  let tablaEC = `<div class="vp-table-wrap"><table class="vp-table">
+  let tablaEC = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table">
 
 
 
@@ -6016,10 +6016,10 @@ function renderizarVistaPrevia() {
 
 
 
-  tablaEC += `</tbody></table></div>`;
+  tablaEC += `</tbody></table></div></div>`;
 
   // Tabla Matriz EC vs Criterios de Evaluación (Contraste)
-  let tablaMatrizEC = `<div class="vp-table-wrap"><table class="vp-table">
+  let tablaMatrizEC = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table">
     <thead><tr>
       <th>#EC</th>
       <th>Elemento de Capacidad</th>
@@ -6035,7 +6035,7 @@ function renderizarVistaPrevia() {
       <td style="white-space:pre-wrap;">${escapeHTML(fila.criteriosTexto)}</td>
     </tr>`;
   });
-  tablaMatrizEC += `</tbody></table></div>`;
+  tablaMatrizEC += `</tbody></table></div></div>`;
 
 
 
@@ -6059,7 +6059,7 @@ function renderizarVistaPrevia() {
     _actsSeqVP[code]++;
   });
 
-  let tablaActs = `<div class="vp-table-wrap"><table class="vp-table vp-table-actividades">
+  let tablaActs = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table vp-table-actividades">
     <thead><tr>
       <th>Elemento de Capacidad (EC)</th>
       <th>Nivel de Dominio de los EC</th>
@@ -6113,7 +6113,7 @@ function renderizarVistaPrevia() {
     </tr>`;
   });
 
-  tablaActs += `</tbody></table></div>`;
+  tablaActs += `</tbody></table></div></div>`;
 
 
 
