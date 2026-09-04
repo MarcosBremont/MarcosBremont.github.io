@@ -3659,6 +3659,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.16<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: aviso "Todo sincronizado" se quedaba pegado en pantalla</div>
+              <ul class="about-ver-items">
+                <li>El navegador puede disparar el evento "online" varias veces seguidas sin que haya habido una desconexión real (visto en Windows/Chrome con VPN o adaptadores de red virtuales). Cada disparo de más volvía a mostrar "Conexión restablecida..." y luego "Todo sincronizado" de nuevo, reapareciendo antes de que el aviso anterior alcanzara a ocultarse -- dando la impresión de que se quedaba pegado para siempre. Ahora esos avisos solo aparecen si antes se detectó una desconexión real.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.15<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10229,9 +10243,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.15"></script>
+  <script src="app.js?v=19.16"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.15"></script>
+  <script src="auth.js?v=19.16"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

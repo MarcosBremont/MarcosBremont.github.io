@@ -35497,13 +35497,30 @@ function _actualizarIndicadorConexion() {
   el.classList.toggle('hidden', navigator.onLine);
 }
 
+// El navegador puede disparar 'online' varias veces seguidas sin que haya
+// habido una desconexión real (visto en Windows/Chrome con VPN o adaptadores
+// de red virtuales -- cada cambio de ruta de red puede generar su propio
+// evento 'online' aunque nunca se perdió la señal). Sin esta bandera, cada
+// disparo de más volvía a mostrar "Conexión restablecida..." y, al resolver
+// de nuevo waitForPendingWrites(), reaparecía "Todo sincronizado" antes de
+// que el toast anterior alcanzara a ocultarse -- dando la impresión de que
+// el aviso se quedaba pegado en pantalla para siempre. Ahora la secuencia de
+// avisos de reconexión solo corre si ANTES pasamos por nuestro propio
+// handler de 'offline' (es decir, si de verdad detectamos que se perdió la
+// conexión) -- _actualizarIndicadorConexion() sí se sigue llamando siempre,
+// para que el indicador del header nunca quede desactualizado.
+let _tinclassOfflineDetectado = !navigator.onLine;
+
 window.addEventListener('offline', () => {
+  _tinclassOfflineDetectado = true;
   _actualizarIndicadorConexion();
   mostrarToast('Sin conexión -- tus cambios se guardan en este dispositivo y se sincronizan solos cuando vuelva el internet', 'info');
 });
 
 window.addEventListener('online', () => {
   _actualizarIndicadorConexion();
+  if (!_tinclassOfflineDetectado) return;
+  _tinclassOfflineDetectado = false;
   mostrarToast('Conexión restablecida, sincronizando tus cambios...', 'info');
   // waitForPendingWrites() resuelve cuando TODO lo que quedó en cola mientras
   // se estaba offline ya llegó al servidor -- se protege con try/catch por si
