@@ -16452,11 +16452,12 @@ function renderizarTablaCalificaciones() {
         .map(fid => (actividades.find(x => x.id === fid)?.enunciado || '').substring(0, 30))
         .filter(Boolean);
       const idEsc1 = a.id.replace(/'/g, "\\'");
-      h2 += '<th class="th-act th-act--calc" title="Suma de: ' + escapeHTML(nombresFuentes.join(', ')) + '" style="min-width:80px;background:#E0F2F1;color:#00695C;position:relative;">'
-        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc1 + '\')" title="Eliminar esta columna" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;color:#00695C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
+      h2 += '<th class="th-act th-act--calc" title="Suma de: ' + escapeHTML(nombresFuentes.join(', ')) + '" style="min-width:80px;background:#E0F2F1;color:#00695C;">'
+        + '<div style="position:relative;">'
+        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc1 + '\')" title="Eliminar esta columna" style="position:absolute;top:-2px;right:-2px;background:none;border:none;cursor:pointer;color:#00695C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
         + '<div style="font-size:0.72rem;font-weight:600;color:#00695C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">functions</span> ' + escapeHTML(calcLabel) + '</div>'
         + '<div style="font-size:0.68rem;color:#00695C;opacity:0.75;margin:1px 0;">Suma (' + (a.calculoFuentes || []).length + ')</div>'
-        + '</th>';
+        + '</div></th>';
     } else if (esComp) {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
@@ -16469,12 +16470,13 @@ function renderizarTablaCalificaciones() {
           + ' onchange="actualizarValorActividad(\'' + a.id + '\',this.value,this)"'
           + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">';
       const idEsc2 = a.id.replace(/'/g, "\\'");
-      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;position:relative;">'
-        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc2 + '\')" title="Eliminar esta columna" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;color:#BF360C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
+      h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;">'
+        + '<div style="position:relative;">'
+        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc2 + '\')" title="Eliminar esta columna" style="position:absolute;top:-2px;right:-2px;background:none;border:none;cursor:pointer;color:#BF360C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
         + '<div style="font-size:0.72rem;font-weight:600;color:#BF360C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
         + '<div style="font-size:0.68rem;color:#BF360C;opacity:0.75;margin:1px 0;">Complementario</div>'
         + valorInputHtml
-        + '</th>';
+        + '</div></th>';
     } else {
       // Columna de actividad normal
       const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';

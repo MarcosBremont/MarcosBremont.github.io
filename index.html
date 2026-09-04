@@ -3659,6 +3659,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.18<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: encabezado "Estudiante" desalineado en Calificaciones</div>
+              <ul class="about-ver-items">
+                <li>El botón "✕" agregado en v19.17 fijaba position:relative directo en el encabezado de las columnas complementarias/de suma, lo cual sobrescribía el position:sticky que esas celdas necesitan del CSS para quedarse fijas al hacer scroll (un estilo en línea siempre gana sobre la hoja de estilos) -- eso rompía el encabezado "Estudiante" (que sí sigue fijo) haciendo que su texto se superpusiera con el de la primera columna al hacer scroll. El botón ahora va dentro de un div interno en vez de tocar el position del encabezado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#2E7D32;">v19.17<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10257,9 +10271,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.17"></script>
+  <script src="app.js?v=19.18"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.17"></script>
+  <script src="auth.js?v=19.18"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
