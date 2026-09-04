@@ -34768,8 +34768,8 @@ function aplicarRespuestaIA(aiData, fechasClase) {
       }
     } else {
       instrumento = act.instrumento === 'rubrica'
-        ? generarRubrica(ecObj, act.enunciado)
-        : generarListaCotejo(ecObj, act.enunciado);
+        ? generarRubrica(act, ecObj.nivel)
+        : generarListaCotejo(act, ecObj.nivel);
     }
 
     return {

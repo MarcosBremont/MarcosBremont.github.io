@@ -3659,6 +3659,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.21<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección: instrumento decía "EC: undefined" cuando la IA no traía criterios propios</div>
+              <ul class="about-ver-items">
+                <li>Cuando la IA no generaba criterios de instrumento propios para una actividad (instrumentoDetalle vacío), el generador local de Lista de Cotejo/Rúbrica se llamaba con los argumentos cambiados -- le pasaba el Elemento de Capacidad en el lugar de la actividad y el enunciado en el lugar del nivel. Por eso salía "EC: undefined" (los EC no tienen un campo "ecCodigo", ese nombre es de las actividades) y los criterios generados quedaban con una redacción algo forzada (se armaban a partir del texto del EC en vez del texto real de la actividad). Ahora recibe los argumentos correctos.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.20<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10300,9 +10314,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.20"></script>
+  <script src="app.js?v=19.21"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.20"></script>
+  <script src="auth.js?v=19.21"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
