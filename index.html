@@ -3312,6 +3312,10 @@
           <button onclick="abrirPlanReforzamiento()" style="background:#FFF3E0;color:#E65100;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
             <span class="material-icons" style="font-size:16px;">fact_check</span>Exportar Plan Reforzamiento
           </button>
+          <button id="btn-guia-estudio-examen" onclick="generarGuiaEstudioExamen()" style="background:#E0F2F1;color:#00695C;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
+            title="Genera con IA una guía de estudio (conceptos básicos, ejemplos y ejercicios) sobre los temas de las preguntas de este examen, para entregarle a los estudiantes">
+            <span class="material-icons" style="font-size:16px;">menu_book</span><span id="btn-guia-estudio-examen-texto">Guía de Estudio</span>
+          </button>
           <button id="btn-generar-foda" onclick="generarAnalisisFodaExamen()" style="background:#F3E5F5;color:#6A1B9A;border:none;padding:9px 16px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
             title="Genera con IA un análisis FODA de los resultados de este examen, con base en el promedio, la distribución de calificaciones y las preguntas de peor/mejor desempeño">
             <span class="material-icons" style="font-size:16px;">grid_view</span>Análisis FODA
@@ -3663,6 +3667,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v19.26<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "Guía de Estudio" generada con IA en el informe de examen</div>
+              <ul class="about-ver-items">
+                <li>Botón "Guía de Estudio" junto a "Exportar Plan Reforzamiento" en el informe de un examen: le da a la IA el enunciado de TODAS las preguntas del examen para que identifique los temas que evalúan (agrupando preguntas relacionadas, no una sección por pregunta) y escriba una guía corta -- definición breve, un ejemplo y 1-2 ejercicios sin resolver por tema, pensada para que el estudiante la copie en su cuaderno y practique. Los temas donde el curso tuvo peor desempeño real reciben más énfasis. Se descarga como Word.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10378,9 +10396,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.25"></script>
+  <script src="app.js?v=19.26"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.25"></script>
+  <script src="auth.js?v=19.26"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

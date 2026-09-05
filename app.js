@@ -35092,6 +35092,14 @@ Genera una sección por cada subtema listado arriba. Sé exhaustivo y claro, com
  *  manejo de reintentos/cuota por modelo. */
 async function _generarContenidoGuiaEstudioIA(dg, ra, ec) {
   const prompt = _construirPromptGuiaEstudio(dg, ra, ec);
+  return _llamarIAGuiaEstudio(prompt, s => Array.isArray(s?.secciones) && s.secciones.length > 0);
+}
+
+/** Cascada de proveedores compartida por CUALQUIER guía de estudio (la del RA
+ *  y la del examen, ver más abajo) -- Claude → Groq → Gemini → OpenRouter,
+ *  igual que generarPlanificacion(). validar(data) decide si la respuesta de
+ *  un proveedor sirve o hay que seguir probando el siguiente. */
+async function _llamarIAGuiaEstudio(prompt, validar) {
   const groqKey = getGroqKey();
   const openrouterKey = getOpenRouterKey();
   const claudeKey = getClaudeKey();
@@ -35136,10 +35144,10 @@ async function _generarContenidoGuiaEstudioIA(dg, ra, ec) {
     }
   }
 
-  if (!data || !Array.isArray(data.secciones) || !data.secciones.length) {
+  if (!data || !validar(data)) {
     throw new Error('Ningún proveedor de IA pudo generar la guía de estudio. Verifica tus claves en ⚙️ Config. IA.');
   }
-  console.log('[GuíaEstudio] Generada con', proveedor, '—', data.secciones.length, 'secciones');
+  console.log('[GuíaEstudio] Generada con', proveedor, '—', (data.secciones || []).length, 'secciones');
   return data;
 }
 
@@ -35207,6 +35215,135 @@ async function generarGuiaEstudioRA() {
   } finally {
     if (btn) btn.disabled = false;
     if (btnTexto) btnTexto.textContent = textoOriginal || 'Generar Guía de Estudio';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// GUÍA DE ESTUDIO DE UN EXAMEN — a partir de las preguntas realmente
+// aplicadas (no del RA), pensada para que el docente se la entregue a los
+// estudiantes: apuntes cortos de cuaderno (definición breve + ejemplo +
+// ejercicios sin resolver), NO el capítulo de libro de texto extenso que ya
+// genera _construirPromptGuiaEstudio() para el RA.
+// ════════════════════════════════════════════════════════════════
+
+/** Arma el prompt: le da a la IA el enunciado de TODAS las preguntas del
+ *  examen para que identifique los temas subyacentes agrupando preguntas
+ *  relacionadas (no una sección por pregunta), y les da más énfasis a los
+ *  temas donde el curso tuvo peor desempeño real (mismo análisis que ya usa
+ *  el Análisis FODA, ver _analizarDesempenoPreguntas). */
+function _construirPromptGuiaEstudioExamen(ex, preguntas, analisisPreguntas) {
+  const listaPreguntas = preguntas.map((p, i) => `${i + 1}. ${p.enunciado}`).join('\n');
+  const peores = (analisisPreguntas || [])
+    .filter(a => a.pct < 70)
+    .slice(0, 6)
+    .map(a => `- "${a.enunciado}" (${a.pct}% de aciertos -- dale más énfasis y profundidad)`)
+    .join('\n');
+
+  return `Eres un experto docente dominicano de educación técnico profesional, redactor de material de estudio para estudiantes.
+
+Los estudiantes presentaron un examen/evaluación con estas preguntas:
+${listaPreguntas}
+
+${peores ? `Estos temas tuvieron el desempeño MÁS BAJO en el examen real -- dales más énfasis y profundidad en la guía:\n${peores}\n\n` : ''}TAREA: A partir de los TEMAS/CONCEPTOS que estas preguntas evalúan, identifica los temas subyacentes (agrupa varias preguntas relacionadas en UN solo tema, no hagas una sección por cada pregunta individual) y escribe una GUÍA DE ESTUDIO breve para que los estudiantes la copien en su cuaderno y estudien.
+
+IMPORTANTE -- esto NO es un libro de texto, son apuntes de clase:
+- Cada tema: una definición/explicación CORTA y clara (2-4 líneas, no un párrafo largo).
+- Un ejemplo concreto y breve por tema.
+- 1-2 ejercicios de práctica CORTOS por tema, SIN la solución (son para que el estudiante los resuelva).
+- Usa vocabulario claro, adecuado para que un estudiante lo entienda estudiando solo.
+
+Responde SOLO con JSON válido (sin markdown, sin texto adicional), con esta estructura exacta:
+{
+  "titulo": "Guía de Estudio - <tema principal del examen>",
+  "introduccion": "1-2 oraciones breves explicando qué cubre esta guía y para qué sirve",
+  "secciones": [
+    {
+      "subtitulo": "Nombre corto del tema/concepto",
+      "contenido": "Definición o explicación breve y clara (2-4 líneas)",
+      "ejemplo": "Un ejemplo concreto y corto",
+      "ejercicios": ["Ejercicio de práctica 1 (sin la solución)", "Ejercicio de práctica 2 (sin la solución)"]
+    }
+  ]
+}`;
+}
+
+/** Arma el documento Word de la guía de estudio de un examen -- igual patrón
+ *  que _guiaEstudioHTML() pero con una sección "ejercicios" adicional (esa
+ *  guía no la tiene porque su prompt no la pide). */
+function _guiaEstudioExamenHTML(data, ex) {
+  const escNL = (t) => escapeHTML(t || '').replace(/\n/g, '<br>');
+  const seccionesHtml = (data.secciones || []).map((s, i) => {
+    const ejerciciosHtml = Array.isArray(s.ejercicios) && s.ejercicios.length
+      ? '<p><b>Ejercicios de práctica:</b></p><ol>' + s.ejercicios.map(e => '<li>' + escNL(e) + '</li>').join('') + '</ol>'
+      : '';
+    return '<h2>' + (i + 1) + '. ' + escapeHTML(s.subtitulo || 'Tema') + '</h2>'
+      + '<p>' + escNL(s.contenido) + '</p>'
+      + (s.ejemplo ? '<p><b>Ejemplo:</b> ' + escNL(s.ejemplo) + '</p>' : '')
+      + ejerciciosHtml;
+  }).join('');
+
+  return `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"/>
+  <style>
+    body{font-family:Arial;font-size:12pt;line-height:1.5;}
+    h1{font-size:16pt;color:#00695C;margin:0 0 6pt;}
+    h2{font-size:13pt;color:#00695C;margin:16pt 0 4pt;}
+    p{margin:0 0 10pt;text-align:justify;}
+    ol{margin:0 0 10pt;padding-left:20pt;}
+    .subt{font-size:10pt;color:#546E7A;margin:0 0 16pt;}
+  </style></head>
+  <body>
+    <h1>${escapeHTML(data.titulo || 'Guía de Estudio')}</h1>
+    <p class="subt">${escapeHTML(ex.materia || ex.titulo || '')}${ex.curso ? ' — ' + escapeHTML(ex.curso) : ''}</p>
+    ${data.introduccion ? '<p>' + escNL(data.introduccion) + '</p>' : ''}
+    ${seccionesHtml}
+  </body></html>`;
+}
+
+/** Botón "Guía de Estudio" del informe de examen -- genera con IA la guía a
+ *  partir de las preguntas REALES del examen (no del RA) y la descarga como
+ *  Word, lista para entregarle a los estudiantes. */
+async function generarGuiaEstudioExamen() {
+  const info = _examenInformeActual;
+  if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
+  if (!info.preguntas.length) { mostrarToast('Este examen todavía no tiene preguntas', 'error'); return; }
+  if (!getGroqKey() && !getGeminiKey() && !getOpenRouterKey() && !getClaudeKey()) {
+    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Claude, Groq, Gemini u OpenRouter).', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-guia-estudio-examen');
+  const btnTexto = document.getElementById('btn-guia-estudio-examen-texto');
+  const textoOriginal = btnTexto?.textContent;
+  if (btn) btn.disabled = true;
+  if (btnTexto) btnTexto.textContent = 'Generando guía…';
+
+  try {
+    const analisisPreguntas = info.puntosPosiblesAuto > 0
+      ? _analizarDesempenoPreguntas(info.respuestas, info.preguntas, info.preguntasCalificables)
+      : [];
+    const prompt = _construirPromptGuiaEstudioExamen(info.ex, info.preguntas, analisisPreguntas);
+    mostrarToast('🟢 Generando guía de estudio con IA...', 'info');
+    const data = await _llamarIAGuiaEstudio(prompt, s => Array.isArray(s?.secciones) && s.secciones.length > 0);
+
+    const html = _guiaEstudioExamenHTML(data, info.ex);
+    const blob = new Blob(['﻿', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Guia_Estudio_' + (info.ex.materia || info.ex.titulo || 'examen').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60) + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    mostrarToast('Guía de estudio generada y descargada', 'success');
+  } catch (e) {
+    mostrarToast('Error generando la guía de estudio: ' + (e.message || e).toString().slice(0, 150), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnTexto) btnTexto.textContent = textoOriginal || 'Guía de Estudio';
   }
 }
 
