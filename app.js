@@ -35812,27 +35812,32 @@ function _actualizarIndicadorConexion() {
 
 // El navegador puede disparar 'online' varias veces seguidas sin que haya
 // habido una desconexión real (visto en Windows/Chrome con VPN o adaptadores
-// de red virtuales -- cada cambio de ruta de red puede generar su propio
-// evento 'online' aunque nunca se perdió la señal). Sin esta bandera, cada
-// disparo de más volvía a mostrar "Conexión restablecida..." y, al resolver
-// de nuevo waitForPendingWrites(), reaparecía "Todo sincronizado" antes de
-// que el toast anterior alcanzara a ocultarse -- dando la impresión de que
-// el aviso se quedaba pegado en pantalla para siempre. Ahora la secuencia de
-// avisos de reconexión solo corre si ANTES pasamos por nuestro propio
-// handler de 'offline' (es decir, si de verdad detectamos que se perdió la
-// conexión) -- _actualizarIndicadorConexion() sí se sigue llamando siempre,
-// para que el indicador del header nunca quede desactualizado.
+// de red virtuales), Y ADEMÁS una conexión genuinamente inestable (wifi que
+// se cae y vuelve varias veces seguidas, común en muchos centros) puede
+// generar ciclos 'offline'/'online' REALES uno detrás de otro. Con solo la
+// bandera de "¿de verdad estuvimos offline?" (v19.16) el segundo caso seguía
+// sin resolverse: cada ciclo real relanzaba "Conexión restablecida..." y su
+// propio waitForPendingWrites(), y si esos ciclos eran más rápidos que los
+// 3.5s que dura un toast, el aviso se veía pegado en pantalla todo el rato
+// que durara la inestabilidad. Ahora se combinan dos protecciones:
+// 1) debounce de 1.5s -- solo se reacciona cuando la conexión lleva un
+//    momento realmente estable, no en cada parpadeo.
+// 2) _tinclassEsperandoSync -- si ya hay un waitForPendingWrites() en curso,
+//    un nuevo ciclo de reconexión no dispara otro aviso ni otra espera en
+//    paralelo (que podría resolver después y reaparecer el toast).
+// _actualizarIndicadorConexion() (el punto del header) se sigue llamando SIN
+// debounce en cada evento crudo, para que nunca quede desactualizado.
 let _tinclassOfflineDetectado = !navigator.onLine;
+let _tinclassEsperandoSync = false;
+let _tinclassDebounceConexion = null;
 
-window.addEventListener('offline', () => {
-  _tinclassOfflineDetectado = true;
-  _actualizarIndicadorConexion();
-  mostrarToast('Sin conexión -- tus cambios se guardan en este dispositivo y se sincronizan solos cuando vuelva el internet', 'info');
-});
-
-window.addEventListener('online', () => {
-  _actualizarIndicadorConexion();
-  if (!_tinclassOfflineDetectado) return;
+function _tinclassManejarCambioConexionEstable(estaOnline) {
+  if (!estaOnline) {
+    _tinclassOfflineDetectado = true;
+    mostrarToast('Sin conexión -- tus cambios se guardan en este dispositivo y se sincronizan solos cuando vuelva el internet', 'info');
+    return;
+  }
+  if (!_tinclassOfflineDetectado || _tinclassEsperandoSync) return;
   _tinclassOfflineDetectado = false;
   mostrarToast('Conexión restablecida, sincronizando tus cambios...', 'info');
   // waitForPendingWrites() resuelve cuando TODO lo que quedó en cola mientras
@@ -35840,11 +35845,25 @@ window.addEventListener('online', () => {
   // el navegador/versión del SDK no lo trae (no es crítico, solo cosmético).
   try {
     if (typeof db !== 'undefined' && typeof db.waitForPendingWrites === 'function') {
+      _tinclassEsperandoSync = true;
       db.waitForPendingWrites()
         .then(() => mostrarToast('Todo sincronizado', 'success'))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => { _tinclassEsperandoSync = false; });
     }
-  } catch (e) {}
+  } catch (e) { _tinclassEsperandoSync = false; }
+}
+
+window.addEventListener('offline', () => {
+  _actualizarIndicadorConexion();
+  clearTimeout(_tinclassDebounceConexion);
+  _tinclassDebounceConexion = setTimeout(() => _tinclassManejarCambioConexionEstable(false), 1500);
+});
+
+window.addEventListener('online', () => {
+  _actualizarIndicadorConexion();
+  clearTimeout(_tinclassDebounceConexion);
+  _tinclassDebounceConexion = setTimeout(() => _tinclassManejarCambioConexionEstable(true), 1500);
 });
 
 // Estado inicial: si la página se abre YA sin conexión, mostrar el indicador

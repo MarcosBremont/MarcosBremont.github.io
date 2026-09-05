@@ -3671,6 +3671,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.28<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Corrección adicional: "Todo sincronizado" seguía pegado con conexión inestable</div>
+              <ul class="about-ver-items">
+                <li>El arreglo de v19.16 evitaba el aviso duplicado cuando el navegador disparaba "online" de más sin haberse desconectado -- pero con una conexión genuinamente inestable (wifi que se cae y vuelve varias veces seguidas), cada ciclo real de desconexión/reconexión relanzaba toda la secuencia de avisos, y si eso pasaba más rápido de lo que tarda un aviso en desaparecer, se veía pegado en pantalla todo el tiempo que durara la inestabilidad. Ahora se espera a que la conexión esté realmente estable (1.5s sin cambios) antes de avisar, y no se dejan dos esperas de sincronización corriendo en paralelo.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v19.27<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10411,9 +10425,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.27"></script>
+  <script src="app.js?v=19.28"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.27"></script>
+  <script src="auth.js?v=19.28"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
