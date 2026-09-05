@@ -35244,24 +35244,27 @@ function _construirPromptGuiaEstudioExamen(ex, preguntas, analisisPreguntas) {
 Los estudiantes presentaron un examen/evaluación con estas preguntas:
 ${listaPreguntas}
 
-${peores ? `Estos temas tuvieron el desempeño MÁS BAJO en el examen real -- dales más énfasis y profundidad en la guía:\n${peores}\n\n` : ''}TAREA: A partir de los TEMAS/CONCEPTOS que estas preguntas evalúan, identifica los temas subyacentes (agrupa varias preguntas relacionadas en UN solo tema, no hagas una sección por cada pregunta individual) y escribe una GUÍA DE ESTUDIO breve para que los estudiantes la copien en su cuaderno y estudien.
+${peores ? `Estos temas tuvieron el desempeño MÁS BAJO en el examen real -- dales más énfasis y profundidad en la guía:\n${peores}\n\n` : ''}TAREA: A partir de los TEMAS/CONCEPTOS que estas preguntas evalúan, identifica los temas subyacentes (agrupa varias preguntas relacionadas en UN solo tema, no hagas una sección por cada pregunta individual) y escribe una GUÍA DE ESTUDIO para que los estudiantes la copien en su cuaderno y estudien -- son apuntes de clase, no un libro de texto, pero deben quedar completos y bien desarrollados, no telegráficos.
 
-IMPORTANTE -- esto NO es un libro de texto, son apuntes de clase:
-- Cada tema: una definición/explicación CORTA y clara (2-4 líneas, no un párrafo largo).
-- Un ejemplo concreto y breve por tema.
-- 1-2 ejercicios de práctica CORTOS por tema, SIN la solución (son para que el estudiante los resuelva).
-- Usa vocabulario claro, adecuado para que un estudiante lo entienda estudiando solo.
+REGLAS:
+- Cada tema: una explicación clara y BIEN DESARROLLADA (un párrafo de 5-8 líneas, cubriendo qué es, para qué sirve y cómo se usa/reconoce -- no una definición de una sola línea).
+- "puntosClave": 3-5 puntos clave del tema en viñetas cortas (ideas sueltas que resumen lo esencial, fáciles de repasar rápido).
+- "ejemplos": 2 ejemplos concretos y distintos entre sí que ilustren el concepto en la práctica (no 1 solo).
+- "ejercicios": 2-3 ejercicios de práctica por tema, SIN la solución (son para que el estudiante los resuelva por su cuenta).
+- Usa vocabulario claro, adecuado para que un estudiante lo entienda estudiando solo, sin el docente presente.
+- No omitas ningún tema relevante de la lista de preguntas -- cubre TODOS los temas distintos que aparecen, con más profundidad en los de peor desempeño.
 
 Responde SOLO con JSON válido (sin markdown, sin texto adicional), con esta estructura exacta:
 {
   "titulo": "Guía de Estudio - <tema principal del examen>",
-  "introduccion": "1-2 oraciones breves explicando qué cubre esta guía y para qué sirve",
+  "introduccion": "2-3 oraciones explicando qué cubre esta guía y para qué le sirve al estudiante",
   "secciones": [
     {
       "subtitulo": "Nombre corto del tema/concepto",
-      "contenido": "Definición o explicación breve y clara (2-4 líneas)",
-      "ejemplo": "Un ejemplo concreto y corto",
-      "ejercicios": ["Ejercicio de práctica 1 (sin la solución)", "Ejercicio de práctica 2 (sin la solución)"]
+      "contenido": "Explicación completa y bien desarrollada (5-8 líneas)",
+      "puntosClave": ["Punto clave 1", "Punto clave 2", "Punto clave 3"],
+      "ejemplos": ["Primer ejemplo concreto", "Segundo ejemplo concreto, distinto al primero"],
+      "ejercicios": ["Ejercicio de práctica 1 (sin la solución)", "Ejercicio de práctica 2 (sin la solución)", "Ejercicio de práctica 3 (sin la solución)"]
     }
   ]
 }`;
@@ -35273,12 +35276,20 @@ Responde SOLO con JSON válido (sin markdown, sin texto adicional), con esta est
 function _guiaEstudioExamenHTML(data, ex) {
   const escNL = (t) => escapeHTML(t || '').replace(/\n/g, '<br>');
   const seccionesHtml = (data.secciones || []).map((s, i) => {
+    const puntosHtml = Array.isArray(s.puntosClave) && s.puntosClave.length
+      ? '<ul>' + s.puntosClave.map(p => '<li>' + escNL(p) + '</li>').join('') + '</ul>'
+      : '';
+    const ejemplos = Array.isArray(s.ejemplos) ? s.ejemplos : (s.ejemplo ? [s.ejemplo] : []);
+    const ejemplosHtml = ejemplos.length
+      ? ejemplos.map(e => '<p><b>Ejemplo:</b> ' + escNL(e) + '</p>').join('')
+      : '';
     const ejerciciosHtml = Array.isArray(s.ejercicios) && s.ejercicios.length
       ? '<p><b>Ejercicios de práctica:</b></p><ol>' + s.ejercicios.map(e => '<li>' + escNL(e) + '</li>').join('') + '</ol>'
       : '';
     return '<h2>' + (i + 1) + '. ' + escapeHTML(s.subtitulo || 'Tema') + '</h2>'
       + '<p>' + escNL(s.contenido) + '</p>'
-      + (s.ejemplo ? '<p><b>Ejemplo:</b> ' + escNL(s.ejemplo) + '</p>' : '')
+      + puntosHtml
+      + ejemplosHtml
       + ejerciciosHtml;
   }).join('');
 
@@ -35291,7 +35302,7 @@ function _guiaEstudioExamenHTML(data, ex) {
     h1{font-size:16pt;color:#00695C;margin:0 0 6pt;}
     h2{font-size:13pt;color:#00695C;margin:16pt 0 4pt;}
     p{margin:0 0 10pt;text-align:justify;}
-    ol{margin:0 0 10pt;padding-left:20pt;}
+    ul,ol{margin:0 0 10pt;padding-left:20pt;}
     .subt{font-size:10pt;color:#546E7A;margin:0 0 16pt;}
   </style></head>
   <body>
@@ -35302,9 +35313,105 @@ function _guiaEstudioExamenHTML(data, ex) {
   </body></html>`;
 }
 
+/** CSS de la "hoja de trabajo" tipo revista/editorial (mono+serif, acentos
+ *  teal/dorado/naranja, "corner-mark" como una página de revista) que ya usa
+ *  generarIndexHtml() para las hojas de actividad de Planificación Diaria --
+ *  copiado tal cual (no se toca generarIndexHtml, cero riesgo de romperlo)
+ *  para que la Guía de Estudio del examen se vea con el mismo lenguaje
+ *  visual y el docente pueda abrirla en un navegador y proyectarla en clase,
+ *  en vez de solo tener la versión Word para imprimir/repartir. */
+const _CSS_HOJA_ESTUDIO =
+  ':root{--ink:#1a1a2e;--paper:#faf8f3;--accent:#c84b31;--gold:#e8a838;--teal:#2a7f7f;--warm:#f0e9dc;--mid:#6b6b8a;--line:#c8c0b0;--mono:"DM Mono",monospace;--serif:"Fraunces",serif;--sans:"Outfit",sans-serif}' +
+  '*{margin:0;padding:0;box-sizing:border-box}' +
+  '@media print{.no-print{display:none!important}body{background:white}.page{box-shadow:none;margin:0}}' +
+  'body{background:#e8e4dc;font-family:var(--sans);color:var(--ink);min-height:100vh;padding:2rem 1rem}' +
+  '.page{max-width:860px;margin:0 auto;background:var(--paper);box-shadow:0 4px 40px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.06);position:relative;overflow:hidden}' +
+  '.top-bar{height:7px;background:repeating-linear-gradient(90deg,var(--accent) 0 80px,var(--gold) 80px 160px,var(--teal) 160px 240px)}' +
+  '.corner-mark{position:absolute;top:60px;right:40px;font-family:var(--serif);font-style:italic;font-size:.72rem;color:var(--mid);text-align:right;line-height:1.6;opacity:.7}' +
+  '.header{padding:2.4rem 3rem 1.8rem;border-bottom:1px solid var(--line);position:relative}' +
+  '.breadcrumb{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.68rem;color:var(--mid);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem}' +
+  '.breadcrumb span{color:var(--line)}' +
+  '.act-label{display:inline-block;font-family:var(--mono);font-size:.7rem;font-weight:500;background:var(--accent);color:white;padding:.2rem .75rem;letter-spacing:.1em;margin-bottom:.8rem}' +
+  '.header h1{font-family:var(--serif);font-size:2.1rem;font-weight:500;line-height:1.2;color:var(--ink);max-width:600px;margin-bottom:.6rem}' +
+  '.header h1 em{font-style:italic;font-weight:300;color:var(--teal)}' +
+  '.rae-box{background:var(--warm);border-left:3px solid var(--teal);padding:.75rem 1rem;margin-top:1rem;display:flex;gap:.8rem;align-items:flex-start}' +
+  '.rae-box .tag{font-family:var(--mono);font-size:.65rem;background:var(--teal);color:white;padding:.15rem .5rem;white-space:nowrap;margin-top:2px;letter-spacing:.05em}' +
+  '.rae-box p{font-size:.83rem;color:var(--ink);line-height:1.5}' +
+  '.content{padding:0 3rem 3rem}.section{margin-top:2.5rem}' +
+  '.section-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;padding-bottom:.5rem;border-bottom:1.5px solid var(--ink)}' +
+  '.section-num{font-family:var(--mono);font-size:.65rem;background:var(--ink);color:var(--paper);padding:.25rem .6rem;letter-spacing:.05em}' +
+  '.section-title{font-family:var(--serif);font-size:1.25rem;font-weight:500;color:var(--ink)}' +
+  '.section-icon{margin-left:auto;font-size:1.1rem;opacity:.5}' +
+  '.callout{display:flex;gap:.8rem;background:var(--warm);border-left:3px solid var(--gold);padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem;line-height:1.55;color:#3a3a4a}' +
+  '.callout .ico{font-size:1.1rem;flex-shrink:0;margin-top:1px}' +
+  '.concept-card{border:1px solid var(--line);padding:1rem 1.1rem;position:relative;background:white;margin-bottom:1rem}' +
+  '.concept-card .example{margin-top:.5rem;background:var(--warm);padding:.4rem .6rem;font-family:var(--mono);font-size:.72rem;color:var(--teal);border-left:2px solid var(--teal)}' +
+  '.task-box{border:2px solid var(--ink);padding:1.2rem 1.4rem;position:relative;background:white;margin-top:1rem}' +
+  '.task-box .t-label{position:absolute;top:-11px;left:14px;background:var(--ink);color:white;font-family:var(--mono);font-size:.65rem;padding:.2rem .7rem;letter-spacing:.08em;text-transform:uppercase}' +
+  '.task-box p,.task-box li{font-size:.85rem;line-height:1.6}' +
+  '.task-box ul,.task-box ol{padding-left:1.3rem}.task-box li{margin-bottom:.35rem}' +
+  '.divider{height:1px;background:var(--line);margin:2rem 0;position:relative}' +
+  '.footer{background:var(--warm);border-top:1px solid var(--line);padding:.8rem 3rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem}' +
+  '.footer .f-left{font-family:var(--mono);font-size:.65rem;color:var(--mid);line-height:1.6}' +
+  '.footer .f-right{font-family:var(--serif);font-style:italic;font-size:.75rem;color:var(--mid)}' +
+  '@media(max-width:600px){.content{padding:0 1.2rem 2rem}.header{padding:1.5rem 1.2rem 1.2rem}.header h1{font-size:1.5rem}.footer{flex-direction:column;text-align:center}.corner-mark{display:none}}';
+
+/** Arma el HTML autocontenido (mismo lenguaje visual que generarIndexHtml,
+ *  ver _CSS_HOJA_ESTUDIO) para abrir en el navegador y proyectar en clase --
+ *  a diferencia de _guiaEstudioExamenHTML() (Word, pensado para imprimir), no
+ *  necesita otra llamada a la IA: reusa exactamente el mismo `data` ya
+ *  generado, solo cambia cómo se presenta. */
+function _guiaEstudioExamenHtmlProyectable(data, ex) {
+  const _e = (s) => escapeHTML(s || '');
+  const materia = ex.materia || ex.titulo || 'Guía de Estudio';
+  const curso = ex.curso || '';
+  const docente = ex.docenteNombre || '';
+
+  const seccionesHtml = (data.secciones || []).map((s, i) => {
+    const puntosHtml = Array.isArray(s.puntosClave) && s.puntosClave.length
+      ? '<div class="concept-card"><ul>' + s.puntosClave.map(p => '<li>' + _e(p) + '</li>').join('') + '</ul></div>'
+      : '';
+    const ejemplos = Array.isArray(s.ejemplos) ? s.ejemplos : (s.ejemplo ? [s.ejemplo] : []);
+    const ejemplosHtml = ejemplos.length
+      ? '<div class="concept-card">' + ejemplos.map(ej => '<div class="example">Ejemplo: ' + _e(ej) + '</div>').join('') + '</div>'
+      : '';
+    const ejerciciosHtml = Array.isArray(s.ejercicios) && s.ejercicios.length
+      ? '<div class="task-box"><span class="t-label">Ejercicios de práctica</span><ol>' + s.ejercicios.map(ej => '<li>' + _e(ej) + '</li>').join('') + '</ol></div>'
+      : '';
+    return '<div class="section">'
+      + '<div class="section-header"><span class="section-num">' + String(i + 1).padStart(2, '0') + '</span><span class="section-title">' + _e(s.subtitulo || 'Tema') + '</span><span class="section-icon">&#x1F4D8;</span></div>'
+      + '<p style="font-size:.9rem;line-height:1.65;margin-bottom:1rem;">' + _e(s.contenido) + '</p>'
+      + puntosHtml + ejemplosHtml + ejerciciosHtml
+      + '</div><div class="divider"></div>';
+  }).join('');
+
+  return '<!DOCTYPE html>\n<html lang="es">\n<head>\n'
+    + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
+    + '<title>' + _e(data.titulo || 'Guía de Estudio') + '</title>\n'
+    + '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+    + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+    + '<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300;1,500&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">\n'
+    + '<style>\n' + _CSS_HOJA_ESTUDIO + '\n</style>\n</head>\n<body>\n'
+    + '<div class="page"><div class="top-bar"></div>\n'
+    + '<div class="corner-mark">' + _e(materia) + (curso ? '<br>' + _e(curso) : '') + (docente ? '<br>Docente: ' + _e(docente) : '') + '</div>\n'
+    + '<div class="header">\n'
+    + '  <div class="breadcrumb"><span>' + _e(materia) + '</span><span>&rsaquo;</span><span>Guía de Estudio</span></div>\n'
+    + '  <div class="act-label">GUÍA DE ESTUDIO</div>\n'
+    + '  <h1>' + _e(data.titulo || 'Guía de Estudio') + '</h1>\n'
+    + (data.introduccion ? '  <div class="rae-box"><span class="tag">INTRO</span><p>' + _e(data.introduccion) + '</p></div>\n' : '')
+    + '</div>\n<div class="content">\n'
+    + seccionesHtml
+    + '\n</div>\n'
+    + '<div class="footer"><div class="f-left">' + _e(materia) + (curso ? ' &middot; ' + _e(curso) : '') + '</div>'
+    + '<div class="f-right">' + (docente ? 'Docente: ' + _e(docente) : '') + '</div></div>\n'
+    + '</div>\n</body>\n</html>';
+}
+
 /** Botón "Guía de Estudio" del informe de examen -- genera con IA la guía a
- *  partir de las preguntas REALES del examen (no del RA) y la descarga como
- *  Word, lista para entregarle a los estudiantes. */
+ *  partir de las preguntas REALES del examen (no del RA) y descarga DOS
+ *  archivos: el Word de siempre (para imprimir/repartir) y un .html
+ *  autocontenido con el mismo diseño de las hojas de Planificación Diaria,
+ *  para abrir en el navegador y proyectar en clase. */
 async function generarGuiaEstudioExamen() {
   const info = _examenInformeActual;
   if (!info) { mostrarToast('Abre primero el informe de un examen', 'error'); return; }
@@ -35328,17 +35435,36 @@ async function generarGuiaEstudioExamen() {
     mostrarToast('🟢 Generando guía de estudio con IA...', 'info');
     const data = await _llamarIAGuiaEstudio(prompt, s => Array.isArray(s?.secciones) && s.secciones.length > 0);
 
-    const html = _guiaEstudioExamenHTML(data, info.ex);
-    const blob = new Blob(['﻿', html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Guia_Estudio_' + (info.ex.materia || info.ex.titulo || 'examen').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60) + '.doc';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    mostrarToast('Guía de estudio generada y descargada', 'success');
+    const nombreBase = (info.ex.materia || info.ex.titulo || 'examen').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60);
+
+    const htmlWord = _guiaEstudioExamenHTML(data, info.ex);
+    const blobWord = new Blob(['﻿', htmlWord], { type: 'application/msword' });
+    const urlWord = URL.createObjectURL(blobWord);
+    const aWord = document.createElement('a');
+    aWord.href = urlWord;
+    aWord.download = 'Guia_Estudio_' + nombreBase + '.doc';
+    document.body.appendChild(aWord);
+    aWord.click();
+    document.body.removeChild(aWord);
+    URL.revokeObjectURL(urlWord);
+
+    // Segundo archivo -- .html proyectable, con un pequeño retraso para que
+    // el navegador no trate las dos descargas seguidas como un popup y
+    // bloquee la segunda.
+    setTimeout(() => {
+      const htmlProyectable = _guiaEstudioExamenHtmlProyectable(data, info.ex);
+      const blobHtml = new Blob(['﻿' + htmlProyectable], { type: 'text/html;charset=utf-8' });
+      const urlHtml = URL.createObjectURL(blobHtml);
+      const aHtml = document.createElement('a');
+      aHtml.href = urlHtml;
+      aHtml.download = 'Guia_Estudio_' + nombreBase + '.html';
+      document.body.appendChild(aHtml);
+      aHtml.click();
+      document.body.removeChild(aHtml);
+      URL.revokeObjectURL(urlHtml);
+    }, 400);
+
+    mostrarToast('Guía de estudio generada (Word + HTML para proyectar) ✓', 'success');
   } catch (e) {
     mostrarToast('Error generando la guía de estudio: ' + (e.message || e).toString().slice(0, 150), 'error');
   } finally {
