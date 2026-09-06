@@ -16485,11 +16485,12 @@ function renderizarTablaCalificaciones() {
         .filter(Boolean);
       const idEsc1 = a.id.replace(/'/g, "\\'");
       h2 += '<th class="th-act th-act--calc" title="Suma de: ' + escapeHTML(nombresFuentes.join(', ')) + '" style="min-width:80px;background:#E0F2F1;color:#00695C;">'
-        + '<div style="position:relative;">'
-        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc1 + '\')" title="Eliminar esta columna" style="position:absolute;top:-2px;right:-2px;background:none;border:none;cursor:pointer;color:#00695C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
-        + '<div style="font-size:0.72rem;font-weight:600;color:#00695C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">functions</span> ' + escapeHTML(calcLabel) + '</div>'
-        + '<div style="font-size:0.68rem;color:#00695C;opacity:0.75;margin:1px 0;">Suma (' + (a.calculoFuentes || []).length + ')</div>'
-        + '</div></th>';
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">'
+        + '<span style="font-size:0.72rem;font-weight:600;color:#00695C;display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="material-icons" style="font-size:13px;flex-shrink:0;">functions</span>' + escapeHTML(calcLabel) + '</span>'
+        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc1 + '\')" title="Eliminar esta columna" style="flex-shrink:0;background:#fff;border:1px solid #80CBC4;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#00695C;padding:0;"><span class="material-icons" style="font-size:12px;">close</span></button>'
+        + '</div>'
+        + '<div style="font-size:0.68rem;color:#00695C;opacity:0.75;margin:1px 0;text-align:left;">Suma (' + (a.calculoFuentes || []).length + ')</div>'
+        + '</th>';
     } else if (esComp) {
       // Columna de ítem complementario
       const compIcono = a.complementarioIcono || 'star';
@@ -16503,12 +16504,13 @@ function renderizarTablaCalificaciones() {
           + ' style="width:44px;padding:2px 3px;font-size:0.72rem;border:1px solid #FFCC80;border-radius:4px;text-align:center;display:block;margin:2px auto 0;">';
       const idEsc2 = a.id.replace(/'/g, "\\'");
       h2 += '<th class="th-act th-act--comp" title="' + escapeHTML(a.enunciado) + '" style="min-width:90px;background:#FFF3E0;color:#BF360C;">'
-        + '<div style="position:relative;">'
-        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc2 + '\')" title="Eliminar esta columna" style="position:absolute;top:-2px;right:-2px;background:none;border:none;cursor:pointer;color:#BF360C;opacity:0.6;padding:1px;display:flex;"><span class="material-icons" style="font-size:13px;">close</span></button>'
-        + '<div style="font-size:0.72rem;font-weight:600;color:#BF360C;"><span class="material-icons" style="font-size:13px;vertical-align:middle;color:#E65100;">' + compIcono + '</span> ' + escapeHTML(compLabel) + '</div>'
-        + '<div style="font-size:0.68rem;color:#BF360C;opacity:0.75;margin:1px 0;">Complementario</div>'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">'
+        + '<span style="font-size:0.72rem;font-weight:600;color:#BF360C;display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="material-icons" style="font-size:13px;flex-shrink:0;color:#E65100;">' + compIcono + '</span>' + escapeHTML(compLabel) + '</span>'
+        + '<button onclick="_calEliminarColumnaComplementaria(\'' + idEsc2 + '\')" title="Eliminar esta columna" style="flex-shrink:0;background:#fff;border:1px solid #FFCC80;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#BF360C;padding:0;"><span class="material-icons" style="font-size:12px;">close</span></button>'
+        + '</div>'
+        + '<div style="font-size:0.68rem;color:#BF360C;opacity:0.75;margin:1px 0;text-align:left;">Complementario</div>'
         + valorInputHtml
-        + '</div></th>';
+        + '</th>';
     } else {
       // Columna de actividad normal
       const fechaCorta = a.fechaStr ? a.fechaStr.split(',')[0] : '';
