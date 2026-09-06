@@ -3688,6 +3688,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.34<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Libro de Calificaciones: columna "Estudiante" del encabezado se soltaba al hacer scroll</div>
+              <ul class="about-ver-items">
+                <li>Al deslizar la tabla hacia la derecha, el encabezado "Estudiante" (fila del título del RA) se soltaba de su posición fija y dejaba ver por debajo el texto del título del RA -- un bug conocido de Chrome/WebKit donde <code>position:sticky</code> no calcula bien el offset en celdas con <code>rowspan</code>. Se resolvió partiendo esa celda en 2 celdas apiladas (una por fila del encabezado) en vez de una sola con rowspan -- se ven exactamente igual, pero sí funcionan bien con scroll horizontal. La columna "Estudiante" de las filas de estudiantes (más abajo) nunca tuvo este problema porque ya no usaba rowspan.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#EF6C00;">v19.33<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10512,9 +10526,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.33"></script>
+  <script src="app.js?v=19.34"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.33"></script>
+  <script src="auth.js?v=19.34"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

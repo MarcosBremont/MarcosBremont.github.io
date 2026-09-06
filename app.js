@@ -16444,9 +16444,17 @@ function renderizarTablaCalificaciones() {
     ? '✓ ' + sumaAsignada.toFixed(1) + ' / ' + raInfo.valorTotal
     : (sumaDiff > 0 ? '+' + sumaDiff.toFixed(1) + ' excede' : sumaDiff.toFixed(1) + ' faltan');
 
+  // "Estudiante" (th-nombre) NO usa rowspan="2" a propósito -- Chrome/WebKit
+  // tiene un bug conocido donde position:sticky (left) en un <th> con rowspan
+  // dentro de una tabla no calcula bien el offset al hacer scroll horizontal,
+  // haciendo que la celda "se suelte" y deje ver el contenido de la celda
+  // vecina (el título del RA) debajo/encima de ella. Se parte en 2 celdas
+  // apiladas (una por fila, cada una position:sticky simple sin rowspan) que
+  // visualmente se ven igual (mismo fondo, mismo ancho) pero sí funcionan
+  // bien con sticky. "#" no necesita este truco porque no es sticky.
   let h1 = '<tr class="tr-ec-header">'
     + '<th rowspan="2" style="min-width:32px;width:32px;text-align:center;background:var(--color-primario);color:#fff;font-size:0.75rem;border-top-left-radius:var(--radio-lg);">#</th>'
-    + '<th class="th-nombre" rowspan="2">Estudiante</th>'
+    + '<th class="th-nombre">Estudiante</th>'
     + '<th colspan="' + actividades.length + '" style="text-align:start;background:var(--color-primario);color:#fff;padding:6px 8px;">'
     + raLabel + '</th>'
     + '<th rowspan="2" style="background:var(--color-primario-dark);color:#fff;min-width:72px;font-size:0.8rem;vertical-align:middle;text-align:center;white-space:nowrap;">Total RA<br><small style=\'font-weight:400;\'>' + raInfo.valorTotal + ' pts</small><br><small style=\'color:' + sumaColor + ';font-size:0.65rem;font-weight:700;\'>' + sumaLabel + '</small><br><button onclick="_copiarColumnaTotal(this)" title="Copiar columna Total RA" style="background:none;border:none;cursor:pointer;padding:1px 3px;color:#90CAF9;margin-top:2px;" tabindex="-1"><span class="material-icons" style="font-size:13px;">content_copy</span></button></th>'
@@ -16460,7 +16468,7 @@ function renderizarTablaCalificaciones() {
   actividades.forEach(a => { const ec = a.ecCodigo || ''; _cntEC[ec] = (_cntEC[ec] || 0) + 1; });
   const _idxEC = {};
 
-  let h2 = '<tr>';
+  let h2 = '<tr><th class="th-nombre"></th>';
   let actNum = 0;
   actividades.forEach((a, i) => {
     const val = raInfo.valores[a.id] !== undefined ? raInfo.valores[a.id] : '';
