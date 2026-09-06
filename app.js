@@ -7557,26 +7557,34 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
     const numeroActividad = act.ecCodigo ? _getActNumero(act.ecCodigo, _actIndexInEC(actividades, idxGlobal)) : '';
 
     const pasosTxt = desarrollo.pasos || desarrollo.procedimental || '';
+
+    // Contenido de cada momento por separado (sin el "INICIO (X min)" de
+    // encabezado -- ese tiempo ya tiene su propio placeholder aparte,
+    // {tiempo_inicio}/{tiempo_desarrollo}/{tiempo_cierre}, para que la
+    // plantilla lo use en el encabezado de su propia fila/celda). Además de
+    // exponerlos sueltos ({momento_inicio}/{momento_desarrollo}/
+    // {momento_cierre}, para plantillas con una fila por momento), se siguen
+    // combinando en momentos_pedagogicos por compatibilidad con plantillas
+    // que ya usan ese único bloque.
+    const momentoInicioTxt = [
+      inicio.apertura ? `Apertura: ${inicio.apertura}` : '',
+      inicio.encuadre ? `Encuadre: ${inicio.encuadre}` : '',
+      inicio.organizacion ? `Organización: ${inicio.organizacion}` : ''
+    ].filter(Boolean).join('\n');
+    const momentoDesarrolloTxt = [
+      pasosTxt,
+      desarrollo.conceptual ? `Conceptual/Actitudinal: ${desarrollo.conceptual}` : ''
+    ].filter(Boolean).join('\n');
+    const momentoCierreTxt = [
+      cierre.sintesis ? `Síntesis: ${cierre.sintesis}` : '',
+      cierre.conexion ? `Conexión con el mundo real: ${cierre.conexion}` : '',
+      cierre.proximopaso ? `Próximo paso: ${cierre.proximopaso}` : ''
+    ].filter(Boolean).join('\n');
+
     const momentosPedagogicos = [
-      `INICIO (${ti} min)`,
-      [
-        inicio.apertura ? `Apertura: ${inicio.apertura}` : '',
-        inicio.encuadre ? `Encuadre: ${inicio.encuadre}` : '',
-        inicio.organizacion ? `Organización: ${inicio.organizacion}` : ''
-      ].filter(Boolean).join('\n'),
-      '',
-      `DESARROLLO (${td} min)`,
-      [
-        pasosTxt,
-        desarrollo.conceptual ? `Conceptual/Actitudinal: ${desarrollo.conceptual}` : ''
-      ].filter(Boolean).join('\n'),
-      '',
-      `CIERRE (${tc} min)`,
-      [
-        cierre.sintesis ? `Síntesis: ${cierre.sintesis}` : '',
-        cierre.conexion ? `Conexión con el mundo real: ${cierre.conexion}` : '',
-        cierre.proximopaso ? `Próximo paso: ${cierre.proximopaso}` : ''
-      ].filter(Boolean).join('\n')
+      `INICIO (${ti} min)`, momentoInicioTxt, '',
+      `DESARROLLO (${td} min)`, momentoDesarrolloTxt, '',
+      `CIERRE (${tc} min)`, momentoCierreTxt
     ].join('\n');
 
     const div = s.diversidad || {};
@@ -7634,7 +7642,13 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
       contenido_actitudinal: (s.contenidos && s.contenidos.actitudinal) || '',
       // Campos combinados para plantillas con una sola celda por bloque
       momentos_pedagogicos: momentosPedagogicos,
-      atencion_diversidad: atencionDiversidad
+      atencion_diversidad: atencionDiversidad,
+      // Momentos por separado -- para plantillas con una fila/celda propia
+      // por cada momento (Inicio / Desarrollo / Cierre), en vez de la única
+      // celda combinada de arriba.
+      momento_inicio: momentoInicioTxt,
+      momento_desarrollo: momentoDesarrolloTxt,
+      momento_cierre: momentoCierreTxt
     };
 
     const zip = new PizZip(templateBuffer.slice(0));
@@ -46616,7 +46630,13 @@ function _mostrarGuiaPlaceholdersDiarias() {
     ['{valor}', 'Puntos/valor de la actividad'],
     ['{tipo}', 'Modalidad: Individual / Por Equipo / Por Equipos (en pares)'],
     ['{tiempo_total}', 'Tiempo total en minutos (usar como "Tiempo Estimado")'],
-    ['{momentos_pedagogicos}', 'RECOMENDADO: Inicio + Desarrollo + Cierre ya combinados en un solo bloque de texto, listo para una única celda "Momentos Pedagógicos"'],
+    ['{tiempo_inicio}', 'Minutos asignados al Inicio (20% del total)'],
+    ['{tiempo_desarrollo}', 'Minutos asignados al Desarrollo (60% del total)'],
+    ['{tiempo_cierre}', 'Minutos asignados al Cierre (20% del total)'],
+    ['{momentos_pedagogicos}', 'Inicio + Desarrollo + Cierre ya combinados en un solo bloque de texto, para una única celda "Momentos Pedagógicos". Si tu plantilla tiene una FILA POR MOMENTO en vez de una sola celda, usa mejor los 3 placeholders de abajo.'],
+    ['{momento_inicio}', 'RECOMENDADO para plantillas con una fila propia por momento: solo el contenido del Inicio (sin el encabezado "INICIO (X min)" -- combínalo tú con {tiempo_inicio} en el encabezado de esa fila).'],
+    ['{momento_desarrollo}', 'Igual que {momento_inicio} pero solo el contenido del Desarrollo.'],
+    ['{momento_cierre}', 'Igual que {momento_inicio} pero solo el contenido del Cierre.'],
     ['{intencion_educativa}', 'Intención educativa de la actividad'],
     ['{estrategia_corta}', 'Etiqueta corta de la estrategia/metodología principal (usar como "Estrategia")'],
     ['{atencion_diversidad}', 'RECOMENDADO: apoyos + adaptaciones + estrategias inclusivas + adaptaciones específicas ya combinados en un solo bloque, listo para una única celda "Atención a la diversidad"'],
