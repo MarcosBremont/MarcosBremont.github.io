@@ -1,5 +1,5 @@
 // Debe coincidir con el campo "sw" de version.json (ver _instrucciones_ia ahi mismo).
-const CACHE_NAME = 'tinclass-v219';
+const CACHE_NAME = 'tinclass-v220';
 
 // Archivos locales a cachear en la instalación
 const STATIC_ASSETS = [

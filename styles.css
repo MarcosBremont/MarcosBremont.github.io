@@ -2686,6 +2686,18 @@ body.dark-mode .cal-plan-card.activo .cal-plan-card-pts {
   padding: 5px 8px;
 }
 
+/* La regla de arriba (misma especificidad que ".th-nombre" de la línea 2670,
+   pero declarada después) le ganaba el fondo a la celda "Estudiante" cuando
+   está dentro de la fila tr-ec-header, dejándola con un fondo CASI
+   TRANSPARENTE (rgba alpha 0.1) en vez del fondo sólido -- al hacer scroll
+   horizontal se veía el texto del título del RA "colándose" a través de la
+   celda fija en vez de quedar tapado por ella. Esta regla, con 3 clases en
+   vez de 2, tiene más especificidad y le devuelve el fondo sólido. */
+.tabla-cal thead tr.tr-ec-header th.th-nombre {
+  background: var(--color-primario-dark);
+  color: #fff;
+}
+
 .tabla-cal tbody td {
   border: 1px solid var(--color-borde);
   padding: 9px 10px;

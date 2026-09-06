@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=19.23" />
+  <link rel="stylesheet" href="styles.css?v=19.35" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -3684,6 +3684,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.35<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Libro de Calificaciones: fondo transparente de "Estudiante" (causa real del bug anterior)</div>
+              <ul class="about-ver-items">
+                <li>El fix de v19.34 (quitar el rowspan) no era suficiente: había una segunda causa independiente -- una regla CSS con la misma especificidad le ganaba el fondo sólido a la celda "Estudiante" cuando queda dentro de la fila del título del RA, dejándola con un fondo CASI TRANSPARENTE en vez de sólido. Así, aunque la celda ya se quedaba fija (sticky) correctamente, se veía el texto del título del RA "colándose" a través de ella al hacer scroll horizontal. Se agregó una regla más específica que le devuelve el fondo sólido.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10526,9 +10540,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.34"></script>
+  <script src="app.js?v=19.35"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.34"></script>
+  <script src="auth.js?v=19.35"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
