@@ -8844,11 +8844,25 @@ function _mostrarCursoAsignado() {
     input.className = 'chk-curso-paso1';
     input.value = c.id;
     input.checked = idsAMarcar.includes(c.id);
-    input.onchange = _actualizarCalendarioDiasClase;
+    input.onchange = () => { _actualizarCalendarioDiasClase(); _actualizarAvisoMultiCursoHorario(); };
     label.appendChild(input);
     label.appendChild(document.createTextNode(' ' + c.nombre));
     contenedor.appendChild(label);
   });
+  _actualizarAvisoMultiCursoHorario();
+}
+
+/** "Días de Clase por Semana" y las fechas de las actividades son ÚNICOS por
+ *  planificación (no por curso) -- si se marcan 2+ cursos aquí, TODOS
+ *  comparten exactamente el mismo horario y las mismas fechas. Se avisa para
+ *  que el docente no asuma que puede darle un horario distinto a cada uno
+ *  marcándolos juntos -- para eso ya existe "Duplicar planificación", que sí
+ *  permite un horario propio por copia. */
+function _actualizarAvisoMultiCursoHorario() {
+  const aviso = document.getElementById('aviso-multi-curso-horario');
+  if (!aviso) return;
+  const marcados = document.querySelectorAll('.chk-curso-paso1:checked').length;
+  aviso.style.display = marcados > 1 ? 'block' : 'none';
 }
 
 /** Mini-calendario que muestra los días de clase del curso seleccionado */

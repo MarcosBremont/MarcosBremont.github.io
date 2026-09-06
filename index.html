@@ -932,6 +932,10 @@
             <span id="aviso-curso-paso1" style="display:none;font-size:0.78rem;color:#E65100;margin-top:4px;">
               Esta planificación se guardó sin vincularse a ningún curso. Puedes marcar uno o más para que aparezca en el Libro de Calificaciones.
             </span>
+            <span id="aviso-multi-curso-horario" style="display:none;font-size:0.78rem;color:#1565C0;margin-top:4px;">
+              <span class="material-icons" style="font-size:14px;vertical-align:middle;">info</span>
+              Los cursos marcados van a compartir el mismo horario ("Días de Clase por Semana" más abajo) y las mismas fechas de actividades. Si alguno de estos cursos tiene un horario distinto, no lo marques aquí -- usa "Duplicar planificación" para crearle su propia copia con su propio horario.
+            </span>
           </div>
 
           <!-- Cantidad de RA del Módulo -->
@@ -3684,6 +3688,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v19.38<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Aviso al marcar varios cursos con el mismo horario</div>
+              <ul class="about-ver-items">
+                <li>"Días de Clase por Semana" y las fechas de las actividades son únicos por planificación, no por curso -- si marcas 2 o más cursos en "Curso(s)", TODOS comparten exactamente el mismo horario y las mismas fechas. Ahora se muestra un aviso al marcar 2+ cursos aclarando esto, y recordando que si alguno necesita un horario distinto, se debe usar "Duplicar planificación" (que sí permite un horario propio por copia) en vez de marcarlos juntos aquí.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10568,9 +10586,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.37"></script>
+  <script src="app.js?v=19.38"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.37"></script>
+  <script src="auth.js?v=19.38"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
