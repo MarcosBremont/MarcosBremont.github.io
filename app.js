@@ -10731,35 +10731,33 @@ Devuelve EXCLUSIVAMENTE un JSON con esta única clave, sin markdown ni texto adi
 {"elementos": ["elemento exacto de la lista", "..."]}`;
 }
 
-/** Filtra UNA categoría con la cascada Gemini -> OpenRouter -> Groq (Claude
- *  excluido a propósito, ver _generarContenidosConIA).
+/** Filtra UNA categoría con la cascada Claude -> Groq -> Gemini -> OpenRouter
+ *  -- la misma cascada de _prGenerarCriteriosIA() (Lista de Cotejo del Plan
+ *  de Reforzamiento), que en la práctica viene funcionando de forma más
+ *  confiable que el orden Gemini -> OpenRouter -> Groq (sin Claude) que este
+ *  asistente usaba antes. Se retoma Claude a pesar de la exclusión anterior
+ *  (fallaba por falta de créditos) porque ese problema ya no aplica y el
+ *  patrón "un proveedor a la vez, escalando al siguiente" sigue igual.
  *
- *  Orden actualizado tras ver logs reales de producción: los modelos
- *  gratuitos de OpenRouter (NVIDIA Nemotron) respondían SIN error pero con
- *  "elementos":[] en las 3 categorías -- pese a listas con contenido real
- *  (800-1800 caracteres) y un RA específico -- además de tardar hasta 70s
- *  por llamada. Gemini suele ser más rápido y confiable para esta tarea de
- *  extracción estructurada, así que pasa a probarse primero. Groq sigue de
- *  último por su límite real de 8000 tokens/minuto (ver commits previos).
- *
- *  Además, un arreglo vacío YA NO se acepta a la primera: un proveedor
- *  puede responder "sin error" pero fallar en la tarea (modelo débil, no
- *  entendió las instrucciones, etc.), así que si el resultado viene vacío
- *  se sigue intentando con el siguiente proveedor disponible por si
- *  encuentra algo -- el vacío solo se acepta como respuesta final si TODOS
- *  los proveedores configurados coinciden en no encontrar nada.
+ *  Un arreglo vacío NO se acepta a la primera: un proveedor puede responder
+ *  "sin error" pero fallar en la tarea (modelo débil, no entendió las
+ *  instrucciones, etc.), así que si el resultado viene vacío se sigue
+ *  intentando con el siguiente proveedor disponible por si encuentra algo --
+ *  el vacío solo se acepta como respuesta final si TODOS los proveedores
+ *  configurados coinciden en no encontrar nada.
  *
  *  Devuelve {elementos: string[]|null, error: string|null} -- elementos es
  *  null solo si NINGÚN proveedor respondió en absoluto (fallo real). */
-async function _filtrarCategoriaConIA(ra, nombreCategoria, lista, groqKey, geminiKey, openrouterKey) {
+async function _filtrarCategoriaConIA(ra, nombreCategoria, lista, groqKey, geminiKey, openrouterKey, claudeKey) {
   const prompt = _construirPromptContenidosCategoria(ra, nombreCategoria, lista);
   const t0 = Date.now();
-  console.log(`[ContenidosIA] ▶ Iniciando filtrado de "${nombreCategoria}" (lista de ${lista.length} caracteres, claves disponibles: gemini=${!!geminiKey} openrouter=${!!openrouterKey} groq=${!!groqKey})`);
+  console.log(`[ContenidosIA] ▶ Iniciando filtrado de "${nombreCategoria}" (lista de ${lista.length} caracteres, claves disponibles: claude=${!!claudeKey} groq=${!!groqKey} gemini=${!!geminiKey} openrouter=${!!openrouterKey})`);
 
   const intentos = [
+    { nombre: 'Claude', key: claudeKey, llamar: () => _llamarClaude(prompt, 4096) },
+    { nombre: 'Groq', key: groqKey, llamar: () => _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096) },
     { nombre: 'Gemini', key: geminiKey, llamar: () => _llamarGemini(prompt, 4096) },
-    { nombre: 'OpenRouter', key: openrouterKey, llamar: () => _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000) },
-    { nombre: 'Groq', key: groqKey, llamar: () => _llamarGroqConFallback(prompt, `Filtrando ${nombreCategoria}`, 4096) }
+    { nombre: 'OpenRouter', key: openrouterKey, llamar: () => _llamarOpenRouterConFallback(prompt, openrouterKey, `Filtrando ${nombreCategoria}`, 4096, 60000) }
   ];
 
   let elementosEncontrados = null; // el primer resultado NO vacío que se obtenga
@@ -10817,14 +10815,13 @@ async function _generarContenidosConIA() {
     return;
   }
 
-  // Claude queda excluido a propósito de este asistente (no se llama en
-  // absoluto, ni siquiera como primer intento) -- pedido explícito del dueño
-  // tras fallar repetidamente por falta de créditos en su cuenta de Anthropic.
-  const groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
-  console.log('[ContenidosIA] Claves configuradas: gemini=' + !!geminiKey + ' openrouter=' + !!openrouterKey + ' groq=' + !!groqKey + ' (orden de intento: Gemini -> OpenRouter -> Groq, escalando si un proveedor responde vacío)');
-  if (!groqKey && !geminiKey && !openrouterKey) {
+  // Misma cascada que _prGenerarCriteriosIA() (Lista de Cotejo del Plan de
+  // Reforzamiento): Claude -> Groq -> Gemini -> OpenRouter.
+  const claudeKey = getClaudeKey(), groqKey = getGroqKey(), geminiKey = getGeminiKey(), openrouterKey = getOpenRouterKey();
+  console.log('[ContenidosIA] Claves configuradas: claude=' + !!claudeKey + ' groq=' + !!groqKey + ' gemini=' + !!geminiKey + ' openrouter=' + !!openrouterKey + ' (orden de intento: Claude -> Groq -> Gemini -> OpenRouter, escalando si un proveedor falla o responde vacío)');
+  if (!claudeKey && !groqKey && !geminiKey && !openrouterKey) {
     console.warn('[ContenidosIA] Abortado: no hay ninguna clave de IA configurada.');
-    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Groq, Gemini u OpenRouter). Completa los contenidos manualmente.', 'error');
+    mostrarToast('No tienes ninguna clave de IA configurada en Ajustes (Claude, Groq, Gemini u OpenRouter). Completa los contenidos manualmente.', 'error');
     return;
   }
 
@@ -10852,7 +10849,7 @@ async function _generarContenidosConIA() {
         console.log(`[ContenidosIA] "${cat.label}": sin lista pegada, se omite.`);
         continue;
       }
-      const { elementos, error } = await _filtrarCategoriaConIA(ra, cat.label, cat.lista, groqKey, geminiKey, openrouterKey);
+      const { elementos, error } = await _filtrarCategoriaConIA(ra, cat.label, cat.lista, groqKey, geminiKey, openrouterKey, claudeKey);
       if (elementos === null) {
         categoriasSinRespuesta.push(cat.label);
         resumenPorCategoria.push(`${cat.label}: SIN RESPUESTA (${error || 'sin detalle'})`);
