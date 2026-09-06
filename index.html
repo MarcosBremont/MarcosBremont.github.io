@@ -1598,6 +1598,18 @@
           </div>
 
           <div class="form-group form-group--full">
+            <label for="ac-situacion-aprendizaje">Situación de Aprendizaje <span class="label-optional">(contexto/escenario real que motiva la unidad)</span></label>
+            <textarea id="ac-situacion-aprendizaje" rows="3"
+              placeholder="Ej: Los estudiantes de sexto grado del nivel primario de la escuela Antonio García presentan a la docente algunas inquietudes sobre el tema de reproducción humana, expresando dudas sobre cómo se da el proceso y qué cambios biológicos ocurren..."></textarea>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label for="ac-estrategia">Estrategia de Enseñanza-Aprendizaje <span class="label-optional">(opcional)</span></label>
+            <textarea id="ac-estrategia" rows="2"
+              placeholder="Ej: Juego, indagación dialógica, recuperación de experiencias previas, descubrimiento, socialización centrada en actividades grupales, expositiva de conocimiento elaborado..."></textarea>
+          </div>
+
+          <div class="form-group form-group--full">
             <label style="display:block;margin-bottom:6px;">Competencias Fundamentales</label>
             <div style="display:flex;flex-wrap:wrap;gap:10px;">
               <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;"><input type="checkbox" class="ac-comp-fund" value="Ética y Ciudadana"> Ética y Ciudadana</label>
@@ -3667,6 +3679,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v19.31<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Académica: Situación de Aprendizaje y Estrategia</div>
+              <ul class="about-ver-items">
+                <li>Nuevos campos en Unidad de Aprendizaje: <strong>Situación de Aprendizaje</strong> (el contexto/escenario real que motiva la unidad, ej. "los estudiantes presentan dudas sobre...") y <strong>Estrategia de Enseñanza-Aprendizaje</strong> (juego, indagación dialógica, descubrimiento, etc.). La IA ahora usa ambos al generar los Indicadores de Logro y las Actividades, para que respondan al mismo contexto/escenario en vez de ser genéricas. También se muestran en la Vista Previa.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10453,9 +10479,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.30"></script>
+  <script src="app.js?v=19.31"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.30"></script>
+  <script src="auth.js?v=19.31"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

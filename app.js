@@ -1351,6 +1351,8 @@ function guardarDatosFormularioAcademico() {
   const competenciasFundamentales = Array.from(document.querySelectorAll('.ac-comp-fund:checked')).map(c => c.value);
   planificacion.unidad = {
     descripcion: getVal('ac-unidad-descripcion'),
+    situacionAprendizaje: getVal('ac-situacion-aprendizaje'),
+    estrategia: getVal('ac-estrategia'),
     competenciasFundamentales,
     competenciasEspecificas: getVal('ac-competencias-especificas'),
     contenidosConceptuales: getVal('ac-contenidos-conceptuales'),
@@ -1387,6 +1389,8 @@ function poblarFormularioAcademicoDesdeEstado() {
   });
   setVal('ac-unidad-titulo', dg.unidadAprendizaje);
   setVal('ac-unidad-descripcion', unidad.descripcion);
+  setVal('ac-situacion-aprendizaje', unidad.situacionAprendizaje);
+  setVal('ac-estrategia', unidad.estrategia);
   document.querySelectorAll('.ac-comp-fund').forEach(chk => {
     chk.checked = (unidad.competenciasFundamentales || []).includes(chk.value);
   });
@@ -1530,7 +1534,7 @@ function construirPromptAcademico(dg, unidad) {
 Grado: ${dg.grado || ''} (Nivel ${dg.nivelEducativo || ''})
 Título de la Unidad de Aprendizaje: ${dg.unidadAprendizaje || ''}
 ${dg.ejeTematico ? `Eje Temático Transversal: ${dg.ejeTematico}\n` : ''}Descripción/Propósito de la Unidad: ${unidad.descripcion || ''}
-Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
+${unidad.situacionAprendizaje ? `Situación de Aprendizaje (contexto/escenario real que motiva la unidad -- las actividades deben responder a esta situación concreta, no ser genéricas): ${unidad.situacionAprendizaje}\n` : ''}${unidad.estrategia ? `Estrategia de Enseñanza-Aprendizaje a aplicar: ${unidad.estrategia}\n` : ''}Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
 Competencias Específicas del Área: ${unidad.competenciasEspecificas || 'no especificadas'}
 Contenidos Conceptuales: ${unidad.contenidosConceptuales || 'no especificados'}
 Contenidos Procedimentales: ${unidad.contenidosProcedimentales || 'no especificados'}
@@ -1542,7 +1546,7 @@ TAREA: Genera exactamente ${cantidadIndicadores} Indicadores de Logro (código "
 Reglas:
 - Cada Indicador de Logro describe lo que el/la estudiante es capaz de HACER al finalizar la unidad (verbo + objeto + condición), no lo que el docente enseña.
 - Las actividades son tareas concretas y evaluables que el estudiante realiza -- NO deben repetir el enunciado del indicador.
-- No inventes contenidos fuera del área curricular indicada.
+${unidad.situacionAprendizaje ? '- Las actividades deben partir de la Situación de Aprendizaje indicada arriba (mismo contexto/personajes/escenario), no ser actividades desconectadas de ella.\n' : ''}${unidad.estrategia ? '- Aplica la Estrategia de Enseñanza-Aprendizaje indicada al diseñar las actividades.\n' : ''}- No inventes contenidos fuera del área curricular indicada.
 
 Responde SOLO con este JSON exacto, sin markdown ni texto adicional:
 {
@@ -1681,6 +1685,8 @@ function renderizarVistaPreviaAcademico() {
       <hr>
       <h3>Descripción</h3>
       <p>${escapeHTML(unidad.descripcion || '')}</p>
+      ${unidad.situacionAprendizaje ? `<h3>Situación de Aprendizaje</h3><p>${escapeHTML(unidad.situacionAprendizaje)}</p>` : ''}
+      ${unidad.estrategia ? `<h3>Estrategia de Enseñanza-Aprendizaje</h3><p>${escapeHTML(unidad.estrategia)}</p>` : ''}
       ${(unidad.competenciasFundamentales || []).length ? `<h3>Competencias Fundamentales</h3><p>${(unidad.competenciasFundamentales || []).map(escapeHTML).join(', ')}</p>` : ''}
       <h3>Indicadores de Logro</h3>
       <ul>${indicadores.map(i => `<li><strong>${escapeHTML(i.codigo)}:</strong> ${escapeHTML(i.enunciado)}</li>`).join('') || '<li>Sin indicadores todavía.</li>'}</ul>
