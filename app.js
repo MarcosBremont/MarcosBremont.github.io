@@ -1355,6 +1355,7 @@ function guardarDatosFormularioAcademico() {
     estrategia: getVal('ac-estrategia'),
     competenciasFundamentales,
     competenciasEspecificas: getVal('ac-competencias-especificas'),
+    criterioEvaluacion: getVal('ac-criterio-evaluacion'),
     contenidosConceptuales: getVal('ac-contenidos-conceptuales'),
     contenidosProcedimentales: getVal('ac-contenidos-procedimentales'),
     contenidosActitudinales: getVal('ac-contenidos-actitudinales'),
@@ -1395,6 +1396,7 @@ function poblarFormularioAcademicoDesdeEstado() {
     chk.checked = (unidad.competenciasFundamentales || []).includes(chk.value);
   });
   setVal('ac-competencias-especificas', unidad.competenciasEspecificas);
+  setVal('ac-criterio-evaluacion', unidad.criterioEvaluacion);
   setVal('ac-contenidos-conceptuales', unidad.contenidosConceptuales);
   setVal('ac-contenidos-procedimentales', unidad.contenidosProcedimentales);
   setVal('ac-contenidos-actitudinales', unidad.contenidosActitudinales);
@@ -1536,7 +1538,7 @@ Título de la Unidad de Aprendizaje: ${dg.unidadAprendizaje || ''}
 ${dg.ejeTematico ? `Eje Temático Transversal: ${dg.ejeTematico}\n` : ''}Descripción/Propósito de la Unidad: ${unidad.descripcion || ''}
 ${unidad.situacionAprendizaje ? `Situación de Aprendizaje (contexto/escenario real que motiva la unidad -- las actividades deben responder a esta situación concreta, no ser genéricas): ${unidad.situacionAprendizaje}\n` : ''}${unidad.estrategia ? `Estrategia de Enseñanza-Aprendizaje a aplicar: ${unidad.estrategia}\n` : ''}Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
 Competencias Específicas del Área: ${unidad.competenciasEspecificas || 'no especificadas'}
-Contenidos Conceptuales: ${unidad.contenidosConceptuales || 'no especificados'}
+${unidad.criterioEvaluacion ? `Criterio(s) de Evaluación (del currículo, vinculado a una Competencia Fundamental -- los Indicadores de Logro deben estar alineados con esto): ${unidad.criterioEvaluacion}\n` : ''}Contenidos Conceptuales: ${unidad.contenidosConceptuales || 'no especificados'}
 Contenidos Procedimentales: ${unidad.contenidosProcedimentales || 'no especificados'}
 Contenidos Actitudinales: ${unidad.contenidosActitudinales || 'no especificados'}
 Recursos disponibles: ${unidad.recursos || 'no especificados'}
@@ -1545,7 +1547,7 @@ TAREA: Genera exactamente ${cantidadIndicadores} Indicadores de Logro (código "
 
 Reglas:
 - Cada Indicador de Logro describe lo que el/la estudiante es capaz de HACER al finalizar la unidad (verbo + objeto + condición), no lo que el docente enseña.
-- Las actividades son tareas concretas y evaluables que el estudiante realiza -- NO deben repetir el enunciado del indicador.
+${unidad.criterioEvaluacion ? '- Cada Indicador de Logro debe ser una versión más específica y observable del Criterio de Evaluación indicado (parte de lo general del currículo hacia lo particular del estudiante), no un tema desconectado de él.\n' : ''}- Las actividades son tareas concretas y evaluables que el estudiante realiza -- NO deben repetir el enunciado del indicador.
 ${unidad.situacionAprendizaje ? '- Las actividades deben partir de la Situación de Aprendizaje indicada arriba (mismo contexto/personajes/escenario), no ser actividades desconectadas de ella.\n' : ''}${unidad.estrategia ? '- Aplica la Estrategia de Enseñanza-Aprendizaje indicada al diseñar las actividades.\n' : ''}- No inventes contenidos fuera del área curricular indicada.
 
 Responde SOLO con este JSON exacto, sin markdown ni texto adicional:
@@ -1688,6 +1690,7 @@ function renderizarVistaPreviaAcademico() {
       ${unidad.situacionAprendizaje ? `<h3>Situación de Aprendizaje</h3><p>${escapeHTML(unidad.situacionAprendizaje)}</p>` : ''}
       ${unidad.estrategia ? `<h3>Estrategia de Enseñanza-Aprendizaje</h3><p>${escapeHTML(unidad.estrategia)}</p>` : ''}
       ${(unidad.competenciasFundamentales || []).length ? `<h3>Competencias Fundamentales</h3><p>${(unidad.competenciasFundamentales || []).map(escapeHTML).join(', ')}</p>` : ''}
+      ${unidad.criterioEvaluacion ? `<h3>Criterio de Evaluación</h3><p>${escapeHTML(unidad.criterioEvaluacion)}</p>` : ''}
       <h3>Indicadores de Logro</h3>
       <ul>${indicadores.map(i => `<li><strong>${escapeHTML(i.codigo)}:</strong> ${escapeHTML(i.enunciado)}</li>`).join('') || '<li>Sin indicadores todavía.</li>'}</ul>
       <h3>Actividades</h3>

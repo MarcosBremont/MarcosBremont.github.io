@@ -1628,6 +1628,11 @@
           </div>
 
           <div class="form-group form-group--full">
+            <label for="ac-criterio-evaluacion">Criterio de Evaluación <span class="label-optional">(del currículo, vinculado a una Competencia Fundamental -- una por línea)</span></label>
+            <textarea id="ac-criterio-evaluacion" rows="3" placeholder="Ej: Ofrece explicaciones científicas a partir de analizar, evaluar y crear preguntas e hipótesis de observación mediante modelos o experimentación de fenómenos naturales en el contexto próximo, experimentado o modelado."></textarea>
+          </div>
+
+          <div class="form-group form-group--full">
             <label for="ac-contenidos-conceptuales">Contenidos Conceptuales</label>
             <textarea id="ac-contenidos-conceptuales" rows="3" onpaste="_autoformatearContenidoPegado(this)"></textarea>
           </div>
@@ -3679,6 +3684,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v19.32<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Académica: Criterio de Evaluación</div>
+              <ul class="about-ver-items">
+                <li>Nuevo campo en Unidad de Aprendizaje: <strong>Criterio de Evaluación</strong> (el que viene del currículo, vinculado a una Competencia Fundamental) -- separado del Indicador de Logro, tal como se distinguen en el Diseño Curricular Dominicano. La IA ahora lo usa para que cada Indicador de Logro generado sea una versión más específica y observable de ese criterio, en vez de un tema desconectado. También se muestra en la Vista Previa.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10479,9 +10498,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.31"></script>
+  <script src="app.js?v=19.32"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.31"></script>
+  <script src="auth.js?v=19.32"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
