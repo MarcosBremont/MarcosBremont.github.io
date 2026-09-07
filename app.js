@@ -6808,14 +6808,13 @@ async function _exportarConPlantillaCentro() {
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
     const needsMerge = actsEC.length > 1;
-    const horasActEC = ec.horasAsignadas ? (ec.horasAsignadas / Math.max(1, actsEC.length)) : 1.5;
     actsEC.forEach((a, i) => {
       const ecText = `${ec.codigo}\n${ec.enunciado || ''}`;
       const ecNivel = nivelLabelTpl[ec.nivel] || ec.nivel || ec.nivelBloom || '';
       // Si la actividad nunca se generó manualmente en el Paso 5 (Planificación Diaria),
       // la metodología activa se rellena con la generación local para que nunca quede
       // en blanco en la exportación (mismo criterio que _exportarDiariaConPlantillaCentro).
-      const metodologia = estadoDiarias.sesiones[a.id]?.estrategiaCorta || generarContenidoSesion(a, ec, horasActEC).estrategiaCorta || '';
+      const metodologia = estadoDiarias.sesiones[a.id]?.estrategiaCorta || generarContenidoSesion(a, ec, _horasClaseDeActividad(a, ec)).estrategiaCorta || '';
       actividades.push({
         ec_codigo: ec.codigo || '',
         ec_enunciado: i === 0 ? (needsMerge ? '__VSTART__' + ecText : ecText) : '__VMERGE__',
@@ -7484,7 +7483,7 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
     // usamos la generación local (sin IA) como relleno campo por campo para que la
     // exportación NUNCA salga en blanco.
     const ecAct = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
-    const horasActAct = ecAct ? (ecAct.horasAsignadas / Math.max(1, actividades.filter(a => a.ecCodigo === ecAct.codigo && !a.esComplementario).length)) : 1.5;
+    const horasActAct = _horasClaseDeActividad(act, ecAct);
     const localAct = generarContenidoSesion(act, ecAct, horasActAct);
     const sRaw = estadoDiarias.sesiones[act.id] || {};
     const s = {
@@ -28048,6 +28047,40 @@ function _seleccionarContenidosRA(textoRA, indice, cantidad) {
   return [...new Set(elegidas)].join('\n');
 }
 
+/** Horas de clase reales para la sesión de UNA actividad, según el día de la
+ *  semana en el que cae su fecha (dg.diasClase[dia].horas) -- antes, todas
+ *  las sesiones usaban el PROMEDIO de horas entre TODOS los días activos
+ *  (ec.horasAsignadas repartido entre las actividades del EC), así que con
+ *  días de duración distinta (ej. lunes 1h, martes/miércoles/jueves 2h)
+ *  ninguna sesión reflejaba su propia duración real -- todas salían iguales,
+ *  con el promedio (1.75h en ese ejemplo). Ahora se busca directamente el
+ *  día real de la fecha de la actividad. Si la actividad no tiene fecha, o
+ *  esa fecha cae en un día sin horas configuradas (caso raro/legado), cae de
+ *  vuelta al promedio de los días activos, y si tampoco hay eso, a 1.5h. */
+function _horasClaseDeActividad(act, ec) {
+  const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const diasClase = planificacion.datosGenerales?.diasClase || {};
+
+  const fechaRaw = act?.fecha;
+  if (fechaRaw) {
+    const fechaStr = fechaRaw instanceof Date ? fechaRaw.toISOString().split('T')[0] : String(fechaRaw).split('T')[0];
+    const d = new Date(fechaStr + 'T12:00:00');
+    if (!isNaN(d.getTime())) {
+      const cfgDia = diasClase[DIAS_SEMANA[d.getDay()]];
+      if (cfgDia && cfgDia.activo && cfgDia.horas) return cfgDia.horas;
+    }
+  }
+
+  const diasActivos = Object.values(diasClase).filter(d => d.activo);
+  if (diasActivos.length) return diasActivos.reduce((s, d) => s + (d.horas || 0), 0) / diasActivos.length;
+
+  if (ec && ec.horasAsignadas) {
+    const numActs = (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo && !a.esComplementario).length;
+    return ec.horasAsignadas / Math.max(1, numActs);
+  }
+  return 1.5;
+}
+
 function generarContenidoSesion(act, ec, horasSesion) {
 
 
@@ -28409,7 +28442,7 @@ function _normalizarTipoSesion(valor) {
 async function _generarSesionConIA(actId, act, ec) {
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
-  const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
+  const horasAct = _horasClaseDeActividad(act, ec);
   const minTotal = Math.round((horasAct || 1.5) * 60);
   const minInicio = Math.round(minTotal * 0.20);
   const minDesarr = Math.round(minTotal * 0.60);
@@ -28677,9 +28710,7 @@ function generarSesion(actId) {
     _generarSesionConIA(actId, act, ec);
     return;
   }
-  const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
-
-
+  const horasAct = _horasClaseDeActividad(act, ec);
 
 
 
@@ -32046,21 +32077,16 @@ function renderizarDiarias() {
 
 
     const s = estadoDiarias.sesiones[act.id] || {};
-
-
-
-    const ti = s.tiempos?.ini ?? 20;
-
-
-
-    const td = s.tiempos?.des ?? 55;
-
-
-
-    const tc = s.tiempos?.cie ?? 15;
-
-
-
+    // Si esta sesión todavía no se generó/guardó (s.tiempos vacío), el default
+    // ya NO es un fijo de 20/55/15 (90 min) sin relación con la configuración
+    // real -- se calcula igual que en la exportación, según el día de la
+    // semana en el que cae la fecha de esta actividad (ver
+    // _horasClaseDeActividad), para que lo que se ve en pantalla coincida con
+    // lo que sale en el Word.
+    const tiemposDefault = s.tiempos || generarContenidoSesion(act, ec, _horasClaseDeActividad(act, ec)).tiempos;
+    const ti = tiemposDefault.ini;
+    const td = tiemposDefault.des;
+    const tc = tiemposDefault.cie;
     const total = ti + td + tc;
 
 
@@ -32957,9 +32983,11 @@ async function exportarDiariasWord(soloActividadId) {
   function _generarDocxDiarias(img1, img2) {
     const sections = actividades.map(function (act) {
       const s = estadoDiarias.sesiones[act.id] || {};
-      const ti = (s.tiempos && s.tiempos.ini) || 20;
-      const td = (s.tiempos && s.tiempos.des) || 55;
-      const tc = (s.tiempos && s.tiempos.cie) || 15;
+      const ecAct = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+      const tiemposDefault = s.tiempos || generarContenidoSesion(act, ecAct, _horasClaseDeActividad(act, ecAct)).tiempos;
+      const ti = tiemposDefault.ini;
+      const td = tiemposDefault.des;
+      const tc = tiemposDefault.cie;
       const tot = ti + td + tc;
       const raW = Math.round(COL2 * 0.68);
       const tW = COL2 - raW;
@@ -34387,7 +34415,7 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
 /** Genera detalle (instrumento + sesión) para UNA sola actividad */
 async function construirPromptDetalleUno(dg, ra, act, ec) {
   const tipo = act.instrumento === 'rubrica' ? 'rubrica' : 'cotejo';
-  const horasSesion = ec && ec.horasAsignadas ? Math.round((ec.horasAsignadas / 2) * 10) / 10 : 1.5;
+  const horasSesion = _horasClaseDeActividad(act, ec);
   const minTotal = Math.round(horasSesion * 60);
   const minInicio = Math.round(minTotal * 0.20);
   const minDesarrollo = Math.round(minTotal * 0.60);
@@ -35032,7 +35060,7 @@ generarPlanificacion = async function () {
     (planificacion.actividades || []).forEach(act => {
       if (act.sesionIA && !estadoDiarias.sesiones[act.id]) {
         const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
-        const horasAct = ec ? (ec.horasAsignadas / Math.max(1, (planificacion.actividades || []).filter(a => a.ecCodigo === ec.codigo).length)) : 1.5;
+        const horasAct = _horasClaseDeActividad(act, ec);
         const minSesion = Math.round(horasAct * 60);
         const tIni = Math.round(minSesion * 0.20);
         const tDes = Math.round(minSesion * 0.60);

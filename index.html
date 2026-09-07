@@ -3665,6 +3665,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.41<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Diaria: la duración de cada sesión ahora usa el día real de la semana</div>
+              <ul class="about-ver-items">
+                <li>Cuando los "Días de Clase por Semana" tienen horas distintas (ej. lunes 1h, martes/miércoles/jueves 2h), cada sesión de la Planificación Diaria calculaba su duración con el PROMEDIO de todos los días activos -- así que ninguna actividad reflejaba su propia duración real, todas salían iguales (1.75h en ese ejemplo). Además, la pantalla del editor mostraba por defecto un valor fijo de 90 minutos que ni siquiera usaba ese promedio, pudiendo no coincidir con lo que salía en el Word exportado.</li>
+                <li>Ahora cada actividad busca las horas del día de la semana específico en que cae su fecha real, tanto en pantalla como en las exportaciones a Word (con y sin plantilla del centro) y en los prompts de IA que generan la sesión.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v19.40<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10588,9 +10603,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.40"></script>
+  <script src="app.js?v=19.41"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.40"></script>
+  <script src="auth.js?v=19.41"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
