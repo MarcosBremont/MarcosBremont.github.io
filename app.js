@@ -26056,9 +26056,11 @@ async function guardarPlanificacionActual(silencioso = false) {
     // una asignación existente si el checklist aún no se restauró en esta
     // sesión (p.ej. al llegar directo al paso 5/6 sin pasar antes por el paso 1).
     const cursoIdsSel = Array.from(document.querySelectorAll('.chk-curso-paso1:checked')).map(chk => chk.value);
+    console.log('[PlanDebug] Asignación de curso(s) -> finalId=', finalId, 'checkboxesEncontrados=', document.querySelectorAll('.chk-curso-paso1').length, 'cursoIdsSel=', cursoIdsSel, 'cursosExist=', cursosExist.map(c => c.id + ':' + c.nombre));
     if (cursosExist.length > 0) {
       const yaAsignada = cursosExist.some(c => (c.planIds || []).includes(finalId));
       if (!yaAsignada && cursoIdsSel.length === 0) {
+        console.warn('[PlanDebug] Ningún curso marcado en el checklist al momento de guardar -- no se asignó ninguno.');
         if (!silencioso) {
           // Advertir que falta seleccionar curso (sin bloquear el guardado)
           const aviso = document.getElementById('aviso-curso-paso1');
@@ -26071,7 +26073,7 @@ async function guardarPlanificacionActual(silencioso = false) {
         const nombresAsignados = [];
         cursoIdsSel.forEach(cursoId => {
           const curso = calState.cursos[cursoId];
-          if (!curso) return;
+          if (!curso) { console.warn('[PlanDebug] cursoId marcado pero no existe en calState.cursos:', cursoId); return; }
           if (!curso.planIds) curso.planIds = [];
           if (!curso.planIds.includes(finalId)) {
             curso.planIds.push(finalId);
@@ -26079,6 +26081,7 @@ async function guardarPlanificacionActual(silencioso = false) {
             nombresAsignados.push(curso.nombre);
           }
         });
+        console.log('[PlanDebug] Asignados a:', nombresAsignados, '-- planIds resultantes:', cursoIdsSel.map(id => id + '=' + JSON.stringify(calState.cursos[id]?.planIds)));
         if (nombresAsignados.length > 0) {
           guardarCalificaciones();
           if (!silencioso) mostrarToast('Planificación guardada y asignada a: ' + nombresAsignados.join(', '), 'success');
