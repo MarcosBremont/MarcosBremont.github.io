@@ -3670,6 +3670,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v19.44<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cambiar el horario en el wizard ahora recalcula las fechas de las actividades</div>
+              <ul class="about-ver-items">
+                <li>Si editabas directamente "Días de Clase por Semana" en el Paso 1 de una planificación que ya tenía actividades generadas (típico tras "Duplicar planificación" para otro curso con horario distinto), las fechas de esas actividades se quedaban con el horario viejo -- solo se recalculaban regenerando todo con IA. Ahora, al presionar "Siguiente" desde el Paso 1, si el horario cambió y ya hay actividades con fecha, se recalculan automáticamente con el nuevo horario (mismo cálculo que ya usa "Duplicar planificación" -- respeta festivos y actividades de varios días).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#2E7D32;">v19.42<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10622,9 +10636,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.43"></script>
+  <script src="app.js?v=19.44"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.43"></script>
+  <script src="auth.js?v=19.44"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -2202,6 +2202,53 @@ function _resolverFechaActividad(fechasValidas, fechaIdx, duracionDias) {
   return { fecha: inicioObj.fecha, fechaFin: finObj.fecha, fechaStr };
 }
 
+/** Resumen normalizado de una configuración de días de clase (solo días
+ *  activos + sus horas), para comparar si cambió de un guardado a otro sin
+ *  que importe el orden de las claves. */
+function _diasClaseKey(dias) {
+  return Object.entries(dias || {})
+    .filter(([, v]) => v && v.activo)
+    .map(([d, v]) => d + ':' + v.horas)
+    .sort()
+    .join('|');
+}
+
+/** Recalcula act.fecha/fechaFin/fechaStr de TODAS las actividades a partir de
+ *  la configuración actual de Días de Clase + Fecha de Inicio/Término --
+ *  misma lógica que ya usa confirmarDuplicarPlan() cuando el curso destino
+ *  tiene un horario distinto (calcularFechasClase + _resolverFechaActividad),
+ *  para el caso de editar el horario directo en el wizard (Paso 1) de una
+ *  planificación que YA tiene actividades generadas (ej. una duplicada, o
+ *  una que se está reprogramando para otro curso) -- antes, cambiar los
+ *  Días de Clase ahí no volvía a calcular las fechas ya asignadas, así que
+ *  se quedaban con el horario viejo hasta que se regeneraba todo con IA. */
+function _reasignarFechasActividadesPorDiasClase() {
+  const dg = planificacion.datosGenerales || {};
+  const acts = planificacion.actividades || [];
+  if (!acts.length || !dg.fechaInicio) return;
+
+  const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
+  const fechaFin = dg.fechaTermino || dg.fechaInicio;
+  const fechas = calcularFechasClase(dg.diasClase || {}, dg.fechaInicio, fechaFin, festivosAdmin);
+  if (!fechas.length) return;
+
+  let idx = 0;
+  acts.forEach(act => {
+    const duracionDias = Math.max(1, Math.min(3, parseInt(act.duracionDias, 10) || 1));
+    const resuelto = _resolverFechaActividad(fechas, idx, duracionDias);
+    if (resuelto.fecha) {
+      act.fecha = resuelto.fecha;
+      act.fechaFin = resuelto.fechaFin;
+      act.fechaStr = resuelto.fechaStr;
+    }
+    idx += duracionDias;
+  });
+
+  if (typeof renderizarActividades === 'function') renderizarActividades(planificacion.actividades);
+  guardarBorrador();
+  mostrarToast('📅 Fechas de las actividades recalculadas según el nuevo horario.', 'info');
+}
+
 /** Normaliza act.fecha/act.fechaFin (Date u string, con o sin hora) a 'YYYY-MM-DD'. */
 function _fechaActISO(valor) {
   if (!valor) return null;
@@ -9485,6 +9532,15 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
 
+  // Si se sale del Paso 1 (Datos Generales) hacia adelante, captura el
+  // horario ANTES de que guardarDatosFormulario() lo sobreescriba con lo que
+  // haya en el formulario -- para detectar si el docente lo cambió (ej. tras
+  // duplicar una planificación) y, si ya hay actividades con fecha, avisar/
+  // recalcularlas con el horario nuevo (ver _reasignarFechasActividadesPorDiasClase).
+  const _diasClaseKeyAntes = (pasoActual === 1 && nuevoPaso > pasoActual)
+    ? _diasClaseKey(planificacion.datosGenerales?.diasClase)
+    : null;
+
   if (nuevoPaso > pasoActual || nuevoPaso === pasoActual) {
 
 
@@ -9493,6 +9549,13 @@ function irAlPaso(nuevoPaso, validar = true) {
 
 
 
+  }
+
+  if (_diasClaseKeyAntes !== null) {
+    const dgTrasGuardar = planificacion.datosGenerales || {};
+    const cambioHorario = _diasClaseKeyAntes !== _diasClaseKey(dgTrasGuardar.diasClase);
+    const hayActividadesConFecha = (planificacion.actividades || []).some(a => a.fecha);
+    if (cambioHorario && hayActividadesConFecha) _reasignarFechasActividadesPorDiasClase();
   }
 
 
