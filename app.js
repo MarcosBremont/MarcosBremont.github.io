@@ -2223,14 +2223,22 @@ function _diasClaseKey(dias) {
  *  Días de Clase ahí no volvía a calcular las fechas ya asignadas, así que
  *  se quedaban con el horario viejo hasta que se regeneraba todo con IA. */
 function _reasignarFechasActividadesPorDiasClase() {
+  // Llamado también directo desde un botón manual en "Días de Clase por
+  // Semana" (Paso 1) -- ahí el formulario puede no haberse guardado todavía
+  // (el docente marcó/cambió un día y le dio clic al botón sin pasar de
+  // paso), así que se asegura de leer los valores más recientes del DOM
+  // antes de recalcular.
+  if (typeof guardarDatosFormulario === 'function' && document.getElementById('horas-lunes')) guardarDatosFormulario();
+
   const dg = planificacion.datosGenerales || {};
   const acts = planificacion.actividades || [];
-  if (!acts.length || !dg.fechaInicio) return;
+  if (!acts.length) { mostrarToast('Esta planificación todavía no tiene actividades.', 'info'); return; }
+  if (!dg.fechaInicio) { mostrarToast('Define primero la Fecha de Inicio.', 'error'); return; }
 
   const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
   const fechaFin = dg.fechaTermino || dg.fechaInicio;
   const fechas = calcularFechasClase(dg.diasClase || {}, dg.fechaInicio, fechaFin, festivosAdmin);
-  if (!fechas.length) return;
+  if (!fechas.length) { mostrarToast('Marca al menos un día en "Días de Clase por Semana" y verifica la Fecha de Término.', 'error'); return; }
 
   let idx = 0;
   acts.forEach(act => {
