@@ -9148,6 +9148,7 @@ function _actualizarDgFechaLabels() {
     const lbl = document.getElementById(id + '-label');
     if (lbl) lbl.textContent = val ? val.split('-').reverse().join('/') : '—';
   });
+  if (typeof _actualizarSugerenciaFechaTermino === 'function') _actualizarSugerenciaFechaTermino();
 }
 
 /** Llena los campos del formulario desde el estado restaurado */
@@ -10164,8 +10165,62 @@ function _renderTablaPriorizacion(cantRA, datos) {
 
   // Recalcular totales en tiempo real
   tbody.querySelectorAll('.prio-valor').forEach(inp => inp.addEventListener('input', _calcTotalesPriorizacion));
-  tbody.querySelectorAll('.prio-tiempo').forEach(inp => inp.addEventListener('input', _calcTotalesPriorizacion));
+  tbody.querySelectorAll('.prio-tiempo').forEach(inp => {
+    inp.addEventListener('input', _actualizarSugerenciaFechaTermino);
+    inp.addEventListener('focus', _actualizarSugerenciaFechaTermino);
+    inp.addEventListener('input', _calcTotalesPriorizacion);
+  });
   _calcTotalesPriorizacion();
+  _actualizarSugerenciaFechaTermino();
+}
+
+let _prioSugerenciaFecha = null;
+
+/** Sugiere la Fecha de Término contando hacia adelante desde la Fecha de
+ *  Inicio la cantidad de semanas escrita en la celda "Tiempo" (de la tabla
+ *  de Priorización) que el docente esté editando/enfocando en ese momento
+ *  (o la primera con un valor, si ninguna tiene el foco) -- para no tener
+ *  que calcular la fecha a mano. El campo "Tiempo" es texto libre (ej. "3
+ *  Sem.", "3"), así que se extrae el primer número que aparezca. */
+function _actualizarSugerenciaFechaTermino() {
+  const box = document.getElementById('prio-sugerencia-fecha');
+  const txt = document.getElementById('prio-sugerencia-texto');
+  if (!box || !txt) return;
+
+  const inicio = document.getElementById('fecha-inicio')?.value;
+  if (!inicio) { box.style.display = 'none'; return; }
+
+  const activo = document.activeElement?.classList?.contains('prio-tiempo') ? document.activeElement : null;
+  const inputs = Array.from(document.querySelectorAll('.prio-tiempo'));
+  const target = activo || inputs.find(i => i.value.trim());
+  if (!target) { box.style.display = 'none'; return; }
+
+  const match = target.value.match(/(\d+(?:[.,]\d+)?)/);
+  const semanas = match ? parseFloat(match[1].replace(',', '.')) : 0;
+  if (!semanas) { box.style.display = 'none'; return; }
+
+  const d = new Date(inicio + 'T12:00:00');
+  if (isNaN(d.getTime())) { box.style.display = 'none'; return; }
+  d.setDate(d.getDate() + Math.round(semanas * 7) - 1);
+  const fechaCalc = d.toISOString().split('T')[0];
+  const fechaCalcLabel = fechaCalc.split('-').reverse().join('/');
+  const inicioLabel = inicio.split('-').reverse().join('/');
+
+  const idx = parseInt(target.dataset.idx, 10) || 0;
+  _prioSugerenciaFecha = fechaCalc;
+  txt.innerHTML = `<strong>RA${idx + 1}</strong>: ${semanas} semana${semanas !== 1 ? 's' : ''} desde el ${inicioLabel} → Fecha de Término sugerida: <strong>${fechaCalcLabel}</strong>`;
+  box.style.display = 'flex';
+}
+
+function _usarFechaTerminoSugerida() {
+  if (!_prioSugerenciaFecha) return;
+  const input = document.getElementById('fecha-termino');
+  if (!input) return;
+  input.value = _prioSugerenciaFecha;
+  _actualizarDgFechaLabels();
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  mostrarToast('Fecha de Término actualizada', 'success');
 }
 
 function _calcTotalesPriorizacion() {

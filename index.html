@@ -995,6 +995,11 @@
               <tbody id="priorizacion-tbody"></tbody>
             </table>
           </div>
+          <div id="prio-sugerencia-fecha" style="display:none;margin-top:10px;background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:8px;padding:10px 14px;font-size:0.82rem;color:#2E7D32;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="material-icons" style="font-size:18px;vertical-align:middle;">event_available</span>
+            <span id="prio-sugerencia-texto"></span>
+            <button type="button" onclick="_usarFechaTerminoSugerida()" style="margin-left:auto;background:#2E7D32;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;">Usar esta fecha</button>
+          </div>
         </div>
 
         <!-- Días de clase + horas por día -->
@@ -3661,6 +3666,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v19.42<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Sugerencia de Fecha de Término desde la tabla de Priorización</div>
+              <ul class="about-ver-items">
+                <li>Al escribir las semanas de un RA en la tabla "Priorización y Ponderación" (ej. "3" en RA1), si ya tienes la Fecha de Inicio puesta, ahora aparece un aviso con la Fecha de Término sugerida (contando esa cantidad de semanas desde el inicio) y un botón "Usar esta fecha" para aplicarla directo, sin tener que calcularla a mano en el calendario.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10603,9 +10622,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.41"></script>
+  <script src="app.js?v=19.42"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.41"></script>
+  <script src="auth.js?v=19.42"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
