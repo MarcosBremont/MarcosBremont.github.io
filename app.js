@@ -1185,7 +1185,7 @@ let planificacion = {
 // tocar nada del wizard/datos de ETP.
 
 /** Objeto `planificacion` fresco para una nueva planificación académica.
- *  `ra.descripcion` se mantiene como espejo de `unidad.descripcion` (y
+ *  `ra.descripcion` se mantiene como espejo de `unidad.situacionAprendizaje` (y
  *  `datosGenerales.moduloFormativo` como espejo de `unidadAprendizaje`)
  *  únicamente para que _ensureRA() (Libro de Calificaciones) encuentre lo que
  *  ya espera sin que haya que tocarle una sola línea. */
@@ -1194,7 +1194,7 @@ function _planificacionAcademicaDefault() {
     tipo: 'academico',
     datosGenerales: {},
     unidad: {
-      descripcion: '',
+      situacionAprendizaje: '',
       competenciasFundamentales: [],
       competenciasEspecificas: '',
       contenidosConceptuales: '',
@@ -1285,7 +1285,7 @@ function actualizarStepperAcademico(pasoActivo) {
 
 function validarPasoAc1() {
   const campos = ['ac-nombre-docente', 'ac-nivel-educativo', 'ac-grado', 'ac-area-curricular',
-    'ac-valor-unidad', 'ac-horas-semana', 'ac-fecha-inicio', 'ac-fecha-termino'];
+    'ac-valor-unidad', 'ac-fecha-inicio', 'ac-fecha-termino'];
   let valido = true;
   campos.forEach(id => {
     const el = document.getElementById(id);
@@ -1299,17 +1299,11 @@ function validarPasoAc1() {
 }
 
 function validarPasoAc2() {
-  const campos = ['ac-unidad-titulo', 'ac-unidad-descripcion'];
-  let valido = true;
-  campos.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const vacio = !String(el.value || '').trim();
-    el.classList.toggle('error', vacio);
-    if (vacio) valido = false;
-  });
-  if (!valido) mostrarToast('Completa el título y la descripción de la Unidad antes de continuar.', 'error');
-  return valido;
+  const el = document.getElementById('ac-unidad-titulo');
+  const vacio = !String(el?.value || '').trim();
+  el?.classList.toggle('error', vacio);
+  if (vacio) mostrarToast('Completa el título de la Unidad antes de continuar.', 'error');
+  return !vacio;
 }
 
 function validarPasoActualAcademico() {
@@ -1319,14 +1313,14 @@ function validarPasoActualAcademico() {
 }
 
 /** Lee los campos del DOM del Paso 1/2 académico hacia `planificacion`.
- *  Espeja unidadAprendizaje→moduloFormativo y unidad.descripcion→ra.descripcion
- *  para que _ensureRA() (Libro de Calificaciones) siga funcionando sin cambios. */
+ *  Espeja unidadAprendizaje→moduloFormativo y unidad.situacionAprendizaje→
+ *  ra.descripcion para que _ensureRA() (Libro de Calificaciones) siga
+ *  funcionando sin cambios -- situacionAprendizaje reemplaza a la antigua
+ *  Descripción/Propósito de la Unidad (quitada del formulario) como fuente
+ *  de ese espejo, ya que ahora la genera la IA junto con Indicadores y
+ *  Actividades (ver construirPromptAcademico/generarPlanificacionAcademica). */
 function guardarDatosFormularioAcademico() {
   const getVal = id => document.getElementById(id)?.value?.trim() || '';
-  const diasClase = [];
-  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
-    if (document.getElementById('ac-dia-' + dia)?.checked) diasClase.push(dia);
-  });
 
   planificacion.datosGenerales = {
     ...(planificacion.datosGenerales || {}),
@@ -1340,19 +1334,15 @@ function guardarDatosFormularioAcademico() {
     anoEscolar: getVal('ac-ano-escolar'),
     ejeTematico: getVal('ac-eje-tematico'),
     valorRA: getVal('ac-valor-unidad'),
-    horasSemana: getVal('ac-horas-semana'),
     fechaInicio: getVal('ac-fecha-inicio'),
     fechaTermino: getVal('ac-fecha-termino'),
-    diasClase,
     unidadAprendizaje: getVal('ac-unidad-titulo'),
     moduloFormativo: getVal('ac-unidad-titulo') // espejo -- ver _ensureRA()
   };
 
   const competenciasFundamentales = Array.from(document.querySelectorAll('.ac-comp-fund:checked')).map(c => c.value);
   planificacion.unidad = {
-    descripcion: getVal('ac-unidad-descripcion'),
     situacionAprendizaje: getVal('ac-situacion-aprendizaje'),
-    estrategia: getVal('ac-estrategia'),
     competenciasFundamentales,
     competenciasEspecificas: getVal('ac-competencias-especificas'),
     criterioEvaluacion: getVal('ac-criterio-evaluacion'),
@@ -1361,7 +1351,7 @@ function guardarDatosFormularioAcademico() {
     contenidosActitudinales: getVal('ac-contenidos-actitudinales'),
     recursos: getVal('ac-recursos')
   };
-  planificacion.ra = { descripcion: planificacion.unidad.descripcion }; // espejo -- ver _ensureRA()
+  planificacion.ra = { descripcion: planificacion.unidad.situacionAprendizaje }; // espejo -- ver _ensureRA()
 }
 
 /** Repuebla el formulario académico desde `planificacion` (al cargar un plan
@@ -1381,17 +1371,10 @@ function poblarFormularioAcademicoDesdeEstado() {
   setVal('ac-ano-escolar', dg.anoEscolar);
   setVal('ac-eje-tematico', dg.ejeTematico);
   setVal('ac-valor-unidad', dg.valorRA);
-  setVal('ac-horas-semana', dg.horasSemana);
   setVal('ac-fecha-inicio', dg.fechaInicio);
   setVal('ac-fecha-termino', dg.fechaTermino);
-  ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
-    const chk = document.getElementById('ac-dia-' + dia);
-    if (chk) chk.checked = (dg.diasClase || []).includes(dia);
-  });
   setVal('ac-unidad-titulo', dg.unidadAprendizaje);
-  setVal('ac-unidad-descripcion', unidad.descripcion);
   setVal('ac-situacion-aprendizaje', unidad.situacionAprendizaje);
-  setVal('ac-estrategia', unidad.estrategia);
   document.querySelectorAll('.ac-comp-fund').forEach(chk => {
     chk.checked = (unidad.competenciasFundamentales || []).includes(chk.value);
   });
@@ -1534,24 +1517,26 @@ function construirPromptAcademico(dg, unidad) {
 
 Área Curricular: ${dg.areaCurricular || ''}
 Grado: ${dg.grado || ''} (Nivel ${dg.nivelEducativo || ''})
-Título de la Unidad de Aprendizaje: ${dg.unidadAprendizaje || ''}
-${dg.ejeTematico ? `Eje Temático Transversal: ${dg.ejeTematico}\n` : ''}Descripción/Propósito de la Unidad: ${unidad.descripcion || ''}
-${unidad.situacionAprendizaje ? `Situación de Aprendizaje (contexto/escenario real que motiva la unidad -- las actividades deben responder a esta situación concreta, no ser genéricas): ${unidad.situacionAprendizaje}\n` : ''}${unidad.estrategia ? `Estrategia de Enseñanza-Aprendizaje a aplicar: ${unidad.estrategia}\n` : ''}Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
+Título de la Unidad de Aprendizaje (el tema): ${dg.unidadAprendizaje || ''}
+${dg.ejeTematico ? `Eje Temático Transversal: ${dg.ejeTematico}\n` : ''}Competencias Fundamentales seleccionadas: ${(unidad.competenciasFundamentales || []).join(', ') || 'ninguna indicada'}
 Competencias Específicas del Área: ${unidad.competenciasEspecificas || 'no especificadas'}
 ${unidad.criterioEvaluacion ? `Criterio(s) de Evaluación (del currículo, vinculado a una Competencia Fundamental -- los Indicadores de Logro deben estar alineados con esto): ${unidad.criterioEvaluacion}\n` : ''}Contenidos Conceptuales: ${unidad.contenidosConceptuales || 'no especificados'}
 Contenidos Procedimentales: ${unidad.contenidosProcedimentales || 'no especificados'}
 Contenidos Actitudinales: ${unidad.contenidosActitudinales || 'no especificados'}
 Recursos disponibles: ${unidad.recursos || 'no especificados'}
-
-TAREA: Genera exactamente ${cantidadIndicadores} Indicadores de Logro (código "IL1", "IL2"...) alineados a las Competencias Específicas, y ${cantidadActPorIndicador} actividad(es) concreta(s) por cada indicador (${totalActs} actividades en total).
+${unidad.situacionAprendizaje ? `Situación de Aprendizaje ya escrita anteriormente (revísala y mejórala si hace falta, manteniendo el mismo contexto/escenario; no la reemplaces por algo distinto salvo que ya no encaje con el tema):\n${unidad.situacionAprendizaje}\n` : ''}
+TAREA: Genera 1) la Situación de Aprendizaje de esta unidad, 2) exactamente ${cantidadIndicadores} Indicadores de Logro (código "IL1", "IL2"...) alineados a las Competencias Específicas, y 3) ${cantidadActPorIndicador} actividad(es) concreta(s) por cada indicador (${totalActs} actividades en total).
 
 Reglas:
+- La Situación de Aprendizaje es un párrafo breve (3-5 líneas) que describe un escenario o contexto REAL y concreto -- ej. "Los estudiantes de [grado] del nivel [nivel] de la escuela [nombre inventado] presentan inquietudes sobre..." -- que le da sentido al tema de la unidad. No es un resumen del contenido, es una situación que un/a estudiante o docente podría vivir realmente.
 - Cada Indicador de Logro describe lo que el/la estudiante es capaz de HACER al finalizar la unidad (verbo + objeto + condición), no lo que el docente enseña.
 ${unidad.criterioEvaluacion ? '- Cada Indicador de Logro debe ser una versión más específica y observable del Criterio de Evaluación indicado (parte de lo general del currículo hacia lo particular del estudiante), no un tema desconectado de él.\n' : ''}- Las actividades son tareas concretas y evaluables que el estudiante realiza -- NO deben repetir el enunciado del indicador.
-${unidad.situacionAprendizaje ? '- Las actividades deben partir de la Situación de Aprendizaje indicada arriba (mismo contexto/personajes/escenario), no ser actividades desconectadas de ella.\n' : ''}${unidad.estrategia ? '- Aplica la Estrategia de Enseñanza-Aprendizaje indicada al diseñar las actividades.\n' : ''}- No inventes contenidos fuera del área curricular indicada.
+- Las actividades deben partir de la Situación de Aprendizaje que generes (mismo contexto/personajes/escenario), no ser actividades desconectadas de ella.
+- No inventes contenidos fuera del área curricular indicada.
 
 Responde SOLO con este JSON exacto, sin markdown ni texto adicional:
 {
+  "situacionAprendizaje": "...",
   "indicadoresLogro": [
     {"codigo": "IL1", "enunciado": "...", "competenciaAsociada": "..."}
   ],
@@ -1572,8 +1557,8 @@ async function generarPlanificacionAcademica() {
   const dg = planificacion.datosGenerales || {};
   const unidad = planificacion.unidad || {};
 
-  if (!unidad.descripcion?.trim()) {
-    mostrarToast('Escribe la descripción de la Unidad antes de generar', 'error');
+  if (!dg.unidadAprendizaje?.trim()) {
+    mostrarToast('Escribe el título de la Unidad (el tema) antes de generar', 'error');
     return;
   }
 
@@ -1613,6 +1598,12 @@ async function generarPlanificacionAcademica() {
     }
 
     if (aiData && Array.isArray(aiData.indicadoresLogro) && aiData.indicadoresLogro.length) {
+      if (aiData.situacionAprendizaje?.trim()) {
+        planificacion.unidad.situacionAprendizaje = aiData.situacionAprendizaje.trim();
+        planificacion.ra = { descripcion: planificacion.unidad.situacionAprendizaje }; // espejo -- ver _ensureRA()
+        const elSit = document.getElementById('ac-situacion-aprendizaje');
+        if (elSit) elSit.value = planificacion.unidad.situacionAprendizaje;
+      }
       planificacion.indicadoresLogro = aiData.indicadoresLogro.map((ind, i) => ({
         codigo: ind.codigo || ('IL' + (i + 1)),
         enunciado: ind.enunciado || '',
@@ -1626,7 +1617,7 @@ async function generarPlanificacionAcademica() {
         esComplementario: false
       }));
       _acDistribuirPuntosAutomatico();
-      mostrarToast('Planificación académica generada con IA ✓', 'success');
+      mostrarToast('Situación de Aprendizaje, Indicadores y Actividades generados con IA ✓', 'success');
     } else {
       mostrarToast('⏳ Ningún proveedor de IA respondió. Generando localmente...', 'warning');
       _acGenerarLocal(dg, unidad);
@@ -1685,10 +1676,7 @@ function renderizarVistaPreviaAcademico() {
       <h2 style="text-align:center;color:#00695C;">${escapeHTML(dg.unidadAprendizaje || 'Unidad sin título')}</h2>
       <p style="text-align:center;color:#546E7A;font-size:0.9rem;">${escapeHTML(dg.areaCurricular || '')} · ${escapeHTML(dg.grado || '')} · ${escapeHTML(dg.nombreDocente || '')}</p>
       <hr>
-      <h3>Descripción</h3>
-      <p>${escapeHTML(unidad.descripcion || '')}</p>
       ${unidad.situacionAprendizaje ? `<h3>Situación de Aprendizaje</h3><p>${escapeHTML(unidad.situacionAprendizaje)}</p>` : ''}
-      ${unidad.estrategia ? `<h3>Estrategia de Enseñanza-Aprendizaje</h3><p>${escapeHTML(unidad.estrategia)}</p>` : ''}
       ${(unidad.competenciasFundamentales || []).length ? `<h3>Competencias Fundamentales</h3><p>${(unidad.competenciasFundamentales || []).map(escapeHTML).join(', ')}</p>` : ''}
       ${unidad.criterioEvaluacion ? `<h3>Criterio de Evaluación</h3><p>${escapeHTML(unidad.criterioEvaluacion)}</p>` : ''}
       <h3>Indicadores de Logro</h3>
@@ -27121,7 +27109,7 @@ function renderizarBiblioteca() {
     // Modo Académico usa nombres de campo distintos (unidadAprendizaje/
     // areaCurricular en vez de moduloFormativo/nombreBachillerato/
     // familiaProfesional) -- ra.descripcion sí se comparte (ver
-    // _planificacionAcademicaDefault, es un espejo de unidad.descripcion).
+    // _planificacionAcademicaDefault, es un espejo de unidad.situacionAprendizaje).
     const campos = reg.tipo === 'academico'
       ? [dg.unidadAprendizaje, dg.nombreDocente, dg.areaCurricular, dg.grado, ra.descripcion]
       : [dg.moduloFormativo, dg.nombreDocente, dg.nombreBachillerato, dg.familiaProfesional, ra.descripcion];

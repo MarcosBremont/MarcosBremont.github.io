@@ -1551,27 +1551,12 @@
             <input type="number" id="ac-valor-unidad" min="1" max="100" placeholder="Ej: 20" required />
           </div>
           <div class="form-group">
-            <label for="ac-horas-semana">Horas por Semana *</label>
-            <input type="number" id="ac-horas-semana" min="1" max="40" placeholder="Ej: 4" required />
-          </div>
-          <div class="form-group">
             <label for="ac-fecha-inicio">Fecha de Inicio *</label>
             <input type="date" id="ac-fecha-inicio" required style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
           </div>
           <div class="form-group">
             <label for="ac-fecha-termino">Fecha de Término *</label>
             <input type="date" id="ac-fecha-termino" required style="padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;width:100%;">
-          </div>
-        </div>
-
-        <div class="dias-clase-section">
-          <h3 class="subsection-title"><span class="material-icons">calendar_today</span>Días de Clase por Semana</h3>
-          <div class="dias-grid">
-            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-lunes" class="dia-checkbox"><span class="dia-nombre">Lunes</span></label></div>
-            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-martes" class="dia-checkbox"><span class="dia-nombre">Martes</span></label></div>
-            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-miercoles" class="dia-checkbox"><span class="dia-nombre">Miércoles</span></label></div>
-            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-jueves" class="dia-checkbox"><span class="dia-nombre">Jueves</span></label></div>
-            <div class="dia-card"><label class="dia-checkbox-label"><input type="checkbox" id="ac-dia-viernes" class="dia-checkbox"><span class="dia-nombre">Viernes</span></label></div>
           </div>
         </div>
       </div>
@@ -1596,21 +1581,9 @@
             <input type="text" id="ac-unidad-titulo" placeholder="Ej: Ecuaciones Lineales" required />
           </div>
           <div class="form-group form-group--full">
-            <label for="ac-unidad-descripcion">Descripción / Propósito de la Unidad *</label>
-            <textarea id="ac-unidad-descripcion" rows="4" required
-              placeholder="Ej: El/la estudiante resolverá situaciones cotidianas y matemáticas aplicando ecuaciones lineales con una incógnita..."></textarea>
-          </div>
-
-          <div class="form-group form-group--full">
-            <label for="ac-situacion-aprendizaje">Situación de Aprendizaje <span class="label-optional">(contexto/escenario real que motiva la unidad)</span></label>
+            <label for="ac-situacion-aprendizaje">Situación de Aprendizaje <span class="label-optional">(la genera la IA según el tema al hacer clic en "Generar Planificación" -- puedes editarla después)</span></label>
             <textarea id="ac-situacion-aprendizaje" rows="3"
-              placeholder="Ej: Los estudiantes de sexto grado del nivel primario de la escuela Antonio García presentan a la docente algunas inquietudes sobre el tema de reproducción humana, expresando dudas sobre cómo se da el proceso y qué cambios biológicos ocurren..."></textarea>
-          </div>
-
-          <div class="form-group form-group--full">
-            <label for="ac-estrategia">Estrategia de Enseñanza-Aprendizaje <span class="label-optional">(opcional)</span></label>
-            <textarea id="ac-estrategia" rows="2"
-              placeholder="Ej: Juego, indagación dialógica, recuperación de experiencias previas, descubrimiento, socialización centrada en actividades grupales, expositiva de conocimiento elaborado..."></textarea>
+              placeholder="Se genera automáticamente a partir del Título de la Unidad y los demás datos de abajo."></textarea>
           </div>
 
           <div class="form-group form-group--full">
@@ -3688,6 +3661,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#00695C;">v19.40<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Académica: formulario más simple, situación de aprendizaje generada por IA</div>
+              <ul class="about-ver-items">
+                <li>Se quitaron 4 campos de la Planificación Académica: <strong>Horas por Semana</strong>, <strong>Días de Clase por Semana</strong> (no se usaban para calcular fechas en este modo), <strong>Descripción/Propósito de la Unidad</strong> y <strong>Estrategia de Enseñanza-Aprendizaje</strong>. Ahora solo hace falta el Título de la Unidad (el tema) para generar.</li>
+                <li>La <strong>Situación de Aprendizaje</strong> ya no se escribe a mano: al hacer clic en "Generar Planificación", la IA la redacta junto con los Indicadores de Logro y las Actividades, a partir del tema, el área curricular, las competencias y los contenidos -- queda editable después por si quieres ajustarla.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10600,9 +10588,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.39"></script>
+  <script src="app.js?v=19.40"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.39"></script>
+  <script src="auth.js?v=19.40"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
