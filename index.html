@@ -3692,6 +3692,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#EF6C00;">v19.39<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Dashboard "Clases de hoy/mañana/pasado mañana": tarjetas sin color</div>
+              <ul class="about-ver-items">
+                <li>Las tarjetas de clase del Dashboard salían siempre en gris, sin el color asignado a cada materia. Causa: los colores se guardan por materia + sección combinados (para distinguir, ej., "Diseño de Portales Web" de 4to A vs. 4to B), pero esta pantalla buscaba el color solo por el nombre de la materia -- nunca encontraba coincidencia y caía siempre al gris por defecto. Se corrigió para que busque con la misma combinación materia+sección que ya usa el horario.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v19.38<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10586,9 +10600,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.38"></script>
+  <script src="app.js?v=19.39"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.38"></script>
+  <script src="auth.js?v=19.39"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

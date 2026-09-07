@@ -39110,7 +39110,7 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
   const horasPer = { 1: 480, 2: 530, 3: 600, 4: 650, 5: 750, 6: 800, 7: 860, 8: 910 };
 
   cont.innerHTML = horario.map(e => {
-    const color = coloresMateria[e.materia.trim()] || '#78909C';
+    const color = coloresMateria[_horarioColorKey(e.materia, e.seccion)] || '#78909C';
     const per = PERIODOS.find(p => p.id === e.periodo);
     const _normSec = _normStr(e.seccion);
     const _normMat = _normStr(e.materia);
