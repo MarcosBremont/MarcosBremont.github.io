@@ -3684,6 +3684,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.58<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: causa real del pie de página sin quitar</div>
+              <ul class="about-ver-items">
+                <li>El fix de v19.56 (tolerar la palabra "Página") no bastaba porque el problema real estaba antes: en algunos currículos, el nombre del Bachillerato Técnico se lee mal de la portada -- se traga de más una sección "1. IDENTIFICACIÓN DEL TÍTULO" con su propio campo "Denominación: ...", quedando con texto de sobra pegado (ej. "...INFORMÁTICAS 1. IDENTIFICACIÓN DEL TÍTULO Denominación: ..."). Con el nombre contaminado, el pie de página real nunca hacía match y no se quitaba nada. Ahora se prefiere el texto después de "Denominación:" cuando aparece, dejando el nombre limpio.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.56<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10790,9 +10804,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.57"></script>
+  <script src="app.js?v=19.58"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.57"></script>
+  <script src="auth.js?v=19.58"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

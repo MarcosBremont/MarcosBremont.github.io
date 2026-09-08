@@ -25195,10 +25195,26 @@ function _parsearDatosGeneralesLocal(encabezado) {
   const codigoTitulo = matchCodigoTitulo ? matchCodigoTitulo[1] : '';
   const codigoFP = codigoTitulo ? (/^[A-Za-z]+/.exec(codigoTitulo)?.[0] || '') : '';
   const matchBachillerato = new RegExp('BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+(.+?)(?=\\s+' + patronCodigoTitulo + '\\b|\\s+Familia\\s+Profesional|\\n|$)', 'i').exec(encabezado);
+  // Un currículo real trae una sección "1. IDENTIFICACIÓN DEL TÍTULO" con su
+  // propio campo "Denominación: {nombre}" ANTES de que aparezca el código del
+  // título o "Familia Profesional" -- sin ningún punto de corte confiable
+  // ahí (la sección no tiene salto de línea real, pdf.js concatena toda la
+  // página en una sola línea), la captura de arriba se traga TODO ese bloque
+  // intermedio como si fuera el nombre (ej. "DESARROLLO Y ADMINISTRACIÓN DE
+  // APLICACIONES INFORMÁTICAS 1. IDENTIFICACIÓN DEL TÍTULO Denominación:
+  // Desarrollo y Administración de Aplicaciones Informáticas" en vez de solo
+  // el nombre limpio) -- eso hacía fallar TODO el reconocimiento del pie de
+  // página repetido (_quitarPieDePagina), porque el pie real nunca contiene
+  // ese bloque completo. "Denominación:" es la fuente más confiable del
+  // nombre real cuando aparece dentro de lo capturado -- se prefiere lo que
+  // venga después de esa palabra.
+  let nombreBachilleratoCapturado = matchBachillerato ? matchBachillerato[1].trim() : '';
+  const matchDenominacion = /Denominaci[oó]n\s*[:.\-]?\s*(.+)$/i.exec(nombreBachilleratoCapturado);
+  if (matchDenominacion) nombreBachilleratoCapturado = matchDenominacion[1].trim();
   const matchFamilia = /Familia\s+Profesional\s+([^\n]{2,80}?)(?=\s{2,}|\n|$)/i.exec(encabezado);
   const matchOrdenanza = /Ordenanza\s*[:.\-]?\s*([^\n]{2,60})/i.exec(encabezado);
   return {
-    nombreBachillerato: matchBachillerato ? ('Bachillerato Técnico en ' + matchBachillerato[1].trim()) : '',
+    nombreBachillerato: matchBachillerato ? ('Bachillerato Técnico en ' + nombreBachilleratoCapturado) : '',
     codigoTitulo,
     familiaProfesional: matchFamilia ? matchFamilia[1].trim() : '',
     codigoFP,
