@@ -25616,7 +25616,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // "XX" sin rellenar con el número real del RA, y el PDF trae ese texto tal
   // cual; se captura igual solo el dígito final como número del RA.
   const regexRA = /RAE?\s*(?:XX\.?\s*)?(\d+(?:\.\d+)?)\s*[:.\-]?\s*/g;
-  const posicionesRA = [];
+  let posicionesRA = [];
   let m;
   while ((m = regexRA.exec(textoRA)) !== null) {
     posicionesRA.push({ numero: m[1], indice: m.index, finMarcador: m.index + m[0].length });
@@ -25639,7 +25639,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // confiable contra que se cuele contenido de otro módulo -- no hace falta
   // una segunda defensa basada en numeración, que resulta más frágil que el
   // problema que trata de evitar.
-  const posicionesRAModulo = posicionesRA;
+  let posicionesRAModulo = posicionesRA;
   if (!posicionesRAModulo.length) return null;
 
   // Tres formatos vistos en documentos reales:
@@ -25661,7 +25661,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // vez de no reconocer el marcador en absoluto y dejar a ese RA en 0
   // criterios.
   const regexCE = /CEX?\.?\s*(\d+)\.(\d+)(?:\.(\d+))?[:.\-]?\s*/g;
-  const posicionesCE = [];
+  let posicionesCE = [];
   while ((m = regexCE.exec(textoCE)) !== null) {
     const esTresNiveles = m[3] !== undefined;
     posicionesCE.push({
@@ -25672,6 +25672,31 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
       indice: m.index,
       finMarcador: m.index + m[0].length
     });
+  }
+
+  // Cuando el módulo buscado empieza a mitad de una página física que
+  // todavía trae la COLA del módulo ANTERIOR (_reconstruirColumnasTabla trae
+  // la página completa, sin importar en qué punto de ella arranca el módulo
+  // pedido -- ver su comentario), esos RA/CE ajenos quedan al PRINCIPIO de
+  // textoRA/textoCE con su numeración real (ej. "RA9"/"CE9.x" de un módulo
+  // de Ofimática colándose antes de "RA1" de Emprendimiento, visto en un
+  // documento real). Se detecta con el propio encabezado "MÓDULO..." de
+  // ESTE módulo, que ya sabemos que cae dentro de textoRA (ver
+  // matchNombreModulo/matchCodigoModulo más arriba, que lo leen de
+  // textoModulo con el mismo patrón): cualquier RA con índice ANTERIOR a ese
+  // encabezado es ajeno. Se descarta junto con los CE que compartan su mismo
+  // número -- así se limpia también textoCE aunque no tenga un encabezado
+  // propio en el que anclar un corte directo ahí.
+  const matchHeaderPropio = /m[oó]dulo(?![a-záéíóúñ])(?:\s*\d+\s*[:.\-]?|\s*[:.\-])/i.exec(textoRA);
+  if (matchHeaderPropio && matchHeaderPropio.index > 0) {
+    const numerosAjenos = new Set(
+      posicionesRA.filter(ra => ra.indice < matchHeaderPropio.index).map(ra => ra.numero)
+    );
+    if (numerosAjenos.size) {
+      posicionesRA = posicionesRA.filter(ra => !numerosAjenos.has(ra.numero));
+      posicionesRAModulo = posicionesRAModulo.filter(ra => !numerosAjenos.has(ra.numero));
+      posicionesCE = posicionesCE.filter(ce => !numerosAjenos.has(ce.numeroRA));
+    }
   }
 
   // Si las columnas se separaron, cada bloque solo compite con marcadores de
