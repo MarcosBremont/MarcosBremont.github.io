@@ -7669,6 +7669,18 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
       `CIERRE (${tc} min)`, momentoCierreTxt
     ].join('\n');
 
+    // Versión en ARREGLO (una línea = un elemento) de cada momento, para
+    // plantillas que quieren una viñeta de Word por línea de verdad -- con
+    // linebreaks:true, {momento_inicio} como texto plano mete todas las
+    // líneas DENTRO de la misma viñeta (saltos de línea suaves), no como
+    // viñetas separadas. Con paragraphLoop:true (ya activado abajo), un
+    // {#momento_inicio_lineas}{.}{/momento_inicio_lineas} dentro de UN
+    // párrafo con viñeta aplicada sí repite el párrafo completo (viñeta
+    // incluida) una vez por línea. Ver _mostrarGuiaPlaceholdersDiarias().
+    const momentoInicioLineas = momentoInicioTxt.split('\n').map(l => l.trim()).filter(Boolean);
+    const momentoDesarrolloLineas = momentoDesarrolloTxt.split('\n').map(l => l.trim()).filter(Boolean);
+    const momentoCierreLineas = momentoCierreTxt.split('\n').map(l => l.trim()).filter(Boolean);
+
     const div = s.diversidad || {};
     const atencionDiversidad = [
       div.apoyos ? `Apoyos posibles: ${div.apoyos}` : '',
@@ -7730,7 +7742,14 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
       // celda combinada de arriba.
       momento_inicio: momentoInicioTxt,
       momento_desarrollo: momentoDesarrolloTxt,
-      momento_cierre: momentoCierreTxt
+      momento_cierre: momentoCierreTxt,
+      // Mismo contenido de arriba, pero como arreglo (una línea = un ítem)
+      // para plantillas que quieren viñetas de Word separadas de verdad --
+      // ver comentario en momentoInicioLineas más arriba y la guía de
+      // placeholders para la sintaxis exacta del bucle en la plantilla.
+      momento_inicio_lineas: momentoInicioLineas,
+      momento_desarrollo_lineas: momentoDesarrolloLineas,
+      momento_cierre_lineas: momentoCierreLineas
     };
 
     const zip = new PizZip(templateBuffer.slice(0));
@@ -47048,9 +47067,12 @@ function _mostrarGuiaPlaceholdersDiarias() {
     ['{tiempo_desarrollo}', 'Minutos asignados al Desarrollo (60% del total)'],
     ['{tiempo_cierre}', 'Minutos asignados al Cierre (20% del total)'],
     ['{momentos_pedagogicos}', 'Inicio + Desarrollo + Cierre ya combinados en un solo bloque de texto, para una única celda "Momentos Pedagógicos". Si tu plantilla tiene una FILA POR MOMENTO en vez de una sola celda, usa mejor los 3 placeholders de abajo.'],
-    ['{momento_inicio}', 'RECOMENDADO para plantillas con una fila propia por momento: solo el contenido del Inicio (sin el encabezado "INICIO (X min)" -- combínalo tú con {tiempo_inicio} en el encabezado de esa fila).'],
+    ['{momento_inicio}', 'RECOMENDADO para plantillas con una fila propia por momento: solo el contenido del Inicio (sin el encabezado "INICIO (X min)" -- combínalo tú con {tiempo_inicio} en el encabezado de esa fila). Si tu párrafo tiene viñeta de Word, TODO este texto cae dentro de UNA sola viñeta (los saltos de línea internos no crean viñetas nuevas) -- para viñetas separadas usa {#momento_inicio_lineas} de abajo.'],
     ['{momento_desarrollo}', 'Igual que {momento_inicio} pero solo el contenido del Desarrollo.'],
     ['{momento_cierre}', 'Igual que {momento_inicio} pero solo el contenido del Cierre.'],
+    ['{#momento_inicio_lineas}• {.}{/momento_inicio_lineas}', 'PARA VIÑETAS SEPARADAS DE VERDAD: escribe este bucle completo (tal cual, con la viñeta • pegada a {.}) dentro de UN párrafo con viñeta de Word aplicada. Repite el párrafo -- viñeta incluida -- una vez por cada línea del contenido del Inicio, en vez de meter todo en una sola viñeta.'],
+    ['{#momento_desarrollo_lineas}• {.}{/momento_desarrollo_lineas}', 'Igual que el de arriba pero para el Desarrollo.'],
+    ['{#momento_cierre_lineas}• {.}{/momento_cierre_lineas}', 'Igual que el de arriba pero para el Cierre.'],
     ['{intencion_educativa}', 'Intención educativa de la actividad'],
     ['{estrategia_corta}', 'Etiqueta corta de la estrategia/metodología principal (usar como "Estrategia")'],
     ['{atencion_diversidad}', 'RECOMENDADO: apoyos + adaptaciones + estrategias inclusivas + adaptaciones específicas ya combinados en un solo bloque, listo para una única celda "Atención a la diversidad"'],
@@ -47072,6 +47094,14 @@ function _mostrarGuiaPlaceholdersDiarias() {
     <p style="font-size:0.75rem;color:#9E9E9E;margin:4px 0 0;">Tip: No uses {#actividades}...{/actividades} en esta plantilla -- todos los placeholders (generales y de sesión) se usan directo, sin loop, porque cada documento ya corresponde a una sola actividad.</p>
   </div>`;
 
+  const bulletsInfo = `<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFCC80;">
+    <strong style="color:#E65100;font-size:0.82rem;">¿Cada línea de "Momentos Pedagógicos" en su propia viñeta?</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">Si pones {momento_inicio} solo dentro de un párrafo con viñeta de Word, TODO el contenido cae dentro de esa MISMA viñeta -- los saltos de línea internos no crean viñetas nuevas, solo cortan el texto visualmente dentro de la misma.</p>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">Para que cada línea sea su propia viñeta, borra {momento_inicio} de ese párrafo y en su lugar escribe (dentro del MISMO párrafo con viñeta aplicada, todo en una sola línea de Word):</p>
+    <p style="font-family:monospace;font-size:0.78rem;color:#E65100;background:#fff;border-radius:6px;padding:8px 10px;margin:6px 0;">{#momento_inicio_lineas}• {.}{/momento_inicio_lineas}</p>
+    <p style="font-size:0.75rem;color:#9E9E9E;margin:4px 0 0;">Repite igual con {#momento_desarrollo_lineas}...{/momento_desarrollo_lineas} y {#momento_cierre_lineas}...{/momento_cierre_lineas} en sus párrafos. Cada uno repite el párrafo completo (viñeta incluida) una vez por línea del contenido.</p>
+  </div>`;
+
   document.getElementById('modal-title').textContent = 'Placeholders para Plantilla Diaria';
   document.getElementById('modal-body').innerHTML =
     '<p style="font-size:0.82rem;color:#424242;margin-bottom:12px;">Escribe estos placeholders en tu plantilla .docx para planificaciones diarias:</p>'
@@ -47086,7 +47116,8 @@ function _mostrarGuiaPlaceholdersDiarias() {
     + '<th style="padding:6px 10px;background:#00897B;color:#fff;text-align:left;font-size:0.78rem;">Dato que inserta</th></tr></thead>'
     + '<tbody>' + makeRows(placeholdersSesion) + '</tbody></table></div>'
     + '<p style="font-size:0.72rem;color:#9E9E9E;margin:8px 0 0;">¿Necesitas los momentos o la atención a la diversidad en celdas separadas en vez de un solo bloque? También existen por separado: {apertura} {encuadre} {organizacion} {pasos} {conceptual} {sintesis} {conexion} {proximopaso} {tiempo_inicio} {tiempo_desarrollo} {tiempo_cierre} {estrategias} (larga) {apoyos_posibles} {adaptaciones} {estrategias_inclusivas} {adaptaciones_especificas}.</p>'
-    + loopInfo;
+    + loopInfo
+    + bulletsInfo;
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
