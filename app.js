@@ -31269,8 +31269,12 @@ function _renderPlanReforzamientoBody() {
 
     <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
       <span style="font-size:.82rem;font-weight:700;color:#1A1A2E;">Actividades de aprendizaje (${s.actividades.length})</span>
-      <button type="button" onclick="_prAgregarActividad()" style="background:#E0F2F1;color:#00695C;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Agregar actividad</button>
+      <div style="display:flex;gap:6px;">
+        <button type="button" id="plan-ref-ia-actividades" onclick="_prGenerarActividadesIA()" title="Le pide a la IA que arme actividades a partir de la Unidad de competencia y los Contenidos ya escritos arriba" style="background:#EDE7F6;color:#5E35B1;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:14px;">auto_awesome</span>Generar con IA</button>
+        <button type="button" onclick="_prAgregarActividad()" style="background:#E0F2F1;color:#00695C;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Agregar actividad</button>
+      </div>
     </div>
+    <p style="font-size:.72rem;color:#9E9E9E;margin:0 0 8px;">"Generar con IA" usa la Unidad de competencia y los Contenidos ya escritos arriba (configura una clave de IA en Ajustes).</p>
     <div id="plan-ref-actividades">${s.actividades.map((a, i) => _renderPlanRefActividadItem(a, i)).join('')}</div>
 
     <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin:16px 0 4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -31502,6 +31506,97 @@ async function _prGenerarContenidosIA() {
   } catch (e) {
     console.error('[Plan Reforzamiento IA]', e);
     mostrarToast('Error generando contenidos: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+  }
+}
+
+/** Arma el prompt para generar las Actividades de aprendizaje del Plan de
+ *  Reforzamiento -- a diferencia de los Contenidos (que salen del examen),
+ *  las actividades se basan en la Unidad de competencia y los Contenidos ya
+ *  escritos en el formulario (vengan de una Planificación guardada o del
+ *  botón "Generar con IA desde el examen"), igual que ya hace
+ *  _prConstruirPromptCriterios con la Lista de Cotejo. */
+function _prConstruirPromptActividades(s) {
+  const contenidos = [s.conceptuales, s.procedimentales, s.actitudinales].filter(t => t.trim()).join('\n');
+  const preguntas = s.analisis.map(a => '- ' + a.enunciado + ' (' + a.pct + '% de aciertos en el curso)').join('\n');
+  return 'Eres un docente de Educación Técnico Profesional (ETP) en República Dominicana, preparando las Actividades de Aprendizaje de un Plan de Reforzamiento después de una evaluación diagnóstica.\n\n'
+    + 'Módulo formativo: ' + (s.moduloFormativo || 'no especificado') + '\n'
+    + 'Unidad de competencia: ' + (s.unidadCompetencia || 'no especificada') + '\n'
+    + (contenidos ? 'Contenidos a reforzar:\n' + contenidos + '\n' : '')
+    + (preguntas ? 'Preguntas del diagnóstico con menor desempeño (temas que más le costaron al curso):\n' + preguntas + '\n' : '')
+    + '\nGenera entre 4 y 6 actividades de aprendizaje CONCRETAS Y ESPECÍFICAS a estos contenidos (no genéricas) para la actividad individual de reforzamiento. Cada actividad necesita: la acción/tarea a desarrollar, tiempo estimado (ej. "50 min."), técnica de seguimiento, evidencias y productos, instrumento de evaluación, y recursos necesarios.\n\n'
+    + 'Reglas:\n'
+    + '- Deben seguir una progresión lógica: primero activar conocimientos previos/diagnosticar, luego explicar/practicar los contenidos, y terminar con una evaluación o socialización de cierre.\n'
+    + '- Cada actividad debe ser DIFERENTE en tipo (no repitas la misma dinámica en varias).\n'
+    + '- El instrumento de evaluación es una técnica/instrumento corto (ej. "Lista de cotejo", "Escala sumativa", "Rúbrica"), no una descripción larga.\n\n'
+    + 'Responde SOLO con este JSON, sin markdown ni texto adicional:\n'
+    + '{"actividades": [{"actividad": "...", "tiempo": "...", "seguimiento": "...", "evidencias": "...", "instrumento": "...", "recursos": "..."}]}';
+}
+
+/** Genera las Actividades de aprendizaje con IA (misma cascada de
+ *  proveedores que _prGenerarCriteriosIA/_prGenerarContenidosIA) -- antes
+ *  esta lista siempre arrancaba con 6 actividades fijas y genéricas
+ *  (idénticas para cualquier módulo), sin relación con el contenido real a
+ *  reforzar. */
+async function _prGenerarActividadesIA() {
+  const s = _planRefState;
+  if (!s) return;
+
+  const groqKey = getGroqKey(), openrouterKey = getOpenRouterKey(), claudeKey = getClaudeKey(), geminiKey = getGeminiKey();
+  if (!groqKey && !geminiKey && !openrouterKey && !claudeKey) {
+    mostrarToast('Configura una clave de IA (Groq, Gemini, OpenRouter o Claude) en Ajustes para generar las actividades automáticamente.', 'error');
+    return;
+  }
+  if (!s.unidadCompetencia.trim() && !s.conceptuales.trim() && !s.procedimentales.trim() && !s.actitudinales.trim()) {
+    mostrarToast('Completa la Unidad de competencia o los Contenidos primero (o elige una Planificación guardada, o genera los Contenidos desde el examen) para que la IA sepa qué actividades proponer.', 'error');
+    return;
+  }
+  if (s.actividades.some(a => a.actividad.trim()) && !confirm('Esto va a reemplazar las actividades que ya tienes. ¿Continuar?')) return;
+
+  const btn = document.getElementById('plan-ref-ia-actividades');
+  const btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+  try {
+    const prompt = _prConstruirPromptActividades(s);
+    let aiData = null;
+
+    if (claudeKey) {
+      try { aiData = await _llamarClaude(prompt, 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Claude falló:', e.message); }
+    }
+    if (!aiData && groqKey) {
+      try { aiData = await _llamarGroqConFallback(prompt, 'Generando actividades de aprendizaje', 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Groq falló:', e.message); }
+    }
+    if (!aiData && geminiKey) {
+      try { aiData = await _llamarGemini(prompt, 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Gemini falló:', e.message); }
+    }
+    if (!aiData && openrouterKey) {
+      try { aiData = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Generando actividades de aprendizaje', 2048, 60000); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] OpenRouter falló:', e.message); }
+    }
+
+    const lista = Array.isArray(aiData?.actividades) ? aiData.actividades.map(a => ({
+      actividad: String(a?.actividad || '').trim(),
+      tiempo: String(a?.tiempo || '').trim(),
+      seguimiento: String(a?.seguimiento || '').trim(),
+      evidencias: String(a?.evidencias || '').trim(),
+      instrumento: String(a?.instrumento || '').trim(),
+      recursos: String(a?.recursos || '').trim()
+    })).filter(a => a.actividad) : [];
+    if (!lista.length) {
+      mostrarToast('Ningún proveedor de IA pudo generar las actividades -- complétalas manualmente.', 'error');
+      return;
+    }
+    _planRefState.actividades = lista;
+    _rerenderPlanReforzamiento();
+    mostrarToast('Actividades generadas con IA -- revísalas y ajusta lo que haga falta', 'success');
+  } catch (e) {
+    console.error('[Plan Reforzamiento IA]', e);
+    mostrarToast('Error generando actividades: ' + e.message, 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
   }
