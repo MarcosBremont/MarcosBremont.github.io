@@ -25420,8 +25420,15 @@ function _quitarPieDePagina(texto, nombreBachillerato) {
   // el salto de página. El número de página también suele quedar pegado
   // justo DESPUÉS del título (ej. "...EVENTOS 23" antes de que siga el resto
   // del texto) -- se lleva también un número corto (1-3 dígitos) ahí, para
-  // no dejar un número suelto en medio de una oración.
-  const regexPie = new RegExp('(?:[A-Za-z]{2,10}(?:-[A-Za-z0-9]{1,6})?\\d{0,4}_\\d\\s*-?\\s*)?BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+' + tituloEscapado + '(?:\\s+\\d{1,3}\\b)?', 'gi');
+  // no dejar un número suelto en medio de una oración. Un documento real
+  // trae la palabra "Página" pegada delante de ese número en vez del número
+  // solo (ej. "...Informáticas Página 58 constitución legal...") -- sin
+  // tolerar esa palabra, el número quedaba sin match y "Página 58" se
+  // quedaba pegado en medio de la descripción del RA que cruza esa página
+  // (confirmado con un currículo real: "RA6: ...para la Bachillerato
+  // Técnico en...Informáticas Página 58 constitución legal del pequeño
+  // negocio...").
+  const regexPie = new RegExp('(?:[A-Za-z]{2,10}(?:-[A-Za-z0-9]{1,6})?\\d{0,4}_\\d\\s*-?\\s*)?BACHILLERATO\\s+T[EÉ]CNICO\\s+EN\\s+' + tituloEscapado + '(?:\\s+P[AÁ]GINA)?(?:\\s+\\d{1,3}\\b)?', 'gi');
   return texto.replace(regexPie, ' ');
 }
 

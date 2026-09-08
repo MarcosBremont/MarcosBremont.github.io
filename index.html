@@ -3684,6 +3684,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.56<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Cargar Currículo: "Página N" se quedaba pegado en medio de un RA</div>
+              <ul class="about-ver-items">
+                <li>Cuando la descripción de un RA cruza un salto de página, el pie de página repetido se quita del texto -- pero el patrón esperaba el número de página SOLO (ej. "...INFORMÁTICAS 58"), y un currículo real trae la palabra "Página" pegada antes del número (ej. "...Informáticas Página 58 constitución legal..."), así que ese "Página 58" se quedaba pegado en medio de la descripción del RA (visto en RA6: "...para la Bachillerato Técnico en...Página 58 constitución legal del pequeño negocio..."). Se corrigió para tolerar también esa palabra.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.55<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10776,9 +10790,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.55"></script>
+  <script src="app.js?v=19.56"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.55"></script>
+  <script src="auth.js?v=19.56"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
