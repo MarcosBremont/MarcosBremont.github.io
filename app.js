@@ -2240,7 +2240,15 @@ function _reasignarFechasActividadesPorDiasClase() {
   const fechas = calcularFechasClase(dg.diasClase || {}, dg.fechaInicio, fechaFin, festivosAdmin);
   if (!fechas.length) { mostrarToast('Marca al menos un día en "Días de Clase por Semana" y verifica la Fecha de Término.', 'error'); return; }
 
+  // Además de la fecha, la duración de cada sesión (Inicio/Desarrollo/Cierre
+  // en minutos) que ya se haya generado en Planificación Diaria queda
+  // guardada en estadoDiarias.sesiones[actId].tiempos -- una vez generada,
+  // NO se recalculaba sola aunque cambiara el horario, así que una sesión ya
+  // generada con un día de 2h seguía mostrando esos mismos minutos incluso
+  // después de que ese día pasara a ser de 1h. Se recalcula aquí también,
+  // usando el mismo horario por día real que ya usa _horasClaseDeActividad.
   let idx = 0;
+  let sesionesActualizadas = 0;
   acts.forEach(act => {
     const duracionDias = Math.max(1, Math.min(3, parseInt(act.duracionDias, 10) || 1));
     const resuelto = _resolverFechaActividad(fechas, idx, duracionDias);
@@ -2250,11 +2258,23 @@ function _reasignarFechasActividadesPorDiasClase() {
       act.fechaStr = resuelto.fechaStr;
     }
     idx += duracionDias;
+
+    const sesion = estadoDiarias.sesiones?.[act.id];
+    if (sesion && typeof _horasClaseDeActividad === 'function') {
+      const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+      const minTotal = Math.round(_horasClaseDeActividad(act, ec) * 60);
+      const tIni = Math.round(minTotal * 0.20);
+      const tDes = Math.round(minTotal * 0.60);
+      sesion.tiempos = { ini: tIni, des: tDes, cie: minTotal - tIni - tDes };
+      sesionesActualizadas++;
+    }
   });
+  if (sesionesActualizadas > 0 && typeof persistirDiarias === 'function') persistirDiarias();
+  if (sesionesActualizadas > 0 && typeof renderizarDiarias === 'function') renderizarDiarias();
 
   if (typeof renderizarActividades === 'function') renderizarActividades(planificacion.actividades);
   guardarBorrador();
-  mostrarToast('📅 Fechas de las actividades recalculadas según el nuevo horario.', 'info');
+  mostrarToast('📅 Fechas' + (sesionesActualizadas > 0 ? ' y duración de las sesiones' : '') + ' recalculadas según el nuevo horario.', 'info');
 }
 
 /** Normaliza act.fecha/act.fechaFin (Date u string, con o sin hora) a 'YYYY-MM-DD'. */
