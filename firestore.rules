@@ -162,6 +162,16 @@ service cloud.firestore {
         allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin');
       }
 
+      // Distribución de seguimiento durante los recesos (áreas/pabellones x
+      // día x responsable) -- Director y Coordinadora del PROPIO centro la
+      // arman (además de Superadmin), y cualquier docente logueado la puede
+      // leer (alimenta el banner "¿A quién le toca hoy?" del Dashboard de
+      // todos los docentes del centro).
+      match /seguimiento_recesos/{doc} {
+        allow read: if signedIn();
+        allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['director', 'coordinadora']) && miCentroId() == centroId));
+      }
+
       // Módulo de Vinculación Sectorial (pasantías, bolsa de empleo, diagnósticos
       // empresariales, convenios, eventos comunitarios). Solo el rol 'vinculadora'
       // de ese mismo centro, o Superadmin -- ni Director ni admin_centro (aunque el

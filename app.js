@@ -38737,6 +38737,7 @@ function renderizarDashboard() {
   _actualizarPlanActivaPorFechas();
   _renderizarSaludo();
   _renderizarBannerCalendarioDashboard();
+  _renderizarBannerSeguimientoDashboard();
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
@@ -44974,7 +44975,7 @@ async function abrirDirector() {
 /** Tabs del director */
 function switchTabDirector(tab) {
   const tabs = {
-    avisos: 'tab-dir-avisos', calificaciones: 'tab-dir-calificaciones', rendimiento: 'tab-dir-rendimiento',
+    avisos: 'tab-dir-avisos', seguimiento: 'tab-dir-seguimiento', calificaciones: 'tab-dir-calificaciones', rendimiento: 'tab-dir-rendimiento',
     planificaciones: 'tab-dir-planificaciones', resumen: 'tab-dir-resumen', docentes: 'tab-dir-docentes',
     sesiones: 'tab-dir-sesiones'
   };
@@ -44994,7 +44995,7 @@ function switchTabDirector(tab) {
   const dispatch = {
     calificaciones: _coordMonitorCalificaciones, rendimiento: _coordMonitorRendimiento,
     planificaciones: _coordMonitorPlanificaciones, resumen: _coordResumenDocentes, avisos: _coordAvisos,
-    sesiones: _renderMonitoreoSesiones
+    sesiones: _renderMonitoreoSesiones, seguimiento: _coordSeguimientoRecesos
   };
   if (dispatch[tab]) { dispatch[tab]('dir-contenido'); return; }
 
@@ -48000,7 +48001,7 @@ function abrirCoordinadora() {
 }
 
 function switchTabCoordinadora(tab) {
-  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos', sesiones: 'tab-coord-sesiones' };
+  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos', seguimiento: 'tab-coord-seguimiento', sesiones: 'tab-coord-sesiones' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -48012,6 +48013,7 @@ function switchTabCoordinadora(tab) {
   else if (tab === 'planificaciones') _coordMonitorPlanificaciones();
   else if (tab === 'resumen') _coordResumenDocentes();
   else if (tab === 'avisos') _coordAvisos();
+  else if (tab === 'seguimiento') _coordSeguimientoRecesos();
   else if (tab === 'sesiones') _renderMonitoreoSesiones('coord-contenido');
 }
 
@@ -49404,6 +49406,158 @@ async function _coordEliminarAviso(centroId, avisoId) {
     mostrarToast('Aviso eliminado', 'success');
     _coordAvisos(window._coordActiveContId);
   } catch (e) { mostrarToast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── SEGUIMIENTO DURANTE LOS RECESOS (Director/Coordinadora/Superadmin) ──
+// ══════════════════════════════════════════════════════════════════
+// Cada centro arma su propia lista de áreas/pabellones con quién da
+// seguimiento cada día (Lunes-Viernes) -- se guarda en
+// centros/{centroId}/seguimiento_recesos/config (subcolección propia, NO un
+// campo del documento del centro, porque ese documento solo lo puede
+// escribir Superadmin -- ver firestore.rules). Alimenta el banner del Dashboard
+// "¿A quién le toca hoy?" (ver _renderizarBannerSeguimientoDashboard),
+// visible para TODOS los docentes del centro (solo el día de hoy, de solo
+// lectura) -- la edición de la tabla completa queda solo en este panel.
+let _segRecesosState = null;
+
+async function _coordSeguimientoRecesos(contId) {
+  contId = contId || 'coord-contenido';
+  window._coordActiveContId = contId;
+  const cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const centroId = await _coordGetCentroId();
+  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordSeguimientoRecesos', contId); return; }
+
+  let areas = [];
+  try {
+    const doc = await db.collection('centros').doc(centroId).collection('seguimiento_recesos').doc('config').get();
+    areas = (doc.exists && Array.isArray(doc.data().areas)) ? doc.data().areas : [];
+  } catch (e) { console.warn('Error cargando seguimiento de recesos:', e); }
+
+  _segRecesosState = { centroId, contId, areas: JSON.parse(JSON.stringify(areas)) };
+  _renderSeguimientoRecesosBody();
+}
+
+const _SEG_RECESOS_DIAS = [['lunes', 'Lunes'], ['martes', 'Martes'], ['miercoles', 'Miércoles'], ['jueves', 'Jueves'], ['viernes', 'Viernes']];
+
+function _renderSeguimientoRecesosBody() {
+  const s = _segRecesosState;
+  if (!s) return;
+  const cont = document.getElementById(s.contId);
+  if (!cont) return;
+
+  const inputS = 'width:100%;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:0.8rem;box-sizing:border-box;font-family:inherit;';
+
+  let html = '<div style="background:#EDE7F6;border:1.5px solid #B39DDB;border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
+    + '<h4 style="margin:0 0 6px;color:#4527A0;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">groups</span> Distribución de seguimiento durante los recesos</h4>'
+    + '<p style="margin:0;font-size:0.8rem;color:#5E35B1;">Arma las áreas/pabellones de tu centro y quién da seguimiento cada día. Esto alimenta el banner "¿A quién le toca hoy?" del Dashboard, visible para todos los docentes.</p>'
+    + '</div>';
+
+  if (!s.areas.length) {
+    html += '<div style="text-align:center;padding:20px;color:#9E9E9E;">Todavía no hay áreas agregadas.</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:12px;">';
+    s.areas.forEach((a, idx) => {
+      html += '<div style="background:#FAFAFA;border:1.5px solid #E8EDF2;border-radius:10px;padding:14px;">'
+        + '<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">'
+        + '<div style="flex:1;min-width:160px;"><label style="font-size:0.7rem;font-weight:700;color:#78909C;display:block;margin-bottom:3px;">Área / Pabellón</label>'
+        + '<input type="text" value="' + escapeHTML(a.nombre || '') + '" placeholder="Ej: Pabellón 1 y 2" style="' + inputS + '" oninput="_segRecesosState.areas[' + idx + '].nombre=this.value">'
+        + '</div>'
+        + '<div style="flex:1;min-width:160px;"><label style="font-size:0.7rem;font-weight:700;color:#78909C;display:block;margin-bottom:3px;">Detalle (opcional)</label>'
+        + '<input type="text" value="' + escapeHTML(a.detalle || '') + '" placeholder="Ej: Cursos 4to A – D" style="' + inputS + '" oninput="_segRecesosState.areas[' + idx + '].detalle=this.value">'
+        + '</div>'
+        + '<button onclick="_segEliminarArea(' + idx + ')" title="Eliminar área" style="background:#FFEBEE;color:#C62828;border:none;border-radius:6px;cursor:pointer;padding:6px 10px;align-self:flex-end;display:flex;align-items:center;"><span class="material-icons" style="font-size:16px;">delete</span></button>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">'
+        + _SEG_RECESOS_DIAS.map(([key, label]) =>
+          '<div><label style="font-size:0.68rem;font-weight:700;color:#78909C;display:block;margin-bottom:2px;">' + label + '</label>'
+          + '<input type="text" value="' + escapeHTML((a.responsables && a.responsables[key]) || '') + '" placeholder="Nombre" style="' + inputS + '" oninput="_segRecesosState.areas[' + idx + '].responsables=_segRecesosState.areas[' + idx + '].responsables||{};_segRecesosState.areas[' + idx + '].responsables[\'' + key + '\']=this.value">'
+          + '</div>'
+        ).join('')
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div style="display:flex;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:10px;">'
+    + '<button onclick="_segAgregarArea()" style="display:flex;align-items:center;gap:6px;background:#E3F2FD;border:1.5px solid #90CAF9;color:#1565C0;border-radius:20px;padding:8px 18px;font-size:0.83rem;font-weight:700;cursor:pointer;"><span class="material-icons">add_circle</span> Agregar área</button>'
+    + '<button onclick="_coordGuardarSeguimientoRecesos()" style="display:flex;align-items:center;gap:6px;background:#4527A0;border:none;color:#fff;border-radius:20px;padding:8px 22px;font-size:0.85rem;font-weight:700;cursor:pointer;"><span class="material-icons">save</span> Guardar</button>'
+    + '</div>';
+
+  cont.innerHTML = html;
+}
+
+function _segAgregarArea() {
+  if (!_segRecesosState) return;
+  _segRecesosState.areas.push({ nombre: '', detalle: '', responsables: {} });
+  _renderSeguimientoRecesosBody();
+}
+
+function _segEliminarArea(idx) {
+  if (!_segRecesosState) return;
+  if (!confirm('¿Eliminar esta área?')) return;
+  _segRecesosState.areas.splice(idx, 1);
+  _renderSeguimientoRecesosBody();
+}
+
+async function _coordGuardarSeguimientoRecesos() {
+  const s = _segRecesosState;
+  if (!s) return;
+  try {
+    await db.collection('centros').doc(s.centroId).collection('seguimiento_recesos').doc('config').set({ areas: s.areas }, { merge: true });
+    mostrarToast('Distribución de seguimiento guardada', 'success');
+    if (typeof _renderizarBannerSeguimientoDashboard === 'function') _renderizarBannerSeguimientoDashboard();
+  } catch (e) { mostrarToast('Error guardando: ' + e.message, 'error'); }
+}
+
+/** Banner del Dashboard (todos los docentes) -- solo el día de hoy, de solo
+ *  lectura. No muestra nada en fin de semana ni si el centro no tiene
+ *  ningún responsable cargado para hoy. */
+async function _renderizarBannerSeguimientoDashboard() {
+  const el = document.getElementById('dash-seguimiento-banner');
+  if (!el) return;
+  el.style.display = 'none';
+  el.innerHTML = '';
+
+  const DIAS_SEMANA_KEY = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const hoyKey = DIAS_SEMANA_KEY[new Date().getDay()];
+  const DIAS_LABEL = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes' };
+  if (!DIAS_LABEL[hoyKey]) return; // fin de semana
+
+  if (typeof _coordGetCentroId !== 'function') return;
+  const centroId = await _coordGetCentroId();
+  if (!centroId) return;
+
+  let areas = [];
+  try {
+    const doc = await db.collection('centros').doc(centroId).collection('seguimiento_recesos').doc('config').get();
+    areas = (doc.exists && Array.isArray(doc.data().areas)) ? doc.data().areas : [];
+  } catch (e) { return; }
+
+  const conResponsable = areas.filter(a => a.responsables && a.responsables[hoyKey] && String(a.responsables[hoyKey]).trim());
+  if (!conResponsable.length) return;
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,#EDE7F6 0%,#F3E5F5 100%);border:1.5px solid #B39DDB;border-radius:12px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.83rem;font-weight:700;color:#4527A0;margin-bottom:8px;">
+        <span class="material-icons" style="font-size:17px;">groups</span>
+        ¿A quién le toca el seguimiento hoy? <span style="font-weight:400;">(${DIAS_LABEL[hoyKey]})</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${conResponsable.map(a => `
+          <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #D1C4E9;border-radius:18px;padding:5px 9px;max-width:100%;">
+            <span class="material-icons" style="font-size:13px;color:#6A1B9A;">location_on</span>
+            <span style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${escapeHTML(a.nombre || '')}${a.detalle ? ' · ' + escapeHTML(a.detalle) : ''}:</span>
+            <span style="font-size:0.78rem;color:#263238;font-weight:700;">${escapeHTML(String(a.responsables[hoyKey]))}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
 }
 
 // ── 5. MONITOR DE RENDIMIENTO / ALERTAS DE RIESGO ───────────────

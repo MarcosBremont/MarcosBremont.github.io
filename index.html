@@ -476,6 +476,9 @@
       <!-- ── Avisos de calendario escolar (incluye el aviso de suscripción en gracia) ── -->
       <div id="dash-calendario-banner" style="display:none;margin-top:8px;"></div>
 
+      <!-- ── Seguimiento durante los recesos de hoy ── -->
+      <div id="dash-seguimiento-banner" style="display:none;margin-top:8px;"></div>
+
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">apps</span>Accesos rápidos
@@ -2730,6 +2733,10 @@
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">campaign</span> Avisos
         </button>
+        <button class="ra-tab" id="tab-dir-seguimiento" onclick="switchTabDirector('seguimiento')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">groups</span> Seguimiento Recesos
+        </button>
         <button class="ra-tab" id="tab-dir-calificaciones" onclick="switchTabDirector('calificaciones')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">grade</span> Calificaciones
@@ -2794,6 +2801,10 @@
         <button class="ra-tab" id="tab-coord-avisos" onclick="switchTabCoordinadora('avisos')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">campaign</span> Avisos
+        </button>
+        <button class="ra-tab" id="tab-coord-seguimiento" onclick="switchTabCoordinadora('seguimiento')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">groups</span> Seguimiento Recesos
         </button>
         <button class="ra-tab" id="tab-coord-sesiones" onclick="switchTabCoordinadora('sesiones')"
           style="display:none;padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -3669,6 +3680,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#4527A0;">v19.46<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Distribución de seguimiento durante los recesos</div>
+              <ul class="about-ver-items">
+                <li>Director, Coordinadora y Superadmin ahora pueden armar (pestaña "Seguimiento Recesos" en su panel) las áreas/pabellones del centro con quién da seguimiento cada día de la semana. En el Dashboard, todos los docentes ven un nuevo banner debajo de "Próximos avisos del calendario escolar" con quién le toca HOY en cada área.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10653,9 +10678,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.45"></script>
+  <script src="app.js?v=19.46"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.45"></script>
+  <script src="auth.js?v=19.46"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
