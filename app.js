@@ -2239,6 +2239,7 @@ function _reasignarFechasActividadesPorDiasClase() {
   const fechaFin = dg.fechaTermino || dg.fechaInicio;
   const fechas = calcularFechasClase(dg.diasClase || {}, dg.fechaInicio, fechaFin, festivosAdmin);
   if (!fechas.length) { mostrarToast('Marca al menos un día en "Días de Clase por Semana" y verifica la Fecha de Término.', 'error'); return; }
+  console.log('[PlanDebug][Recalcular] dg.diasClase=', JSON.stringify(dg.diasClase), 'fechaInicio=', dg.fechaInicio, 'fechaFin=', fechaFin, 'sesionesGuardadas=', Object.keys(estadoDiarias.sesiones || {}).length);
 
   // Además de la fecha, la duración de cada sesión (Inicio/Desarrollo/Cierre
   // en minutos) que ya se haya generado en Planificación Diaria queda
@@ -2260,8 +2261,11 @@ function _reasignarFechasActividadesPorDiasClase() {
     idx += duracionDias;
 
     const sesion = estadoDiarias.sesiones?.[act.id];
+    const ecDbg = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+    const horasDbg = typeof _horasClaseDeActividad === 'function' ? _horasClaseDeActividad(act, ecDbg) : null;
+    console.log('[PlanDebug][Recalcular] act.id=', act.id, 'fecha=', act.fecha, 'ecCodigo=', act.ecCodigo, 'tieneSesionGuardada=', !!sesion, 'horasDetectadas=', horasDbg, 'minutos=', horasDbg != null ? _minutosDesdeHoras(horasDbg) : null);
     if (sesion && typeof _horasClaseDeActividad === 'function') {
-      const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+      const ec = ecDbg;
       const minTotal = _minutosDesdeHoras(_horasClaseDeActividad(act, ec));
       const tIni = Math.round(minTotal * 0.20);
       const tDes = Math.round(minTotal * 0.60);
@@ -2270,7 +2274,14 @@ function _reasignarFechasActividadesPorDiasClase() {
     }
   });
   if (sesionesActualizadas > 0 && typeof persistirDiarias === 'function') persistirDiarias();
-  if (sesionesActualizadas > 0 && typeof renderizarDiarias === 'function') renderizarDiarias();
+  // Se llama SIEMPRE (no solo si sesionesActualizadas > 0): el panel de
+  // Planificación Diaria, si ya estaba abierto, se había renderizado con el
+  // horario viejo -- las actividades SIN sesión guardada todavía se
+  // recalculan solas al renderizar (usan _horasClaseDeActividad en el
+  // momento), pero solo si algo dispara un re-render; si nadie lo hace, el
+  // panel se queda mostrando el HTML ya pintado desde antes, aunque los
+  // datos de fondo ya estén al día.
+  if (typeof renderizarDiarias === 'function') renderizarDiarias();
 
   if (typeof renderizarActividades === 'function') renderizarActividades(planificacion.actividades);
   guardarBorrador();
@@ -32442,6 +32453,7 @@ function renderizarDiarias() {
     const td = tiemposDefault.des;
     const tc = tiemposDefault.cie;
     const total = ti + td + tc;
+    console.log('[PlanDebug][renderizarDiarias] act.id=', act.id, 'tieneSesionGuardada=', !!s.tiempos, 'tiemposUsados=', JSON.stringify(tiemposDefault), 'total=', total);
 
 
 
