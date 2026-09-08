@@ -2262,7 +2262,7 @@ function _reasignarFechasActividadesPorDiasClase() {
     const sesion = estadoDiarias.sesiones?.[act.id];
     if (sesion && typeof _horasClaseDeActividad === 'function') {
       const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
-      const minTotal = Math.round(_horasClaseDeActividad(act, ec) * 60);
+      const minTotal = _minutosDesdeHoras(_horasClaseDeActividad(act, ec));
       const tIni = Math.round(minTotal * 0.20);
       const tDes = Math.round(minTotal * 0.60);
       sesion.tiempos = { ini: tIni, des: tDes, cie: minTotal - tIni - tDes };
@@ -28196,6 +28196,20 @@ function _seleccionarContenidosRA(textoRA, indice, cantidad) {
   return [...new Set(elegidas)].join('\n');
 }
 
+/** Convierte una cantidad de "horas de clase" (tal como se configura en
+ *  Días de Clase por Semana) a minutos reales de sesión -- en el sistema
+ *  educativo dominicano una hora de clase dura 40 minutos, NO 60, y cuando
+ *  son varias horas seguidas se suma un recreo de 20 min entre cada bloque:
+ *  1h = 40 min, 2h = 100 min (no 80), 3h = 160 min, etc. Fórmula:
+ *  40 + 60*(horas-1) para horas >= 1 (equivalente a 60*horas - 20). Antes
+ *  toda la duración de sesión (Inicio/Desarrollo/Cierre de Planificación
+ *  Diaria) se calculaba con horas*60, tratando la hora de clase como si
+ *  fuera una hora de reloj completa. */
+function _minutosDesdeHoras(horas) {
+  const h = Math.max(0, horas || 0);
+  return h <= 0 ? 0 : Math.round(40 + 60 * (h - 1));
+}
+
 /** Horas de clase reales para la sesión de UNA actividad, según el día de la
  *  semana en el que cae su fecha (dg.diasClase[dia].horas) -- antes, todas
  *  las sesiones usaban el PROMEDIO de horas entre TODOS los días activos
@@ -28268,7 +28282,7 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
 
 
-  const minSesion = Math.round((horasSesion || 1.5) * 60);
+  const minSesion = _minutosDesdeHoras(horasSesion || 1.5);
 
 
 
@@ -28592,7 +28606,7 @@ async function _generarSesionConIA(actId, act, ec) {
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
   const horasAct = _horasClaseDeActividad(act, ec);
-  const minTotal = Math.round((horasAct || 1.5) * 60);
+  const minTotal = _minutosDesdeHoras(horasAct || 1.5);
   const minInicio = Math.round(minTotal * 0.20);
   const minDesarr = Math.round(minTotal * 0.60);
   const minCierre = minTotal - minInicio - minDesarr;
@@ -28869,7 +28883,7 @@ function generarSesion(actId) {
   let gen;
   if (act.sesionIA) {
     const s = act.sesionIA;
-    const minSesion = Math.round((horasAct || 1.5) * 60);
+    const minSesion = _minutosDesdeHoras(horasAct || 1.5);
     const tIni = Math.round(minSesion * 0.20);
     const tDes = Math.round(minSesion * 0.60);
     const tCie = minSesion - tIni - tDes;
@@ -34757,7 +34771,7 @@ async function _llamarGroqConFallback(prompt, mensajeToast, maxTokens = 8192) {
 async function construirPromptDetalleUno(dg, ra, act, ec) {
   const tipo = act.instrumento === 'rubrica' ? 'rubrica' : 'cotejo';
   const horasSesion = _horasClaseDeActividad(act, ec);
-  const minTotal = Math.round(horasSesion * 60);
+  const minTotal = _minutosDesdeHoras(horasSesion);
   const minInicio = Math.round(minTotal * 0.20);
   const minDesarrollo = Math.round(minTotal * 0.60);
   const minCierre = minTotal - minInicio - minDesarrollo;
@@ -35402,7 +35416,7 @@ generarPlanificacion = async function () {
       if (act.sesionIA && !estadoDiarias.sesiones[act.id]) {
         const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
         const horasAct = _horasClaseDeActividad(act, ec);
-        const minSesion = Math.round(horasAct * 60);
+        const minSesion = _minutosDesdeHoras(horasAct);
         const tIni = Math.round(minSesion * 0.20);
         const tDes = Math.round(minSesion * 0.60);
         const s = act.sesionIA;
