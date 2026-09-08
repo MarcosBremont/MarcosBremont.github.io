@@ -28198,16 +28198,15 @@ function _seleccionarContenidosRA(textoRA, indice, cantidad) {
 
 /** Convierte una cantidad de "horas de clase" (tal como se configura en
  *  Días de Clase por Semana) a minutos reales de sesión -- en el sistema
- *  educativo dominicano una hora de clase dura 40 minutos, NO 60, y cuando
- *  son varias horas seguidas se suma un recreo de 20 min entre cada bloque:
- *  1h = 40 min, 2h = 100 min (no 80), 3h = 160 min, etc. Fórmula:
- *  40 + 60*(horas-1) para horas >= 1 (equivalente a 60*horas - 20). Antes
- *  toda la duración de sesión (Inicio/Desarrollo/Cierre de Planificación
- *  Diaria) se calculaba con horas*60, tratando la hora de clase como si
- *  fuera una hora de reloj completa. */
+ *  educativo dominicano una hora de clase dura 50 minutos, NO 60 (mismo
+ *  valor que ya usa PERIODOS/horasPer para los bloques del Horario semanal
+ *  en otra parte de la app, ver _renderizarClasesHoyManana). Antes toda la
+ *  duración de sesión (Inicio/Desarrollo/Cierre de Planificación Diaria) se
+ *  calculaba con horas*60, tratando la hora de clase como si fuera una hora
+ *  de reloj completa. */
 function _minutosDesdeHoras(horas) {
   const h = Math.max(0, horas || 0);
-  return h <= 0 ? 0 : Math.round(40 + 60 * (h - 1));
+  return Math.round(h * 50);
 }
 
 /** Horas de clase reales para la sesión de UNA actividad, según el día de la
