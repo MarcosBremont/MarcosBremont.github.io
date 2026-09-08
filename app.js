@@ -7680,6 +7680,7 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
     const momentoInicioLineas = momentoInicioTxt.split('\n').map(l => l.trim()).filter(Boolean);
     const momentoDesarrolloLineas = momentoDesarrolloTxt.split('\n').map(l => l.trim()).filter(Boolean);
     const momentoCierreLineas = momentoCierreTxt.split('\n').map(l => l.trim()).filter(Boolean);
+    console.log('[PlantillaDiaria] act.id=', act.id, 'momentoInicioLineas=', momentoInicioLineas, 'momentoDesarrolloLineas=', momentoDesarrolloLineas, 'momentoCierreLineas=', momentoCierreLineas);
 
     const div = s.diversidad || {};
     const atencionDiversidad = [
