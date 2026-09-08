@@ -25480,6 +25480,7 @@ function _extraerCurriculoLocal(textoCompleto, moduloBuscado, paginas) {
   // al final, para el resultado) porque _quitarPieDePagina() los necesita YA
   // para limpiar el pie de página repetido de cada hoja del módulo.
   const datosGenerales = _parsearDatosGeneralesLocal(_extraerEncabezadoDocumento(textoCompleto));
+  console.log('[Currículo] datosGenerales.nombreBachillerato=', JSON.stringify(datosGenerales.nombreBachillerato));
   textoModulo = _quitarPieDePagina(textoModulo, datosGenerales.nombreBachillerato);
 
   // pdf.js une TODO el texto de una página en una sola línea (ver
