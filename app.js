@@ -31255,7 +31255,10 @@ function _renderPlanReforzamientoBody() {
     <div style="margin-bottom:14px;"><label style="${labelS}">Unidad de competencia</label>
       <textarea rows="2" style="${inputS}resize:vertical;" oninput="_planRefState.unidadCompetencia=this.value">${_eHtml(s.unidadCompetencia)}</textarea></div>
 
-    <div style="font-size:.82rem;font-weight:700;color:#1A1A2E;margin-bottom:2px;">Contenidos</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;flex-wrap:wrap;gap:6px;">
+      <span style="font-size:.82rem;font-weight:700;color:#1A1A2E;">Contenidos</span>
+      <button type="button" id="plan-ref-ia-contenidos" onclick="_prGenerarContenidosIA()" title="Le pide a la IA que lea las preguntas de este examen y redacte los Contenidos cubiertos" style="background:#EDE7F6;color:#5E35B1;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:14px;">auto_awesome</span>Generar con IA desde el examen</button>
+    </div>
     <p style="font-size:.72rem;color:#9E9E9E;margin:0 0 8px;">Un elemento por línea -- se listan como viñetas en el documento.</p>
     <div style="margin-bottom:10px;"><label style="${labelS}">Conceptuales</label>
       <textarea rows="3" style="${inputS}resize:vertical;" placeholder="Ej: Algoritmos&#10;Operadores lógicos, relacionales y matemáticos." oninput="_planRefState.conceptuales=this.value">${_eHtml(s.conceptuales)}</textarea></div>
@@ -31405,6 +31408,100 @@ async function _prGenerarCriteriosIA() {
   } catch (e) {
     console.error('[Plan Reforzamiento IA]', e);
     mostrarToast('Error generando criterios: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+  }
+}
+
+/** Arma el prompt para que la IA redacte los Contenidos (Conceptuales/
+ *  Procedimentales/Actitudinales) A PARTIR de las preguntas del examen ya
+ *  aplicado -- las preguntas no tienen un campo de "tema" propio, así que no
+ *  hay nada que copiar directo; la IA tiene que inferirlos leyendo los
+ *  enunciados. Las preguntas de menor desempeño (mismo análisis que ya se
+ *  muestra como referencia en el formulario) se marcan para que la IA les dé
+ *  prioridad -- son las que de verdad ameritan reforzamiento. */
+function _prConstruirPromptContenidosExamen(s, info) {
+  const preguntas = info?.preguntas || [];
+  const numsDebiles = new Set((s.analisis || []).map(a => a.numero));
+  const listaPreguntas = preguntas.map((p, i) => {
+    const num = i + 1;
+    return num + '. ' + (p.enunciado || '') + (numsDebiles.has(num) ? '  [BAJO DESEMPEÑO -- priorizar en los contenidos]' : '');
+  }).join('\n');
+
+  return 'Eres un docente de Educación Técnico Profesional (ETP) en República Dominicana preparando un Plan de Reforzamiento a partir de un examen ya aplicado' + (s.moduloFormativo ? ' del módulo "' + s.moduloFormativo + '"' : '') + '.\n\n'
+    + 'Preguntas del examen (las marcadas "BAJO DESEMPEÑO" son las que más le costaron al curso):\n' + listaPreguntas + '\n\n'
+    + 'TAREA: A partir de ESTAS preguntas -- no inventes temas que no aparezcan en ellas -- redacta los Contenidos que el plan de reforzamiento debe cubrir, organizados en:\n'
+    + '- Conceptuales: los conceptos/definiciones/teoría que las preguntas evalúan.\n'
+    + '- Procedimentales: los procedimientos/técnicas/pasos prácticos que las preguntas evalúan.\n'
+    + '- Actitudinales: valores o actitudes profesionales relacionadas al tema, solo si alguna pregunta realmente lo sugiere (si no, deja el arreglo vacío -- no inventes).\n'
+    + 'Cada contenido es una frase corta (no una oración completa), uno por línea -- varios por categoría si el examen lo amerita.\n\n'
+    + 'Responde SOLO con este JSON, sin markdown ni texto adicional:\n'
+    + '{"conceptuales": ["elemento 1", "elemento 2"], "procedimentales": ["..."], "actitudinales": ["..."]}';
+}
+
+/** Genera los Contenidos (Conceptuales/Procedimentales/Actitudinales) con IA
+ *  a partir de las preguntas del examen que originó este Plan de
+ *  Reforzamiento (misma cascada de proveedores que _prGenerarCriteriosIA) --
+ *  para el caso en que no exista una Planificación guardada que coincida con
+ *  este módulo/RA, o el docente prefiera que reflejen justo lo que se
+ *  evaluó en el examen en vez del contenido completo planificado. */
+async function _prGenerarContenidosIA() {
+  const s = _planRefState;
+  const info = _examenInformeActual;
+  if (!s || !info) return;
+
+  if (!(info.preguntas || []).length) {
+    mostrarToast('Este examen no tiene preguntas para analizar.', 'error');
+    return;
+  }
+
+  const groqKey = getGroqKey(), openrouterKey = getOpenRouterKey(), claudeKey = getClaudeKey(), geminiKey = getGeminiKey();
+  if (!groqKey && !geminiKey && !openrouterKey && !claudeKey) {
+    mostrarToast('Configura una clave de IA (Groq, Gemini, OpenRouter o Claude) en Ajustes para generar los contenidos automáticamente.', 'error');
+    return;
+  }
+  if ((s.conceptuales.trim() || s.procedimentales.trim() || s.actitudinales.trim())
+    && !confirm('Esto va a reemplazar los Contenidos que ya escribiste. ¿Continuar?')) return;
+
+  const btn = document.getElementById('plan-ref-ia-contenidos');
+  const btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+  try {
+    const prompt = _prConstruirPromptContenidosExamen(s, info);
+    let aiData = null;
+
+    if (claudeKey) {
+      try { aiData = await _llamarClaude(prompt, 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Claude falló:', e.message); }
+    }
+    if (!aiData && groqKey) {
+      try { aiData = await _llamarGroqConFallback(prompt, 'Generando contenidos desde el examen', 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Groq falló:', e.message); }
+    }
+    if (!aiData && geminiKey) {
+      try { aiData = await _llamarGemini(prompt, 2048); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] Gemini falló:', e.message); }
+    }
+    if (!aiData && openrouterKey) {
+      try { aiData = await _llamarOpenRouterConFallback(prompt, openrouterKey, 'Generando contenidos desde el examen', 2048, 60000); }
+      catch (e) { console.warn('[Plan Reforzamiento IA] OpenRouter falló:', e.message); }
+    }
+
+    const aLista = arr => Array.isArray(arr) ? arr.map(x => String(x || '').trim()).filter(Boolean).join('\n') : '';
+    const conc = aLista(aiData?.conceptuales), proc = aLista(aiData?.procedimentales), act = aLista(aiData?.actitudinales);
+    if (!conc && !proc && !act) {
+      mostrarToast('Ningún proveedor de IA pudo generar los contenidos -- complétalos manualmente.', 'error');
+      return;
+    }
+    if (conc) _planRefState.conceptuales = conc;
+    if (proc) _planRefState.procedimentales = proc;
+    if (act) _planRefState.actitudinales = act;
+    _rerenderPlanReforzamiento();
+    mostrarToast('Contenidos generados con IA a partir del examen -- revísalos y ajusta lo que haga falta', 'success');
+  } catch (e) {
+    console.error('[Plan Reforzamiento IA]', e);
+    mostrarToast('Error generando contenidos: ' + e.message, 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
   }
