@@ -47846,8 +47846,11 @@ async function _renderConfigEmailJS() {
     + '<input type="text" id="sa-emailjs-template" value="' + escapeHTML(cfg.templateId || '') + '" placeholder="template_xxxxxxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></label>'
     + '<label style="font-size:0.8rem;font-weight:600;color:#455A64;">Public Key'
     + '<input type="text" id="sa-emailjs-publickey" value="' + escapeHTML(cfg.publicKey || '') + '" placeholder="xxxxxxxxxxxxxxxxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">'
+    + '<button onclick="_guardarConfigEmailJS()" style="display:inline-flex;align-items:center;gap:4px;padding:10px 18px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">save</span> Guardar</button>'
+    + '<button id="sa-emailjs-btn-probar" onclick="_probarConfigEmailJS()" style="display:inline-flex;align-items:center;gap:4px;padding:10px 18px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">send</span> Probar envío</button>'
     + '</div>'
-    + '<button onclick="_guardarConfigEmailJS()" style="margin-top:16px;display:inline-flex;align-items:center;gap:4px;padding:10px 18px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">save</span> Guardar</button>'
+    + '<p style="color:#90A4AE;font-size:0.78rem;margin:10px 0 0;">"Probar envío" manda un código de prueba a tu propio correo (' + escapeHTML(window.currentUser?.email || '') + ') usando los valores escritos arriba, sin necesidad de guardarlos primero.</p>'
     + '</div>';
 
   cont.innerHTML = html;
@@ -47863,6 +47866,40 @@ async function _guardarConfigEmailJS() {
   } catch (e) {
     console.error('Error guardando config EmailJS:', e);
     mostrarToast('Error guardando configuración', 'error');
+  }
+}
+
+// Envía un código de prueba al correo del superadmin logueado con los
+// valores ESCRITOS en el formulario (no necesariamente guardados aún), para
+// poder validar una cuenta de EmailJS antes de dejarla activa para todos.
+async function _probarConfigEmailJS() {
+  const serviceId  = document.getElementById('sa-emailjs-service')?.value?.trim() || '';
+  const templateId = document.getElementById('sa-emailjs-template')?.value?.trim() || '';
+  const publicKey  = document.getElementById('sa-emailjs-publickey')?.value?.trim() || '';
+  const destino = window.currentUser?.email || '';
+
+  if (!serviceId || !templateId || !publicKey) { mostrarToast('Completa los 3 campos antes de probar', 'error'); return; }
+  if (!destino) { mostrarToast('No se detectó tu correo de sesión', 'error'); return; }
+  if (typeof emailjs === 'undefined') { mostrarToast('La librería de EmailJS no cargó en esta página', 'error'); return; }
+
+  const btn = document.getElementById('sa-emailjs-btn-probar');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 1s linear infinite;">sync</span> Enviando...'; }
+
+  const codigoPrueba = String(Math.floor(100000 + Math.random() * 900000));
+  try {
+    await emailjs.send(serviceId, templateId, {
+      email: destino, to_email: destino, user_email: destino, recipient: destino,
+      passcode: codigoPrueba, otp_code: codigoPrueba, code: codigoPrueba, app_name: 'TinClass'
+    }, { publicKey: publicKey });
+    mostrarToast('Correo de prueba enviado a ' + destino + ' ✓ Revisa bandeja y spam', 'success');
+  } catch (e) {
+    const result = { ok: false, status: e?.status || e?.code || 0, reason: e?.text || e?.message || String(e), error: String(e?.text || e?.message || e || '') };
+    console.error('EmailJS error (prueba):', e);
+    if (typeof _diagnosticoOTPConsola === 'function') console.warn('[OTP] Diagnóstico sugerido:', _diagnosticoOTPConsola(result), result);
+    const msg = (typeof _tradErrorOTP === 'function') ? _tradErrorOTP(result) : ('Error: ' + result.reason);
+    mostrarToast(msg, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<span class="material-icons" style="font-size:16px;">send</span> Probar envío'; }
   }
 }
 
