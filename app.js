@@ -177,10 +177,17 @@ function _purgarPapeleraCursos() {
   });
 }
 
-function eliminarCurso(id) {
+async function eliminarCurso(id) {
   const curso = calState.cursos[id];
   if (!curso) return;
   if (!confirm(`¿Eliminar el curso "${curso.nombre}"? Podrás recuperarlo desde la papelera durante ${CAL_PAPELERA_DIAS} días.`)) return;
+
+  // Segunda confirmación con contraseña -- a pedido del usuario, mismo
+  // mecanismo que ya usa eliminarEstudiante() (borra un curso completo, con
+  // todos sus estudiantes y notas, así que no debe quedar en un solo clic).
+  const confirmado = await _confirmarAccionSensible('eliminar el curso "' + curso.nombre + '"');
+  if (!confirmado) return;
+
   if (!calState.papeleraCursos) calState.papeleraCursos = {};
   calState.papeleraCursos[id] = { ...curso, eliminadoEn: new Date().toISOString() };
   delete calState.cursos[id];
