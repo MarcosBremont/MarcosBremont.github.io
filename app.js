@@ -6977,6 +6977,12 @@ async function _exportarConPlantillaCentro() {
     : '';
   data.permea_ec_codigo = ecsActitudinalesSinActs.map(e => e.codigo).join(', ');
   data.permea_ec_enunciado = ecsActitudinalesSinActs.map(e => e.enunciado).join('\n');
+  // Faltaba el nivel Bloom de esta fila especial ("Actitudinal") -- la
+  // plantilla del usuario solo tenía {ec_codigo} y el texto explicativo para
+  // esta fila, pero ningún placeholder análogo a {ec_nivel} (que solo existe
+  // DENTRO del loop {#actividades}, no disponible fuera de él) para mostrar
+  // el nivel en la celda correspondiente -- esa celda quedaba siempre vacía.
+  data.permea_ec_nivel = ecsActitudinalesSinActs.map(e => nivelLabelTpl[e.nivel] || e.nivel).join(', ');
 
   // Agregar placeholders de priorización RA1-RA10
   const prio = dg.priorizacion || [];
@@ -47219,7 +47225,11 @@ function _mostrarGuiaPlaceholders() {
     ['{ec_nivel}', 'Nivel Bloom del EC (solo primera fila)'],
     ['{act_enunciado}', 'Enunciado de la actividad'],
     ['{act_fecha}', 'Fecha de realización'],
-    ['{act_instrumento}', 'Tipo de instrumento de evaluación']
+    ['{act_instrumento}', 'Tipo de instrumento de evaluación'],
+    ['{permea_ec_codigo}', 'Código del EC actitudinal SIN actividades propias (ej. "E.C.4.1.1") -- va FUERA del loop {#actividades}, en una fila aparte.'],
+    ['{permea_ec_nivel}', 'Nivel del EC actitudinal (siempre "Actitudinal") -- para esa misma fila aparte.'],
+    ['{permea_ec_enunciado}', 'Enunciado del EC actitudinal -- para esa misma fila aparte.'],
+    ['{permea_actitudinal}', 'Texto fijo explicando que este EC permea a todos los demás (no necesita Actividades ni Contenidos propios) -- para esa misma fila aparte.']
   ];
 
   const tablaInfo = `<div style="margin-top:14px;padding:12px;background:#FFF3E0;border-radius:8px;border:1px solid #FFE0B2;">
@@ -47244,6 +47254,23 @@ function _mostrarGuiaPlaceholders() {
     </table>
     <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;"><code>{#actividades}</code> abre el loop y <code>{/actividades}</code> lo cierra. La fila se repite por cada actividad.</p>
   </div>`;
+  const permeaInfo = `<div style="margin-top:14px;padding:12px;background:#F3E5F5;border-radius:8px;border:1px solid #E1BEE7;">
+    <strong style="color:#6A1B9A;font-size:0.82rem;">Fila aparte para el EC Actitudinal (no lleva Actividades propias):</strong>
+    <p style="font-size:0.78rem;color:#616161;margin:6px 0;">El EC de nivel Actitudinal no tiene actividades propias (permea a todos los demás EC), así que NO aparece dentro del loop <code>{#actividades}</code>. Para mostrarlo, agrega una fila aparte en tu tabla, con celdas fusionadas a mano si hace falta, usando estos 4 placeholders (fuera del loop):</p>
+    <table style="width:100%;border-collapse:collapse;font-size:0.75rem;margin:6px 0;">
+      <tr style="background:#6A1B9A;color:#fff;">
+        <th style="padding:4px 8px;border:1px solid #6A1B9A;">Código</th>
+        <th style="padding:4px 8px;border:1px solid #6A1B9A;">Nivel</th>
+        <th style="padding:4px 8px;border:1px solid #6A1B9A;">Texto (colspan)</th>
+      </tr>
+      <tr>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#6A1B9A;">{permea_ec_codigo}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#6A1B9A;">{permea_ec_nivel}</td>
+        <td style="padding:4px 8px;border:1px solid #E0E0E0;font-family:monospace;color:#6A1B9A;">{permea_actitudinal}</td>
+      </tr>
+    </table>
+    <p style="font-size:0.72rem;color:#9E9E9E;margin:4px 0 0;">Opcional: envuelve toda la fila con <code>{#permea_actitudinal}</code>...<code>{/permea_actitudinal}</code> para que desaparezca sola si el módulo no tiene EC actitudinal.</p>
+  </div>`;
   const rows = placeholders.map(([ph, desc]) =>
     '<tr><td style="padding:4px 10px;font-family:monospace;font-size:0.8rem;color:#4527A0;font-weight:600;border:1px solid #E0E0E0;">' + ph + '</td>'
     + '<td style="padding:4px 10px;font-size:0.8rem;color:#616161;border:1px solid #E0E0E0;">' + desc + '</td></tr>'
@@ -47264,6 +47291,7 @@ function _mostrarGuiaPlaceholders() {
     + '<th style="padding:6px 10px;background:#7C4DFF;color:#fff;text-align:left;font-size:0.78rem;border:1px solid #7C4DFF;">Dato que inserta</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table></div>'
     + tablaInfo
+    + permeaInfo
     + dinamicoInfo
     + '<p style="font-size:0.75rem;color:#9E9E9E;margin-top:10px;">Tip: En tu archivo Word, simplemente escribe el placeholder (ej: <code>{familia_profesional}</code>) donde quieras que aparezca el dato.</p>';
   document.getElementById('modal-overlay').classList.remove('hidden');
