@@ -45541,7 +45541,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', sesiones: 'tab-sa-sesiones', bugs: 'tab-sa-bugs' };
+  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', emailjs: 'tab-sa-emailjs', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', sesiones: 'tab-sa-sesiones', bugs: 'tab-sa-bugs' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -45551,6 +45551,7 @@ function switchTabSuperadmin(tab) {
   if (tab === 'solicitudes') _renderSolicitudesPendientes();
   else if (tab === 'centros') _renderCentrosEducativos();
   else if (tab === 'admins') _renderEmailsSuperadmin();
+  else if (tab === 'emailjs') _renderConfigEmailJS();
   else if (tab === 'opciones') _renderOpcionesDocentes();
   else if (tab === 'opciones_coord') _renderOpcionesCoordinadora();
   else if (tab === 'opciones_psico') _renderOpcionesPsicologia();
@@ -47815,6 +47816,54 @@ async function _quitarSuperadmin(email) {
   await _guardarEmailsSuperadmin(emails);
   mostrarToast('Superadmin removido', 'success');
   _renderEmailsSuperadmin();
+}
+
+// ── CONFIGURACIÓN GLOBAL DE EMAILJS (envío de códigos OTP) ──────
+// Editable desde Superadmin sin necesitar tocar código ni desplegar --
+// pisa (si hay valores guardados) los fijos de firebase-config.js. Un
+// centro puede además tener su propia cuenta (Superadmin > Centros
+// Educativos), que sigue teniendo prioridad sobre esta config global.
+async function _cargarConfigEmailJS() {
+  try {
+    const doc = await db.collection('config').doc('emailjs').get();
+    return doc.exists ? (doc.data() || {}) : {};
+  } catch (e) { console.warn('Error cargando config EmailJS:', e); return {}; }
+}
+
+async function _renderConfigEmailJS() {
+  const cont = document.getElementById('sa-contenido');
+  cont.innerHTML = '<div style="text-align:center;padding:20px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
+
+  const cfg = await _cargarConfigEmailJS();
+
+  let html = '<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:12px;padding:20px;max-width:520px;">'
+    + '<h3 style="margin:0 0 6px;color:#1A237E;">Cuenta de EmailJS (envío de códigos OTP)</h3>'
+    + '<p style="color:#78909C;font-size:0.85rem;margin:0 0 16px;">Se usa para enviar el código de verificación al registrarse. Si dejas un campo vacío, se usa el valor por defecto guardado en el código. Un centro con su propia cuenta configurada (Superadmin &gt; Centros Educativos) siempre tiene prioridad sobre esta configuración global.</p>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<label style="font-size:0.8rem;font-weight:600;color:#455A64;">Service ID'
+    + '<input type="text" id="sa-emailjs-service" value="' + escapeHTML(cfg.serviceId || '') + '" placeholder="service_xxxxxxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></label>'
+    + '<label style="font-size:0.8rem;font-weight:600;color:#455A64;">Template ID (OTP)'
+    + '<input type="text" id="sa-emailjs-template" value="' + escapeHTML(cfg.templateId || '') + '" placeholder="template_xxxxxxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></label>'
+    + '<label style="font-size:0.8rem;font-weight:600;color:#455A64;">Public Key'
+    + '<input type="text" id="sa-emailjs-publickey" value="' + escapeHTML(cfg.publicKey || '') + '" placeholder="xxxxxxxxxxxxxxxxx" style="display:block;width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid #CFD8DC;border-radius:8px;font-size:0.9rem;box-sizing:border-box;"></label>'
+    + '</div>'
+    + '<button onclick="_guardarConfigEmailJS()" style="margin-top:16px;display:inline-flex;align-items:center;gap:4px;padding:10px 18px;background:#B71C1C;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;"><span class="material-icons" style="font-size:16px;">save</span> Guardar</button>'
+    + '</div>';
+
+  cont.innerHTML = html;
+}
+
+async function _guardarConfigEmailJS() {
+  const serviceId  = document.getElementById('sa-emailjs-service')?.value?.trim() || '';
+  const templateId = document.getElementById('sa-emailjs-template')?.value?.trim() || '';
+  const publicKey  = document.getElementById('sa-emailjs-publickey')?.value?.trim() || '';
+  try {
+    await db.collection('config').doc('emailjs').set({ serviceId, templateId, publicKey });
+    mostrarToast('Configuración de EmailJS guardada ✓', 'success');
+  } catch (e) {
+    console.error('Error guardando config EmailJS:', e);
+    mostrarToast('Error guardando configuración', 'error');
+  }
 }
 
 // ── OPCIONES DE VISIBILIDAD PARA DOCENTES ───────────────────────

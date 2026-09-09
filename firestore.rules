@@ -83,6 +83,15 @@ service cloud.firestore {
       );
     }
 
+    // config/emailjs necesita lectura publica: se consulta durante el
+    // registro (envio del codigo OTP), ANTES de que la persona tenga sesion
+    // iniciada -- si dependiera de signedIn() como el resto de config/, el
+    // override global de cuenta EmailJS nunca se aplicaria en el registro.
+    match /config/emailjs {
+      allow read: if true;
+      allow write: if isSuperadminByEmail();
+    }
+
     match /config/{doc} {
       allow read: if signedIn();
       // Antes cualquier usuario logueado podia escribir aqui, incluyendo

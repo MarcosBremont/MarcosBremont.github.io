@@ -3037,6 +3037,10 @@
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">shield</span> Correos Superadmin
         </button>
+        <button class="ra-tab" id="tab-sa-emailjs" onclick="switchTabSuperadmin('emailjs')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">mail</span> EmailJS
+        </button>
         <button class="ra-tab" id="tab-sa-opciones" onclick="switchTabSuperadmin('opciones')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">toggle_on</span> Opciones Docentes
@@ -3680,6 +3684,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#2E7D32;">v19.62<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Registro: cuenta de EmailJS configurable desde Superadmin</div>
+              <ul class="about-ver-items">
+                <li>El registro fallaba con "no pudimos enviar el código" porque la cuenta de EmailJS compartida llegó a su límite mensual gratuito (200/200 envíos). Antes, cambiar de cuenta requería editar <code>firebase-config.js</code> y publicar una nueva versión. Ahora hay una pestaña "EmailJS" en Superadmin para escribir Service ID / Template ID / Public Key sin tocar código -- se aplica al instante a todos los registros (una cuenta por centro sigue teniendo prioridad si ese centro configuró la suya propia).</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10846,9 +10864,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.61"></script>
+  <script src="app.js?v=19.62"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.61"></script>
+  <script src="auth.js?v=19.62"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

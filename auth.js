@@ -1138,14 +1138,29 @@ function _tradErrorOTP(result) {
 // Si el centro tiene su propia cuenta de EmailJS configurada (Superadmin > Centros
 // Educativos), se usa esa en vez de la compartida por defecto de firebase-config.js.
 async function _enviarEmailOTP(email, code, centroId) {
-  if (typeof EMAILJS_SERVICE_ID === 'undefined' ||
-      EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
-    return { ok: false, reason: 'EmailJS no configurado' };
+  let serviceId = (typeof EMAILJS_SERVICE_ID !== 'undefined') ? EMAILJS_SERVICE_ID : '';
+  let templateId = (typeof EMAILJS_TEMPLATE_ID !== 'undefined') ? EMAILJS_TEMPLATE_ID : '';
+  let publicKey = (typeof EMAILJS_PUBLIC_KEY !== 'undefined') ? EMAILJS_PUBLIC_KEY : '';
+
+  // Config global editable desde Superadmin > EmailJS (sin necesitar tocar
+  // codigo ni desplegar) -- pisa los valores fijos de firebase-config.js.
+  // Util para cambiar de cuenta de EmailJS si la actual agota su cuota
+  // mensual gratuita (causa real de un fallo reportado: 200/200 requests).
+  if (typeof db !== 'undefined') {
+    try {
+      const globalDoc = await db.collection('config').doc('emailjs').get();
+      if (globalDoc.exists) {
+        const g = globalDoc.data() || {};
+        if (g.serviceId) serviceId = g.serviceId;
+        if (g.templateId) templateId = g.templateId;
+        if (g.publicKey) publicKey = g.publicKey;
+      }
+    } catch (e) { /* si falla la lectura, se sigue con firebase-config.js */ }
   }
 
-  let serviceId = EMAILJS_SERVICE_ID;
-  let templateId = EMAILJS_TEMPLATE_ID;
-  let publicKey = EMAILJS_PUBLIC_KEY;
+  if (!serviceId || serviceId === 'YOUR_SERVICE_ID') {
+    return { ok: false, reason: 'EmailJS no configurado' };
+  }
 
   if (centroId && typeof db !== 'undefined') {
     try {
