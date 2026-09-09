@@ -28591,10 +28591,11 @@ function generarContenidoSesion(act, ec, horasSesion) {
 
   const p = plantillas[nivel] || plantillas.aplicacion;
 
-  // Convierte el texto numerado "1. ... 2. ..." de "procedimental" al formato "Paso N – ..."
-  const pasosDesdeProcedimental = (p.procedimental || '').split(/\n(?=\d+\.\s)/).map((linea, i) => {
-    const texto = linea.replace(/^\d+\.\s*/, '').trim();
-    return texto ? `Paso ${i + 1} – ${texto}` : '';
+  // Convierte el texto numerado "1. ... 2. ..." de "procedimental" a líneas
+  // sueltas -- sin anteponer "Paso N –" (se pidió quitarlo de la Planificación
+  // Diaria, tanto en el fallback local como en el prompt de IA equivalente).
+  const pasosDesdeProcedimental = (p.procedimental || '').split(/\n(?=\d+\.\s)/).map(linea => {
+    return linea.replace(/^\d+\.\s*/, '').trim();
   }).filter(Boolean).join('\n\n');
 
   const tipoDefault = { conocimiento: 'Individual', comprension: 'Por Equipos (en pares)', aplicacion: 'Por Equipo', actitudinal: 'Individual' }[nivel] || 'Individual';
@@ -46186,7 +46187,7 @@ RESPONDE SOLO JSON válido, sin markdown, sin texto extra. USA EXACTAMENTE estas
   "apertura": "Guion de apertura ({{minInicio}} min en total junto con encuadre y organización): un saludo o frase motivadora textual entre comillas, seguido de una 'frase del día' o dato curioso relacionado al tema con una breve pregunta de reflexión para los estudiantes, y una dinámica de enganche breve (pase de lista, retroalimentación de la clase anterior, etc.).",
   "encuadre": "El propósito de la sesión en 1-2 oraciones que el docente puede decir textualmente a los estudiantes, vinculado al EC y a cómo se conecta con la clase anterior y la siguiente.",
   "organizacion": "Instrucciones concretas: cómo se forman los equipos/parejas o si es individual, qué roles se asignan (ej. investigador, redactor, expositor) para favorecer la inclusión, y qué materiales debe tener listos cada quien antes de empezar.",
-  "pasos": "Entre 4 y 6 pasos numerados del desarrollo ({{minDesarrollo}} min repartidos entre los pasos), en formato 'Paso N – Título breve (X min): descripción detallada de qué instrucción da el docente, qué produce el estudiante y cómo se apoya la inclusión cuando aplique.' separados por doble salto de línea.",
+  "pasos": "Entre 4 y 6 pasos del desarrollo ({{minDesarrollo}} min repartidos entre los pasos), en formato 'Título breve (X min): descripción detallada de qué instrucción da el docente, qué produce el estudiante y cómo se apoya la inclusión cuando aplique.' -- SIN escribir 'Paso 1', 'Paso 2' ni ningún número de paso delante del título, separados por doble salto de línea.",
   "conceptual": "Un breve momento de análisis o comparación técnica dentro del desarrollo (ej. comparar casos, aplicar un concepto a una situación real) que conecte la actividad con su relevancia profesional.",
   "sintesis": "El cierre de la sesión ({{minCierre}} min): una pregunta reflexiva textual entre comillas para los estudiantes, y cómo el docente sintetiza los aprendizajes clave.",
   "conexion": "Cómo se conecta lo aprendido con la práctica profesional real o con la siguiente sesión (ej. 'Se presenta el tema del día siguiente: ...') y la despedida.",
