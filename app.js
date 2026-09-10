@@ -42760,7 +42760,8 @@ let _calEsc = {
   esAdmin: false,        // solo superadmin puede editar el calendario de un centro
   centroId: null,        // centro cuyo calendario se esta viendo/editando
   listaCentros: [],       // solo se llena para superadmin (selector de centro)
-  responsables: {},      // mapa clave->nombre (ver _efRespClave), solo lectura aqui
+  responsables: {},      // mapa clave->nombre (ver _efRespClave)
+  puedeAsignarResponsable: false, // superadmin o director/coordinadora del centro que se está viendo
 };
 
 function _calEscEsAdmin() {
@@ -42822,14 +42823,45 @@ function _calEscCambiarCentro(centroId) {
   });
 }
 
-// Responsables de efemérides (solo lectura aquí; se editan desde Panel
-// Director/Coordinadora > Responsables Efemérides, ver _coordResponsablesEfemerides).
+// Responsables de efemérides: se cargan junto al calendario oficial y se
+// editan aquí mismo, en línea, por quien tenga permiso (ver
+// _calEscCalcularPuedeAsignarResponsable / _calEscGuardarResponsableInline).
 async function _calEscCargarResponsables() {
   if (typeof db === 'undefined' || !_calEsc.centroId) { _calEsc.responsables = {}; return; }
   try {
     const doc = await db.collection('centros').doc(_calEsc.centroId).collection('efemerides_responsables').doc('config').get();
     _calEsc.responsables = (doc.exists && doc.data()?.asignaciones) ? doc.data().asignaciones : {};
   } catch (e) { _calEsc.responsables = {}; }
+}
+
+// Superadmin siempre puede; Director/Coordinadora solo del centro que están
+// viendo (mismo criterio que firestore.rules: hasRole(['director',
+// 'coordinadora']) && miCentroId() == centroId).
+async function _calEscCalcularPuedeAsignarResponsable() {
+  if (_calEscEsAdmin()) return true;
+  if (!_calEsc.centroId || typeof _getPerfilUsuarioActualCacheado !== 'function') return false;
+  try {
+    const perfil = await _getPerfilUsuarioActualCacheado();
+    if (!perfil || perfil.centroId !== _calEsc.centroId) return false;
+    return _tieneRol(perfil, 'director') || _tieneRol(perfil, 'coordinadora');
+  } catch { return false; }
+}
+
+async function _calEscGuardarResponsableInline(idx, valor) {
+  const clave = (_calEsc._respOrden || [])[idx];
+  if (!clave || !_calEsc.centroId) return;
+  _calEsc.responsables = _calEsc.responsables || {};
+  const valorLimpio = (valor || '').trim();
+  if (valorLimpio) _calEsc.responsables[clave] = valorLimpio;
+  else delete _calEsc.responsables[clave];
+  try {
+    await db.collection('centros').doc(_calEsc.centroId).collection('efemerides_responsables').doc('config').set({ asignaciones: _calEsc.responsables }, { merge: true });
+    mostrarToast('Responsable guardado ✓', 'success');
+    if (typeof _renderizarBannerEfemerideDashboard === 'function') _renderizarBannerEfemerideDashboard();
+  } catch (e) {
+    console.error('Error guardando responsable de efeméride:', e);
+    mostrarToast('Error al guardar el responsable', 'error');
+  }
 }
 
 function _calEscDatosActuales() {
@@ -42929,6 +42961,7 @@ async function abrirCalendarioEscolar() {
   }
 
   await Promise.all([_calEscCargarAdmin(), _calEscCargarResponsables()]);
+  _calEsc.puedeAsignarResponsable = await _calEscCalcularPuedeAsignarResponsable();
   _calEscCargarPersonal();
 
   if (_calEscEsAdmin()) {
@@ -43083,8 +43116,12 @@ function _calEscRenderListaActividades(mes, lista, editable) {
 
 function _calEscRenderListaEfemerides(mes, lista, editable) {
   if (!lista || !lista.length) return `<p style="color:#9E9E9E;font-size:0.82rem;text-align:center;padding:16px 0;">Sin efemérides registradas.</p>`;
+  const puedeResp = !!_calEsc.puedeAsignarResponsable;
+  _calEsc._respOrden = []; // índice -> clave compuesta, reconstruido en cada render (ver _calEscGuardarResponsableInline)
   return [...lista].sort((a, b) => (a.dia||0)-(b.dia||0)).map((ef, i) => {
-    const resp = (_calEsc.responsables || {})[_efRespClave(mes, ef)];
+    const clave = _efRespClave(mes, ef);
+    const resp = (_calEsc.responsables || {})[clave] || '';
+    const idxResp = _calEsc._respOrden.push(clave) - 1;
     return `
     <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #EEEEEE;">
       <div style="min-width:32px;height:32px;background:#6A1B9A;color:#fff;border-radius:8px;flex-shrink:0;
@@ -43094,7 +43131,14 @@ function _calEscRenderListaEfemerides(mes, lista, editable) {
       <div style="flex:1;min-width:0;">
         <div style="font-size:0.85rem;font-weight:700;color:#212121;">${escapeHTML(ef.titulo)}</div>
         ${ef.descripcion ? `<div style="font-size:0.78rem;color:#78909C;margin-top:2px;">${escapeHTML(ef.descripcion)}</div>` : ''}
-        ${resp ? `<div style="font-size:0.75rem;color:#6A1B9A;margin-top:3px;"><span class="material-icons" style="font-size:12px;vertical-align:middle;">person</span> Responsable: <strong>${escapeHTML(resp)}</strong></div>` : ''}
+        ${puedeResp
+          ? `<div style="display:flex;align-items:center;gap:5px;margin-top:5px;">
+               <span class="material-icons" style="font-size:13px;color:#6A1B9A;flex-shrink:0;">person</span>
+               <input type="text" value="${escapeHTML(resp)}" placeholder="Responsable"
+                 style="flex:1;min-width:0;max-width:220px;padding:3px 8px;border:1.5px solid #D1C4E9;border-radius:14px;font-size:0.75rem;color:#4527A0;background:#F8F5FC;"
+                 onchange="_calEscGuardarResponsableInline(${idxResp}, this.value)">
+             </div>`
+          : (resp ? `<div style="font-size:0.75rem;color:#6A1B9A;margin-top:3px;"><span class="material-icons" style="font-size:12px;vertical-align:middle;">person</span> Responsable: <strong>${escapeHTML(resp)}</strong></div>` : '')}
       </div>
       ${editable ? `
         <button onclick="_calEscEditarEfemeride('${mes}',${i})" title="Editar"
@@ -45329,7 +45373,7 @@ async function abrirDirector() {
 /** Tabs del director */
 function switchTabDirector(tab) {
   const tabs = {
-    avisos: 'tab-dir-avisos', seguimiento: 'tab-dir-seguimiento', efemerides: 'tab-dir-efemerides', calificaciones: 'tab-dir-calificaciones', rendimiento: 'tab-dir-rendimiento',
+    avisos: 'tab-dir-avisos', seguimiento: 'tab-dir-seguimiento', calificaciones: 'tab-dir-calificaciones', rendimiento: 'tab-dir-rendimiento',
     planificaciones: 'tab-dir-planificaciones', resumen: 'tab-dir-resumen', docentes: 'tab-dir-docentes',
     sesiones: 'tab-dir-sesiones'
   };
@@ -45349,7 +45393,7 @@ function switchTabDirector(tab) {
   const dispatch = {
     calificaciones: _coordMonitorCalificaciones, rendimiento: _coordMonitorRendimiento,
     planificaciones: _coordMonitorPlanificaciones, resumen: _coordResumenDocentes, avisos: _coordAvisos,
-    sesiones: _renderMonitoreoSesiones, seguimiento: _coordSeguimientoRecesos, efemerides: _coordResponsablesEfemerides
+    sesiones: _renderMonitoreoSesiones, seguimiento: _coordSeguimientoRecesos
   };
   if (dispatch[tab]) { dispatch[tab]('dir-contenido'); return; }
 
@@ -48475,7 +48519,7 @@ function abrirCoordinadora() {
 }
 
 function switchTabCoordinadora(tab) {
-  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos', seguimiento: 'tab-coord-seguimiento', efemerides: 'tab-coord-efemerides', sesiones: 'tab-coord-sesiones' };
+  const tabs = { calificaciones: 'tab-coord-calificaciones', planificaciones: 'tab-coord-planificaciones', resumen: 'tab-coord-resumen', avisos: 'tab-coord-avisos', seguimiento: 'tab-coord-seguimiento', sesiones: 'tab-coord-sesiones' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -48488,7 +48532,6 @@ function switchTabCoordinadora(tab) {
   else if (tab === 'resumen') _coordResumenDocentes();
   else if (tab === 'avisos') _coordAvisos();
   else if (tab === 'seguimiento') _coordSeguimientoRecesos();
-  else if (tab === 'efemerides') _coordResponsablesEfemerides();
   else if (tab === 'sesiones') _renderMonitoreoSesiones('coord-contenido');
 }
 
@@ -50036,111 +50079,23 @@ async function _renderizarBannerSeguimientoDashboard() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ── RESPONSABLES DE EFEMÉRIDES (Director/Coordinadora/Superadmin) ──
+// ── RESPONSABLES DE EFEMÉRIDES ───────────────────────────────────
 // ══════════════════════════════════════════════════════════════════
-// Mismo patrón que Seguimiento de Recesos: el centro asigna un responsable
-// por cada efeméride del calendario OFICIAL del centro (centros/{id}/
-// calendario/main, que solo Superadmin edita -- fechas/títulos NO se tocan
-// aquí). Se guarda aparte, en centros/{id}/efemerides_responsables/config,
-// como un mapa { "<clave>": "<nombre>" } -- la clave es mes+dia+titulo (no
-// el índice del array) para que la asignación sobreviva si el calendario
-// oficial se reordena o se agregan/quitan efemérides en otros meses.
-// Alimenta el banner del Dashboard "Efeméride de hoy" (todos los docentes,
-// solo lectura) y también se muestra dentro del propio Calendario Escolar
-// (ver _calEscRenderListaEfemerides).
-let _efRespState = null;
-
+// El centro asigna un responsable por cada efeméride del calendario
+// OFICIAL del centro (centros/{id}/calendario/main, que solo Superadmin
+// edita -- fechas/títulos NO se tocan aquí). Se guarda aparte, en
+// centros/{id}/efemerides_responsables/config, como un mapa
+// { "<clave>": "<nombre>" } -- la clave es mes+dia+titulo (no el índice
+// del array) para que la asignación sobreviva si el calendario oficial se
+// reordena o se agregan/quitan efemérides en otros meses. Se edita
+// directamente dentro de Calendario Escolar (ver _calEscRenderListaEfemerides
+// / _calEscGuardarResponsableInline, visible solo para quien puede asignar:
+// Director/Coordinadora del propio centro o Superadmin) y se muestra a
+// todos los docentes ahí mismo y en el banner "Efeméride de hoy" del
+// Dashboard.
 const CAL_ESC_MES_POR_JSMES = ['enero','febrero','marzo','abril','mayo','junio',null,'agosto','septiembre','octubre','noviembre','diciembre'];
 
 function _efRespClave(mes, ef) { return mes + '|' + (ef.dia || '') + '|' + (ef.titulo || ''); }
-
-async function _coordResponsablesEfemerides(contId) {
-  contId = contId || 'coord-contenido';
-  window._coordActiveContId = contId;
-  const cont = document.getElementById(contId);
-  if (!cont) return;
-  cont.innerHTML = '<div style="text-align:center;padding:30px;"><span class="material-icons" style="animation:spin 1s linear infinite;">sync</span> Cargando...</div>';
-
-  const centroId = await _coordGetCentroId();
-  if (!centroId) { _coordMostrarSelectorCentro(cont, '_coordResponsablesEfemerides', contId); return; }
-
-  let meses = {};
-  let asignaciones = {};
-  try {
-    const [calDoc, respDoc] = await Promise.all([
-      db.collection('centros').doc(centroId).collection('calendario').doc('main').get(),
-      db.collection('centros').doc(centroId).collection('efemerides_responsables').doc('config').get()
-    ]);
-    meses = (calDoc.exists && calDoc.data()?.meses) ? calDoc.data().meses : {};
-    asignaciones = (respDoc.exists && respDoc.data()?.asignaciones) ? respDoc.data().asignaciones : {};
-  } catch (e) { console.warn('Error cargando responsables de efemérides:', e); }
-
-  _efRespState = { centroId, contId, meses, asignaciones: { ...asignaciones }, orden: [] };
-  _renderResponsablesEfemeridesBody();
-}
-
-function _renderResponsablesEfemeridesBody() {
-  const s = _efRespState;
-  if (!s) return;
-  const cont = document.getElementById(s.contId);
-  if (!cont) return;
-
-  s.orden = []; // índice -> clave compuesta, reconstruido en cada render
-  const inputS = 'flex:1;min-width:140px;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:0.8rem;box-sizing:border-box;font-family:inherit;';
-
-  let html = '<div style="background:#EDE7F6;border:1.5px solid #B39DDB;border-radius:12px;padding:14px 16px;margin-bottom:16px;">'
-    + '<h4 style="margin:0 0 6px;color:#4527A0;display:flex;align-items:center;gap:6px;"><span class="material-icons" style="font-size:20px;">auto_stories</span> Responsables de Efemérides</h4>'
-    + '<p style="margin:0;font-size:0.8rem;color:#5E35B1;">Asigna quién está a cargo de cada efeméride del calendario oficial del centro. Se muestra a todos los docentes en Calendario Escolar y en el banner "Efeméride de hoy" del Dashboard. Las fechas y títulos se editan solo desde el calendario oficial (Superadmin).</p>'
-    + '</div>';
-
-  const mesesConDatos = CAL_ESC_MESES.filter(m => (s.meses[m]?.efemerides || []).length);
-  if (!mesesConDatos.length) {
-    html += '<div style="text-align:center;padding:30px;color:#9E9E9E;">Este centro todavía no tiene efemérides en su calendario oficial.</div>';
-  } else {
-    mesesConDatos.forEach(mes => {
-      const lista = [...(s.meses[mes].efemerides || [])].sort((a, b) => (a.dia||0)-(b.dia||0));
-      html += '<div style="margin-bottom:18px;">'
-        + '<h5 style="margin:0 0 8px;color:#1565C0;font-size:0.85rem;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;">' + escapeHTML(CAL_ESC_MESES_LABEL[mes]) + '</h5>'
-        + '<div style="display:flex;flex-direction:column;gap:8px;">'
-        + lista.map(ef => {
-            const clave = _efRespClave(mes, ef);
-            const idx = s.orden.push(clave) - 1;
-            const valor = s.asignaciones[clave] || '';
-            return '<div style="display:flex;align-items:center;gap:10px;background:#FAFAFA;border:1.5px solid #E8EDF2;border-radius:10px;padding:10px 12px;flex-wrap:wrap;">'
-              + '<div style="min-width:30px;height:30px;background:#6A1B9A;color:#fff;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">' + (ef.dia || '—') + '</div>'
-              + '<div style="flex:2;min-width:180px;font-size:0.82rem;color:#37474F;">' + escapeHTML(ef.titulo || '') + '</div>'
-              + '<input type="text" value="' + escapeHTML(valor) + '" placeholder="Responsable" style="' + inputS + '" oninput="_efRespSetValor(' + idx + ',this.value)">'
-              + '</div>';
-          }).join('')
-        + '</div></div>';
-    });
-  }
-
-  html += '<div style="display:flex;justify-content:flex-end;margin-top:10px;">'
-    + '<button onclick="_coordGuardarResponsablesEfemerides()" style="display:flex;align-items:center;gap:6px;background:#4527A0;border:none;color:#fff;border-radius:20px;padding:8px 22px;font-size:0.85rem;font-weight:700;cursor:pointer;"><span class="material-icons">save</span> Guardar</button>'
-    + '</div>';
-
-  cont.innerHTML = html;
-}
-
-function _efRespSetValor(idx, valor) {
-  const s = _efRespState;
-  if (!s || !s.orden || !s.orden[idx]) return;
-  s.asignaciones[s.orden[idx]] = valor;
-}
-
-async function _coordGuardarResponsablesEfemerides() {
-  const s = _efRespState;
-  if (!s) return;
-  try {
-    await db.collection('centros').doc(s.centroId).collection('efemerides_responsables').doc('config').set({ asignaciones: s.asignaciones }, { merge: true });
-    mostrarToast('Responsables guardados ✓', 'success');
-    if (typeof _renderizarBannerEfemerideDashboard === 'function') _renderizarBannerEfemerideDashboard();
-  } catch (e) {
-    console.error('Error guardando responsables de efemérides:', e);
-    mostrarToast('Error al guardar', 'error');
-  }
-}
 
 async function _renderizarBannerEfemerideDashboard() {
   const el = document.getElementById('dash-efemeride-banner');
