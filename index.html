@@ -3688,6 +3688,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.64<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Blog del docente: el botón "Guardar" no respondía si el almacenamiento estaba lleno</div>
+              <ul class="about-ver-items">
+                <li>Cada post de blog puede llevar hasta 3 adjuntos de 400 KB guardados como texto en el navegador, y los posts de años anteriores se archivan ahí mismo sin límite -- con el tiempo eso puede llenar el espacio disponible del dispositivo. Al llenarse, guardar un post nuevo lanzaba un error interno que el botón nunca mostraba: parecía que "Guardar" simplemente no hacía nada. Ahora, si no hay espacio, primero se liberan los posts archivados de años anteriores (ya están a salvo en la nube) para que el post actual sí quepa; si aun así no alcanza, se avisa con un mensaje claro en vez de fallar en silencio.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#2E7D32;">v19.63<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10878,9 +10892,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.63"></script>
+  <script src="app.js?v=19.64"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.63"></script>
+  <script src="auth.js?v=19.64"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

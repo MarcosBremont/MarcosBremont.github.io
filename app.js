@@ -40638,6 +40638,11 @@ function cargarBlog() {
     return { posts: [], postsArchivados: {} };
   }
 }
+// Devuelve true si el post quedó guardado en localStorage, false si no cupo
+// ni liberando espacio -- antes usaba localStorage.setItem directo, que ante
+// un QuotaExceededError (adjuntos de blog + años archivados acumulan varios
+// MB) tiraba una excepción sin atrapar: _guardarPost abortaba a mitad de
+// camino y el docente veía el botón "Guardar" sin ningún efecto ni aviso.
 function guardarBlog(data) {
   const payload = {
     ...(data || {}),
@@ -40645,8 +40650,16 @@ function guardarBlog(data) {
     postsArchivados: data?.postsArchivados && typeof data.postsArchivados === 'object' ? data.postsArchivados : {},
     _lastModified: Date.now()
   };
-  localStorage.setItem(BLOG_KEY, JSON.stringify(payload));
+  let ok = _setItemQuotaSafe(BLOG_KEY, JSON.stringify(payload), true);
+  if (!ok && Object.keys(payload.postsArchivados).length) {
+    // Los posts de años anteriores (con sus adjuntos en base64) ya viven a
+    // salvo en Firestore via _syncFirebase de abajo -- se sacrifican de
+    // localStorage como último recurso (mismo criterio que cal_backups en
+    // auth.js) para que el post ACTUAL que el docente está guardando sí quepa.
+    ok = _setItemQuotaSafe(BLOG_KEY, JSON.stringify({ ...payload, postsArchivados: {} }));
+  }
   if (window._syncFirebase) _syncFirebase('blog', payload);
+  return ok;
 }
 
 function _archivarPostsBlogDocente(yearId, closedAt) {
@@ -41014,18 +41027,23 @@ function _guardarPost(id) {
   const ahora   = new Date().toISOString();
   const adjuntos = window._blogTempAdjuntos || [];
 
+  let guardadoOk = true;
   if (id) {
     const idx = (blog.posts || []).findIndex(p => p.id === id);
     if (idx >= 0) {
       const wasPublicado = blog.posts[idx].publicado;
       blog.posts[idx] = { ...blog.posts[idx], cursoId, cursoNombre: curso?.nombre || '', planId, raLabel, tipo, titulo, contenido, fechaLimite, adjuntos, actualizadoEn: ahora };
-      guardarBlog(blog);
-      if (wasPublicado) _blogPublicarEnFirestore(blog.posts[idx]);
+      guardadoOk = guardarBlog(blog);
+      if (guardadoOk && wasPublicado) _blogPublicarEnFirestore(blog.posts[idx]);
     }
   } else {
     const nuevo = { id: 'blog-' + Date.now(), cursoId, cursoNombre: curso?.nombre || '', planId, raLabel, tipo, titulo, contenido, fechaLimite, adjuntos, publicado: false, creadoEn: ahora };
     (blog.posts = blog.posts || []).push(nuevo);
-    guardarBlog(blog);
+    guardadoOk = guardarBlog(blog);
+  }
+  if (!guardadoOk) {
+    mostrarToast('No se pudo guardar: no queda espacio de almacenamiento en este dispositivo. Quita algún adjunto o borra archivos de otras secciones para liberar espacio.', 'error');
+    return;
   }
   cerrarModalBtn();
   renderizarBlog();
