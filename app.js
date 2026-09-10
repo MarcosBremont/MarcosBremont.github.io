@@ -39196,6 +39196,24 @@ function _dashAsegurarCalendarioAdminBanner() {
   })().finally(() => { _dashCalBannerFetchInFlight = false; });
 }
 
+// Responsables de efemérides para el banner "Próximos avisos" -- se cargan
+// aparte (no forman parte de _calEscCargarAdmin) con el mismo patrón de
+// "cargar en segundo plano y re-renderizar" que el calendario admin de arriba.
+let _dashRespBannerFetchInFlight = false;
+let _dashRespBannerCargados = false;
+function _dashAsegurarResponsablesBanner() {
+  if (_dashRespBannerFetchInFlight || _dashRespBannerCargados || typeof db === 'undefined') return;
+  _dashRespBannerFetchInFlight = true;
+  (async () => {
+    if (!_calEsc.centroId) {
+      _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
+    }
+    await _calEscCargarResponsables();
+    _dashRespBannerCargados = true;
+    _renderizarBannerCalendarioDashboard();
+  })().finally(() => { _dashRespBannerFetchInFlight = false; });
+}
+
 function _dashParseActividadConFecha(texto) {
   const t = String(texto || '').trim();
   if (!t) return null;
@@ -39217,10 +39235,10 @@ function _dashConstruirAvisosCalendario(datos) {
   hoy.setHours(0, 0, 0, 0);
   const avisos = [];
 
-  const pushAviso = (tipo, fecha, titulo, icono, anticipacionDias) => {
+  const pushAviso = (tipo, fecha, titulo, icono, anticipacionDias, responsable) => {
     const diff = _dashFechaDiffDias(hoy, fecha);
     if (diff < 0 || diff > anticipacionDias) return;
-    avisos.push({ tipo, fecha, titulo: String(titulo || '').trim(), icono, diff });
+    avisos.push({ tipo, fecha, titulo: String(titulo || '').trim(), icono, diff, responsable: responsable || '' });
   };
 
   (_calEsc.adminDatos?.festivos || datos.festivos || []).forEach(f => {
@@ -39266,7 +39284,8 @@ function _dashConstruirAvisosCalendario(datos) {
 
       const prox = cands.find(d => _dashFechaDiffDias(hoy, d) >= 0);
       if (!prox) return;
-      pushAviso('Efeméride', prox, e.titulo || e.descripcion || 'Efeméride escolar', 'auto_stories', 2);
+      const responsable = (_calEsc.responsables || {})[_efRespClave(mesKey, e)];
+      pushAviso('Efeméride', prox, e.titulo || e.descripcion || 'Efeméride escolar', 'auto_stories', 2, responsable);
     });
   });
 
@@ -39299,6 +39318,7 @@ function _renderizarBannerCalendarioDashboard() {
   // vuelva a renderizar el banner cuando llegue, sin importar si ya hay avisos
   // (p.ej. cumpleaños, que están disponibles de inmediato desde datos locales).
   _dashAsegurarCalendarioAdminBanner();
+  _dashAsegurarResponsablesBanner();
 
   const datos = _dashObtenerDatosCalendario();
   let avisos = _dashConstruirAvisosCalendario(datos);
@@ -39341,6 +39361,7 @@ function _renderizarBannerCalendarioDashboard() {
             <span class="material-icons" style="font-size:13px;color:${a.esSuscripcion ? '#C62828' : a.tipo === 'Festivo' ? '#EF6C00' : a.tipo === 'Actividad' ? '#1565C0' : a.tipo === 'Cumpleaños' ? '#AD1457' : '#6A1B9A'};">${a.icono}</span>
             ${a.esSuscripcion ? '' : `<span class="dash-cal-pill-meta" style="font-size:0.75rem;color:#455A64;white-space:nowrap;">${_dashEtiquetaAnticipacion(a.diff, a.enCurso)} · ${_dashFechaCorta(a.fecha)}</span>`}
             <span class="dash-cal-pill-titulo" style="font-size:0.78rem;color:${a.esSuscripcion ? '#C62828' : '#263238'};font-weight:${a.esSuscripcion ? '700' : '400'};">${escapeHTML(a.titulo)}</span>
+            ${a.responsable ? `<span style="display:flex;align-items:center;gap:2px;font-size:0.72rem;color:#6A1B9A;background:#F3E5F5;border-radius:12px;padding:2px 8px;white-space:nowrap;"><span class="material-icons" style="font-size:11px;">person</span>${escapeHTML(a.responsable)}</span>` : ''}
           </div>
         `).join('')}
       </div>
