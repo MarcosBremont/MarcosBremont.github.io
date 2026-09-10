@@ -49514,12 +49514,22 @@ function _coordPlanItemHTML(item, idx) {
   const modulo = plan.datosGenerales?.moduloFormativo || '';
   const nActs = (plan.actividades || []).length;
   const fecha = item.fechaGuardadoLabel || (item.fechaGuardado ? new Date(item.fechaGuardado).toLocaleDateString('es-DO') : '');
+  const valorRA = parseFloat(plan.datosGenerales?.valorRA);
+  const sumaActs = (plan.actividades || []).reduce((s, a) => s + (parseFloat(a.valor) || 0), 0);
 
   let h = '<div style="background:#F5F5F5;border:1px solid #E0E0E0;border-radius:8px;padding:10px;">'
     + '<div style="font-weight:600;font-size:0.85rem;color:#212121;">' + escapeHTML(item.nombre || 'Sin nombre') + '</div>';
   if (modulo) h += '<div style="font-size:0.78rem;color:#1565C0;">' + escapeHTML(modulo) + '</div>';
   if (raCorto) h += '<div style="font-size:0.75rem;color:#00695C;">' + escapeHTML(raCorto) + '</div>';
   h += '<div style="font-size:0.72rem;color:#78909C;margin-top:2px;">' + nActs + ' actividades · Guardada: ' + fecha + '</div>';
+  if (valorRA > 0) {
+    const descuadrado = Math.abs(sumaActs - valorRA) > 0.01;
+    h += '<div style="font-size:0.72rem;margin-top:2px;color:' + (descuadrado ? '#C62828' : '#2E7D32') + ';font-weight:600;">'
+      + '<span class="material-icons" style="font-size:12px;vertical-align:middle;">military_tech</span> '
+      + 'Valor del RA: ' + valorRA + ' pts (actividades suman ' + sumaActs + ')'
+      + (descuadrado ? ' ⚠' : '')
+      + '</div>';
+  }
 
   if (nActs > 0) {
     h += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:0.75rem;color:#5C6BC0;">Ver actividades</summary>';
