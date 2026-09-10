@@ -945,6 +945,36 @@ const plantillasSecuencia = {
 
   },
 
+  analisis: {
+
+    anticipacion: { nombre: "Anticipación", descripcion: "Presentar un caso o un conjunto de datos/evidencias reales que requiera ser descompuesto para su estudio.", pct: 15 },
+
+    construccion: { nombre: "Construcción", descripcion: "Descomposición guiada del caso en sus componentes, comparación de elementos y elaboración de esquemas de análisis.", pct: 60 },
+
+    consolidacion: { nombre: "Consolidación", descripcion: "Presentación de conclusiones del análisis y coevaluación mediante lista de cotejo.", pct: 25 }
+
+  },
+
+  sintesis: {
+
+    anticipacion: { nombre: "Anticipación", descripcion: "Plantear un problema abierto del campo profesional que admita varias soluciones posibles.", pct: 10 },
+
+    construccion: { nombre: "Construcción", descripcion: "Diseño o formulación guiada de una propuesta o solución integrada, con retroalimentación del docente en cada etapa.", pct: 65 },
+
+    consolidacion: { nombre: "Consolidación", descripcion: "Presentación de la propuesta elaborada y coevaluación mediante rúbrica.", pct: 25 }
+
+  },
+
+  evaluacion: {
+
+    anticipacion: { nombre: "Anticipación", descripcion: "Presentar criterios o estándares de calidad relacionados con el tema para orientar el juicio crítico.", pct: 10 },
+
+    construccion: { nombre: "Construcción", descripcion: "Análisis crítico y valoración fundamentada de casos, procesos o resultados según los criterios establecidos.", pct: 60 },
+
+    consolidacion: { nombre: "Consolidación", descripcion: "Sustentación del juicio emitido y retroalimentación formativa grupal.", pct: 30 }
+
+  },
+
 
 
   actitudinal: {
@@ -1948,7 +1978,7 @@ function extraerPalabrasClave(ra) {
 
 
 
-function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
+function generarElementosCapacidad(ra, criterios, datos, cantidadEC, nivelBloomRA) {
   // Extraer núcleo temático del RA (frase más importante)
   // Tomar la primera oración completa, limpiar y recortar
   const raLimpio = (ra || '').trim().replace(/\s+/g, ' ');
@@ -1982,35 +2012,66 @@ function generarElementosCapacidad(ra, criterios, datos, cantidadEC) {
     conocimiento: 'mediante el análisis de materiales curriculares y fuentes técnicas especializadas',
     comprension: 'a través del análisis comparativo de casos reales relacionados con el entorno profesional',
     aplicacion: 'utilizando herramientas y técnicas apropiadas en situaciones prácticas del ámbito laboral',
+    analisis: 'a través de la descomposición y el examen crítico de situaciones y datos propios del ámbito profesional',
+    sintesis: 'diseñando o proponiendo soluciones integradas a problemas reales del ámbito profesional',
+    evaluacion: 'emitiendo juicios fundamentados sobre la calidad y pertinencia de procesos y resultados del ámbito profesional',
     actitudinal: 'asumiendo una actitud reflexiva, comprometida y ética ante su práctica profesional'
   };
 
-  // Plantillas base por nivel
-  const nivelesBase = [
+  // Plantillas base por nivel -- sube la escala cognitiva (conocimiento →
+  // comprensión → aplicación → análisis → síntesis → evaluación) hasta el
+  // nivel elegido/detectado para el RA (nivelBloomRA); antes esta lista
+  // estaba fija en solo 4 niveles sin importar el nivel del RA, así que los
+  // EC siempre topaban en Aplicación aunque el RA se marcara con un nivel
+  // más alto. 'actitudinal' no es parte de la escala cognitiva -- va
+  // siempre al final, aparte.
+  const nivelesBaseTodos = [
     { nivel: 'conocimiento', verbo: 'Identificar', prefijo: '', condicion: condiciones.conocimiento },
     { nivel: 'comprension', verbo: 'Explicar', prefijo: 'los elementos, relaciones y responsabilidades asociadas a ', condicion: condiciones.comprension },
     { nivel: 'aplicacion', verbo: 'Aplicar', prefijo: 'los procedimientos y mecanismos de ', condicion: condiciones.aplicacion },
-    { nivel: 'actitudinal', verbo: 'Valorar', prefijo: 'la importancia ética y profesional de ', condicion: condiciones.actitudinal }
+    { nivel: 'analisis', verbo: 'Analizar', prefijo: 'los componentes, relaciones y factores críticos de ', condicion: condiciones.analisis },
+    { nivel: 'sintesis', verbo: 'Diseñar', prefijo: 'propuestas o soluciones integradas para ', condicion: condiciones.sintesis },
+    { nivel: 'evaluacion', verbo: 'Evaluar', prefijo: 'la calidad, pertinencia y resultados de ', condicion: condiciones.evaluacion }
   ];
+  const topeIdx = nivelesBaseTodos.findIndex(n => n.nivel === nivelBloomRA);
+  const nivelesCognitivos = topeIdx >= 0 ? nivelesBaseTodos.slice(0, topeIdx + 1) : nivelesBaseTodos.slice(0, 3);
+  const nivelesBase = [...nivelesCognitivos, { nivel: 'actitudinal', verbo: 'Valorar', prefijo: 'la importancia ética y profesional de ', condicion: condiciones.actitudinal }];
 
   // Verbos adicionales por nivel para ECs extras
   const verbosExtra = {
     conocimiento: ['Describir', 'Reconocer', 'Enumerar', 'Definir', 'Clasificar', 'Listar'],
     comprension: ['Interpretar', 'Comparar', 'Analizar', 'Diferenciar', 'Resumir', 'Contrastar'],
     aplicacion: ['Ejecutar', 'Implementar', 'Demostrar', 'Utilizar', 'Desarrollar', 'Resolver'],
+    analisis: ['Descomponer', 'Categorizar', 'Distinguir', 'Contrastar', 'Examinar', 'Diferenciar'],
+    sintesis: ['Formular', 'Planificar', 'Elaborar', 'Integrar', 'Proponer', 'Reorganizar'],
+    evaluacion: ['Juzgar', 'Justificar', 'Argumentar', 'Fundamentar', 'Criticar', 'Valorar críticamente'],
     actitudinal: ['Reflexionar sobre', 'Promover', 'Asumir', 'Comprometerse con', 'Evaluar', 'Apreciar']
   };
 
   const total = cantidadEC || 4;
   const ec = [];
 
-  // Reparto por nivel: el mismo round-robin de siempre (1 de cada nivel por
-  // "vuelta" completa) determina CUÁNTOS EC le tocan a cada nivel, pero ahora
-  // se generan AGRUPADOS por nivel en vez de intercalados -- antes, con 5+ EC,
-  // salían mezclados (ej. conocer, aplicación, conocer de nuevo) en lugar de
-  // uno detrás del otro.
+  // Reparto por nivel -- YA NO es un round-robin simple (i % nivelesBase.length):
+  // con pocos EC y una escalera larga (ej. 4 EC pero 7 niveles hasta Evaluación),
+  // ese cálculo nunca llegaba a recorrer los últimos índices y el nivel tope
+  // -- justo el que se pidió -- se quedaba sin ningún EC (mismo bug y mismo
+  // arreglo que en construirPromptBase, ver ahí para más contexto). Se
+  // muestrea espaciado a lo largo de toda la escalera para garantizar que el
+  // primer nivel (conocimiento) Y el último (el nivel tope, o actitudinal)
+  // siempre queden representados, a costa de saltarse algún nivel intermedio
+  // si no alcanza. Con suficientes EC, el resultado es igual al round-robin
+  // de siempre (1 de cada nivel por "vuelta" completa), agrupados por nivel.
   const conteoPorNivel = nivelesBase.map(() => 0);
-  for (let i = 0; i < total; i++) conteoPorNivel[i % nivelesBase.length]++;
+  if (total <= 1) {
+    conteoPorNivel[nivelesBase.length - 1] = 1;
+  } else if (total >= nivelesBase.length) {
+    for (let i = 0; i < total; i++) conteoPorNivel[i % nivelesBase.length]++;
+  } else {
+    for (let i = 0; i < total; i++) {
+      const idx = Math.round(i * (nivelesBase.length - 1) / (total - 1));
+      conteoPorNivel[idx]++;
+    }
+  }
 
   let codigoIdx = 1;
   nivelesBase.forEach((base, baseIdx) => {
@@ -3193,7 +3254,7 @@ function renderizarEC(listaEC) {
 
 
 
-    const nombreNivel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' }[ec.nivel];
+    const nombreNivel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' }[ec.nivel];
 
 
 
@@ -3495,6 +3556,9 @@ function _editarNivelEC(idx, chipEl) {
     { val: 'conocimiento', label: 'Recordar', color: '#1565C0' },
     { val: 'comprension', label: 'Comprensión', color: '#2E7D32' },
     { val: 'aplicacion', label: 'Aplicación', color: '#E65100' },
+    { val: 'analisis', label: 'Análisis', color: '#00695C' },
+    { val: 'sintesis', label: 'Síntesis', color: '#4527A0' },
+    { val: 'evaluacion', label: 'Evaluación', color: '#AD1457' },
     { val: 'actitudinal', label: 'Actitudinal', color: '#6A1B9A' },
   ];
 
@@ -6054,7 +6118,7 @@ function renderizarVistaPrevia() {
 
 
 
-  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
 
 
 
@@ -6136,7 +6200,7 @@ function renderizarVistaPrevia() {
 
 
   // Tabla de actividades agrupada por EC (con rowspan)
-  const nivelLabelAct = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabelAct = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
 
   // Agrupar actividades por EC manteniendo orden
   const _actsSeqVP = {};
@@ -6896,7 +6960,7 @@ async function _exportarConPlantillaCentro() {
   // Construir filas para loop de docxtemplater (tabla en Word)
   // Usamos marcadores __VMERGE__ para celdas que deben fusionarse verticalmente
   // y __VSTART__ para la primera celda del grupo (restart del merge)
-  const nivelLabelTpl = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabelTpl = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
   const actividades = [];
   ecs.forEach(ec => {
     const actsEC = acts.filter(a => a.ecCodigo === ec.codigo && !a.esComplementario);
@@ -10236,7 +10300,12 @@ function guardarDatosFormulario() {
     contenidosProcedimentales: getVal('contenidos-procedimentales'),
     contenidosActitudinales: getVal('contenidos-actitudinales'),
 
-    nivelBloom: planificacion.ra?.nivelBloom || ''
+    nivelBloom: planificacion.ra?.nivelBloom || '',
+    // Se reconstruye este objeto desde cero en cada guardado del formulario --
+    // sin preservar este flag, la elección manual del nivel Bloom (ver
+    // cambiarNivelBloomManual) se perdía justo antes de generarPlanificacion(),
+    // que es cuando más importa.
+    nivelBloomManual: planificacion.ra?.nivelBloomManual || false
 
 
 
@@ -10580,15 +10649,16 @@ function generarPlanificacion() {
 
 
 
-      const nivelRA = analizarNivelBloom(ra.descripcion);
-
-
-
-      planificacion.ra.nivelBloom = nivelRA;
-
-
-
-      actualizarBloomBadge(ra.descripcion);
+      // Si el usuario ya eligió el nivel a mano (selector "Cambiar" en el
+      // badge de nivel Bloom), no lo pisamos con la detección automática --
+      // analizarNivelBloom() nunca detecta Análisis/Síntesis/Evaluación, así
+      // que sobreescribir aquí sin este guard deshacía cualquier selección
+      // manual de esos 3 niveles justo antes de generar los EC.
+      if (!ra.nivelBloomManual) {
+        const nivelRA = analizarNivelBloom(ra.descripcion);
+        planificacion.ra.nivelBloom = nivelRA;
+        actualizarBloomBadge(ra.descripcion);
+      }
 
 
 
@@ -10641,7 +10711,7 @@ function generarPlanificacion() {
 
       const _cantEC = parseInt(dg.cantidadEC) || 4;
       const _cantActPorEC = parseInt(dg.cantidadActPorEC) || 1;
-      let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg, _cantEC);
+      let ec = generarElementosCapacidad(ra.descripcion, ra.criterios, dg, _cantEC, ra.nivelBloom);
 
 
 
@@ -10812,8 +10882,13 @@ function actualizarBloomBadge(textoRA) {
   const wrap = document.getElementById('bloom-badge-wrap');
   if (!textoRA || textoRA.length < 5) { if (wrap) wrap.classList.add('hidden'); badge.classList.add('hidden'); return; }
 
-
-
+  // Si el usuario ya eligió el nivel a mano (cambiarNivelBloomManual), no lo
+  // pisamos con la detección automática -- este bug hacía que, aunque se
+  // eligiera Análisis/Síntesis/Evaluación en el selector, generarPlanificacion()
+  // volviera a llamar esta función y regresara el nivel a uno de los 4 que
+  // analizarNivelBloom() sí sabe detectar (nunca sube más allá de Aplicación),
+  // por lo que los EC generados nunca reflejaban el nivel elegido.
+  if (planificacion.ra && planificacion.ra.nivelBloomManual) return;
 
 
 
@@ -10826,7 +10901,7 @@ function actualizarBloomBadge(textoRA) {
 
 
 
-    conocimiento: { label: 'Nivel Bloom Detectado: Conocimiento', color: '#1565C0', bg: '#E3F2FD' },
+    conocimiento: { label: 'Nivel Bloom Detectado: Recordar', color: '#1565C0', bg: '#E3F2FD' },
 
 
 
@@ -10873,7 +10948,7 @@ function toggleBloomSelector() {
 
 function cambiarNivelBloomManual(nivel) {
   const colores = {
-    conocimiento: { label: 'Nivel Bloom: Conocimiento', color: '#1565C0', bg: '#E3F2FD' },
+    conocimiento: { label: 'Nivel Bloom: Recordar', color: '#1565C0', bg: '#E3F2FD' },
     comprension:  { label: 'Nivel Bloom: Comprensión',  color: '#2E7D32', bg: '#E8F5E9' },
     aplicacion:   { label: 'Nivel Bloom: Aplicación',   color: '#E65100', bg: '#FFF3E0' },
     analisis:     { label: 'Nivel Bloom: Análisis',     color: '#00695C', bg: '#E0F2F1' },
@@ -10885,6 +10960,7 @@ function cambiarNivelBloomManual(nivel) {
   const b = document.getElementById('nivel-bloom-detectado');
   if (b) { b.textContent = inf.label; b.style.color = inf.color; b.style.background = inf.bg; b.style.border = `1px solid ${inf.color}33`; }
   planificacion.ra.nivelBloom = nivel;
+  planificacion.ra.nivelBloomManual = true;
   const sel = document.getElementById('bloom-selector');
   if (sel) sel.style.display = 'none';
   guardarBorrador();
@@ -26609,7 +26685,7 @@ function _exportarWordHTML() {
   const ra = planificacion.ra || {};
   const ec = planificacion.elementosCapacidad || [];
   const acts = planificacion.actividades || [];
-  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
 
   // Tabla EC
   let tablaEC = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;">';
@@ -32495,7 +32571,7 @@ function renderizarDiarias() {
 
 
 
-  const nivLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', actitudinal: 'Actitudinal' };
+  const nivLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
 
 
 
@@ -34629,31 +34705,50 @@ async function construirPromptBase(dg, ra) {
   const actsPorEC = parseInt(dg.cantidadActPorEC) || 1;
   const totalActs = cantEC * actsPorEC;
 
-  // Niveles de Bloom cíclicos para los EC
-  const nivelesBloom = ['conocimiento', 'comprension', 'aplicacion', 'actitudinal'];
-  const verbosNivel = {
-    conocimiento: 'Verbo conocimiento (Identificar, Reconocer, Clasificar...)',
-    comprension: 'Verbo comprensión (Explicar, Describir, Comparar...)',
-    aplicacion: 'Verbo aplicación (Aplicar, Implementar, Ejecutar...)',
-    actitudinal: 'Verbo actitudinal (Valorar, Asumir, Demostrar compromiso...)'
-  };
+  // Niveles de Bloom para los EC: sube la escala cognitiva hasta el nivel
+  // elegido/detectado para el RA (ra.nivelBloom) -- antes esta lista estaba
+  // fija en solo 4 niveles sin importar qué nivel se seleccionara para el RA
+  // (bug reportado: los EC siempre topaban en Aplicación aunque el RA se
+  // marcara como Análisis/Síntesis/Evaluación). 'actitudinal' no es parte de
+  // la escala cognitiva -- va siempre al final, aparte.
+  const NIVELES_BLOOM_COGNITIVOS = ['conocimiento', 'comprension', 'aplicacion', 'analisis', 'sintesis', 'evaluacion'];
+  const topeIdx = NIVELES_BLOOM_COGNITIVOS.indexOf(ra.nivelBloom);
+  // Si el RA no tiene nivel válido en la escala cognitiva (vacío, o "actitudinal"
+  // como nivel del propio RA), se mantiene el comportamiento de siempre: subir
+  // hasta Aplicación.
+  const nivelesCognitivos = topeIdx >= 0 ? NIVELES_BLOOM_COGNITIVOS.slice(0, topeIdx + 1) : NIVELES_BLOOM_COGNITIVOS.slice(0, 3);
+  const nivelesBloom = [...nivelesCognitivos, 'actitudinal'];
 
   // Generar lista de ECs esperados -- agrupados por nivel (no intercalados):
-  // el reparto (cuántos EC le tocan a cada nivel) sigue siendo el mismo
-  // round-robin de siempre, pero se le pide a la IA los códigos ya en orden
-  // agrupado (conocimiento, conocimiento, comprensión, ...) para que con 5+
-  // EC no salgan mezclados (ej. conocer, aplicación, conocer de nuevo).
-  const conteoPorNivelEC = nivelesBloom.map(() => 0);
-  for (let i = 0; i < cantEC; i++) conteoPorNivelEC[i % nivelesBloom.length]++;
-
-  const ecCodigos = [];
-  let ecCodigoIdx = 1;
-  nivelesBloom.forEach((nivel, nivelIdx) => {
-    for (let v = 0; v < conteoPorNivelEC[nivelIdx]; v++) {
-      ecCodigos.push({ codigo: `E.C.${ecCodigoIdx}.1.1`, nivel });
-      ecCodigoIdx++;
+  // se le pide a la IA los códigos ya en orden agrupado (conocimiento,
+  // conocimiento, comprensión, ...) para que con 5+ EC no salgan mezclados
+  // (ej. conocer, aplicación, conocer de nuevo).
+  //
+  // El reparto YA NO es un round-robin simple (i % nivelesBloom.length): con
+  // pocos EC y una escalera larga (ej. 4 EC pero 7 niveles hasta Evaluación),
+  // ese cálculo nunca llegaba a recorrer los últimos índices y el nivel tope
+  // -- justo el que el usuario pidió -- se quedaba sin ningún EC. Ahora se
+  // muestrea espaciado a lo largo de toda la escalera para garantizar que el
+  // primer nivel (conocimiento) Y el último (el nivel tope, o actitudinal)
+  // siempre queden representados, aunque cantEC sea menor que la cantidad de
+  // niveles -- a costa de saltarse algún nivel intermedio si no alcanza.
+  const nivelesPorEC = [];
+  if (cantEC <= 1) {
+    nivelesPorEC.push(nivelesBloom[nivelesBloom.length - 1]);
+  } else if (cantEC >= nivelesBloom.length) {
+    const conteoPorNivelEC = nivelesBloom.map(() => 0);
+    for (let i = 0; i < cantEC; i++) conteoPorNivelEC[i % nivelesBloom.length]++;
+    nivelesBloom.forEach((nivel, nivelIdx) => {
+      for (let v = 0; v < conteoPorNivelEC[nivelIdx]; v++) nivelesPorEC.push(nivel);
+    });
+  } else {
+    for (let i = 0; i < cantEC; i++) {
+      const idx = Math.round(i * (nivelesBloom.length - 1) / (cantEC - 1));
+      nivelesPorEC.push(nivelesBloom[idx]);
     }
-  });
+  }
+
+  const ecCodigos = nivelesPorEC.map((nivel, i) => ({ codigo: `E.C.${i + 1}.1.1`, nivel }));
 
   // Generar lista de actividades esperadas -- el EC actitudinal no lleva
   // actividades propias (permea a todos los demás EC, ver _DEFAULT_PROMPT_BASE).
@@ -35194,8 +35289,9 @@ async function _llamarModeloOpenRouter(modelo, apiKey, prompt, maxTokens = 4096,
 function aplicarRespuestaIA(aiData, fechasClase) {
   const dg = planificacion.datosGenerales;
 
-  // 1. Nivel del RA
-  if (aiData.nivelBloomRA) {
+  // 1. Nivel del RA -- si el usuario ya lo eligió a mano, no lo pisamos con
+  // la propia estimación de la IA (mismo criterio que actualizarBloomBadge).
+  if (aiData.nivelBloomRA && !planificacion.ra.nivelBloomManual) {
     planificacion.ra.nivelBloom = aiData.nivelBloomRA;
     const el = document.getElementById('nivel-bloom-detectado');
     if (el) el.textContent = aiData.nivelBloomRA.charAt(0).toUpperCase() + aiData.nivelBloomRA.slice(1);
@@ -46343,9 +46439,12 @@ REGLAS PARA LOS EC:
   * Recordar: Identificar, Reconocer, Clasificar, Enumerar, Definir
   * Comprensión: Explicar, Describir, Comparar, Interpretar, Diferenciar
   * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
+  * Análisis: Analizar, Descomponer, Categorizar, Distinguir, Contrastar, Examinar
+  * Síntesis: Diseñar, Formular, Planificar, Elaborar, Integrar, Proponer
+  * Evaluación: Evaluar, Juzgar, Justificar, Argumentar, Fundamentar, Criticar
   * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
 - El OBJETO es lo que el estudiante aprende (específico al módulo, pero redactado de forma original)
-- El OBJETO debe salir de un punto CONCRETO de la lista CONTENIDOS DEL RA de arriba, no de los Criterios de Evaluación ni de un tema inventado -- los Criterios solo sirven para el campo "contraste". Usa los Contenidos Conceptuales para el OBJETO de los EC de nivel Recordar/Comprensión, los Procedimentales para los de nivel Aplicación, y los Actitudinales para el EC de nivel Actitudinal. Si no hay Contenidos cargados para el RA, redacta el OBJETO igual de específico al módulo aunque no provenga de esa lista.
+- El OBJETO debe salir de un punto CONCRETO de la lista CONTENIDOS DEL RA de arriba, no de los Criterios de Evaluación ni de un tema inventado -- los Criterios solo sirven para el campo "contraste". Usa los Contenidos Conceptuales para el OBJETO de los EC de nivel Recordar/Comprensión, los Procedimentales para los de nivel Aplicación/Análisis/Síntesis/Evaluación, y los Actitudinales para el EC de nivel Actitudinal. Si no hay Contenidos cargados para el RA, redacta el OBJETO igual de específico al módulo aunque no provenga de esa lista.
 - El MODO DE HACER es cómo o para qué lo aprende
 
 EJEMPLO de EC bien redactado (para un módulo de programación):
@@ -46369,7 +46468,7 @@ REGLAS PARA LAS ACTIVIDADES:
 
 JSON requerido (respetar esta estructura exacta):
 {
-  "nivelBloomRA": "(conocimiento|comprension|aplicacion|sintesis|evaluacion)",
+  "nivelBloomRA": "(conocimiento|comprension|aplicacion|analisis|sintesis|evaluacion|actitudinal)",
   "elementosCapacidad": [
 {{ecCodigosJSON}}
   ],

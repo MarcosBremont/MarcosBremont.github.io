@@ -30,7 +30,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css?v=19.35" />
+  <link rel="stylesheet" href="styles.css?v=19.70" />
   <!-- Auth -->
   <link rel="stylesheet" href="auth.css?v=18.36" />
   <!-- Splash loader -->
@@ -1118,7 +1118,7 @@
                 <span class="material-icons" style="font-size:14px;">edit</span> Cambiar
               </button>
               <select id="bloom-selector" onchange="cambiarNivelBloomManual(this.value)" style="display:none;border:1px solid #1565C0;border-radius:6px;padding:3px 8px;font-size:0.82rem;color:#1565C0;background:#E3F2FD;cursor:pointer;">
-                <option value="conocimiento">Conocimiento</option>
+                <option value="conocimiento">Recordar</option>
                 <option value="comprension">Comprensión</option>
                 <option value="aplicacion">Aplicación</option>
                 <option value="analisis">Análisis</option>
@@ -3687,6 +3687,23 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.70<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Los EC siempre topaban en "Aplicación" aunque se eligiera un nivel Bloom más alto</div>
+              <ul class="about-ver-items">
+                <li>Causa 1: al generar la planificación, la lista de niveles Bloom para los EC estaba fija en Recordar/Comprensión/Aplicación/Actitudinal sin importar el nivel elegido para el RA -- ahora sube la escalera (incluye Análisis/Síntesis/Evaluación) hasta el nivel seleccionado, tanto en la generación local como con IA.</li>
+                <li>Causa 2 (la más grave): aunque eligieras el nivel a mano con el selector "Cambiar", justo antes de generar los EC el sistema volvía a detectar el nivel automáticamente y lo pisaba -- la detección automática nunca reconoce Análisis/Síntesis/Evaluación, así que tu elección se perdía sin avisar. Ahora una elección manual ya no se sobreescribe.</li>
+                <li>Se completó el soporte de Análisis/Síntesis/Evaluación en toda la app: colores de las tarjetas de EC, etiquetas en Vista Previa/exportaciones/plantilla Word, y el menú para cambiar el nivel de un EC individual.</li>
+                <li>De paso: el selector de nivel del RA decía "Conocimiento" -- se corrigió a "Recordar", como en el resto de la app.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10965,9 +10982,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.69"></script>
+  <script src="app.js?v=19.70"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.69"></script>
+  <script src="auth.js?v=19.70"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

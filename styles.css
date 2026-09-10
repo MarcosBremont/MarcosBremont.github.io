@@ -28,6 +28,12 @@
   --bloom-comprension-bg: #E8F5E9;
   --bloom-aplicacion: #E65100;
   --bloom-aplicacion-bg: #FFF3E0;
+  --bloom-analisis: #00695C;
+  --bloom-analisis-bg: #E0F2F1;
+  --bloom-sintesis: #4527A0;
+  --bloom-sintesis-bg: #EDE7F6;
+  --bloom-evaluacion: #AD1457;
+  --bloom-evaluacion-bg: #FCE4EC;
   --bloom-actitudinal: #6A1B9A;
   --bloom-actitudinal-bg: #F3E5F5;
 
@@ -922,6 +928,21 @@ body.dark-mode .info-tip strong {
   border-color: #FFCC80;
 }
 
+.ec-card.nivel-analisis {
+  background: var(--bloom-analisis-bg);
+  border-color: #80CBC4;
+}
+
+.ec-card.nivel-sintesis {
+  background: var(--bloom-sintesis-bg);
+  border-color: #B39DDB;
+}
+
+.ec-card.nivel-evaluacion {
+  background: var(--bloom-evaluacion-bg);
+  border-color: #F48FB1;
+}
+
 .ec-card.nivel-actitudinal {
   background: var(--bloom-actitudinal-bg);
   border-color: #CE93D8;
@@ -970,6 +991,21 @@ body.dark-mode .info-tip strong {
 
 .chip-aplicacion {
   background: var(--bloom-aplicacion);
+  color: #fff;
+}
+
+.chip-analisis {
+  background: var(--bloom-analisis);
+  color: #fff;
+}
+
+.chip-sintesis {
+  background: var(--bloom-sintesis);
+  color: #fff;
+}
+
+.chip-evaluacion {
+  background: var(--bloom-evaluacion);
   color: #fff;
 }
 
@@ -8158,6 +8194,21 @@ body.dark-mode .ec-card.nivel-comprension {
 body.dark-mode .ec-card.nivel-aplicacion {
   background: #2E1800 !important;
   border-color: #E65100 !important;
+}
+
+body.dark-mode .ec-card.nivel-analisis {
+  background: #0A2320 !important;
+  border-color: #00695C !important;
+}
+
+body.dark-mode .ec-card.nivel-sintesis {
+  background: #1C1533 !important;
+  border-color: #4527A0 !important;
+}
+
+body.dark-mode .ec-card.nivel-evaluacion {
+  background: #2E0A1A !important;
+  border-color: #AD1457 !important;
 }
 
 body.dark-mode .ec-card.nivel-actitudinal {
