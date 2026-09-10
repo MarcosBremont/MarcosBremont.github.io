@@ -3688,6 +3688,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v19.65<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Incidente: almacenamiento lleno tumbaba TODO el sistema, no solo el guardado que lo disparó</div>
+              <ul class="about-ver-items">
+                <li>Reportado como "se cayó todo el sistema". Cuando el almacenamiento local del navegador queda completamente lleno (ver v19.64), Firestore también deja de poder escribir sus propias claves internas de coordinación entre pestañas -- eso lo hace entrar en un estado roto ("INTERNAL ASSERTION FAILED") que bloquea TODAS las lecturas y escrituras de la app, no solo la que originalmente llenó el espacio. Ahora, antes de activar esa coordinación, se libera automáticamente lo prescindible (respaldos de calificaciones, blog de años archivados) si el almacenamiento está casi lleno, para no llegar nunca a ese punto.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.64<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10869,7 +10883,7 @@
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=18.99"></script>
+  <script src="firebase-config.js?v=19.65"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -10892,9 +10906,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.64"></script>
+  <script src="app.js?v=19.65"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.64"></script>
+  <script src="auth.js?v=19.65"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

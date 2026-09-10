@@ -163,6 +163,37 @@ const storage = firebase.storage();
 // eso va aquí, justo después de crear `db`) -- pero no hace falta esperar
 // esta promesa para seguir usando `db` normalmente: Firestore encola las
 // operaciones que le lleguen mientras esto termina de activarse.
+// ── Liberar espacio ANTES de activar la coordinación multi-pestaña ──────
+// synchronizeTabs:true hace que Firestore escriba sus propias claves de
+// coordinación (firestore_targets_/firestore_clients_/firestore_mutations_)
+// en localStorage, no solo en IndexedDB -- si el origen ya está casi lleno
+// (ej. blog del docente con adjuntos + años archivados, ver guardarBlog en
+// app.js), esa escritura interna del SDK falla a mitad de una sincronización
+// y Firestore queda en "INTERNAL ASSERTION FAILED: Unexpected state": un
+// estado roto que tumba TODAS las lecturas/escrituras, no solo la que lo
+// disparó (visto en producción: reportado como "se cayó todo el sistema").
+// Se libera lo prescindible ANTES de que esto pueda pasar, mismo criterio
+// que _setItemQuotaSafe/LS_QUOTA_SACRIFICIO en auth.js.
+(function _liberarEspacioPreventivo() {
+  try {
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      total += (k || '').length + (localStorage.getItem(k) || '').length;
+    }
+    if (total < 4000000) return; // ~8 MB en UTF-16; margen conservador bajo cuotas típicas de 5-10 MB
+    localStorage.removeItem('planificadorRA_cal_backups_v1');
+    const blogRaw = localStorage.getItem('planificadorRA_blog_v1');
+    if (blogRaw) {
+      const blog = JSON.parse(blogRaw);
+      if (blog && blog.postsArchivados && Object.keys(blog.postsArchivados).length) {
+        blog.postsArchivados = {};
+        localStorage.setItem('planificadorRA_blog_v1', JSON.stringify(blog));
+      }
+    }
+  } catch (e) { /* mejor esfuerzo -- si esto falla, enablePersistence sigue su curso normal */ }
+})();
+
 db.enablePersistence({ synchronizeTabs: true }).catch(e => {
   // 'failed-precondition': ya hay otra pestaña con persistencia de una sola
   // pestaña activa (no debería pasar con synchronizeTabs, pero por si acaso).
