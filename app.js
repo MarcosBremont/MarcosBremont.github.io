@@ -46345,6 +46345,7 @@ REGLAS PARA LOS EC:
   * Aplicación: Aplicar, Implementar, Ejecutar, Demostrar, Resolver, Construir
   * Actitudinal: Valorar, Asumir, Demostrar compromiso con, Reflexionar sobre
 - El OBJETO es lo que el estudiante aprende (específico al módulo, pero redactado de forma original)
+- El OBJETO debe salir de un punto CONCRETO de la lista CONTENIDOS DEL RA de arriba, no de los Criterios de Evaluación ni de un tema inventado -- los Criterios solo sirven para el campo "contraste". Usa los Contenidos Conceptuales para el OBJETO de los EC de nivel Recordar/Comprensión, los Procedimentales para los de nivel Aplicación, y los Actitudinales para el EC de nivel Actitudinal. Si no hay Contenidos cargados para el RA, redacta el OBJETO igual de específico al módulo aunque no provenga de esa lista.
 - El MODO DE HACER es cómo o para qué lo aprende
 
 EJEMPLO de EC bien redactado (para un módulo de programación):
@@ -46361,8 +46362,9 @@ REGLAS PARA LAS ACTIVIDADES:
 - PROHIBIDO: poner "Práctica de laboratorio: [copiar el EC]". Eso está MAL.
 - Cada actividad del mismo EC debe ser DIFERENTE entre sí. Varía el tipo de actividad.
 - Tipos de actividad válidos: Investigación, Práctica guiada, Exposición, Debate, Taller, Estudio de caso, Proyecto, Ejercicio práctico, Análisis comparativo, Presentación, Cuestionario, Mapa conceptual, Role-playing
-- IMPORTANTE: no bases TODAS las actividades únicamente en los Criterios de Evaluación (son solo referencia de contraste temático, no la única fuente de tareas). Distribuye también actividades que trabajen los CONTENIDOS DEL RA indicados arriba (conceptuales/procedimentales/actitudinales) -- especialmente en los EC de nivel Recordar/Comprensión, donde temas más introductorios de los Contenidos (origen/evolución, clasificación, tipos, fundamentos, principios) encajan mejor que la práctica técnica puntual de los Criterios. En los EC de nivel Aplicación sí es normal que predomine lo más técnico/práctico de los Criterios.
-- Para cada actividad, además del enunciado, redacta en el campo "contenidos" un texto breve (1-2 líneas) con los contenidos/temas mediadores que esa actividad trabaja específicamente -- distinto en cada actividad, no repitas el mismo texto en todas.
+- OBLIGATORIO: al menos la MITAD de las actividades de cada EC (redondeando hacia arriba) debe tener como tema central un punto CONCRETO de la lista CONTENIDOS DEL RA de arriba (no un tema inventado ni una paráfrasis del EC/Criterio) -- los Criterios de Evaluación son solo referencia de contraste temático, NUNCA la única fuente de tareas. En los EC de nivel Recordar/Comprensión usa sobre todo Contenidos Conceptuales; en los de nivel Aplicación, Contenidos Procedimentales; para el EC actitudinal (que no lleva actividades propias, ver regla de abajo) sus Contenidos Actitudinales se reflejan en las demás actividades cuando aplique.
+- COBERTURA: revisa la lista CONTENIDOS DEL RA antes de terminar -- cada punto de esa lista (conceptual, procedimental y actitudinal) debe quedar representado en el OBJETO de al menos un EC o en el campo "contenidos" de al menos una actividad. Ningún punto de Contenidos debe quedar totalmente sin usar.
+- Para cada actividad, además del enunciado, redacta en el campo "contenidos" un texto breve (1-2 líneas) citando el punto ESPECÍFICO de la lista CONTENIDOS DEL RA que esa actividad trabaja -- distinto en cada actividad, no repitas el mismo texto en todas.
 - Indica en el campo "duracionDias" cuántos días de clase necesita esa actividad para completarse: usa 1 para la MAYORÍA de las actividades (lo normal). Usa 2 o 3 SOLO si la actividad es claramente compleja o extensa (ej. un proyecto, un informe elaborado, una investigación profunda) y realmente no se puede completar en una sola sesión de clase. No abuses de valores mayores a 1.
 
 JSON requerido (respetar esta estructura exacta):
@@ -46482,7 +46484,7 @@ function _buildContenidosBloque(ra) {
   const p = ra.contenidosProcedimentales;
   const a = ra.contenidosActitudinales;
   if (!c && !p && !a) return '';
-  let bloque = 'CONTENIDOS DEL RA (fuente principal de temas para las ACTIVIDADES, no solo referencia pasiva -- varias actividades deben tratar puntos concretos de esta lista, ver REGLAS PARA LAS ACTIVIDADES):';
+  let bloque = 'CONTENIDOS DEL RA (fuente principal de temas: de aquí sale el OBJETO de cada EC y el tema de la mayoría de las ACTIVIDADES, no solo referencia pasiva -- ver REGLAS PARA LOS EC y REGLAS PARA LAS ACTIVIDADES):';
   if (c) bloque += '\n• Conceptuales: ' + c.replace(/\n/g, ', ');
   if (p) bloque += '\n• Procedimentales: ' + p.replace(/\n/g, ', ');
   if (a) bloque += '\n• Actitudinales: ' + a.replace(/\n/g, ', ');
