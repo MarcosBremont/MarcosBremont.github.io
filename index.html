@@ -479,6 +479,9 @@
       <!-- ── Seguimiento durante los recesos de hoy ── -->
       <div id="dash-seguimiento-banner" style="display:none;margin-top:8px;"></div>
 
+      <!-- ── Efeméride de hoy ── -->
+      <div id="dash-efemeride-banner" style="display:none;margin-top:8px;"></div>
+
       <!-- ── Accesos rápidos ── -->
       <div class="dash-section-label" style="margin-top:8px;">
         <span class="material-icons">apps</span>Accesos rápidos
@@ -2737,6 +2740,10 @@
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">groups</span> Seguimiento Recesos
         </button>
+        <button class="ra-tab" id="tab-dir-efemerides" onclick="switchTabDirector('efemerides')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">auto_stories</span> Responsables Efemérides
+        </button>
         <button class="ra-tab" id="tab-dir-calificaciones" onclick="switchTabDirector('calificaciones')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">grade</span> Calificaciones
@@ -2805,6 +2812,10 @@
         <button class="ra-tab" id="tab-coord-seguimiento" onclick="switchTabCoordinadora('seguimiento')"
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">groups</span> Seguimiento Recesos
+        </button>
+        <button class="ra-tab" id="tab-coord-efemerides" onclick="switchTabCoordinadora('efemerides')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">auto_stories</span> Responsables Efemérides
         </button>
         <button class="ra-tab" id="tab-coord-sesiones" onclick="switchTabCoordinadora('sesiones')"
           style="display:none;padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -3684,6 +3695,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#6A1B9A;">v19.66<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Responsables de Efemérides</div>
+              <ul class="about-ver-items">
+                <li>Director y Coordinadora ahora pueden asignar quién está a cargo de cada efeméride del calendario oficial del centro (pestaña "Responsables Efemérides"), igual que ya se hacía con "Seguimiento Recesos". El responsable asignado se muestra a todos los docentes dentro de Calendario Escolar, junto a cada efeméride, y también aparece en un nuevo banner "Efeméride de hoy" en el Dashboard.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -10906,9 +10931,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.65"></script>
+  <script src="app.js?v=19.66"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.65"></script>
+  <script src="auth.js?v=19.66"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

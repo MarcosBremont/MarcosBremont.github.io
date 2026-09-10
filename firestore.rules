@@ -181,6 +181,17 @@ service cloud.firestore {
         allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['director', 'coordinadora']) && miCentroId() == centroId));
       }
 
+      // Responsables de Efemérides: quién está a cargo de cada efeméride del
+      // calendario OFICIAL del centro (centros/{id}/calendario/main, que solo
+      // Superadmin edita -- fechas/títulos no se tocan aquí). Mismo criterio
+      // de acceso que seguimiento_recesos: Director/Coordinadora del PROPIO
+      // centro asignan, cualquier docente logueado del centro solo lee
+      // (alimenta el banner "Efeméride de hoy" del Dashboard).
+      match /efemerides_responsables/{doc} {
+        allow read: if signedIn();
+        allow write: if signedIn() && (isSuperadminByEmail() || currentRole() == 'superadmin' || (hasRole(['director', 'coordinadora']) && miCentroId() == centroId));
+      }
+
       // Módulo de Vinculación Sectorial (pasantías, bolsa de empleo, diagnósticos
       // empresariales, convenios, eventos comunitarios). Solo el rol 'vinculadora'
       // de ese mismo centro, o Superadmin -- ni Director ni admin_centro (aunque el
