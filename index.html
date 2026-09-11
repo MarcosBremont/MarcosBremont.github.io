@@ -3693,6 +3693,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.76<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">El nivel Bloom no se detectaba al importar el siguiente RA del currículo en la misma sesión</div>
+              <ul class="about-ver-items">
+                <li>Si en un RA anterior (dentro de la misma sesión, sin recargar la app) se había cambiado el nivel Bloom a mano, esa elección quedaba pegada y se arrastraba silenciosamente al importar el SIGUIENTE RA del currículo -- ni el badge de "Nivel Bloom Detectado" se mostraba, ni los EC se generaban según el RA recién importado (efecto secundario del fix de v19.70). Ahora, importar un RA del currículo siempre limpia esa elección manual y arranca con detección automática fresca.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v19.75<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11054,9 +11068,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.75"></script>
+  <script src="app.js?v=19.76"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.75"></script>
+  <script src="auth.js?v=19.76"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

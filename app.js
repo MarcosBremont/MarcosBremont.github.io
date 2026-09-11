@@ -26076,6 +26076,17 @@ function _confirmarImportCurriculo(idx) {
   const ra = parsed?.ras?.[idx];
   if (!ra) return;
 
+  // Importar un RA del currículo es siempre el inicio de un RA nuevo -- si un
+  // RA anterior en esta misma sesión (sin recargar la app, ej. importando
+  // varios RA seguidos del mismo módulo) tenía el nivel Bloom elegido a mano
+  // (ver cambiarNivelBloomManual), ese flag quedaba pegado en
+  // planificacion.ra y se arrastraba al RA nuevo -- la detección automática
+  // se saltaba en silencio (actualizarBloomBadge/generarPlanificacion, ver
+  // v19.70) y ni el badge ni los EC reflejaban el RA que se acababa de
+  // importar. Se limpia aquí para que el RA nuevo siempre arranque con
+  // detección automática fresca.
+  if (planificacion.ra) planificacion.ra.nivelBloomManual = false;
+
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (el && val !== undefined && val !== null) el.value = val;
