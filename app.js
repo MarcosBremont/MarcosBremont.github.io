@@ -39154,7 +39154,6 @@ function renderizarDashboard() {
   _renderizarSaludo();
   _renderizarBannerCalendarioDashboard();
   _renderizarBannerSeguimientoDashboard();
-  _renderizarBannerEfemerideDashboard();
   _renderizarAlertas();
   _renderizarClasesHoy();
   _renderizarClasesManana();
@@ -42974,7 +42973,7 @@ async function _calEscGuardarResponsableInline(idx, valor) {
   try {
     await db.collection('centros').doc(_calEsc.centroId).collection('efemerides_responsables').doc('config').set({ asignaciones: _calEsc.responsables }, { merge: true });
     mostrarToast('Responsable guardado ✓', 'success');
-    if (typeof _renderizarBannerEfemerideDashboard === 'function') _renderizarBannerEfemerideDashboard();
+    if (typeof _renderizarBannerCalendarioDashboard === 'function') _renderizarBannerCalendarioDashboard();
   } catch (e) {
     console.error('Error guardando responsable de efeméride:', e);
     mostrarToast('Error al guardar el responsable', 'error');
@@ -50222,61 +50221,15 @@ async function _renderizarBannerSeguimientoDashboard() {
 // reordena o se agregan/quitan efemérides en otros meses. Se edita
 // directamente dentro de Calendario Escolar (ver _calEscRenderListaEfemerides
 // / _calEscGuardarResponsableInline, visible solo para quien puede asignar:
-// Director/Coordinadora del propio centro o Superadmin) y se muestra a
-// todos los docentes ahí mismo y en el banner "Efeméride de hoy" del
-// Dashboard.
+// Director/Coordinadora del propio centro o Superadmin) y se muestra a todos
+// los docentes ahí mismo y en el pill "Efeméride" del banner "Próximos
+// avisos del calendario escolar" del Dashboard (ver
+// _dashConstruirAvisosCalendario) -- antes había además un banner aparte
+// "Efeméride de hoy" (_renderizarBannerEfemerideDashboard), quitado por
+// quedar redundante con ese mismo aviso.
 const CAL_ESC_MES_POR_JSMES = ['enero','febrero','marzo','abril','mayo','junio',null,'agosto','septiembre','octubre','noviembre','diciembre'];
 
 function _efRespClave(mes, ef) { return mes + '|' + (ef.dia || '') + '|' + (ef.titulo || ''); }
-
-async function _renderizarBannerEfemerideDashboard() {
-  const el = document.getElementById('dash-efemeride-banner');
-  if (!el) return;
-  el.style.display = 'none';
-  el.innerHTML = '';
-
-  const hoy = new Date();
-  const mesKey = CAL_ESC_MES_POR_JSMES[hoy.getMonth()];
-  if (!mesKey) return; // julio: fuera del año escolar
-  const diaHoy = hoy.getDate();
-
-  if (typeof _coordGetCentroId !== 'function') return;
-  const centroId = await _coordGetCentroId();
-  if (!centroId) return;
-
-  let efemeridesHoy = [];
-  let asignaciones = {};
-  try {
-    const [calDoc, respDoc] = await Promise.all([
-      db.collection('centros').doc(centroId).collection('calendario').doc('main').get(),
-      db.collection('centros').doc(centroId).collection('efemerides_responsables').doc('config').get()
-    ]);
-    const lista = calDoc.exists ? (calDoc.data()?.meses?.[mesKey]?.efemerides || []) : [];
-    efemeridesHoy = lista.filter(ef => Number(ef.dia) === diaHoy);
-    asignaciones = (respDoc.exists && respDoc.data()?.asignaciones) ? respDoc.data().asignaciones : {};
-  } catch (e) { return; }
-
-  if (!efemeridesHoy.length) return;
-
-  el.style.display = 'block';
-  el.innerHTML = `
-    <div style="background:linear-gradient(135deg,#F3E5F5 0%,#EDE7F6 100%);border:1.5px solid #CE93D8;border-radius:12px;padding:10px 12px;">
-      <div style="display:flex;align-items:center;gap:6px;font-size:0.83rem;font-weight:700;color:#6A1B9A;margin-bottom:8px;">
-        <span class="material-icons" style="font-size:17px;">auto_stories</span>
-        Efeméride de hoy
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${efemeridesHoy.map(ef => {
-          const clave = _efRespClave(mesKey, ef);
-          const resp = asignaciones[clave];
-          return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <span style="font-size:0.8rem;color:#37474F;font-weight:600;">${escapeHTML(ef.titulo || '')}</span>
-            ${resp ? `<span style="font-size:0.75rem;color:#6A1B9A;background:#fff;border:1px solid #D1C4E9;border-radius:14px;padding:2px 9px;">${escapeHTML(resp)}</span>` : `<span style="font-size:0.72rem;color:#B0BEC5;font-style:italic;">Sin responsable asignado</span>`}
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-}
 
 // ── 5. MONITOR DE RENDIMIENTO / ALERTAS DE RIESGO ───────────────
 // Reutiliza los mismos umbrales que el panel de Rendimiento del docente
