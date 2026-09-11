@@ -26325,17 +26325,16 @@ async function guardarPlanificacionActual(silencioso = false) {
   if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe('planificadorRA_biblioteca_v1', bibliotecaJSON);
   else { try { localStorage.setItem('planificadorRA_biblioteca_v1', bibliotecaJSON); } catch (e) { console.warn('No se pudo guardar la biblioteca localmente:', e); } }
 
-  // Mostrar indicador de guardado en Firebase
-  const btnGuardar = document.querySelector('[onclick*="guardarPlanificacionActual"]');
-  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.dataset._origText = btnGuardar.innerHTML; btnGuardar.textContent = 'Guardando…'; }
-
-  try {
-    await _syncBibliotecaFirebase(biblio);
-  } finally {
-    if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardar.dataset._origText) btnGuardar.innerHTML = btnGuardar.dataset._origText; }
-  }
-
-  // Asignar al curso (o cursos) seleccionado en Paso 1
+  // Asignar al curso (o cursos) seleccionado en Paso 1 -- ANTES del await de
+  // sincronización con Firebase (justo abajo), no después. La subida a
+  // Firestore es una llamada de red que puede tardar; si la asignación al
+  // curso quedaba detrás de ese await, un docente que guardaba y navegaba de
+  // inmediato a "Mis Planificaciones" (que agrupa por curso.planIds) se
+  // encontraba con el RA recién creado sin aparecer bajo su curso -- todavía
+  // no se le había asignado ningún curso en calState.cursos en memoria,
+  // aunque ya estuviera guardado en la biblioteca. Moviendo esto antes del
+  // await, calState.cursos queda actualizado en la misma porción síncrona
+  // que el guardado local, disponible de inmediato sin depender de la red.
   const finalId = registro.id;
   const cursosExist = Object.values(calState.cursos);
 
@@ -26408,6 +26407,16 @@ async function guardarPlanificacionActual(silencioso = false) {
         if (aviso) aviso.style.display = 'none';
       }
     }
+  }
+
+  // Mostrar indicador de guardado en Firebase
+  const btnGuardar = document.querySelector('[onclick*="guardarPlanificacionActual"]');
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.dataset._origText = btnGuardar.innerHTML; btnGuardar.textContent = 'Guardando…'; }
+
+  try {
+    await _syncBibliotecaFirebase(biblio);
+  } finally {
+    if (btnGuardar) { btnGuardar.disabled = false; if (btnGuardar.dataset._origText) btnGuardar.innerHTML = btnGuardar.dataset._origText; }
   }
 }
 
