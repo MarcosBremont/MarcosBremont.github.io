@@ -969,6 +969,11 @@
                 <span class="material-icons" style="font-size:20px;">calendar_month</span>
               </button>
             </div>
+            <div id="inicio-sugerencia-fecha" style="display:none;margin-top:8px;background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:8px;padding:8px 10px;font-size:0.78rem;color:#1565C0;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span class="material-icons" style="font-size:16px;vertical-align:middle;">event_available</span>
+              <span id="inicio-sugerencia-texto"></span>
+              <button type="button" onclick="_usarFechaInicioSugerida()" style="margin-left:auto;background:#1565C0;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.74rem;font-weight:700;cursor:pointer;">Usar esta fecha</button>
+            </div>
           </div>
 
           <!-- Fecha de Término -->
@@ -3684,6 +3689,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v19.73<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nueva Planificación: Fecha de Inicio sugerida según el RA anterior del curso</div>
+              <ul class="about-ver-items">
+                <li>Al marcar un curso en Datos Generales, si ese curso ya tiene otro RA guardado, ahora aparece una sugerencia con la fecha en que terminó ese RA anterior y un botón "Usar esta fecha" para poner automáticamente el día siguiente como Fecha de Inicio -- ya no hace falta ir a revisar manualmente cuándo terminó el RA previo.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11007,9 +11026,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.72"></script>
+  <script src="app.js?v=19.73"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.72"></script>
+  <script src="auth.js?v=19.73"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

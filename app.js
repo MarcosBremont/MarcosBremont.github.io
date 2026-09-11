@@ -9014,12 +9014,13 @@ function _mostrarCursoAsignado() {
     input.className = 'chk-curso-paso1';
     input.value = c.id;
     input.checked = idsAMarcar.includes(c.id);
-    input.onchange = () => { _actualizarCalendarioDiasClase(); _actualizarAvisoMultiCursoHorario(); };
+    input.onchange = () => { _actualizarCalendarioDiasClase(); _actualizarAvisoMultiCursoHorario(); _sugerirFechaInicioPorCurso(); };
     label.appendChild(input);
     label.appendChild(document.createTextNode(' ' + c.nombre));
     contenedor.appendChild(label);
   });
   _actualizarAvisoMultiCursoHorario();
+  _sugerirFechaInicioPorCurso();
 }
 
 /** "Días de Clase por Semana" y las fechas de las actividades son ÚNICOS por
@@ -9332,6 +9333,7 @@ function _actualizarDgFechaLabels() {
     if (lbl) lbl.textContent = val ? val.split('-').reverse().join('/') : '—';
   });
   if (typeof _actualizarSugerenciaFechaTermino === 'function') _actualizarSugerenciaFechaTermino();
+  if (typeof _sugerirFechaInicioPorCurso === 'function') _sugerirFechaInicioPorCurso();
 }
 
 /** Llena los campos del formulario desde el estado restaurado */
@@ -10425,6 +10427,62 @@ function _usarFechaTerminoSugerida() {
   input.dispatchEvent(new Event('input', { bubbles: true }));
   input.dispatchEvent(new Event('change', { bubbles: true }));
   mostrarToast('Fecha de Término actualizada', 'success');
+}
+
+// ── Sugerir Fecha de Inicio a partir del RA anterior del mismo curso ────
+// Si el curso marcado ya tiene otras planificaciones guardadas (otros RA),
+// se sugiere como Fecha de Inicio el día siguiente al que terminó el RA más
+// reciente de ese curso -- para no tener que ir a revisar manualmente
+// cuándo terminó el RA anterior. Solo se sugiere si Fecha de Inicio está
+// vacía (nunca pisa una fecha ya puesta, propia o de un plan existente que
+// se está editando).
+let _inicioSugeridaFecha = null;
+
+function _sugerirFechaInicioPorCurso() {
+  const box = document.getElementById('inicio-sugerencia-fecha');
+  const txt = document.getElementById('inicio-sugerencia-texto');
+  if (!box || !txt) return;
+
+  if (document.getElementById('fecha-inicio')?.value) { box.style.display = 'none'; return; }
+
+  const cursoId = _cursoIdSeleccionadoPaso1();
+  const curso = cursoId ? calState.cursos?.[cursoId] : null;
+  const planIds = (curso?.planIds || []).filter(id => id !== planificacion._id);
+  if (!planIds.length) { box.style.display = 'none'; return; }
+
+  const biblio = cargarBiblioteca().items || [];
+  let masReciente = null;
+  planIds.forEach(id => {
+    const item = biblio.find(i => i.id === id);
+    const fTermino = item?.planificacion?.datosGenerales?.fechaTermino;
+    if (!fTermino || !/^\d{4}-\d{2}-\d{2}$/.test(fTermino)) return;
+    if (!masReciente || fTermino > masReciente.fechaTermino) {
+      masReciente = { fechaTermino: fTermino, ra: item.planificacion?.ra?.descripcion || '' };
+    }
+  });
+  if (!masReciente) { box.style.display = 'none'; return; }
+
+  const d = new Date(masReciente.fechaTermino + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  _inicioSugeridaFecha = d.toISOString().split('T')[0];
+  const sugeridaLabel = _inicioSugeridaFecha.split('-').reverse().join('/');
+  const terminoLabel = masReciente.fechaTermino.split('-').reverse().join('/');
+  const raCorta = masReciente.ra.substring(0, 40) + (masReciente.ra.length > 40 ? '...' : '');
+
+  txt.innerHTML = 'El RA anterior de este curso' + (raCorta ? ' ("' + escapeHTML(raCorta) + '")' : '') + ' terminó el <strong>' + terminoLabel + '</strong> → Fecha de Inicio sugerida: <strong>' + sugeridaLabel + '</strong>';
+  box.style.display = 'flex';
+}
+
+function _usarFechaInicioSugerida() {
+  if (!_inicioSugeridaFecha) return;
+  const input = document.getElementById('fecha-inicio');
+  if (!input) return;
+  input.value = _inicioSugeridaFecha;
+  _actualizarDgFechaLabels();
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  document.getElementById('inicio-sugerencia-fecha').style.display = 'none';
+  mostrarToast('Fecha de Inicio actualizada', 'success');
 }
 
 function _calcTotalesPriorizacion() {
