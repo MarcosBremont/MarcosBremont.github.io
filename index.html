@@ -3693,6 +3693,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#B71C1C;">v19.74<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Incidente: refuerzo contra "FIRESTORE... Unexpected state" (Exámenes y otras secciones sin cargar)</div>
+              <ul class="about-ver-items">
+                <li>El fix preventivo de v19.65 (liberar espacio antes de que Firestore se rompa por falta de espacio en el dispositivo) tenía un umbral demasiado alto para dispositivos con cuota más chica (algunos móviles/Safari) -- la limpieza podía correr demasiado tarde. Se bajó el umbral y, más importante, se agregó una recuperación automática: si Firestore igual queda roto ("INTERNAL ASSERTION FAILED"), la app libera espacio de nuevo y se recarga sola una vez, en vez de dejar toda sección (Exámenes, Calificaciones, etc.) sin cargar hasta que alguien cierre y reabra manualmente.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v19.73<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11003,7 +11017,7 @@
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=19.65"></script>
+  <script src="firebase-config.js?v=19.74"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -11026,9 +11040,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.73"></script>
+  <script src="app.js?v=19.74"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.73"></script>
+  <script src="auth.js?v=19.74"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

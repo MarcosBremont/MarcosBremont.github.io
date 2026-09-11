@@ -174,14 +174,24 @@ const storage = firebase.storage();
 // disparó (visto en producción: reportado como "se cayó todo el sistema").
 // Se libera lo prescindible ANTES de que esto pueda pasar, mismo criterio
 // que _setItemQuotaSafe/LS_QUOTA_SACRIFICIO en auth.js.
-(function _liberarEspacioPreventivo() {
+// Extraída a función reutilizable: se llama preventivamente aquí abajo ANTES
+// de enablePersistence, y también de forma reactiva mas abajo si Firestore
+// ya quedó roto (ver _recuperarDeFirestoreRoto) -- el umbral preventivo
+// original (4.000.000 caracteres, ~8 MB) resultó insuficiente en la
+// práctica: en dispositivos con cuota más chica (móviles, Safari, que a
+// veces rondan solo 5 MB = ~2.500.000 caracteres por origen), la limpieza
+// corría demasiado tarde -- el origen ya podía estar sobre cuota antes de
+// que el chequeo disparara, y hasta el propio localStorage.setItem de la
+// limpieza podía fallar en silencio (try/catch de "mejor esfuerzo"), sin
+// liberar nada. Bajado a 2.000.000 (~4 MB) para dejar más margen real.
+function _liberarEspacioLocalStorage() {
   try {
     let total = 0;
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       total += (k || '').length + (localStorage.getItem(k) || '').length;
     }
-    if (total < 4000000) return; // ~8 MB en UTF-16; margen conservador bajo cuotas típicas de 5-10 MB
+    if (total < 2000000) return;
     localStorage.removeItem('planificadorRA_cal_backups_v1');
     const blogRaw = localStorage.getItem('planificadorRA_blog_v1');
     if (blogRaw) {
@@ -192,7 +202,34 @@ const storage = firebase.storage();
       }
     }
   } catch (e) { /* mejor esfuerzo -- si esto falla, enablePersistence sigue su curso normal */ }
-})();
+}
+_liberarEspacioLocalStorage();
+
+// ── Recuperación automática si Firestore igual queda en estado roto ─────
+// Aun con la limpieza preventiva de arriba, un dispositivo con cuota
+// especialmente chica puede quedarse sin espacio de todos modos -- ahí
+// Firestore entra en "INTERNAL ASSERTION FAILED: Unexpected state" y NINGUNA
+// lectura/escritura vuelve a funcionar hasta recargar la página (visto en
+// producción más de una vez, reportado como "se cayó todo el sistema" /
+// pantallas enteras con "Error al cargar: FIRESTORE... Unexpected state").
+// En vez de dejar a la persona atascada sin saber qué hacer, se detecta ese
+// error específico, se libera espacio de nuevo, y se fuerza UNA sola
+// recarga automática -- con una bandera en sessionStorage para no entrar en
+// bucle de recargas si el problema no se puede resolver liberando espacio.
+function _recuperarDeFirestoreRoto() {
+  if (sessionStorage.getItem('tinclass_fs_recovery_attempted')) return;
+  try { sessionStorage.setItem('tinclass_fs_recovery_attempted', '1'); } catch (e) {}
+  _liberarEspacioLocalStorage();
+  setTimeout(() => location.reload(), 300);
+}
+window.addEventListener('error', function(e) {
+  const msg = String(e?.message || e?.error?.message || '');
+  if (msg.includes('INTERNAL ASSERTION FAILED')) _recuperarDeFirestoreRoto();
+});
+window.addEventListener('unhandledrejection', function(e) {
+  const msg = String(e?.reason?.message || e?.reason || '');
+  if (msg.includes('INTERNAL ASSERTION FAILED')) _recuperarDeFirestoreRoto();
+});
 
 db.enablePersistence({ synchronizeTabs: true }).catch(e => {
   // 'failed-precondition': ya hay otra pestaña con persistencia de una sola
