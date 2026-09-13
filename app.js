@@ -2290,7 +2290,7 @@ function _diasClaseKey(dias) {
  *  una que se está reprogramando para otro curso) -- antes, cambiar los
  *  Días de Clase ahí no volvía a calcular las fechas ya asignadas, así que
  *  se quedaban con el horario viejo hasta que se regeneraba todo con IA. */
-function _reasignarFechasActividadesPorDiasClase() {
+async function _reasignarFechasActividadesPorDiasClase() {
   // Llamado también directo desde un botón manual en "Días de Clase por
   // Semana" (Paso 1) -- ahí el formulario puede no haberse guardado todavía
   // (el docente marcó/cambió un día y le dio clic al botón sin pasar de
@@ -2303,7 +2303,7 @@ function _reasignarFechasActividadesPorDiasClase() {
   if (!acts.length) { mostrarToast('Esta planificación todavía no tiene actividades.', 'info'); return; }
   if (!dg.fechaInicio) { mostrarToast('Define primero la Fecha de Inicio.', 'error'); return; }
 
-  const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
+  const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? await _calEscGetFestivosAdmin() : [];
   const fechaFin = dg.fechaTermino || dg.fechaInicio;
   const fechas = calcularFechasClase(dg.diasClase || {}, dg.fechaInicio, fechaFin, festivosAdmin);
   if (!fechas.length) { mostrarToast('Marca al menos un día en "Días de Clase por Semana" y verifica la Fecha de Término.', 'error'); return; }
@@ -2380,10 +2380,10 @@ function _actividadCubreFecha(act, fechaISO) {
 /**
  * Muestra en el panel de planificación cuántos días festivos fueron excluidos del cálculo.
  */
-function _mostrarNotaFestivosExcluidos(diasConfig, fechaInicio, fechaFin) {
+async function _mostrarNotaFestivosExcluidos(diasConfig, fechaInicio, fechaFin) {
   const nota = document.getElementById('festivos-excluidos-note');
   if (!nota) return;
-  const festivos = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
+  const festivos = typeof _calEscGetFestivosAdmin === 'function' ? await _calEscGetFestivosAdmin() : [];
   if (!festivos.length || !fechaInicio || !fechaFin) { nota.style.display = 'none'; return; }
   // Calcular sin exclusión para contar cuántos coinciden
   const sinExcluir = calcularFechasClase(diasConfig, fechaInicio, fechaFin, []);
@@ -10683,7 +10683,7 @@ function generarPlanificacion() {
 
 
 
-  setTimeout(() => {
+  setTimeout(async () => {
 
 
 
@@ -10733,7 +10733,7 @@ function generarPlanificacion() {
 
 
         dg.diasClase, dg.fechaInicio, dg.fechaTermino,
-        typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : []
+        typeof _calEscGetFestivosAdmin === 'function' ? await _calEscGetFestivosAdmin() : []
 
 
 
@@ -27192,7 +27192,7 @@ async function confirmarDuplicarPlan() {
       dgCopia.diasClase = diasClaseCurso;
       dgCopia.fechaInicio = nuevaFechaInicio;
 
-      const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : [];
+      const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? await _calEscGetFestivosAdmin() : [];
       const nuevasFechas = calcularFechasClase(diasClaseCurso, nuevaFechaInicio, fechaFin || nuevaFechaInicio, festivosAdmin);
 
       // Asignar nueva fecha a cada actividad en orden -- las que duran varios
@@ -35552,11 +35552,17 @@ generarPlanificacion = async function () {
 
   // Calcular fechas de clase (necesario para asignar fechas a actividades)
   // ORDEN CORRECTO: (diasClase, fechaInicio, fechaTermino)
+  // _calEscGetFestivosAdmin() es async y garantiza que el calendario admin ya
+  // esté cargado -- sin el await, si el docente entraba directo a Nueva
+  // Planificación sin haber abierto antes Calendario Escolar (o navegaba más
+  // rápido que la carga en segundo plano del Dashboard), esta llamada
+  // devolvía [] en silencio y NINGÚN festivo/día no lectivo del calendario
+  // oficial del centro se excluía al asignar fechas a las actividades.
   const fechasClase = calcularFechasClase(
     planificacion.datosGenerales.diasClase,
     planificacion.datosGenerales.fechaInicio,
     planificacion.datosGenerales.fechaTermino,
-    typeof _calEscGetFestivosAdmin === 'function' ? _calEscGetFestivosAdmin() : []
+    typeof _calEscGetFestivosAdmin === 'function' ? await _calEscGetFestivosAdmin() : []
   );
   planificacion.fechasClase = fechasClase;
   planificacion.horasTotal = fechasClase.reduce((s, f) => s + f.horas, 0);
@@ -43722,8 +43728,25 @@ function _calEscGuardarEfemeride(mes, idx) {
 
 // ── DÍAS FESTIVOS / NO LECTIVOS ──────────────────────────────────────
 
-function _calEscGetFestivosAdmin() {
-  // Siempre retorna los festivos del calendario ADMIN (son globales para todos)
+// Siempre retorna los festivos del calendario ADMIN (son globales para todos).
+// Es async y GARANTIZA que _calEsc.adminDatos esté cargado antes de leerlo --
+// antes simplemente leía _calEsc.adminDatos tal cual estuviera en ese
+// instante, que solo se llena al abrir la pantalla de Calendario Escolar (o
+// mediante una carga en segundo plano que dispara el Dashboard). Si el
+// docente iba directo a Nueva Planificación sin haber abierto antes
+// Calendario Escolar, o navegaba más rápido de lo que esa carga en segundo
+// plano tardaba en resolver, esta función devolvía [] en silencio -- la
+// planificación se generaba sin excluir NINGÚN festivo/día no lectivo del
+// calendario oficial del centro, aunque el docente sí los tuviera
+// configurados ahí. Ahora, si todavía no se cargó, se carga aquí mismo antes
+// de responder.
+async function _calEscGetFestivosAdmin() {
+  if (!_calEsc.adminDatos) {
+    if (!_calEsc.centroId && typeof _obtenerCentroIdDeUsuarioActual === 'function') {
+      _calEsc.centroId = await _obtenerCentroIdDeUsuarioActual();
+    }
+    if (typeof _calEscCargarAdmin === 'function') await _calEscCargarAdmin();
+  }
   return (_calEsc.adminDatos?.festivos || []).map(f => f.fecha);
 }
 

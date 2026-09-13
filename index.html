@@ -3693,6 +3693,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#E65100;">v19.77<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fechas de actividades: los festivos del calendario oficial podían no excluirse</div>
+              <ul class="about-ver-items">
+                <li>Al calcular las fechas de clase reales para una planificación, el sistema consulta los festivos/días no lectivos del calendario oficial del centro -- pero esa consulta dependía de que "Calendario Escolar" ya se hubiera abierto antes en la sesión (o de que una carga en segundo plano del Dashboard terminara a tiempo). Si el docente entraba directo a Nueva Planificación y generaba rápido, la consulta devolvía vacío en silencio y NINGÚN festivo se excluía, aunque sí estuvieran cargados en el calendario del centro. Ahora se garantiza que el calendario esté cargado antes de calcular fechas, sin importar qué tan rápido se navegue. Los días que no forman parte del horario configurado (ej. sábados y domingos si no están marcados como días de clase) ya se excluían correctamente desde antes.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.76<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11068,9 +11082,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.76"></script>
+  <script src="app.js?v=19.77"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.76"></script>
+  <script src="auth.js?v=19.77"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
