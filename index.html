@@ -3693,6 +3693,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00695C;">v19.78<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Planificación Diaria: "Index.html" fallaba con "JSON inválido parte 1"</div>
+              <ul class="about-ver-items">
+                <li>Al generar la hoja de trabajo para estudiantes (botón "Index.html"), la respuesta de la IA se cortaba a la mitad antes de terminar el JSON -- el límite de tokens (2048) se quedaba corto para las 4 secciones que pide esa llamada (conceptos, tablas, caso práctico, actividad autónoma), sobre todo en español. Se subió el límite a 4096 en ambas llamadas (secciones 01-04 y 05-08).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#E65100;">v19.77<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11082,9 +11096,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.77"></script>
+  <script src="app.js?v=19.78"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.77"></script>
+  <script src="auth.js?v=19.78"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -29572,13 +29572,13 @@ async function generarIndexHtml(actId) {
 
   try {
     mostrarToast('Generando secciones 01-04...', 'info');
-    const raw1 = await _llamarIATextoLibre(prompt1, 2048, _jsonSysMsg, '{');
+    const raw1 = await _llamarIATextoLibre(prompt1, 4096, _jsonSysMsg, '{');
     if (!raw1) throw new Error('Sin respuesta del AI (parte 1).');
     const d1 = _parseJson(raw1);
     if (!d1 || (!d1.s1 && !d1.s2)) throw new Error('JSON invalido parte 1. AI respondio: ' + raw1.substring(0, 80).replace(/[<>]/g, ''));
 
     mostrarToast('Generando secciones 05-08...', 'info');
-    const raw2 = await _llamarIATextoLibre(prompt2, 2048, _jsonSysMsg, '{');
+    const raw2 = await _llamarIATextoLibre(prompt2, 4096, _jsonSysMsg, '{');
     if (!raw2) throw new Error('Sin respuesta del AI (parte 2).');
     const d2 = _parseJson(raw2);
     if (!d2 || (!d2.s5 && !d2.s6)) throw new Error('JSON invalido parte 2. AI respondio: ' + raw2.substring(0, 80).replace(/[<>]/g, ''));
