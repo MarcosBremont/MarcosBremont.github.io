@@ -14895,6 +14895,15 @@ function activarPlanEnCurso(planId) {
   guardarCalificaciones();
   renderizarTablaCalificaciones();
   renderizarTabsPlanesDelCurso();
+  // Si el panel de Participación está abierto, refrescarlo con el módulo/RA
+  // recién activado -- los datos ya quedan correctamente separados por
+  // módulo (ver v19.79/_participPlanId), pero sin esto el panel seguía
+  // mostrando en pantalla la participación del RA anterior hasta cerrarlo y
+  // volver a abrirlo.
+  if (_participPanelAbierto) {
+    _participFechaSeleccionada = null;
+    renderizarParticipacion();
+  }
 }
 
 /** Recalcula planActivaId de cada curso según las fechas de las planificaciones.
