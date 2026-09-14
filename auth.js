@@ -867,6 +867,19 @@ async function _migrarDatosLocales(uid) {
   try {
     const base = db.collection('users').doc(uid).collection('data');
     const promesas = FIREBASE_STORES.map(async ({ store, key }) => {
+      // Biblioteca: un docente con varias planificaciones fácilmente supera
+      // el límite de 1 MiB por documento de Firestore si se sube como un
+      // solo doc.set() (el resto de este método) -- se sube en chunks, igual
+      // que en cada guardado normal (ver persistirBiblioteca/
+      // _syncBibliotecaFirebase en app.js), o la migración fallaba en
+      // silencio justo para el store que más le importa al docente.
+      if (store === 'biblioteca') {
+        const raw = localStorage.getItem(key);
+        if (raw && typeof window._guardarBibliotecaChunks === 'function') {
+          try { await window._guardarBibliotecaChunks(JSON.parse(raw)); } catch (e) { console.warn('Error migrando biblioteca en chunks:', e); }
+        }
+        return;
+      }
       // Stores dinámicos: recolectar claves individuales en un objeto
       if (store === 'notas_clase') {
         const data = {};

@@ -3693,6 +3693,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v19.80<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: botón "Forzar sincronización con la nube" en Mis datos</div>
+              <ul class="about-ver-items">
+                <li>Si en algún momento la subida automática a Firestore falló en silencio (ej. por quedarse sin espacio local, ver los fixes de v19.65/19.74/19.79), tus datos podían quedar guardados solo en ese dispositivo -- al entrar desde otra computadora, no aparecía nada. El nuevo botón en "Mis datos" vuelve a subir TODO lo que tengas en este dispositivo (planificaciones, calificaciones, sesiones diarias, asistencia, y el resto) a la nube, de un solo clic. De paso se corrigió que la migración automática de la primera vez subía la biblioteca de planificaciones como un solo documento (podía fallar si tenías muchas) en vez de en partes, como ya se hacía en cada guardado normal.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.79<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -10994,6 +11008,10 @@
           <button class="btn-siguiente" onclick="exportarDatos()" style="width:100%;justify-content:center;">
             <span class="material-icons">download</span> Descargar backup completo
           </button>
+          <button class="btn-siguiente" onclick="_forzarSincronizacionNube()" id="btn-forzar-sync" style="width:100%;justify-content:center;margin-top:8px;background:#1565C0;">
+            <span class="material-icons">cloud_sync</span> Forzar sincronización con la nube
+          </button>
+          <p style="font-size:0.72rem;color:#90A4AE;margin:6px 0 0;">Vuelve a subir a Firestore todo lo que tengas guardado en este dispositivo. Útil si entraste desde otra computadora y no viste tus planificaciones u otros datos.</p>
         </div>
 
         <div class="backup-divider"></div>
@@ -11111,9 +11129,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.79"></script>
+  <script src="app.js?v=19.80"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.79"></script>
+  <script src="auth.js?v=19.80"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

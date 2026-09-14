@@ -38680,6 +38680,79 @@ function cerrarBackup() {
   document.getElementById('backup-overlay').classList.add('hidden');
 }
 
+// ── Forzar sincronización con la nube ────────────────────────────
+// Vuelve a subir TODO lo que haya en localStorage a Firestore, sin esperar a
+// que cada pantalla individual dispare su propio guardado. Pensado para
+// cuando la subida automática falló en silencio en algún momento (ej. el
+// dispositivo se quedó sin espacio local y Firestore entró en un estado roto
+// -- ver los fixes de v19.65/19.74/19.79) y el docente entra desde otra
+// computadora sin ver sus datos, porque nunca llegaron a la nube.
+async function _forzarSincronizacionNube() {
+  if (!window.currentUser) { mostrarToast('Debes iniciar sesión para sincronizar', 'error'); return; }
+  if (typeof window._syncFirebaseAwait !== 'function') { mostrarToast('Sincronización no disponible en este momento', 'error'); return; }
+
+  const btn = document.getElementById('btn-forzar-sync');
+  if (btn) {
+    btn.disabled = true;
+    btn.dataset._origHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin 1s linear infinite;">sync</span> Sincronizando...';
+  }
+  mostrarToast('Subiendo tus datos a la nube, puede tardar un momento...', 'info');
+
+  let ok = 0, fail = 0;
+  try {
+    // Biblioteca (planificaciones): en chunks, igual que cada guardado normal
+    // -- un doc.set() directo con muchas planificaciones supera el límite de
+    // 1 MiB por documento de Firestore y falla en silencio.
+    if (typeof window._guardarBibliotecaChunks === 'function') {
+      try { await window._guardarBibliotecaChunks(cargarBiblioteca()); ok++; }
+      catch (e) { console.warn('Forzar sync: biblioteca falló:', e); fail++; }
+    }
+
+    // Calificaciones
+    try { await window._syncFirebaseAwait('calificaciones', calState); ok++; }
+    catch (e) { console.warn('Forzar sync: calificaciones falló:', e); fail++; }
+
+    // Planificación Diaria: también en chunks
+    if (typeof _syncDiariasChunks === 'function') {
+      try { _syncDiariasChunks(); ok++; }
+      catch (e) { console.warn('Forzar sync: diarias falló:', e); fail++; }
+    }
+
+    // Resto de stores con clave única en localStorage
+    const ESPECIALES = new Set(['biblioteca', 'calificaciones', 'diarias', 'notas_clase', 'obs_estudiantes', 'eval_formas', 'preferencias']);
+    if (typeof FIREBASE_STORES !== 'undefined') {
+      for (const { store, key } of FIREBASE_STORES) {
+        if (ESPECIALES.has(store)) continue;
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        try { await window._syncFirebaseAwait(store, raw); ok++; }
+        catch (e) { console.warn('Forzar sync: ' + store + ' falló:', e); fail++; }
+      }
+    }
+
+    // Stores dinámicos: varias claves de localStorage por prefijo, agrupadas
+    // en un solo documento (mismo criterio que _migrarDatosLocales en auth.js)
+    const dinamicos = [
+      { store: 'notas_clase', prefixes: ['notaclase_', 'notaclasev2_'] },
+      { store: 'obs_estudiantes', prefixes: ['obs_est_'] },
+      { store: 'eval_formas', prefixes: ['eval_'] }
+    ];
+    for (const { store, prefixes } of dinamicos) {
+      const data = {};
+      Object.keys(localStorage).filter(k => prefixes.some(p => k.startsWith(p))).forEach(k => { data[k] = localStorage.getItem(k); });
+      if (!Object.keys(data).length) continue;
+      try { await window._syncFirebaseAwait(store, JSON.stringify(data)); ok++; }
+      catch (e) { console.warn('Forzar sync: ' + store + ' falló:', e); fail++; }
+    }
+
+    if (fail === 0) mostrarToast('✓ Todos tus datos se sincronizaron con la nube', 'success');
+    else mostrarToast('Sincronizado con ' + fail + ' error(es) -- revisa la consola (F12)', 'warning');
+  } finally {
+    if (btn) { btn.disabled = false; if (btn.dataset._origHtml) btn.innerHTML = btn.dataset._origHtml; }
+  }
+}
+
 function abrirHistorialCierres() {
   abrirBackup();
   setTimeout(() => {
