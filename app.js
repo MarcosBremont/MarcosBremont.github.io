@@ -14886,6 +14886,14 @@ function activarCurso(id) {
     _asistVistaActiva = 'pasar';
     renderizarAsistencia();
   }
+  // Mismo caso para Participación -- sin esto, cambiar de curso (chips
+  // "CURSO:" arriba de la tabla) dejaba el panel mostrando la lista de
+  // estudiantes y las marcas del curso anterior hasta cerrarlo y reabrirlo
+  // (mismo bug que ya se corrigió para el cambio de RA en activarPlanEnCurso).
+  if (_participPanelAbierto) {
+    _participFechaSeleccionada = null;
+    renderizarParticipacion();
+  }
 }
 
 function activarPlanEnCurso(planId) {
@@ -16133,6 +16141,14 @@ function abrirCalificaciones(cursoId) {
   if (preselect && calState.cursos[preselect]) calState.cursoActivoId = preselect;
   _mostrarPanel('panel-calificaciones');
   renderizarCalificaciones();
+  // Igual que en activarCurso/activarPlanEnCurso: si se llega aquí desde
+  // otro lado (ej. un acceso directo del Dashboard) con el panel de
+  // Participación todavía marcado como abierto de una visita anterior,
+  // refrescarlo -- si no, se queda mostrando el curso/RA de esa vez.
+  if (_participPanelAbierto) {
+    _participFechaSeleccionada = null;
+    renderizarParticipacion();
+  }
 }
 
 function cerrarCalificaciones() {
