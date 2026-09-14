@@ -3693,6 +3693,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.79<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Dos fixes: calificaciones que desaparecían, y Participación mezclada entre módulos</div>
+              <ul class="about-ver-items">
+                <li><strong>Calificaciones perdidas al reabrir la app:</strong> guardarCalificaciones() escribía en el almacenamiento local sin protección -- si el dispositivo se quedaba sin espacio, esa escritura fallaba en silencio y ABORTABA el resto de la función, incluyendo la subida a la nube. La nota se veía bien en pantalla en el momento (solo estaba en memoria) pero no quedaba guardada en ningún lado, y desaparecía al volver a abrir la app. Ahora usa el mismo guardado a prueba de cuota que ya protege a Planificaciones y al blog, así que la subida a la nube siempre se intenta aunque el espacio local esté lleno.</li>
+                <li><strong>Participación mezclada entre módulos de un mismo curso:</strong> si un curso tiene 2+ módulos formativos asignados, marcar la participación de un módulo hacía que el otro apareciera "ya marcado" ese mismo día. El registro se guardaba solo por curso+fecha, sin distinguir el módulo. Ahora se guarda también por módulo/planificación activa -- los registros existentes se migran automáticamente al módulo que estaba activo en cada curso.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v19.78<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11096,9 +11111,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.78"></script>
+  <script src="app.js?v=19.79"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.78"></script>
+  <script src="auth.js?v=19.79"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

@@ -8634,13 +8634,17 @@ function _renderParticipacionCicloHTML(yearId) {
   const cursosDelCiclo = calState.cursosArchivados?.[yearId]?.cursos || [];
   const cursoIdsDelCiclo = new Set(cursosDelCiclo.map(c => c.id));
   const filas = [];
-  Object.entries(data || {}).forEach(([cursoId, porFecha]) => {
-    Object.entries(porFecha || {}).forEach(([fecha, porEst]) => {
-      if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(fecha, yearId)) return;
-      const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
-      const estados = Object.values(porEst || {});
-      const destacados = estados.filter(v => v === 'D').length;
-      filas.push({ cursoNombre, fecha, destacados, total: estados.length });
+  Object.entries(data || {}).forEach(([cursoId, porPlan]) => {
+    // porPlan: un bucket por módulo/planificación activa del curso (ver
+    // _participPlanId) -- se listan todos, no solo el módulo activo hoy.
+    Object.values(porPlan || {}).forEach(porFecha => {
+      Object.entries(porFecha || {}).forEach(([fecha, porEst]) => {
+        if (!cursoIdsDelCiclo.has(cursoId) && !_fechaPerteneceACiclo(fecha, yearId)) return;
+        const cursoNombre = cursosDelCiclo.find(c => c.id === cursoId)?.nombre || cursoId;
+        const estados = Object.values(porEst || {});
+        const destacados = estados.filter(v => v === 'D').length;
+        filas.push({ cursoNombre, fecha, destacados, total: estados.length });
+      });
     });
   });
   if (!filas.length) return '<div style="font-size:0.74rem;color:#9E9E9E;">Sin registros de participación en este ciclo.</div>';
@@ -14689,7 +14693,16 @@ function guardarCalificaciones() {
   });
 
   calState._lastModified = Date.now();
-  localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState));
+  // Antes esto era un localStorage.setItem sin atrapar: si el dispositivo no
+  // tenía espacio (QuotaExceededError), la excepción abortaba la función
+  // ENTERA justo antes de _syncFirebase de abajo -- la calificación recién
+  // puesta se quedaba solo en memoria (por eso se veía bien en pantalla en
+  // el momento) sin guardarse ni localmente ni en la nube, y desaparecía al
+  // reabrir la app. _setItemQuotaSafe nunca lanza (libera cal_backups y
+  // reintenta), así que _syncFirebase ahora SIEMPRE llega a ejecutarse.
+  const calStateJSON = JSON.stringify(calState);
+  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(CAL_STORAGE_KEY, calStateJSON);
+  else { try { localStorage.setItem(CAL_STORAGE_KEY, calStateJSON); } catch (e) { console.warn('No se pudo guardar calificaciones localmente:', e); } }
   if (window._syncFirebase) _syncFirebase('calificaciones', calState);
 }
 
@@ -22766,13 +22779,54 @@ const PARTICIP_KEY = 'planificadorRA_participacion_v1';
 let _participPanelAbierto = false;
 let _participFechaSeleccionada = null;
 
+// Estructura: data[cursoId][planId][fecha][estudianteId] = estado. El nivel
+// planId (ver _participPlanId) es necesario porque un mismo curso puede
+// tener 2+ módulos formativos asignados (curso.planIds) -- sin distinguir
+// cuál módulo, marcar participación en uno hacía que el OTRO módulo
+// apareciera "ya marcado" ese mismo día, aunque fueran clases distintas
+// (reportado por el usuario).
 function cargarParticipacion() {
-  try { return JSON.parse(localStorage.getItem(PARTICIP_KEY) || '{}'); } catch { return {}; }
+  let data;
+  try { data = JSON.parse(localStorage.getItem(PARTICIP_KEY) || '{}'); } catch { data = {}; }
+  // Migración desde el formato viejo (data[cursoId][fecha][estId], sin nivel
+  // de módulo): se detecta porque las claves tras cursoId son fechas ISO
+  // directamente, y se migra bajo el planActivaId actual del curso -- mejor
+  // esfuerzo, ya que no hay forma de saber con certeza a cuál módulo
+  // pertenecía cada registro viejo si el curso llegó a tener más de uno.
+  let migrado = false;
+  Object.keys(data).forEach(cursoId => {
+    const bucket = data[cursoId];
+    if (!bucket || typeof bucket !== 'object') return;
+    const claves = Object.keys(bucket);
+    if (claves.length && claves.every(k => /^\d{4}-\d{2}-\d{2}$/.test(k))) {
+      const planId = calState.cursos?.[cursoId]?.planActivaId || '_general';
+      data[cursoId] = { [planId]: bucket };
+      migrado = true;
+    }
+  });
+  if (migrado) guardarParticipacion(data);
+  return data;
 }
 
 function guardarParticipacion(data) {
   localStorage.setItem(PARTICIP_KEY, JSON.stringify(data));
   if (window._syncFirebase) _syncFirebase('participacion', data);
+}
+
+/** Módulo/planificación activa del curso -- clave para no mezclar la
+ *  participación de un módulo con la de otro dentro del mismo curso. */
+function _participPlanId(cursoId) {
+  return calState.cursos?.[cursoId]?.planActivaId || '_general';
+}
+
+/** Nombre del módulo formativo de la planificación activa del curso (para
+ *  mostrar en el historial de participación, evitando confusión entre
+ *  módulos de un mismo curso). '' si no se puede resolver. */
+function _moduloActivoLabel(cursoId) {
+  const planId = calState.cursos?.[cursoId]?.planActivaId;
+  if (!planId) return '';
+  const reg = (cargarBiblioteca().items || []).find(i => i.id === planId);
+  return reg?.planificacion?.datosGenerales?.moduloFormativo || '';
 }
 
 function toggleVistaParticipacion() {
@@ -22803,7 +22857,8 @@ function renderizarParticipacion() {
   const hoy = new Date().toISOString().split('T')[0];
   const fecha = _participFechaSeleccionada || hoy;
   const data = cargarParticipacion();
-  const diaData = (data[calState.cursoActivoId] || {})[fecha] || {};
+  const planId = _participPlanId(calState.cursoActivoId);
+  const diaData = ((data[calState.cursoActivoId] || {})[planId] || {})[fecha] || {};
   const fechaFmt = new Date(fecha + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   const counts = { D: 0, P: 0, N: 0 };
   curso.estudiantes.forEach(e => { const v = diaData[e.id]; if (v) counts[v] = (counts[v] || 0) + 1; });
@@ -22862,27 +22917,29 @@ function _cambiarFechaParticip(fecha) {
 
 function marcarParticipacion(estudianteId, estado, fechaOverride) {
   const cursoId = calState.cursoActivoId;
+  const planId = _participPlanId(cursoId);
   const fecha = fechaOverride || (_participFechaSeleccionada || new Date().toISOString().split('T')[0]);
   const data = cargarParticipacion();
   if (!data[cursoId]) data[cursoId] = {};
-  if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
+  if (!data[cursoId][planId]) data[cursoId][planId] = {};
+  if (!data[cursoId][planId][fecha]) data[cursoId][planId][fecha] = {};
   // Toggle: click mismo estado lo quita
-  if (data[cursoId][fecha][estudianteId] === estado) {
-    delete data[cursoId][fecha][estudianteId];
+  if (data[cursoId][planId][fecha][estudianteId] === estado) {
+    delete data[cursoId][planId][fecha][estudianteId];
   } else {
-    data[cursoId][fecha][estudianteId] = estado;
+    data[cursoId][planId][fecha][estudianteId] = estado;
   }
   guardarParticipacion(data);
   // Actualizar fila sin re-render completo
   const fila = document.getElementById('particip-fila-' + estudianteId);
   if (fila) {
-    const v = data[cursoId][fecha][estudianteId] || '';
+    const v = data[cursoId][planId][fecha][estudianteId] || '';
     fila.querySelectorAll('.particip-btn').forEach(btn => {
       btn.classList.toggle('activo', btn.classList.contains(v));
     });
   }
   // Actualizar summary counts
-  const diaData = (data[cursoId] || {})[fecha] || {};
+  const diaData = ((data[cursoId] || {})[planId] || {})[fecha] || {};
   const curso = calState.cursos[cursoId];
   const counts = { D: 0, P: 0, N: 0 };
   (curso?.estudiantes || []).forEach(e => { const vv = diaData[e.id]; if (vv) counts[vv] = (counts[vv] || 0) + 1; });
@@ -22900,20 +22957,23 @@ function _marcarTodosParticip(estado) {
   const cursoId = calState.cursoActivoId;
   const curso = calState.cursos[cursoId];
   if (!curso) return;
+  const planId = _participPlanId(cursoId);
   const fecha = _participFechaSeleccionada || new Date().toISOString().split('T')[0];
   const data = cargarParticipacion();
   if (!data[cursoId]) data[cursoId] = {};
-  if (!data[cursoId][fecha]) data[cursoId][fecha] = {};
-  curso.estudiantes.forEach(e => { data[cursoId][fecha][e.id] = estado; });
+  if (!data[cursoId][planId]) data[cursoId][planId] = {};
+  if (!data[cursoId][planId][fecha]) data[cursoId][planId][fecha] = {};
+  curso.estudiantes.forEach(e => { data[cursoId][planId][fecha][e.id] = estado; });
   guardarParticipacion(data);
   renderizarParticipacion();
 }
 
 function _limpiarDiaParticip() {
   const cursoId = calState.cursoActivoId;
+  const planId = _participPlanId(cursoId);
   const fecha = _participFechaSeleccionada || new Date().toISOString().split('T')[0];
   const data = cargarParticipacion();
-  if (data[cursoId]) delete data[cursoId][fecha];
+  if (data[cursoId] && data[cursoId][planId]) delete data[cursoId][planId][fecha];
   guardarParticipacion(data);
   renderizarParticipacion();
 }
@@ -22924,7 +22984,10 @@ function _abrirHistorialParticipacion() {
     mostrarToast('Sin estudiantes en este curso', 'error'); return;
   }
   const data = cargarParticipacion();
-  const cursoData = data[calState.cursoActivoId] || {};
+  const planId = _participPlanId(calState.cursoActivoId);
+  // Solo el módulo activo -- el historial no debe mezclar la participación
+  // de otros módulos asignados al mismo curso.
+  const cursoData = (data[calState.cursoActivoId] || {})[planId] || {};
   const fechas = Object.keys(cursoData).sort(); // YYYY-MM-DD orden cronológico
 
   // Crear o reusar overlay
@@ -22987,7 +23050,7 @@ function _abrirHistorialParticipacion() {
         <span class="material-icons" style="color:#fff;font-size:22px;">table_chart</span>
         <div style="flex:1;">
           <div style="font-weight:800;color:#fff;font-size:1rem;">Historial de Participación</div>
-          <div style="font-size:0.78rem;color:#E1BEE7;">${escapeHTML(curso.nombre || '')} · ${fechas.length} día(s) registrado(s)</div>
+          <div style="font-size:0.78rem;color:#E1BEE7;">${escapeHTML(curso.nombre || '')}${_moduloActivoLabel(calState.cursoActivoId) ? ' · ' + escapeHTML(_moduloActivoLabel(calState.cursoActivoId)) : ''} · ${fechas.length} día(s) registrado(s)</div>
         </div>
         <button onclick="document.getElementById('particip-historial-overlay').remove()"
           style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;color:#fff;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:0.82rem;font-weight:600;">
