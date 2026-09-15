@@ -29689,6 +29689,216 @@ async function generarIndexHtml(actId) {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════
+// PRESENTACIÓN DE CLASE (deck de diapositivas) -- a diferencia de
+// generarIndexHtml (una hoja de trabajo/evaluación para el estudiante, que
+// asume que el tema ya se explicó), esto genera el material para EXPLICAR
+// el tema desde cero, en diapositivas navegables, proyectable en clase.
+// Construye el concepto progresivamente (de lo más básico a lo específico
+// de la actividad) en vez de asumir que el estudiante ya lo sabe.
+// ════════════════════════════════════════════════════════════════════
+async function generarPresentacionHtml(actId) {
+  const acts = planificacion.actividades || [];
+  const act = acts.find(a => a.id === actId);
+  if (!act) return;
+
+  const dg = planificacion.datosGenerales || {};
+  const ra = planificacion.ra || {};
+  const sesion = estadoDiarias.sesiones[actId] || {};
+
+  const inicio = [sesion.inicio && sesion.inicio.apertura, sesion.inicio && sesion.inicio.encuadre, sesion.inicio && sesion.inicio.organizacion]
+    .filter(Boolean).join('\n\n') || 'No generado aun.';
+  const desarrollo = [sesion.desarrollo && sesion.desarrollo.procedimental, sesion.desarrollo && sesion.desarrollo.conceptual]
+    .filter(Boolean).join('\n\n') || 'No generado aun.';
+  const cierre = [sesion.cierre && sesion.cierre.sintesis, sesion.cierre && sesion.cierre.conexion, sesion.cierre && sesion.cierre.proximopaso]
+    .filter(Boolean).join('\n\n') || 'No generado aun.';
+
+  const materia = dg.moduloFormativo || 'la asignatura';
+  const centro = dg.nombreBachillerato || 'Centro Educativo';
+  const docente = dg.nombreDocente || 'Docente';
+  const raDesc = ra.descripcion || 'No especificado';
+
+  const _tc = function(s, max) { return s && s.length > max ? s.substring(0, max) + '...' : (s || ''); };
+  const _e = function(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+
+  /* Resalta código HTML/código genérico ya escapado (_e ya corrió antes) --
+   * envuelve etiquetas/atributos/comentarios en spans con las mismas clases
+   * que el CSS de abajo (.c-tag/.c-attr/.c-val/.c-punct/.c-com/.c-text), sin
+   * pedirle a la IA que genere HTML con spans (mucho más frágil). */
+  function _resaltarCodigo(raw) {
+    if (!raw) return '';
+    var s = _e(raw);
+    s = s.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="c-com">$1</span>');
+    s = s.replace(/(&lt;\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s+[a-zA-Z-]+(?:=(?:&quot;[^&]*?&quot;))?)*)(\s*\/?&gt;)/g, function(m, open, tag, attrs, close) {
+      var attrsHl = attrs.replace(/([a-zA-Z-]+)(=)(&quot;[^&]*?&quot;)/g, '<span class="c-attr">$1</span><span class="c-punct">$2</span><span class="c-val">$3</span>');
+      return '<span class="c-punct">' + open + '</span><span class="c-tag">' + tag + '</span>' + attrsHl + '<span class="c-punct">' + close + '</span>';
+    });
+    return s;
+  }
+
+  /* CSS pre-construido, mismo tema visual que la referencia (deck oscuro con
+   * tema de editor de código) -- la IA solo genera el CONTENIDO de cada
+   * diapositiva, nunca el CSS/JS del carrusel. */
+  var _CSS =
+    ':root{--bg:#12121c;--bg-panel:#191926;--bg-code:#0d0d15;--line:#2a2a3d;--text:#eae8f2;--text-dim:#8d8aa3;--tag:#ff7b8b;--attr:#7fd0ff;--val:#b8f78a;--accent:#ffb454;--punct:#6b6885}' +
+    '*{margin:0;padding:0;box-sizing:border-box}' +
+    'html,body{height:100%;background:var(--bg);color:var(--text);font-family:\'Sora\',sans-serif;overflow:hidden}' +
+    'body::before{content:"";position:fixed;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:64px 64px;opacity:.12;pointer-events:none;z-index:0}' +
+    '.deck{position:relative;width:100vw;height:100vh;z-index:1}' +
+    '.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:7vh 9vw;opacity:0;transform:translateX(24px);transition:opacity .38s ease,transform .38s ease;overflow-y:auto}' +
+    '.slide.active{display:flex;opacity:1;transform:translateX(0)}' +
+    '.eyebrow{font-family:\'Fira Code\',monospace;font-size:.82rem;color:var(--accent);letter-spacing:.02em;margin-bottom:14px}' +
+    '.eyebrow .punct{color:var(--punct)}' +
+    'h1{font-size:clamp(2.2rem,5vw,4rem);font-weight:800;line-height:1.05;letter-spacing:-.02em;max-width:18ch}' +
+    'h1 .hl{color:var(--tag)}' +
+    'h2{font-size:clamp(1.7rem,3.4vw,2.7rem);font-weight:700;line-height:1.12;letter-spacing:-.01em;margin-bottom:22px}' +
+    'h2 .hl{color:var(--tag)}' +
+    '.subtitle{margin-top:16px;font-size:clamp(1rem,1.3vw,1.2rem);color:var(--text-dim);max-width:56ch;line-height:1.6}' +
+    '.content-row{display:grid;grid-template-columns:1.05fr .95fr;gap:5vw;align-items:center;width:100%}' +
+    '.content-row.sola{grid-template-columns:1fr;max-width:70ch}' +
+    'ul.points{list-style:none;display:flex;flex-direction:column;gap:14px}' +
+    'ul.points li{font-size:1.04rem;color:var(--text);line-height:1.5;padding-left:24px;position:relative}' +
+    'ul.points li::before{content:"";position:absolute;left:0;top:.55em;width:8px;height:8px;background:var(--tag);border-radius:2px;transform:rotate(45deg)}' +
+    '.code{font-family:\'Fira Code\',monospace;background:var(--bg-code);border:1px solid var(--line);border-radius:10px;padding:20px 22px;font-size:.88rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;overflow-x:auto;box-shadow:0 20px 50px -20px rgba(0,0,0,.6)}' +
+    '.code .c-tag{color:var(--tag)}.code .c-attr{color:var(--attr)}.code .c-val{color:var(--val)}.code .c-punct{color:var(--punct)}.code .c-com{color:var(--text-dim);font-style:italic}.code .c-text{color:var(--text)}' +
+    '.grid-tags{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%}' +
+    '.tag-chip{border:1px solid var(--line);background:var(--bg-panel);border-radius:10px;padding:14px 16px}' +
+    '.tag-chip .name{font-family:\'Fira Code\',monospace;color:var(--tag);font-size:1rem;font-weight:500}' +
+    '.tag-chip .desc{margin-top:5px;font-size:.84rem;color:var(--text-dim);line-height:1.4}' +
+    '.table-demo{border-collapse:collapse;font-size:.92rem;width:100%}' +
+    '.table-demo th,.table-demo td{border:1px solid var(--line);padding:10px 14px;text-align:left}' +
+    '.table-demo th{background:var(--bg-panel);color:var(--attr);font-weight:600}.table-demo td{color:var(--text)}' +
+    '.closing{align-items:flex-start}.tag-badge{display:inline-flex;gap:2px;font-family:\'Fira Code\',monospace;font-size:clamp(2.2rem,6vw,4.4rem);font-weight:600;color:var(--tag);line-height:1;margin-bottom:22px}.tag-badge .punct{color:var(--punct)}' +
+    '.hud{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;gap:18px;padding:18px 9vw}' +
+    '.progress-track{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}.progress-fill{height:100%;width:0;background:var(--tag);transition:width .35s ease}' +
+    '.counter{font-family:\'Fira Code\',monospace;font-size:.85rem;color:var(--text-dim);min-width:64px}.counter b{color:var(--text)}' +
+    '.nav-btn{width:38px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg-panel);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}' +
+    '.nav-btn:hover{border-color:var(--tag)}.nav-btn svg{width:16px;height:16px}' +
+    '.hint{position:fixed;top:22px;right:9vw;font-family:\'Fira Code\',monospace;font-size:.75rem;color:var(--text-dim);z-index:5;opacity:.75}' +
+    '@media(max-width:820px){.content-row{grid-template-columns:1fr;gap:24px}.grid-tags{grid-template-columns:repeat(2,1fr)}.hint{display:none}.hud{padding:14px 6vw}}' +
+    '@media(prefers-reduced-motion:reduce){.slide{transition:none}}';
+
+  var _htmlTop =
+    '<!DOCTYPE html>\n<html lang="es">\n<head>\n' +
+    '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">\n' +
+    '<title>' + _e(act.ecCodigo || 'Actividad') + ': ' + _e(act.enunciado) + '</title>\n' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
+    '<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n' +
+    '<style>\n' + _CSS + '\n</style>\n</head>\n<body>\n' +
+    '<div class="hint">&larr; &rarr; para navegar</div>\n<div class="deck" id="deck">\n' +
+    '<section class="slide">\n<div class="eyebrow"><span class="punct">&lt;</span>' + _e(materia) + '<span class="punct">&gt;</span></div>\n' +
+    '<h1>' + _e(act.ecCodigo || '') + '</h1>\n<p class="subtitle">' + _e(act.enunciado) + '</p>\n</section>\n';
+
+  var _htmlBottom =
+    '\n<section class="slide closing">\n<div class="tag-badge"><span class="punct">&lt;/</span>fin<span class="punct">&gt;</span></div>\n' +
+    '<h1>Ahora a <span class="hl">practicar</span></h1>\n' +
+    '<p class="subtitle">Con esto ya tienen lo necesario para la actividad de hoy. Docente: ' + _e(docente) + ' &middot; ' + _e(centro) + '</p>\n</section>\n' +
+    '</div>\n' +
+    '<div class="hud"><button class="nav-btn" id="prevBtn" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+    '<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>' +
+    '<div class="counter"><b id="curNum">01</b> / <span id="totalNum"></span></div>' +
+    '<button class="nav-btn" id="nextBtn" aria-label="Siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></div>\n' +
+    '<script>\n' +
+    'var slides=document.querySelectorAll(".slide"),total=slides.length,current=0;\n' +
+    'document.getElementById("totalNum").textContent=String(total).padStart(2,"0");\n' +
+    'function render(){slides.forEach(function(s,i){s.classList.toggle("active",i===current);});document.getElementById("curNum").textContent=String(current+1).padStart(2,"0");document.getElementById("progressFill").style.width=((current+1)/total*100)+"%";}\n' +
+    'function goTo(i){current=Math.max(0,Math.min(total-1,i));render();}\n' +
+    'document.getElementById("prevBtn").addEventListener("click",function(){goTo(current-1);});\n' +
+    'document.getElementById("nextBtn").addEventListener("click",function(){goTo(current+1);});\n' +
+    'window.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();goTo(current+1);}if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();goTo(current-1);}if(e.key==="Home")goTo(0);if(e.key==="End")goTo(total-1);});\n' +
+    'var tX=0;window.addEventListener("touchstart",function(e){tX=e.changedTouches[0].clientX;});window.addEventListener("touchend",function(e){var dx=e.changedTouches[0].clientX-tX;if(Math.abs(dx)>50)goTo(dx<0?current+1:current-1);});\n' +
+    'render();\n</script>\n</body>\n</html>';
+
+  const _jsonSysMsg = 'Eres un generador de contenido educativo. Responde UNICAMENTE con JSON valido. Sin markdown, sin HTML, sin CSS, sin texto extra. El primer y ultimo caracter de tu respuesta deben ser { y }.';
+  const prompt =
+    'MATERIA: ' + _tc(materia, 60) + '\n' +
+    'TEMA DE LA ACTIVIDAD: ' + _tc(act.ecCodigo || '', 30) + ' - ' + _tc(act.enunciado, 120) + '\n' +
+    'RA: ' + _tc(raDesc, 180) + '\n' +
+    'INICIO PLANEADO: ' + _tc(inicio, 250) + '\n' +
+    'DESARROLLO PLANEADO: ' + _tc(desarrollo, 500) + '\n' +
+    'CIERRE PLANEADO: ' + _tc(cierre, 150) + '\n\n' +
+    'TAREA: vas a armar una PRESENTACION DE CLASE en diapositivas para EXPLICAR el tema desde cero, no una actividad ni una evaluacion (eso ya existe aparte). ' +
+    'Empieza desde el concepto MAS BASICO que un estudiante necesite repasar para entender el tema de la actividad, y sube progresivamente, un concepto por diapositiva, hasta llegar al concepto especifico de la actividad. Como si fuera la primera vez que lo ven -- no asumas conocimiento previo salvo lo obviamente elemental para el nivel del modulo.\n' +
+    'Espanol con tildes. Ejemplos dominicanos donde aplique. Rellena TODOS los [placeholders] con contenido REAL y especifico al tema, nunca generico.\n' +
+    'Genera SOLO este JSON, con un arreglo "slides" de 5 a 7 diapositivas (ni menos ni mas):\n' +
+    '{"slides":[' +
+    '{"eyebrow":"[ej: 01 / conceptos]","titulo":"[titulo corto de la diapositiva]","tipo":"puntos","puntos":["[punto 1 concreto]","[punto 2]","[punto 3]"],"codigo":"[ejemplo de codigo/sintaxis REAL con saltos de linea \\n si el tema lo amerita (ej: HTML, formulas, comandos), o cadena vacia \\"\\" si el tema no usa codigo]"},' +
+    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tarjetas","tarjetas":[{"nombre":"[termino corto]","desc":"[definicion 1 linea]"},{"nombre":"[t2]","desc":"[d2]"},{"nombre":"[t3]","desc":"[d3]"}]},' +
+    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tabla","tabla":{"cols":["[col1]","[col2]"],"filas":[["[a1]","[a2]"],["[b1]","[b2]"]]}}' +
+    '] -- repite variando "tipo" entre "puntos" (explicacion progresiva, con o sin "codigo"), "tarjetas" (3 a 6 terminos relacionados a enumerar) y "tabla" (para comparar opciones o clasificar) segun lo que mejor comunique cada concepto. No uses "tarjetas" ni "tabla" si el tema no tiene terminos/comparaciones que enumerar -- en ese caso usa "puntos".}';
+
+  function _buildSlides(data) {
+    var slides = (data && Array.isArray(data.slides)) ? data.slides : [];
+    var h = '';
+    slides.forEach(function(sl, i) {
+      var eyebrow = sl.eyebrow || (String(i + 1).padStart(2, '0') + ' /');
+      var titulo = sl.titulo || '';
+      h += '<section class="slide">\n<div class="eyebrow"><span class="punct">' + _e(String(i + 1).padStart(2, '0')) + ' /</span> ' + _e(eyebrow.replace(/^\d+\s*\/\s*/, '')) + '</div>\n<h2>' + _e(titulo) + '</h2>\n';
+
+      if (sl.tipo === 'tarjetas' && Array.isArray(sl.tarjetas) && sl.tarjetas.length) {
+        h += '<div class="content-row sola"><div class="grid-tags">';
+        sl.tarjetas.forEach(function(t) {
+          h += '<div class="tag-chip"><div class="name">' + _e(t.nombre || '') + '</div><div class="desc">' + _e(t.desc || '') + '</div></div>';
+        });
+        h += '</div></div>\n';
+      } else if (sl.tipo === 'tabla' && sl.tabla && Array.isArray(sl.tabla.cols)) {
+        h += '<div class="content-row sola"><table class="table-demo"><tr>' + sl.tabla.cols.map(function(c) { return '<th>' + _e(c) + '</th>'; }).join('') + '</tr>';
+        (sl.tabla.filas || []).forEach(function(row) {
+          h += '<tr>' + (Array.isArray(row) ? row : []).map(function(cell) { return '<td>' + _e(String(cell)) + '</td>'; }).join('') + '</tr>';
+        });
+        h += '</table></div>\n';
+      } else {
+        var puntos = Array.isArray(sl.puntos) ? sl.puntos : [];
+        var puntosHtml = '<ul class="points">' + puntos.map(function(p) { return '<li>' + _e(p) + '</li>'; }).join('') + '</ul>';
+        if (sl.codigo && String(sl.codigo).trim()) {
+          h += '<div class="content-row"><div class="code">' + _resaltarCodigo(sl.codigo) + '</div>' + puntosHtml + '</div>\n';
+        } else {
+          h += '<div class="content-row sola">' + puntosHtml + '</div>\n';
+        }
+      }
+      h += '</section>\n';
+    });
+    return h;
+  }
+
+  const btn = document.querySelector('[onclick*="generarPresentacionHtml(\'' + actId + '\')"]');
+  const _restaurarBtn = function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:14px;">slideshow</span> Presentación'; }
+  };
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
+  mostrarToast('Generando presentación de clase...', 'info');
+
+  function _parseJson(raw) {
+    if (!raw) return null;
+    var s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    if (s === -1 || e <= s) return null;
+    try { return JSON.parse(raw.substring(s, e + 1)); } catch(x) { return null; }
+  }
+
+  try {
+    const raw = await _llamarIATextoLibre(prompt, 4096, _jsonSysMsg, '{');
+    if (!raw) throw new Error('Sin respuesta del AI.');
+    const data = _parseJson(raw);
+    if (!data || !Array.isArray(data.slides) || !data.slides.length) throw new Error('JSON invalido. AI respondio: ' + raw.substring(0, 80).replace(/[<>]/g, ''));
+
+    const slidesHtml = _buildSlides(data);
+    if (!slidesHtml || slidesHtml.length < 100) throw new Error('Contenido insuficiente generado.');
+    const html = _htmlTop + slidesHtml + _htmlBottom;
+    const nombre = 'Presentacion - ' + (act.ecCodigo || 'Actividad').replace(/\s+/g, ' ') + '.html';
+    const blob = new Blob(['﻿' + html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre; a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+    mostrarToast('Presentación descargada: ' + nombre, 'success');
+  } catch (e) {
+    mostrarToast('Error al generar: ' + e.message, 'error');
+  } finally {
+    _restaurarBtn();
+  }
+}
+
 
 
 /** Llama a la IA disponible y devuelve texto libre.
@@ -32874,6 +33084,9 @@ function renderizarDiarias() {
           </button>
           <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
             <span class="material-icons">html</span> Index.html
+          </button>
+          <button class="btn-pd-index" onclick="event.stopPropagation();generarPresentacionHtml('${act.id}')" title="Generar presentación de diapositivas para explicar el tema en clase">
+            <span class="material-icons">slideshow</span> Presentación
           </button>
           <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
                   onclick="event.stopPropagation();toggleSesion('${act.id}')">
