@@ -7876,8 +7876,16 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
     // Al descargar una sola sesión puntual (botón "Descargar" de una tarjeta),
     // el nombre incluye el EC y la fecha para distinguirla -- si es la única
     // actividad de toda la planificación, sigue usando el nombre genérico.
+    // El nombre incluye "Act X.X.X" (mismo número que muestra la tarjeta en
+    // pantalla y que usa Index.html/Presentación) además del EC y la fecha --
+    // dos actividades distintas del mismo EC el mismo día generaban el
+    // mismo nombre de archivo (el navegador solo lo distinguía agregando
+    // "(1)", "(2)"... sin decir a cuál actividad correspondía cada una).
+    const _actsFull = planificacion.actividades || [];
+    const _actIdxFull = soloActividadId ? _actsFull.findIndex(a => a.id === soloActividadId) : -1;
+    const _actNumLabel = _actIdxFull >= 0 ? _getActNumero(actividades[0].ecCodigo, _actIndexInEC(_actsFull, _actIdxFull)) : '';
     const nombre = soloActividadId
-      ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
+      ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (_actNumLabel ? _actNumLabel + '_' : '') + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
       : 'PlanificacionDiaria_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -29885,7 +29893,9 @@ async function generarPresentacionHtml(actId) {
     const slidesHtml = _buildSlides(data);
     if (!slidesHtml || slidesHtml.length < 100) throw new Error('Contenido insuficiente generado.');
     const html = _htmlTop + slidesHtml + _htmlBottom;
-    const nombre = 'Presentacion - ' + (act.ecCodigo || 'Actividad').replace(/\s+/g, ' ') + '.html';
+    const _actIdxPres = acts.findIndex(a => a.id === actId);
+    const _actNumLabelPres = _actIdxPres >= 0 ? _getActNumero(act.ecCodigo, _actIndexInEC(acts, _actIdxPres)) : (act.ecCodigo || 'Actividad');
+    const nombre = 'Presentacion - ' + _actNumLabelPres.replace(/\s+/g, ' ') + '.html';
     const blob = new Blob(['﻿' + html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -34011,8 +34021,11 @@ async function exportarDiariasWord(soloActividadId) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
+      const _actsFullFallback = planificacion.actividades || [];
+      const _actIdxFullFallback = soloActividadId ? _actsFullFallback.findIndex(a => a.id === soloActividadId) : -1;
+      const _actNumLabelFallback = _actIdxFullFallback >= 0 ? _getActNumero(actividades[0].ecCodigo, _actIndexInEC(_actsFullFallback, _actIdxFullFallback)) : '';
       a.download = soloActividadId
-        ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
+        ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (_actNumLabelFallback ? _actNumLabelFallback + '_' : '') + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
         : 'PlanificacionesDiarias_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
