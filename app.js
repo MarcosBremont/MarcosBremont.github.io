@@ -9445,6 +9445,7 @@ function poblarFormularioDesdeEstado() {
 
 
   setVal('recursos-didacticos', ra.recursos);
+  setVal('ra-instrucciones-ia', ra.instruccionesIA);
   setVal('contenidos-conceptuales', ra.contenidosConceptuales);
   setVal('contenidos-procedimentales', ra.contenidosProcedimentales);
   setVal('contenidos-actitudinales', ra.contenidosActitudinales);
@@ -10313,6 +10314,7 @@ function guardarDatosFormulario() {
     contenidosConceptuales: getVal('contenidos-conceptuales'),
     contenidosProcedimentales: getVal('contenidos-procedimentales'),
     contenidosActitudinales: getVal('contenidos-actitudinales'),
+    instruccionesIA: getVal('ra-instrucciones-ia'),
 
     nivelBloom: planificacion.ra?.nivelBloom || '',
     // Se reconstruye este objeto desde cero en cada guardado del formulario --
@@ -35209,11 +35211,22 @@ async function construirPromptBase(dg, ra) {
     ? ceLista.map(c => `${c.codigo}: ${c.descripcion}`).join('\n')
     : 'No especificados';
 
+  // Instrucciones libres del docente para este RA (campo "Instrucciones
+  // adicionales para la IA" en Paso 2) -- si las llenó, se anteponen con
+  // prioridad explícita justo debajo del RA, antes de cualquier regla fija
+  // del prompt, y se refuerza la prioridad de nuevo en REGLAS PARA LOS EC.
+  // Vacío (string '') si no escribió nada, para que {{instruccionesPrioritarias}}
+  // simplemente desaparezca del prompt sin dejar un hueco raro.
+  const instruccionesPrioritarias = (ra.instruccionesIA || '').trim()
+    ? '\n⚠️ INSTRUCCIONES ESPECIALES DEL DOCENTE PARA ESTE RA (tienen PRIORIDAD ABSOLUTA sobre cualquier regla general de este prompt si hay conflicto):\n' + ra.instruccionesIA.trim() + '\n'
+    : '';
+
   return _getPromptResuelto('prompt_base', {
     moduloFormativo: dg.moduloFormativo || '',
     familiaProfesional: dg.familiaProfesional || '',
     diasStr,
     raDescripcion: ra.descripcion || '',
+    instruccionesPrioritarias,
     raCriterios: raCriteriosNumerados,
     raRecursos: ra.recursosDid || 'Pizarrón, guías',
     contenidosBloque: _buildContenidosBloque(ra),
@@ -46534,7 +46547,7 @@ const PROMPTS_IA_DEFS = [
     key: 'prompt_base',
     label: 'Prompt — Estructura Base (EC + Actividades)',
     icono: 'account_tree',
-    desc: 'Prompt para generar los Elementos de Capacidad y actividades a partir del RA. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{diasStr}}, {{raDescripcion}}, {{raCriterios}}, {{raRecursos}}, {{contenidosBloque}}, {{cantEC}}, {{actsPorEC}}, {{totalActs}}, {{ecCodigosLista}}, {{actEsperadasLista}}'
+    desc: 'Prompt para generar los Elementos de Capacidad y actividades a partir del RA. Variables: {{moduloFormativo}}, {{familiaProfesional}}, {{diasStr}}, {{raDescripcion}}, {{instruccionesPrioritarias}}, {{raCriterios}}, {{raRecursos}}, {{contenidosBloque}}, {{cantEC}}, {{actsPorEC}}, {{totalActs}}, {{ecCodigosLista}}, {{actEsperadasLista}}'
   },
   {
     key: 'prompt_instrumentos',
@@ -46951,7 +46964,7 @@ Responde SOLO con JSON válido, sin markdown, sin texto extra.
 Estoy elaborando una planificación por RA para el módulo "{{moduloFormativo}}" de la familia "{{familiaProfesional}}". Horario: {{diasStr}}.
 
 RESULTADO DE APRENDIZAJE (RA): {{raDescripcion}}
-
+{{instruccionesPrioritarias}}
 CRITERIOS DE EVALUACIÓN, numerados (usa estos códigos EXACTOS en el campo "contraste" de cada EC, NO los copies como enunciado de EC):
 {{raCriterios}}
 
@@ -46962,6 +46975,7 @@ RECURSOS: {{raRecursos}}
 TAREA: Elabora {{cantEC}} Elementos de Capacidad (EC) siguiendo la Taxonomía de Bloom.
 
 REGLAS PARA LOS EC:
+- Si el docente escribió Instrucciones especiales arriba (justo debajo del RA), esas tienen PRIORIDAD ABSOLUTA sobre cualquier regla de esta lista o de la de Actividades si entran en conflicto.
 - Cada EC debe tener la estructura: VERBO + OBJETO + MODO DE HACER
 - Los EC NO son los criterios de evaluación. Los criterios son solo referencia temática.
 - NUNCA copies ni parafrasees los criterios de evaluación como EC.

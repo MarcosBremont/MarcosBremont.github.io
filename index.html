@@ -1148,6 +1148,18 @@
               placeholder="Ej: Computadoras con acceso a internet, proyector, pizarrón digital, plataforma Moodle, herramientas de desarrollo VS Code..."></textarea>
           </div>
 
+          <!-- Instrucciones adicionales para la IA (tienen prioridad sobre las reglas por defecto) -->
+          <div class="form-group form-group--full">
+            <label for="ra-instrucciones-ia" style="color:#4527A0;">
+              <span class="material-icons" style="font-size:16px;vertical-align:middle;">tips_and_updates</span>
+              Instrucciones adicionales para la IA
+              <span class="label-optional">(opcional)</span>
+            </label>
+            <textarea id="ra-instrucciones-ia" rows="3"
+              placeholder="Ej: Todos los ejemplos deben ser de bases de datos MySQL, no MongoDB. Prioriza actividades individuales sobre grupales. Enfócate en el sector turístico..."></textarea>
+            <p style="font-size:0.76rem;color:#7C4DFF;margin:4px 2px 0;">Si escribes algo aquí, la IA le dará <strong>prioridad</strong> sobre sus reglas por defecto al generar los Elementos de Capacidad y Actividades de este RA.</p>
+          </div>
+
           <!-- Contenidos (obligatorio, siempre visible) -->
           <div class="form-group form-group--full">
             <div style="display:flex;align-items:center;gap:6px;padding:8px 0;">
@@ -3689,6 +3701,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#7C4DFF;">v19.86<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: "Instrucciones adicionales para la IA" en Resultado de Aprendizaje</div>
+              <ul class="about-ver-items">
+                <li>Campo nuevo y opcional en Paso 2 (Resultado de Aprendizaje y Criterios): si escribes algo ahí (ej. "todos los ejemplos deben ser de bases de datos MySQL", "prioriza actividades individuales"), la IA le da prioridad absoluta sobre sus reglas por defecto al generar los Elementos de Capacidad y Actividades de ese RA.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11199,9 +11225,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.85"></script>
+  <script src="app.js?v=19.86"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.85"></script>
+  <script src="auth.js?v=19.86"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
