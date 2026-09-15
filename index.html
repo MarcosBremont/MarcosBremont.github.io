@@ -3693,6 +3693,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.85<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Duplicar planificación: fechas mal calculadas al asignar a un curso con otro horario</div>
+              <ul class="about-ver-items">
+                <li>Dos bugs confirmados con capturas: (1) la Fecha de Término del plan duplicado se quedaba copiada del original sin recalcular, mostrando un rango mucho más largo del real cuando el horario del curso destino necesitaba menos semanas -- ahora se ajusta a la fecha real de la última actividad. (2) La Fecha de Inicio sugerida al duplicar siempre era "el próximo día de clase desde hoy", sin revisar si el curso destino ya tenía otro RA ocupando ese rango -- dos RA del mismo curso terminaban "empezando" el mismo día. Ahora se sugiere el día siguiente a que terminó el RA más reciente ya asignado a ese curso.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v19.84<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11185,9 +11199,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.84"></script>
+  <script src="app.js?v=19.85"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.84"></script>
+  <script src="auth.js?v=19.85"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

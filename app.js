@@ -26977,7 +26977,25 @@ function _actualizarFechaInicioDup() {
   const diasClase = planRef?.planificacion?.datosGenerales?.diasClase
     || planesCurso[0]?.planificacion?.datosGenerales?.diasClase
     || null;
-  inputFecha.value = _proximoDiaClaseDesde(diasClase, new Date());
+
+  // Punto de partida: el día siguiente a que terminó el RA más reciente que
+  // YA esté asignado a este curso (excluyendo el plan que se está
+  // duplicando, por si ya estaba asignado aquí mismo) -- si no hay ninguno,
+  // hoy. Antes esto siempre sugería "el próximo día de clase desde HOY" sin
+  // importar que el curso ya tuviera otro RA ocupando ese rango, así que dos
+  // RA del mismo curso terminaban con la misma Fecha de Inicio sugerida
+  // (reportado: RA3.1 y RA3.2 del mismo curso, ambos "iniciando" el mismo día).
+  let base = new Date();
+  planIds.filter(pid => pid !== _dupPlanId).forEach(pid => {
+    const item = (biblio.items || []).find(i => i.id === pid);
+    const fTermino = item?.planificacion?.datosGenerales?.fechaTermino;
+    if (fTermino && /^\d{4}-\d{2}-\d{2}$/.test(fTermino)) {
+      const d = new Date(fTermino + 'T12:00:00');
+      d.setDate(d.getDate() + 1);
+      if (d > base) base = d;
+    }
+  });
+  inputFecha.value = _proximoDiaClaseDesde(diasClase, base);
 }
 
 function abrirDuplicarPlan(id) {
@@ -27282,19 +27300,37 @@ async function confirmarDuplicarPlan() {
     if (horarioDiferente && diasClaseCurso) {
       // Recalcular fechas usando el horario del curso destino
       const dgCopia = copia.planificacion.datosGenerales;
-      const fechaFin = dgCopia.fechaTermino || null;
 
       // Actualizar diasClase y fechaInicio en la copia
       dgCopia.diasClase = diasClaseCurso;
       dgCopia.fechaInicio = nuevaFechaInicio;
 
+      // Ventana de búsqueda de fechas de clase: NO se reutiliza tal cual la
+      // Fecha de Término del plan ORIGINAL como límite -- ese valor fue
+      // calculado para el horario/fecha de inicio de origen, no para los de
+      // este curso. Si el nuevo horario necesita más semanas (menos días de
+      // clase por semana) quedaba corto y algunas actividades no recibían
+      // fecha; si necesita menos, el límite viejo se quedaba pegado
+      // (reportado: la tarjeta duplicada mostraba "→ 15 de noviembre" igual
+      // que el original, aunque las actividades ya hubieran terminado en
+      // octubre). Se estima una ventana generosa a partir de cuántos días de
+      // clase hacen falta en total, con margen extra por festivos, y AL
+      // FINAL se ajusta fechaTermino a la fecha real de la última actividad.
+      const diasNecesarios = acts.reduce((s, a) => s + Math.max(1, Math.min(3, parseInt(a.duracionDias, 10) || 1)), 0);
+      const diasActivosPorSemana = Object.values(diasClaseCurso).filter(v => v.activo).length || 1;
+      const semanasEstimadas = Math.ceil(diasNecesarios / diasActivosPorSemana) + 4; // +4 semanas de margen por festivos
+      const finBusqueda = new Date(nuevaFechaInicio + 'T12:00:00');
+      finBusqueda.setDate(finBusqueda.getDate() + semanasEstimadas * 7);
+      const finBusquedaISO = finBusqueda.toISOString().split('T')[0];
+
       const festivosAdmin = typeof _calEscGetFestivosAdmin === 'function' ? await _calEscGetFestivosAdmin() : [];
-      const nuevasFechas = calcularFechasClase(diasClaseCurso, nuevaFechaInicio, fechaFin || nuevaFechaInicio, festivosAdmin);
+      const nuevasFechas = calcularFechasClase(diasClaseCurso, nuevaFechaInicio, finBusquedaISO, festivosAdmin);
 
       // Asignar nueva fecha a cada actividad en orden -- las que duran varios
       // días (duracionDias) consumen varias fechas consecutivas, igual que en
       // la generación original (ver _resolverFechaActividad).
       let fechaIdxDup = 0;
+      let ultimaFechaAsignada = null; // string YYYY-MM-DD, mismo formato que fechaInicio/fechaTermino
       acts.forEach(act => {
         const duracionDias = Math.max(1, Math.min(3, parseInt(act.duracionDias, 10) || 1));
         const resuelto = _resolverFechaActividad(nuevasFechas, fechaIdxDup, duracionDias);
@@ -27302,9 +27338,18 @@ async function confirmarDuplicarPlan() {
           act.fecha = resuelto.fecha;
           act.fechaFin = resuelto.fechaFin;
           act.fechaStr = resuelto.fechaStr;
+          // resuelto.fecha/fechaFin son objetos Date (ver calcularFechasClase) --
+          // fechaTermino en datosGenerales siempre es un string "YYYY-MM-DD",
+          // nunca un Date, para que quede consistente con fechaInicio y con
+          // cómo se lee en el resto de la app (ej. _actualizarFechaInicioDup).
+          const fISO = (resuelto.fechaFin || resuelto.fecha).toISOString().split('T')[0];
+          if (!ultimaFechaAsignada || fISO > ultimaFechaAsignada) ultimaFechaAsignada = fISO;
         }
         fechaIdxDup += duracionDias;
       });
+      // Fecha de Término = la fecha real de la última actividad, no la del
+      // plan original ni el límite de búsqueda (que solo era un margen).
+      if (ultimaFechaAsignada) dgCopia.fechaTermino = ultimaFechaAsignada;
 
       mostrarToast('📅 Fechas recalculadas según el horario del curso destino.', 'info');
     } else {
