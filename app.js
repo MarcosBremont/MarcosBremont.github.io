@@ -30244,7 +30244,7 @@ async function generarPresentacionPptx(actId) {
     const { act, acts, materia, centro, docente, data } = await _obtenerDatosPresentacion(actId);
 
     const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_16x9'; // 13.33 x 7.5 in
+    pptx.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 in -- LAYOUT_16x9 son 10 x 5.625 in, mucho más chico que las coordenadas usadas abajo
 
     const fondoOscuro = (slide) => { slide.background = { color: COL.bg }; };
 
