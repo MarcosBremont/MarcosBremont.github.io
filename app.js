@@ -3797,6 +3797,16 @@ async function _confirmarRegenerarActividad(idx) {
     const ra = planificacion.ra || {};
     const nivelLabelMap = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
     const nivelEC = act.ecNivel || ec.nivel;
+    // Ejemplos de otras actividades YA existentes en esta planificación, para
+    // que la IA copie su estilo/longitud -- sin esto, tendía a escribir un
+    // párrafo largo y cargado de ejemplos entre paréntesis, muy distinto a
+    // las demás actividades (una oración corta y simple).
+    const otrasActs = (planificacion.actividades || [])
+      .filter((a, i) => i !== idx && (a.enunciado || '').trim())
+      .slice(0, 3);
+    const ejemplosTxt = otrasActs.length
+      ? '\n\nEJEMPLOS DE OTRAS ACTIVIDADES DE ESTA MISMA PLANIFICACIÓN (copia ese MISMO estilo, formato y longitud):\n' + otrasActs.map(a => '- ' + a.enunciado).join('\n')
+      : '';
     const prompt =
       'MATERIA: ' + (dg.moduloFormativo || '') + '\n' +
       'RA: ' + (ra.descripcion || '') + '\n' +
@@ -3804,14 +3814,16 @@ async function _confirmarRegenerarActividad(idx) {
       'NIVEL DE DOMINIO DEL EC: ' + (nivelLabelMap[nivelEC] || nivelEC) + '\n' +
       'ACTIVIDAD ACTUAL (a reemplazar): ' + (act.enunciado || '') + '\n\n' +
       '⚠️ INSTRUCCIONES DEL DOCENTE PARA ESTA REGENERACIÓN (tienen PRIORIDAD ABSOLUTA sobre cualquier otro criterio):\n' + instrucciones + '\n\n' +
-      'TAREA: escribe UNA nueva actividad de enseñanza/aprendizaje para este EC, coherente con su nivel de dominio, que cumpla estrictamente las instrucciones del docente de arriba. Español con tildes. Responde SOLO con el enunciado de la actividad, en un único párrafo, sin numeración, sin comillas, sin explicación adicional.';
+      'TAREA: escribe UNA nueva actividad de enseñanza/aprendizaje para este EC, coherente con su nivel de dominio, que cumpla estrictamente las instrucciones del docente de arriba. ' +
+      'DEBE SER BREVE Y SIMPLE: una sola oración de máximo 25 palabras (2 líneas como mucho) -- nunca un párrafo largo, nunca listas de ejemplos entre paréntesis, nunca explicaciones extendidas. ' +
+      'Español con tildes. Responde SOLO con el enunciado de la actividad, en una única oración corta, sin numeración, sin comillas, sin explicación adicional.' + ejemplosTxt;
 
     // maxTokens generoso a propósito: algunos modelos (ej. gpt-oss de Groq)
     // gastan una parte del presupuesto en "razonamiento" invisible antes de
     // la respuesta visible -- con un límite chico (300) eso se comía casi
     // todo el presupuesto y la respuesta llegaba cortada a un par de
     // palabras ("El", literalmente, en un caso real).
-    const raw = await _llamarIATextoLibre(prompt, 800, 'Eres un experto en diseño de actividades de enseñanza para educación técnico-profesional dominicana. Responde solo con el enunciado de la actividad solicitada, en un párrafo, sin markdown, sin comillas, sin texto adicional.');
+    const raw = await _llamarIATextoLibre(prompt, 800, 'Eres un experto en diseño de actividades de enseñanza para educación técnico-profesional dominicana. Respondes SIEMPRE con una sola oración breve (máximo 25 palabras), nunca un párrafo largo. Solo el enunciado de la actividad solicitada, sin markdown, sin comillas, sin texto adicional.');
     const enunciadoNuevo = (raw || '').trim().replace(/^["“”]+|["“”]+$/g, '');
     // Si la IA devolvió una respuesta sospechosamente corta (cortada a mitad
     // de generar), no reemplazar el enunciado con basura -- mejor avisar y
