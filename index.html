@@ -3710,6 +3710,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v19.99<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix crítico: planificaciones diarias que se perdían sin avisar</div>
+              <ul class="about-ver-items">
+                <li>El guardado de Planificaciones Diarias (persistirDiarias) no estaba protegido contra el localStorage lleno: si no había espacio, el guardado local Y la subida a la nube fallaban juntos, en silencio -- sin ningún aviso, el docente solo lo notaba días después al ver que la sesión ya no estaba en ningún lado.</li>
+                <li>Corregido con el mismo mecanismo ya usado en Calificaciones y Blog (que libera espacio automáticamente si hace falta), y ahora la subida a la nube se intenta siempre, aunque el guardado local falle. Si de verdad no se pudo guardar ni liberando espacio, ahora aparece un aviso claro en pantalla en vez de fallar callado.</li>
+                <li>También se reforzó por el mismo motivo la restauración de copias de seguridad completas (Mis datos → Restaurar backup).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v19.98<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11428,9 +11444,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.98"></script>
+  <script src="app.js?v=19.99"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.98"></script>
+  <script src="auth.js?v=19.99"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

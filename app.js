@@ -28496,7 +28496,19 @@ function cargarDiarias() {
 
 
 function persistirDiarias() {
-  localStorage.setItem(DIARIAS_KEY, JSON.stringify(estadoDiarias));
+  // localStorage.setItem sin protección: si el localStorage está lleno, esto
+  // lanzaba QuotaExceededError -- como no había try/catch, la función se
+  // detenía ahí mismo y NUNCA llegaba a _syncDiariasChunks(), perdiendo la
+  // sesión diaria tanto localmente como en la nube (mismo bug ya corregido
+  // en guardarBlog/guardarCalificaciones -- ver _setItemQuotaSafe).
+  const guardadoLocal = _setItemQuotaSafe(DIARIAS_KEY, JSON.stringify(estadoDiarias));
+  // Si ni liberando espacio se pudo guardar local, que quede visible en vez de
+  // silencioso -- es justo el escenario que causaba pérdida de datos sin que
+  // el docente se enterara hasta días después. Igual se intenta subir a la
+  // nube (_syncDiariasChunks no depende de que el guardado local funcionara).
+  if (!guardadoLocal && typeof mostrarToast === 'function') {
+    mostrarToast('No se pudo guardar la planificación diaria en este dispositivo (sin espacio). Se intentará subir a la nube igual.', 'error');
+  }
   if (window.currentUser) _syncDiariasChunks();
 }
 
@@ -39917,59 +39929,59 @@ function onBackupFileSelected(input) {
  *  forcedSchoolYear: si el snapshot no trae _meta.schoolYear, usar este como respaldo
  *  (p.ej. el yearId del ciclo archivado que se está restaurando). */
 function _aplicarSnapshotBackup(d, forcedSchoolYear) {
-  if (d.biblioteca) localStorage.setItem(BIBLIO_KEY, d.biblioteca);
-  if (d.calificaciones) localStorage.setItem(CAL_STORAGE_KEY, d.calificaciones);
-  if (d.horario) localStorage.setItem(HORARIO_KEY, d.horario);
-  if (d.tareas) localStorage.setItem(TAREAS_KEY, d.tareas);
-  if (d.asistencia) localStorage.setItem(ASIST_KEY, d.asistencia);
-  if (d.comentarios) localStorage.setItem(COMENT_KEY, d.comentarios);
+  if (d.biblioteca) _setItemQuotaSafe(BIBLIO_KEY, d.biblioteca);
+  if (d.calificaciones) _setItemQuotaSafe(CAL_STORAGE_KEY, d.calificaciones);
+  if (d.horario) _setItemQuotaSafe(HORARIO_KEY, d.horario);
+  if (d.tareas) _setItemQuotaSafe(TAREAS_KEY, d.tareas);
+  if (d.asistencia) _setItemQuotaSafe(ASIST_KEY, d.asistencia);
+  if (d.comentarios) _setItemQuotaSafe(COMENT_KEY, d.comentarios);
   if (d.notasClase) {
     try {
       const nc = JSON.parse(d.notasClase);
-      Object.entries(nc).forEach(([k, v]) => localStorage.setItem(k, v));
+      Object.entries(nc).forEach(([k, v]) => _setItemQuotaSafe(k, v));
     } catch { }
   }
   if (d.obsEstudiantes) {
     try {
       const obs = JSON.parse(d.obsEstudiantes);
-      Object.entries(obs).forEach(([k, v]) => localStorage.setItem(k, v));
+      Object.entries(obs).forEach(([k, v]) => _setItemQuotaSafe(k, v));
     } catch { }
   }
-  if (d.diarias) localStorage.setItem(DIARIAS_KEY, d.diarias);
-  if (d.incidencias) localStorage.setItem(INCID_KEY, d.incidencias);
-  if (d.recuperaciones) localStorage.setItem(RECUP_KEY, d.recuperaciones);
-  if (d.borrador && d.borrador !== 'null') localStorage.setItem(STORAGE_KEY, d.borrador);
-  if (d.notasDocente) localStorage.setItem(NOTAS_DOCENTE_KEY, d.notasDocente);
-  if (d.libreta) localStorage.setItem(LIBRETA_KEY, d.libreta);
+  if (d.diarias) _setItemQuotaSafe(DIARIAS_KEY, d.diarias);
+  if (d.incidencias) _setItemQuotaSafe(INCID_KEY, d.incidencias);
+  if (d.recuperaciones) _setItemQuotaSafe(RECUP_KEY, d.recuperaciones);
+  if (d.borrador && d.borrador !== 'null') _setItemQuotaSafe(STORAGE_KEY, d.borrador);
+  if (d.notasDocente) _setItemQuotaSafe(NOTAS_DOCENTE_KEY, d.notasDocente);
+  if (d.libreta) _setItemQuotaSafe(LIBRETA_KEY, d.libreta);
   if (d.evalFormas) {
     try {
       const ef = JSON.parse(d.evalFormas);
-      Object.entries(ef).forEach(([k, v]) => localStorage.setItem(k, v));
+      Object.entries(ef).forEach(([k, v]) => _setItemQuotaSafe(k, v));
     } catch { }
   }
-  if (d.groqKey) localStorage.setItem(GROQ_KEY_STORAGE, d.groqKey);
-  if (d.openrouterKey) localStorage.setItem(OPENROUTER_KEY_STORAGE, d.openrouterKey);
-  if (d.cuentasEstudiantes) localStorage.setItem(CUENTAS_EST_KEY, d.cuentasEstudiantes);
-  if (d.bitacora) localStorage.setItem(BITACORA_KEY, d.bitacora);
-  if (d.participacion) localStorage.setItem(PARTICIP_KEY, d.participacion);
-  if (d.blog) localStorage.setItem(BLOG_KEY, d.blog);
-  if (d.reportes) localStorage.setItem(REPORTES_KEY, d.reportes);
-  if (d.calendarioEscolar) localStorage.setItem(CAL_ESC_KEY, d.calendarioEscolar);
-  if (d.cumpleanos) localStorage.setItem(CUMPLE_KEY, d.cumpleanos);
-  if (d.stickies) localStorage.setItem(STICKIES_KEY, d.stickies);
-  if (d.calBackups) localStorage.setItem(CAL_BACKUP_KEY, d.calBackups);
-  if (d.geminiKey) localStorage.setItem(GEMINI_KEY_STORAGE, d.geminiKey);
+  if (d.groqKey) _setItemQuotaSafe(GROQ_KEY_STORAGE, d.groqKey);
+  if (d.openrouterKey) _setItemQuotaSafe(OPENROUTER_KEY_STORAGE, d.openrouterKey);
+  if (d.cuentasEstudiantes) _setItemQuotaSafe(CUENTAS_EST_KEY, d.cuentasEstudiantes);
+  if (d.bitacora) _setItemQuotaSafe(BITACORA_KEY, d.bitacora);
+  if (d.participacion) _setItemQuotaSafe(PARTICIP_KEY, d.participacion);
+  if (d.blog) _setItemQuotaSafe(BLOG_KEY, d.blog);
+  if (d.reportes) _setItemQuotaSafe(REPORTES_KEY, d.reportes);
+  if (d.calendarioEscolar) _setItemQuotaSafe(CAL_ESC_KEY, d.calendarioEscolar);
+  if (d.cumpleanos) _setItemQuotaSafe(CUMPLE_KEY, d.cumpleanos);
+  if (d.stickies) _setItemQuotaSafe(STICKIES_KEY, d.stickies);
+  if (d.calBackups) _setItemQuotaSafe(CAL_BACKUP_KEY, d.calBackups);
+  if (d.geminiKey) _setItemQuotaSafe(GEMINI_KEY_STORAGE, d.geminiKey);
   if (d.preferencias) {
     try {
       const pref = JSON.parse(d.preferencias);
       Object.entries(pref).forEach(([k, v]) => {
-        if (v !== null && v !== undefined) localStorage.setItem(k, v);
+        if (v !== null && v !== undefined) _setItemQuotaSafe(k, v);
       });
     } catch { }
   }
   const schoolYear = (d._meta && d._meta.schoolYear) || forcedSchoolYear || null;
   if (schoolYear) {
-    localStorage.setItem(ACTIVE_YEAR_KEY, schoolYear);
+    _setItemQuotaSafe(ACTIVE_YEAR_KEY, schoolYear);
     if (window._syncFirebase) {
       window._syncFirebase('active_year', schoolYear);
     }
