@@ -3806,9 +3806,18 @@ async function _confirmarRegenerarActividad(idx) {
       '⚠️ INSTRUCCIONES DEL DOCENTE PARA ESTA REGENERACIÓN (tienen PRIORIDAD ABSOLUTA sobre cualquier otro criterio):\n' + instrucciones + '\n\n' +
       'TAREA: escribe UNA nueva actividad de enseñanza/aprendizaje para este EC, coherente con su nivel de dominio, que cumpla estrictamente las instrucciones del docente de arriba. Español con tildes. Responde SOLO con el enunciado de la actividad, en un único párrafo, sin numeración, sin comillas, sin explicación adicional.';
 
-    const raw = await _llamarIATextoLibre(prompt, 300, 'Eres un experto en diseño de actividades de enseñanza para educación técnico-profesional dominicana. Responde solo con el enunciado de la actividad solicitada, en un párrafo, sin markdown, sin comillas, sin texto adicional.');
-    if (!raw) throw new Error('Sin respuesta del AI.');
-    act.enunciado = raw.trim().replace(/^["“”]+|["“”]+$/g, '');
+    // maxTokens generoso a propósito: algunos modelos (ej. gpt-oss de Groq)
+    // gastan una parte del presupuesto en "razonamiento" invisible antes de
+    // la respuesta visible -- con un límite chico (300) eso se comía casi
+    // todo el presupuesto y la respuesta llegaba cortada a un par de
+    // palabras ("El", literalmente, en un caso real).
+    const raw = await _llamarIATextoLibre(prompt, 800, 'Eres un experto en diseño de actividades de enseñanza para educación técnico-profesional dominicana. Responde solo con el enunciado de la actividad solicitada, en un párrafo, sin markdown, sin comillas, sin texto adicional.');
+    const enunciadoNuevo = (raw || '').trim().replace(/^["“”]+|["“”]+$/g, '');
+    // Si la IA devolvió una respuesta sospechosamente corta (cortada a mitad
+    // de generar), no reemplazar el enunciado con basura -- mejor avisar y
+    // dejar la actividad como estaba.
+    if (enunciadoNuevo.length < 20) throw new Error('La IA devolvió una respuesta incompleta ("' + enunciadoNuevo + '"). Intenta de nuevo.');
+    act.enunciado = enunciadoNuevo;
     act.instrumento = generarInstrumento(act, nivelEC);
     guardarBorrador();
     cerrarModalBtn();

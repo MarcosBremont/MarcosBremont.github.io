@@ -3710,6 +3710,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v20.01<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: "Regenerar" con instrucciones dejaba el enunciado cortado</div>
+              <ul class="about-ver-items">
+                <li>Al regenerar una actividad con instrucciones (v20.00), la respuesta de la IA a veces llegaba cortada a un par de palabras (ej. quedaba literalmente "El" como enunciado) -- el límite de tokens era muy chico para modelos que gastan parte del presupuesto en razonamiento antes de responder. Se subió el límite y ahora, si aun así la respuesta llega sospechosamente corta, se avisa con un error en vez de guardar un enunciado roto.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#7C4DFF;">v20.00<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11459,9 +11473,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.00"></script>
+  <script src="app.js?v=20.01"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.00"></script>
+  <script src="auth.js?v=20.01"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
