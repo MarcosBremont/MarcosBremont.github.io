@@ -242,6 +242,19 @@ _liberarEspacioLocalStorage();
 // disparar). Ahora se permiten varios intentos por pestaña, y si ni así se
 // resuelve, se muestra un aviso fijo en pantalla en vez de seguir fallando
 // en silencio.
+// Un usuario reportó que, incluso con los reintentos de arriba, el problema
+// seguía repitiéndose sin parar (consola con decenas de
+// "QuotaExceededError" al escribir 'firestore_targets_...') -- liberar
+// cal_backups/blog archivado no siempre alcanza a bajar el origen lo
+// suficiente. En vez de solo reintentar con la esperanza de que esta vez sí
+// haya espacio, a la primera falla se desactiva PERMANENTEMENTE (hasta que
+// se borre a mano) la coordinación multi-pestaña (synchronizeTabs) para
+// este navegador -- es la característica específica que escribe esas
+// claves en localStorage; sin ella, Firestore sigue funcionando con caché
+// offline (vía IndexedDB, no localStorage) sin depender de que haya espacio
+// libre para su propia coordinación interna. El costo es que dos pestañas
+// abiertas a la vez ya no coordinan cuál es la "primaria" para bajar datos
+// -- aceptable frente a que la app quede completamente inutilizable.
 const FS_RECOVERY_MAX_INTENTOS = 3;
 function _recuperarDeFirestoreRoto() {
   let intentos = 0;
@@ -252,6 +265,7 @@ function _recuperarDeFirestoreRoto() {
   }
   try { sessionStorage.setItem('tinclass_fs_recovery_intentos', String(intentos + 1)); } catch (e) {}
   _liberarEspacioLocalStorage();
+  try { localStorage.setItem('tinclass_fs_single_tab', '1'); } catch (e) {}
   setTimeout(() => location.reload(), 300);
 }
 
@@ -273,16 +287,28 @@ function _mostrarAvisoFirestoreRoto() {
   if (document.body) mostrar();
   else document.addEventListener('DOMContentLoaded', mostrar);
 }
+// Antes esto solo reaccionaba a "INTERNAL ASSERTION FAILED" -- pero esa es
+// una consecuencia TARDÍA del problema real. La primera señal (la que de
+// verdad hay que atrapar para actuar a tiempo) es el propio
+// QuotaExceededError de Firestore al escribir sus claves de coordinación en
+// localStorage, que en un caso real en producción se repitió decenas de
+// veces sin que "INTERNAL ASSERTION FAILED" llegara a aparecer -- el
+// chequeo angosto dejaba pasar ese caso sin activar ninguna recuperación.
+function _esErrorFirestoreRoto(msg) {
+  return msg.includes('INTERNAL ASSERTION FAILED') || msg.includes('QuotaExceededError');
+}
 window.addEventListener('error', function(e) {
   const msg = String(e?.message || e?.error?.message || '');
-  if (msg.includes('INTERNAL ASSERTION FAILED')) _recuperarDeFirestoreRoto();
+  if (_esErrorFirestoreRoto(msg)) _recuperarDeFirestoreRoto();
 });
 window.addEventListener('unhandledrejection', function(e) {
   const msg = String(e?.reason?.message || e?.reason || '');
-  if (msg.includes('INTERNAL ASSERTION FAILED')) _recuperarDeFirestoreRoto();
+  if (_esErrorFirestoreRoto(msg)) _recuperarDeFirestoreRoto();
 });
 
-db.enablePersistence({ synchronizeTabs: true }).catch(e => {
+let _fsSyncTabs = true;
+try { _fsSyncTabs = localStorage.getItem('tinclass_fs_single_tab') !== '1'; } catch (e) {}
+db.enablePersistence({ synchronizeTabs: _fsSyncTabs }).catch(e => {
   // 'failed-precondition': ya hay otra pestaña con persistencia de una sola
   // pestaña activa (no debería pasar con synchronizeTabs, pero por si acaso).
   // 'unimplemented': el navegador no soporta IndexedDB (ej. algunos modos

@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v20.04<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix crítico: Firestore roto seguía sin recuperarse en algunos casos</div>
+              <ul class="about-ver-items">
+                <li>La recuperación automática de la v20.03 solo reaccionaba al error "INTERNAL ASSERTION FAILED" -- pero un caso real en producción mostró decenas de "QuotaExceededError" (la causa real, más temprana) sin que ese error específico llegara a aparecer, así que la recuperación nunca se disparaba y la app se quedaba congelada en "Cargando...".</li>
+                <li>Ahora también se reacciona directamente al QuotaExceededError. Además, en vez de solo esperar que liberar espacio alcance, al primer problema se desactiva la coordinación entre pestañas de Firestore para este navegador -- la función específica que necesita escribir en el almacenamiento local -- eliminando la causa de raíz en vez de solo reintentar con la esperanza de que haya espacio.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v20.03<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11479,7 +11494,7 @@
   <script src="https://accounts.google.com/gsi/client" defer></script>
   <script src="https://apis.google.com/js/api.js" defer></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=20.03"></script>
+  <script src="firebase-config.js?v=20.04"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -11502,9 +11517,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.03"></script>
+  <script src="app.js?v=20.04"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.03"></script>
+  <script src="auth.js?v=20.04"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
