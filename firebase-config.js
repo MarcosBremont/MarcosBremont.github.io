@@ -199,21 +199,33 @@ const storage = firebase.storage();
 // que el chequeo disparara, y hasta el propio localStorage.setItem de la
 // limpieza podía fallar en silencio (try/catch de "mejor esfuerzo"), sin
 // liberar nada. Bajado a 2.000.000 (~4 MB) para dejar más margen real.
-function _liberarEspacioLocalStorage() {
+const FS_QUOTA_THRESHOLD = 2000000;
+function _localStorageSizeAprox() {
+  let total = 0;
   try {
-    let total = 0;
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       total += (k || '').length + (localStorage.getItem(k) || '').length;
     }
-    if (total < 2000000) return;
+  } catch (e) { /* mejor esfuerzo */ }
+  return total;
+}
+function _liberarEspacioLocalStorage() {
+  try {
+    if (_localStorageSizeAprox() < FS_QUOTA_THRESHOLD) return;
+    // removeItem nunca lanza QuotaExceededError (a diferencia de setItem),
+    // así que esta liberación en particular es segura incluso si el origen
+    // está completamente al tope.
     localStorage.removeItem('planificadorRA_cal_backups_v1');
     const blogRaw = localStorage.getItem('planificadorRA_blog_v1');
     if (blogRaw) {
       const blog = JSON.parse(blogRaw);
       if (blog && blog.postsArchivados && Object.keys(blog.postsArchivados).length) {
         blog.postsArchivados = {};
-        localStorage.setItem('planificadorRA_blog_v1', JSON.stringify(blog));
+        // Este setItem SÍ puede fallar si el origen está realmente al límite
+        // (reescribe una clave, no solo la borra) -- si falla, al menos la
+        // liberación de cal_backups de arriba ya surtió efecto.
+        try { localStorage.setItem('planificadorRA_blog_v1', JSON.stringify(blog)); } catch (e) {}
       }
     }
   } catch (e) { /* mejor esfuerzo -- si esto falla, enablePersistence sigue su curso normal */ }
@@ -246,15 +258,18 @@ _liberarEspacioLocalStorage();
 // seguía repitiéndose sin parar (consola con decenas de
 // "QuotaExceededError" al escribir 'firestore_targets_...') -- liberar
 // cal_backups/blog archivado no siempre alcanza a bajar el origen lo
-// suficiente. En vez de solo reintentar con la esperanza de que esta vez sí
-// haya espacio, a la primera falla se desactiva PERMANENTEMENTE (hasta que
-// se borre a mano) la coordinación multi-pestaña (synchronizeTabs) para
-// este navegador -- es la característica específica que escribe esas
-// claves en localStorage; sin ella, Firestore sigue funcionando con caché
-// offline (vía IndexedDB, no localStorage) sin depender de que haya espacio
-// libre para su propia coordinación interna. El costo es que dos pestañas
-// abiertas a la vez ya no coordinan cuál es la "primaria" para bajar datos
-// -- aceptable frente a que la app quede completamente inutilizable.
+// suficiente. El primer intento de arreglo fue guardar una bandera en
+// localStorage para forzar synchronizeTabs:false en la próxima carga --
+// pero en un dispositivo con el origen REALMENTE al tope, hasta esa
+// bandera (un par de bytes) puede fallar al escribirse, dejando el "fix"
+// sin ningún efecto (visto en un segundo reporte del mismo usuario, con la
+// misma falla repitiéndose después de esa versión). Por eso la decisión de
+// usar o no synchronizeTabs ya NO depende de guardar nada: se mide el
+// tamaño de localStorage en cada carga (ver _fsSyncTabs más abajo,
+// calculado DESPUÉS de _liberarEspacioLocalStorage) y, si sigue por encima
+// del umbral, se omite synchronizeTabs esa vez -- sin necesitar escribir ni
+// leer ninguna bandera. Se autocorrige solo: en cuanto haya espacio real de
+// nuevo, la siguiente carga vuelve a intentar synchronizeTabs:true.
 const FS_RECOVERY_MAX_INTENTOS = 3;
 function _recuperarDeFirestoreRoto() {
   let intentos = 0;
@@ -265,7 +280,6 @@ function _recuperarDeFirestoreRoto() {
   }
   try { sessionStorage.setItem('tinclass_fs_recovery_intentos', String(intentos + 1)); } catch (e) {}
   _liberarEspacioLocalStorage();
-  try { localStorage.setItem('tinclass_fs_single_tab', '1'); } catch (e) {}
   setTimeout(() => location.reload(), 300);
 }
 
@@ -306,8 +320,12 @@ window.addEventListener('unhandledrejection', function(e) {
   if (_esErrorFirestoreRoto(msg)) _recuperarDeFirestoreRoto();
 });
 
-let _fsSyncTabs = true;
-try { _fsSyncTabs = localStorage.getItem('tinclass_fs_single_tab') !== '1'; } catch (e) {}
+// Medido DESPUÉS de _liberarEspacioLocalStorage(): si ni liberando espacio
+// bajamos del umbral, no vale la pena arriesgarse a que Firestore escriba
+// sus claves de coordinación multi-pestaña (synchronizeTabs) -- ver el
+// bloque de comentarios de _recuperarDeFirestoreRoto arriba para el porqué
+// de decidir esto en tiempo real en vez de con una bandera guardada.
+const _fsSyncTabs = _localStorageSizeAprox() < FS_QUOTA_THRESHOLD;
 db.enablePersistence({ synchronizeTabs: _fsSyncTabs }).catch(e => {
   // 'failed-precondition': ya hay otra pestaña con persistencia de una sola
   // pestaña activa (no debería pasar con synchronizeTabs, pero por si acaso).

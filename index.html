@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v20.05<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix crítico: el fix anterior de Firestore no se guardaba en dispositivos muy llenos</div>
+              <ul class="about-ver-items">
+                <li>El fix de la v20.04 (desactivar la coordinación multi-pestaña de Firestore tras el primer problema) guardaba esa decisión en una bandera en el almacenamiento local -- pero en un dispositivo con el almacenamiento REALMENTE al tope, hasta esa bandera diminuta podía fallar al guardarse, dejando el fix sin ningún efecto (confirmado con un segundo reporte del mismo usuario).</li>
+                <li>Ahora esa decisión ya no depende de guardar nada: se mide el espacio usado en cada apertura de la app y, si sigue muy lleno incluso después de liberar lo que se pueda, se omite la coordinación multi-pestaña esa vez -- sin escribir ninguna bandera que pueda fallar. En cuanto haya espacio real de nuevo, vuelve a activarse sola.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v20.04<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11494,7 +11509,7 @@
   <script src="https://accounts.google.com/gsi/client" defer></script>
   <script src="https://apis.google.com/js/api.js" defer></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=20.04"></script>
+  <script src="firebase-config.js?v=20.05"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -11517,9 +11532,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.04"></script>
+  <script src="app.js?v=20.05"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.04"></script>
+  <script src="auth.js?v=20.05"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
