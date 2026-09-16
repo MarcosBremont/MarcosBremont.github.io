@@ -6112,7 +6112,32 @@ function renderizarVistaPrevia() {
   const acts = planificacion.actividades || [];
   const fechaHoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
-
+  // Tabla de Priorización y Ponderación de los RA -- mismos datos (dg.priorizacion,
+  // un {tiempo,valor} por cada uno de los 10 RA posibles del módulo) que ya usa
+  // _exportarConPlantillaCentro() para el Word, pero no se mostraba en la Vista
+  // Previa en pantalla.
+  let tablaPriorizacion = '';
+  {
+    const prio = dg.priorizacion || [];
+    let totalTiempo = 0, totalValor = 0, tiempoAllNum = true;
+    const filaTiempo = [], filaValor = [];
+    for (let i = 0; i < 10; i++) {
+      const t = (prio[i] && prio[i].tiempo) || '';
+      const v = (prio[i] && prio[i].valor) || '';
+      filaTiempo.push(t);
+      filaValor.push(v);
+      const tNum = parseFloat(t);
+      if (t && isNaN(tNum)) tiempoAllNum = false; else totalTiempo += tNum || 0;
+      totalValor += parseFloat(v) || 0;
+    }
+    tablaPriorizacion = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table vp-table-priorizacion">
+      <thead><tr><th>No. del RA</th>${Array.from({ length: 10 }, (_, i) => `<th>RA${i + 1}</th>`).join('')}<th>Total</th></tr></thead>
+      <tbody>
+        <tr><td>Tiempo</td>${filaTiempo.map(t => `<td>${escapeHTML(String(t || '—'))}</td>`).join('')}<td><strong>${tiempoAllNum && totalTiempo ? totalTiempo : '—'}</strong></td></tr>
+        <tr><td>Valor</td>${filaValor.map(v => `<td>${escapeHTML(String(v || '—'))}</td>`).join('')}<td><strong>${totalValor || '—'}</strong></td></tr>
+      </tbody>
+    </table></div></div>`;
+  }
 
 
 
@@ -6394,53 +6419,26 @@ function renderizarVistaPrevia() {
 
 
 
-    <div class="vp-datos-grid">
+    <div class="vp-table-wrap"><table class="vp-table vp-table-datos"><tbody>
+      <tr><td>Nombre de la Institución</td><td>${escapeHTML(dg.nombreInstitucion || '-')}</td></tr>
+      <tr><td>Regional/Distrito</td><td>${escapeHTML(dg.regional || '-')}</td></tr>
+      <tr><td>Politécnico</td><td>${escapeHTML(dg.politecnico || '-')}</td></tr>
+      <tr><td>Familia Profesional</td><td>${escapeHTML(dg.familiaProfesional || '-')} (${escapeHTML(dg.codigoFP || '-')})</td></tr>
+      <tr><td>Bachillerato Técnico</td><td>${escapeHTML(dg.nombreBachillerato || '-')}</td></tr>
+      <tr><td>Código Título</td><td>${escapeHTML(dg.codigoTitulo || '-')}</td></tr>
+      <tr><td>Módulo Formativo</td><td>${escapeHTML(dg.moduloFormativo || '-')} (${escapeHTML(dg.codigoModulo || '-')})</td></tr>
+      <tr><td>Docente</td><td>${escapeHTML(dg.nombreDocente || '-')}</td></tr>
+      <tr><td>Ordenanza</td><td>${escapeHTML(dg.ordenanza || '-')}</td></tr>
+      <tr><td>Período</td><td>${escapeHTML(dg.fechaInicio || '-')} → ${escapeHTML(dg.fechaTermino || '-')}</td></tr>
+      <tr><td>Horas por semana / Total</td><td>${dg.horasSemana || '-'} hrs / ${planificacion.horasTotal} hrs</td></tr>
+      <tr><td>RA N° / Valor</td><td>${dg.cantidadRA || '-'} RA en el módulo · ${dg.valorRA || '-'} puntos</td></tr>
+    </tbody></table></div>
 
+    <!-- Tabla de Priorización y Ponderación de los RA -->
 
+    <div class="vp-section-title">Priorización y Ponderación de los RA</div>
 
-      <div class="vp-dato"><strong>Nombre de la Institución</strong><span>${escapeHTML(dg.nombreInstitucion || '-')}</span></div>
-
-      <div class="vp-dato"><strong>Regional/Distrito</strong><span>${escapeHTML(dg.regional || '-')}</span></div>
-
-      <div class="vp-dato"><strong>Politécnico</strong><span>${escapeHTML(dg.politecnico || '-')}</span></div>
-
-      <div class="vp-dato"><strong>Familia Profesional</strong><span>${dg.familiaProfesional || '-'} (${dg.codigoFP || '-'})</span></div>
-
-
-
-      <div class="vp-dato"><strong>Bachillerato Técnico</strong><span>${dg.nombreBachillerato || '-'}</span></div>
-
-
-
-      <div class="vp-dato"><strong>Código Título</strong><span>${dg.codigoTitulo || '-'}</span></div>
-
-
-
-      <div class="vp-dato"><strong>Módulo Formativo</strong><span>${dg.moduloFormativo || '-'} (${dg.codigoModulo || '-'})</span></div>
-
-
-
-      <div class="vp-dato"><strong>Docente</strong><span>${dg.nombreDocente || '-'}</span></div>
-
-
-
-      <div class="vp-dato"><strong>Ordenanza</strong><span>${escapeHTML(dg.ordenanza || '-')}</span></div>
-
-
-
-      <div class="vp-dato"><strong>Período</strong><span>${dg.fechaInicio || '-'} → ${dg.fechaTermino || '-'}</span></div>
-
-
-
-      <div class="vp-dato"><strong>Horas por semana / Total</strong><span>${dg.horasSemana || '-'} hrs / ${planificacion.horasTotal} hrs</span></div>
-
-
-
-      <div class="vp-dato"><strong>RA N° / Valor</strong><span>${dg.cantidadRA || '-'} RA en el módulo · ${dg.valorRA || '-'} puntos</span></div>
-
-
-
-    </div>
+    ${tablaPriorizacion}
 
 
 

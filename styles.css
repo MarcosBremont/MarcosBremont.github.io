@@ -1593,6 +1593,40 @@ body.dark-mode .info-tip strong {
   min-width: 900px;
 }
 
+/* "Datos Generales" como tabla de etiqueta/valor (como en el Word real),
+   en vez de la cuadrícula de tarjetas que tenía antes -- la primera celda
+   de cada fila hace de etiqueta. */
+.vp-table-datos td:first-child {
+  font-weight: 700;
+  color: #1A3E7A;
+  background: #EAF2FF;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.vista-previa .vp-table-datos td:first-child {
+  background: #EAF2FF !important;
+  color: #1A3E7A !important;
+}
+
+.vp-table-priorizacion th,
+.vp-table-priorizacion td {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.vp-table-priorizacion td:first-child {
+  text-align: left;
+  font-weight: 700;
+  color: #1A3E7A;
+  background: #EAF2FF;
+}
+
+.vista-previa .vp-table-priorizacion td:first-child {
+  background: #EAF2FF !important;
+  color: #1A3E7A !important;
+}
+
 .vp-instrumento-box {
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-md);
