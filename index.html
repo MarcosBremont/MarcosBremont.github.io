@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v20.08<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: la actividad de la tarjeta de clase cambiaba sola entre visitas</div>
+              <ul class="about-ver-items">
+                <li>Cuando un curso tenía más de una planificación asignada al mismo módulo/materia (ej. dos RA distintos con actividades el mismo día) y ninguna era la "activa" del curso, el sistema elegía "la primera que encontrara" para mostrar en la tarjeta de clase del dashboard -- pero ese orden podía cambiar entre una visita y otra (ej. al crear o duplicar otra planificación), haciendo que la actividad mostrada cambiara sola, o hasta desapareciera por completo si la planificación elegida esta vez no tenía la sesión diaria generada.</li>
+                <li>Ahora esa elección es siempre la misma mientras no cambie de verdad la lista de planificaciones candidatas, así la tarjeta ya no "pierde" la actividad entre una entrada y otra al dashboard.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v20.07<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11560,9 +11575,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.07"></script>
+  <script src="app.js?v=20.08"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.07"></script>
+  <script src="auth.js?v=20.08"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

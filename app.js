@@ -40698,9 +40698,18 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
         if (activosIds.size > 0) {
           sesiones = sesiones.filter(s => activosIds.has(s.planId));
         }
-        // Si ninguno coincide (planActivaId es de otra materia), mostrar solo el primer plan encontrado
+        // Si ninguno coincide (planActivaId es de otra materia), mostrar solo un plan --
+        // pero SIEMPRE el mismo uno, no "el primero que aparezca" en planIdsUnicos. Ese
+        // orden depende de en qué posición esté cada plan dentro de biblio.items, que
+        // puede reordenarse entre una carga de la página y otra (ej. tras cualquier
+        // autoguardado) -- eso hacía que la actividad mostrada en esta tarjeta cambiara
+        // sola de una sesión a otra sin que el docente tocara nada, incluso desapareciendo
+        // por completo si el plan elegido esta vez no tenía la sesión diaria generada
+        // (reportado como "lo vi, salí, volví a entrar y ya no estaba"). Ordenar por
+        // planId lo vuelve determinístico: siempre gana el mismo plan mientras la lista
+        // de candidatos no cambie de verdad.
         else {
-          const primero = planIdsUnicos[0];
+          const primero = [...planIdsUnicos].sort()[0];
           sesiones = sesiones.filter(s => s.planId === primero);
         }
       }
