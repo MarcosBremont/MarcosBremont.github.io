@@ -11443,7 +11443,23 @@ async function _generarContenidosConIA() {
 
 function actualizarResumenHoras() {
 
-
+  // "Horas por Semana" se autocalcula sumando las horas de los días de
+  // clase marcados en "Días de Clase por Semana" (más abajo en el mismo
+  // paso), en vez de quedar como un número aparte que el docente debía
+  // mantener sincronizado a mano -- antes podían desalinearse (ej. "Horas
+  // por Semana" en 6 pero los días marcados sumando 8), lo que hacía que
+  // "Aprox. X semanas · Y horas" de abajo reportara horas que no
+  // correspondían al horario real marcado.
+  const _diasSemanaIds = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
+  const _sumaDiasHoras = _diasSemanaIds.reduce((acc, d) => {
+    if (!document.getElementById('dia-' + d)?.checked) return acc;
+    return acc + (parseFloat(document.getElementById('horas-' + d)?.value) || 0);
+  }, 0);
+  const _horasSemanaInput = document.getElementById('horas-semana');
+  if (_sumaDiasHoras > 0 && _horasSemanaInput && Number(_horasSemanaInput.value) !== _sumaDiasHoras) {
+    _horasSemanaInput.value = _sumaDiasHoras;
+    _horasSemanaInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 
   const horasSemana = parseInt(document.getElementById('horas-semana')?.value || '0', 10);
 

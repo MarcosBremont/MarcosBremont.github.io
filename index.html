@@ -957,6 +957,7 @@
           <div class="form-group">
             <label for="horas-semana">Horas por Semana *</label>
             <input type="number" id="horas-semana" min="1" max="40" placeholder="Ej: 6" required />
+            <p style="font-size:0.76rem;color:#7C4DFF;margin:4px 2px 0;">Se recalcula solo al marcar los días en "Días de Clase por Semana" (más abajo). Si aún no marcas ninguno, puedes escribirla aquí.</p>
           </div>
 
           <!-- Fecha de Inicio -->
@@ -3705,6 +3706,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#7C4DFF;">v19.95<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Horas por Semana" ahora se calcula sola desde los días marcados</div>
+              <ul class="about-ver-items">
+                <li>Antes "Horas por Semana" (Datos Generales) y "Días de Clase por Semana" eran dos campos independientes que se podían desincronizar (ej. decir 6 horas arriba pero tener días marcados que sumaban 8) -- eso hacía que el resumen "Aprox. X semanas · Y horas" no reflejara el horario real.</li>
+                <li>Ahora "Horas por Semana" se recalcula sola sumando las horas de los días que marques abajo. Si todavía no marcas ningún día, se puede seguir escribiendo a mano.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11368,9 +11384,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.94"></script>
+  <script src="app.js?v=19.95"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.94"></script>
+  <script src="auth.js?v=19.95"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
