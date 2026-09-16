@@ -1627,6 +1627,28 @@ body.dark-mode .info-tip strong {
   color: #1A3E7A !important;
 }
 
+/* Bloque de datos de "Matriz por Resultados de Aprendizajes (RA)" -- filas
+   con 1 o 2 pares etiqueta:valor (colspan en las de 1 solo par ancho), como
+   en el Word real. Las etiquetas caen siempre en posición impar (1era o
+   3era celda de la fila), tanto en filas de 4 celdas como en las que usan
+   colspan="3" (ahí solo hay 2 celdas, pero la etiqueta sigue siendo la 1ra). */
+.vp-table-matriz-info td:nth-child(odd) {
+  font-weight: 700;
+  color: #1A3E7A;
+  background: #EAF2FF;
+  width: 17%;
+  white-space: nowrap;
+}
+
+.vp-table-matriz-info td:nth-child(even) {
+  width: 33%;
+}
+
+.vista-previa .vp-table-matriz-info td:nth-child(odd) {
+  background: #EAF2FF !important;
+  color: #1A3E7A !important;
+}
+
 .vp-instrumento-box {
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-md);

@@ -6139,74 +6139,31 @@ function renderizarVistaPrevia() {
     </table></div></div>`;
   }
 
-
-
-
-
-  const nivelLabel = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
-
-
-
-
-
-
-
-  // Tabla de EC
-
-
-
-  let tablaEC = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table">
-
-
-
-    <thead><tr><th>Código</th><th>Enunciado del EC</th><th>Nivel Bloom</th><th>Horas</th></tr></thead>
-
-
-
-    <tbody>`;
-
-
-
-  ec.forEach(e => {
-
-
-
-    tablaEC += `<tr>
-
-
-
-      <td><code>${e.codigo}</code></td>
-
-
-
-      <td>${e.enunciado}</td>
-
-
-
-      <td>${nivelLabel[e.nivel]}</td>
-
-
-
-      <td>${e.horasAsignadas}h</td>
-
-
-
-    </tr>`;
-
-
-
-  });
-
-
-
-  tablaEC += `</tbody></table></div></div>`;
+  // Bloque de datos de la "Matriz por Resultados de Aprendizajes (RA)" --
+  // mismos campos que ya rellena _exportarConPlantillaCentro() para esa
+  // sección del Word (unidad_competencia, codigo_uc, cantidad_ra, valor_ra,
+  // horas_semana, fecha_inicio, fecha_termino, resultado_aprendizaje,
+  // nivel_dominio), organizados igual que en el documento real.
+  const nivelDominioRA = ra.nivelBloom || planificacion.nivelBloomRA || '-';
+  const unidadCompetencia = dg.unidadCompetencia || dg.competenciaAsociada || '-';
+  const codigoUC = dg.codigoUC || dg.codigoCompetencia || '-';
+  const matrizInfo = `<div class="vp-table-wrap"><table class="vp-table vp-table-matriz-info"><tbody>
+    <tr><td>Nombre de la Institución</td><td>${escapeHTML(dg.nombreInstitucion || '-')}</td><td>Bachillerato Técnico en</td><td>${escapeHTML(dg.nombreBachillerato || '-')}</td></tr>
+    <tr><td>Módulo Formativo</td><td>${escapeHTML(dg.moduloFormativo || '-')}</td><td>Código MF</td><td>${escapeHTML(dg.codigoModulo || '-')}</td></tr>
+    <tr><td>Nombre del Docente</td><td colspan="3">${escapeHTML(dg.nombreDocente || '-')}</td></tr>
+    <tr><td>Unidad de Competencia Asociada</td><td>${escapeHTML(unidadCompetencia)}</td><td>Código UC</td><td>${escapeHTML(codigoUC)}</td></tr>
+    <tr><td>Cantidad de RA del MF</td><td>${escapeHTML(String(dg.cantidadRA || '-'))}</td><td>Valor del RA a trabajar</td><td>${escapeHTML(String(dg.valorRA || '-'))}</td></tr>
+    <tr><td>Horas/Semana del MF</td><td colspan="3">${escapeHTML(String(dg.horasSemana || '-'))}</td></tr>
+    <tr><td>Fecha de Inicio del RA</td><td>${escapeHTML(dg.fechaInicio || '-')}</td><td>Fecha de Término del RA</td><td>${escapeHTML(dg.fechaTermino || '-')}</td></tr>
+    <tr><td>Resultado de Aprendizaje (RA)</td><td>${escapeHTML(ra.descripcion || '-')}</td><td>Nivel de Dominio (RA)</td><td>${escapeHTML(nivelDominioRA)}</td></tr>
+  </tbody></table></div>`;
 
   // Tabla Matriz EC vs Criterios de Evaluación (Contraste)
   let tablaMatrizEC = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table">
     <thead><tr>
       <th>#EC</th>
-      <th>Elemento de Capacidad</th>
-      <th>Contraste EC vs CE</th>
+      <th>Elementos de Capacidad (EC)</th>
+      <th>Contraste EC Vs CE</th>
       <th>Criterios de Evaluación</th>
     </tr></thead>
     <tbody>`;
@@ -6420,18 +6377,13 @@ function renderizarVistaPrevia() {
 
 
     <div class="vp-table-wrap"><table class="vp-table vp-table-datos"><tbody>
-      <tr><td>Nombre de la Institución</td><td>${escapeHTML(dg.nombreInstitucion || '-')}</td></tr>
       <tr><td>Regional/Distrito</td><td>${escapeHTML(dg.regional || '-')}</td></tr>
       <tr><td>Politécnico</td><td>${escapeHTML(dg.politecnico || '-')}</td></tr>
-      <tr><td>Familia Profesional</td><td>${escapeHTML(dg.familiaProfesional || '-')} (${escapeHTML(dg.codigoFP || '-')})</td></tr>
-      <tr><td>Bachillerato Técnico</td><td>${escapeHTML(dg.nombreBachillerato || '-')}</td></tr>
-      <tr><td>Código Título</td><td>${escapeHTML(dg.codigoTitulo || '-')}</td></tr>
-      <tr><td>Módulo Formativo</td><td>${escapeHTML(dg.moduloFormativo || '-')} (${escapeHTML(dg.codigoModulo || '-')})</td></tr>
       <tr><td>Docente</td><td>${escapeHTML(dg.nombreDocente || '-')}</td></tr>
+      <tr><td>Familia Profesional</td><td>${escapeHTML(dg.familiaProfesional || '-')}</td></tr>
       <tr><td>Ordenanza</td><td>${escapeHTML(dg.ordenanza || '-')}</td></tr>
-      <tr><td>Período</td><td>${escapeHTML(dg.fechaInicio || '-')} → ${escapeHTML(dg.fechaTermino || '-')}</td></tr>
-      <tr><td>Horas por semana / Total</td><td>${dg.horasSemana || '-'} hrs / ${planificacion.horasTotal} hrs</td></tr>
-      <tr><td>RA N° / Valor</td><td>${dg.cantidadRA || '-'} RA en el módulo · ${dg.valorRA || '-'} puntos</td></tr>
+      <tr><td>Título o Bachillerato</td><td>${escapeHTML(dg.nombreBachillerato || '-')}</td></tr>
+      <tr><td>Módulo Formativo (MF)</td><td>${escapeHTML(dg.moduloFormativo || '-')} ${escapeHTML(dg.codigoModulo || '-')}</td></tr>
     </tbody></table></div>
 
     <!-- Tabla de Priorización y Ponderación de los RA -->
@@ -6450,11 +6402,11 @@ function renderizarVistaPrevia() {
 
 
 
-    <div class="vp-section-title">Resultado de Aprendizaje (RA)</div>
+    <div class="vp-section-title">Matriz por Resultados de Aprendizajes (RA)</div>
 
 
 
-    <div class="vp-ra-box">${ra.descripcion || '-'}</div>
+    ${matrizInfo}
 
 
 
@@ -6470,31 +6422,9 @@ function renderizarVistaPrevia() {
 
 
 
-    <!-- EC -->
-
-
-
-    <div class="vp-section-title">Elementos de Capacidad</div>
-
-
-
-    ${tablaEC}
-
-    <!-- Matriz EC vs Criterios de Evaluación -->
-
-    <div class="vp-section-title">Matriz EC vs Criterios de Evaluación</div>
-
     ${tablaMatrizEC}
 
 
-
-
-
-    <!-- Actividades -->
-
-
-
-    <div class="vp-section-title">Actividades de Aprendizaje y Evaluación</div>
 
 
 
