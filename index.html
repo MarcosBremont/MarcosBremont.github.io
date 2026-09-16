@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v20.03<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix crítico: la app se quedaba congelada por Firestore roto</div>
+              <ul class="about-ver-items">
+                <li>Cuando el almacenamiento local se llenaba, Firestore quedaba en un estado roto ("INTERNAL ASSERTION FAILED") que ya se recuperaba solo con una recarga automática -- pero esa recarga solo se permitía UNA vez por pestaña. Si esa única recarga no liberaba espacio suficiente, el problema volvía a aparecer más tarde en la misma pestaña y ya no se recuperaba solo: la app se quedaba congelada, con la consola llena del mismo error repitiéndose sin parar, sin ningún aviso visible.</li>
+                <li>Ahora se permiten varios intentos automáticos por pestaña, y si de verdad no se puede resolver solo, aparece un aviso fijo en pantalla explicando qué hacer (cerrar y volver a abrir la pestaña) en vez de dejar la app congelada sin explicación.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#7C4DFF;">v20.02<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11464,7 +11479,7 @@
   <script src="https://accounts.google.com/gsi/client" defer></script>
   <script src="https://apis.google.com/js/api.js" defer></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=19.87"></script>
+  <script src="firebase-config.js?v=20.03"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -11487,9 +11502,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.02"></script>
+  <script src="app.js?v=20.03"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.02"></script>
+  <script src="auth.js?v=20.03"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

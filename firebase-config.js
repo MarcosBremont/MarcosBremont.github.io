@@ -231,11 +231,47 @@ _liberarEspacioLocalStorage();
 // error específico, se libera espacio de nuevo, y se fuerza UNA sola
 // recarga automática -- con una bandera en sessionStorage para no entrar en
 // bucle de recargas si el problema no se puede resolver liberando espacio.
+// Antes esto se permitía UNA sola vez por pestaña (bandera booleana): si esa
+// única recarga no alcanzaba a liberar espacio suficiente (ej. el docente
+// sigue generando/guardando contenido y el origen vuelve a llenarse), el
+// error volvía a aparecer más tarde en la MISMA pestaña y la función ya no
+// hacía nada -- la bandera seguía puesta -- dejando el error repitiéndose
+// sin parar y la app con pantalla congelada, sin ningún aviso (reportado
+// así por un usuario: consola llena de "INTERNAL ASSERTION FAILED" durante
+// más de 40 segundos seguidos, sin que la recarga automática llegara a
+// disparar). Ahora se permiten varios intentos por pestaña, y si ni así se
+// resuelve, se muestra un aviso fijo en pantalla en vez de seguir fallando
+// en silencio.
+const FS_RECOVERY_MAX_INTENTOS = 3;
 function _recuperarDeFirestoreRoto() {
-  if (sessionStorage.getItem('tinclass_fs_recovery_attempted')) return;
-  try { sessionStorage.setItem('tinclass_fs_recovery_attempted', '1'); } catch (e) {}
+  let intentos = 0;
+  try { intentos = parseInt(sessionStorage.getItem('tinclass_fs_recovery_intentos') || '0', 10); } catch (e) {}
+  if (intentos >= FS_RECOVERY_MAX_INTENTOS) {
+    _mostrarAvisoFirestoreRoto();
+    return;
+  }
+  try { sessionStorage.setItem('tinclass_fs_recovery_intentos', String(intentos + 1)); } catch (e) {}
   _liberarEspacioLocalStorage();
   setTimeout(() => location.reload(), 300);
+}
+
+// Aviso fijo cuando ya se agotaron los reintentos automáticos -- se arma con
+// DOM plano (sin depender de mostrarToast, que puede no estar cargado
+// todavía si esto ocurre muy temprano) para que el docente sepa qué hacer
+// en vez de quedarse viendo la app congelada sin ninguna explicación.
+function _mostrarAvisoFirestoreRoto() {
+  const mostrar = () => {
+    if (document.getElementById('fs-recovery-banner')) return;
+    const div = document.createElement('div');
+    div.id = 'fs-recovery-banner';
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#C62828;color:#fff;padding:14px 18px;font-family:Arial,sans-serif;font-size:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3);';
+    div.innerHTML = 'Hubo un problema guardando datos localmente (almacenamiento del navegador lleno). ' +
+      '<strong>Cierra esta pestaña por completo y vuelve a abrirla</strong> para que el sistema vuelva a funcionar bien. ' +
+      'Si el problema sigue, entra a "Mis datos" y borra copias de seguridad o publicaciones archivadas del blog que ya no necesites.';
+    document.body.prepend(div);
+  };
+  if (document.body) mostrar();
+  else document.addEventListener('DOMContentLoaded', mostrar);
 }
 window.addEventListener('error', function(e) {
   const msg = String(e?.message || e?.error?.message || '');
