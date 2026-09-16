@@ -1452,6 +1452,10 @@
             <span class="material-icons">description</span>
             Exportar Planificación por RA
           </button>
+          <button class="btn-export" onclick="window._driveModoSubida=true;exportarWord()" title="Subir la Planificación por RA a la carpeta de Drive elegida (Mis datos → Google Drive)" style="background:#E8F0FE;color:#1967D2;border:1px solid #AECBFA;">
+            <span class="material-icons">cloud_upload</span>
+            Subir Planificación por RA a Drive
+          </button>
           <button class="btn-export" onclick="exportarDiariasWord()" style="background:linear-gradient(135deg,#5C6BC0,#3949AB);color:#fff;">
             <span class="material-icons">today</span>
             Exportar Planificaciones Diarias
@@ -3701,6 +3705,21 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1967D2;">v19.88<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Google Drive: ahora también en la Planificación por RA</div>
+              <ul class="about-ver-items">
+                <li>Nuevo botón "Subir Planificación por RA a Drive" en Vista Previa y Exportación, y "Subir Word RA a Drive" en la tarjeta de cada planificación (junto a "Word RA"/"Word Diarias") -- sube el Word de la Planificación por RA directo a la carpeta de Drive elegida en Mis datos.</li>
+                <li>El botón de subir a Drive para Planificaciones Diarias (agregado en la v19.87) sigue igual. Ambos son un agregado: los botones de exportar/descargar a la PC siguen funcionando exactamente igual.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11259,9 +11278,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.87"></script>
+  <script src="app.js?v=19.88"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.87"></script>
+  <script src="auth.js?v=19.88"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

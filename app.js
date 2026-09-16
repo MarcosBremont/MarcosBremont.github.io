@@ -7156,15 +7156,19 @@ async function _exportarConPlantillaCentro() {
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   });
 
-  // Descargar
+  // Descargar (o subir a Drive -- ver mismo patrón en _exportarDiariaConPlantillaCentro)
   const nombre = _nombreArchivoRA('docx');
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(out);
-  link.download = nombre;
-  link.click();
-  URL.revokeObjectURL(link.href);
-
-  mostrarToast('Planificación exportada con plantilla del centro', 'success');
+  if (window._driveModoSubida) {
+    window._driveModoSubida = false;
+    await _subirArchivoADrive(out, nombre);
+  } else {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(out);
+    link.download = nombre;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    mostrarToast('Planificación exportada con plantilla del centro', 'success');
+  }
   return true;
 }
 
@@ -8241,7 +8245,12 @@ async function exportarWord() {
 
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
 
-
+  // Bot\u00f3n "Subir a Drive" -- mismo patr\u00f3n que en _exportarDiariaConPlantillaCentro
+  if (window._driveModoSubida) {
+    window._driveModoSubida = false;
+    await _subirArchivoADrive(blob, nombreArchivo);
+    return;
+  }
 
   const url = URL.createObjectURL(blob);
 
@@ -26977,7 +26986,7 @@ async function exportarPlanDesdeListado(id) {
     planificacion = JSON.parse(JSON.stringify(reg.planificacion));
     mostrarToast('Exportando a Word...', 'info');
     const usoPlantilla = await _exportarConPlantillaCentro();
-    if (!usoPlantilla) { _avisarExportSinPlantilla(); _exportarWordHTML(); }
+    if (!usoPlantilla) { _avisarExportSinPlantilla(); await _exportarWordHTML(); }
   } catch (e) {
     console.warn('[ExportListado] Error:', e);
     mostrarToast('Error al exportar: ' + e.message, 'error');
@@ -27038,7 +27047,7 @@ async function exportarDiariasDesdeListado(id) {
   }
 }
 
-function _exportarWordHTML() {
+async function _exportarWordHTML() {
   // Generar vista previa temporal para export HTML-Word
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
@@ -27108,6 +27117,12 @@ function _exportarWordHTML() {
   const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"/><style>body{font-family:Calibri,Arial;font-size:11pt;margin:2cm;}table{width:100%;border-collapse:collapse;}th,td{border:1pt solid #999;padding:6pt;font-size:10pt;}th{background:#1565C0;color:#fff;}</style></head><body>' + contenido + '</body></html>';
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const nombre = _nombreArchivoRA('doc');
+  // Botón "Subir a Drive" -- mismo patrón que en _exportarDiariaConPlantillaCentro
+  if (window._driveModoSubida) {
+    window._driveModoSubida = false;
+    await _subirArchivoADrive(blob, nombre);
+    return true;
+  }
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = nombre;
@@ -27977,6 +27992,9 @@ function renderizarBiblioteca() {
         </button>
         <button class="btn-pln-export" onclick="exportarDiariasDesdeListado('${reg.id}')" title="Exportar planificaciones diarias a Word" style="width:100%;justify-content:center;background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:15px;">event_note</span> Word Diarias
+        </button>
+        <button class="btn-pln-export" onclick="window._driveModoSubida=true;exportarPlanDesdeListado('${reg.id}')" title="Subir la Planificación por RA a la carpeta de Drive elegida (Mis datos → Google Drive)" style="width:100%;justify-content:center;grid-column:1/-1;background:#E8F0FE;color:#1967D2;border:1px solid #AECBFA;border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:15px;">cloud_upload</span> Subir Word RA a Drive
         </button>`}
         ${archivada ? '' : `<button onclick="archivarPlanificacion('${reg.id}')" title="Archivar planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#F5F5F5;color:#546E7A;border:1px solid #E0E0E0;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
           <span class="material-icons" style="font-size:15px;">archive</span> Archivar</button>`}
@@ -50435,7 +50453,7 @@ async function _coordDescargarPlanWord(idx, planId) {
     planificacion = JSON.parse(JSON.stringify(item.planificacion));
     mostrarToast('Exportando a Word...', 'info');
     const usoPlantilla = await _exportarConPlantillaCentro();
-    if (!usoPlantilla) { _avisarExportSinPlantilla(); _exportarWordHTML(); }
+    if (!usoPlantilla) { _avisarExportSinPlantilla(); await _exportarWordHTML(); }
   } catch (e) {
     console.warn('[CoordExport] Error:', e);
     mostrarToast('Error al exportar: ' + e.message, 'error');
