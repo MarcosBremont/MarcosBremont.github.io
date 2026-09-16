@@ -30309,19 +30309,27 @@ async function generarPresentacionPptx(actId) {
   }
 
   try {
-    const { act, acts, materia, centro, docente, data } = await _obtenerDatosPresentacion(actId);
+    const { act, acts, materia, centro, docente, data, ra } = await _obtenerDatosPresentacion(actId);
+
+    // Número "Act X.X.X" (mismo que usa Index.html/Word Diarias/el nombre del
+    // archivo) para mostrarlo junto al enunciado de la actividad en la portada.
+    const _actIdxPres = acts.findIndex(a => a.id === actId);
+    const _actNumLabelPres = _actIdxPres >= 0 ? _getActNumero(act.ecCodigo, _actIndexInEC(acts, _actIdxPres)) : (act.ecCodigo || 'Actividad');
 
     const pptx = new PptxGenJS();
     pptx.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 in -- LAYOUT_16x9 son 10 x 5.625 in, mucho más chico que las coordenadas usadas abajo
 
     const fondoOscuro = (slide) => { slide.background = { color: COL.bg }; };
 
-    // Portada
+    // Portada -- orden pedido: módulo formativo, RA, actividad (con su
+    // número "Act X.X.X"), docente. Ya no se muestra el código de Elemento
+    // de Capacidad (ej. "E.C.1.1.1"), que no le dice nada al estudiante.
     const s0 = pptx.addSlide();
     fondoOscuro(s0);
     s0.addText(String(materia).toUpperCase(), { x: 0.7, y: 0.6, w: 11.9, h: 0.5, fontSize: 14, color: COL.accent, fontFace: 'Consolas', charSpacing: 1 });
-    s0.addText(act.ecCodigo || '', { x: 0.7, y: 1.6, w: 11.9, h: 1.6, fontSize: 44, bold: true, color: COL.text, fontFace: 'Arial' });
-    s0.addText(act.enunciado || '', { x: 0.7, y: 3.3, w: 10.5, h: 1.2, fontSize: 18, color: COL.textDim, fontFace: 'Arial' });
+    s0.addText(ra?.descripcion || '', { x: 0.7, y: 1.5, w: 11.9, h: 2, fontSize: 26, bold: true, color: COL.text, fontFace: 'Arial', valign: 'top' });
+    s0.addText(_actNumLabelPres + ' - ' + (act.enunciado || ''), { x: 0.7, y: 3.7, w: 11.5, h: 2, fontSize: 17, color: COL.textDim, fontFace: 'Arial', valign: 'top' });
+    s0.addText('Docente: ' + (docente || ''), { x: 0.7, y: 6.4, w: 11.5, h: 0.5, fontSize: 13, color: COL.accent, fontFace: 'Consolas' });
 
     // Diapositivas de contenido -- mismo array "slides" que usa la versión HTML
     const slides = Array.isArray(data.slides) ? data.slides : [];
@@ -30367,8 +30375,6 @@ async function generarPresentacionPptx(actId) {
     sF.addText('Ahora a practicar', { x: 0.7, y: 3.2, w: 11.9, h: 1, fontSize: 34, bold: true, color: COL.text, fontFace: 'Arial' });
     sF.addText('Docente: ' + docente + '  ·  ' + centro, { x: 0.7, y: 4.15, w: 11, h: 0.6, fontSize: 15, color: COL.textDim, fontFace: 'Arial' });
 
-    const _actIdxPres = acts.findIndex(a => a.id === actId);
-    const _actNumLabelPres = _actIdxPres >= 0 ? _getActNumero(act.ecCodigo, _actIndexInEC(acts, _actIdxPres)) : (act.ecCodigo || 'Actividad');
     const nombre = 'Presentacion - ' + _actNumLabelPres.replace(/\s+/g, ' ') + '.pptx';
 
     await pptx.writeFile({ fileName: nombre });
