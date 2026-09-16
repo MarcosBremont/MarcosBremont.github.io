@@ -134,6 +134,21 @@ const EMAILJS_ERROR_SERVICE_ID = 'service_sgj6ij6';
 const EMAILJS_ERROR_PUBLIC_KEY = 'XPOUVX51K_CUwNDVJ';
 const EMAILJS_ERROR_TEMPLATE_ID = 'template_u82f83c';
 
+// ================================================================
+// GOOGLE DRIVE — subir Word (RA/Diarias) directo a una carpeta
+// compartida (ej. la de la coordinadora), ademas de la descarga normal
+// a la PC (que NUNCA se quita). Credenciales del proyecto de Google
+// Cloud "metabot-7af4d" -- ambas son seguras de tener en el cliente:
+// el Client ID no es secreto, y la API Key está restringida solo a
+// Google Picker API + los dominios de esta app (ver GOOGLE_DRIVE_CLIENT_ID
+// / GOOGLE_PICKER_API_KEY en Google Cloud Console > Credenciales).
+// El scope drive.file (Google Auth Platform > Acceso a los datos) limita
+// el acceso SOLO a los archivos que esta app cree, nunca a todo el Drive
+// del docente.
+// ================================================================
+const GOOGLE_DRIVE_CLIENT_ID = '872698787040-taljpritv4ambf18eu5tsevd4phja895.apps.googleusercontent.com';
+const GOOGLE_PICKER_API_KEY  = 'AIzaSyCj85PfrbIevYZ3IKEgAYiwEv5GVHJr09c';
+
 const firebaseConfig = {
   apiKey:            "AIzaSyA7-ES4dg5_2E9jpFMYqDIygN15GSpOnj0",
   authDomain:        "metabot-7af4d.firebaseapp.com",

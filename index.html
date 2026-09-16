@@ -3705,6 +3705,22 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1967D2;">v19.87<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: subir planificaciones directo a Google Drive</div>
+              <ul class="about-ver-items">
+                <li>Nueva sección "Google Drive" en Mis datos: conecta tu cuenta de Google y elige una carpeta destino (incluye carpetas que otra persona, como tu coordinadora, te haya compartido).</li>
+                <li>Botón "☁ Drive" nuevo junto a "Descargar" en cada sesión de Planificación Diaria: sube ese Word directo a la carpeta elegida.</li>
+                <li>Esto es un agregado -- el botón de descargar la planificación a la PC sigue funcionando exactamente igual, siempre.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#7C4DFF;">v19.86<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11112,6 +11128,18 @@
 
         <div class="backup-divider"></div>
 
+        <!-- Google Drive -->
+        <div class="backup-section">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#1967D2;">cloud</span>
+            Google Drive
+          </div>
+          <p class="backup-desc">Sube tus planificaciones (RA y Diarias) directo a una carpeta de Drive -- por ejemplo, la carpeta que tu coordinadora te compartió. Esto es un agregado: el botón de descargar a la computadora sigue funcionando igual, siempre.</p>
+          <div id="drive-estado-wrap" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="backup-divider"></div>
+
         <!-- Copias de seguridad automáticas -->
         <div class="backup-section">
           <div class="backup-section-title">
@@ -11201,8 +11229,14 @@
   </script>
   <!-- EmailJS — envío de códigos OTP por correo -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- Google Identity Services (token OAuth para Drive) + API client clásico
+       (gapi, para cargar el Picker de Google) -- ver MÓDULO: GOOGLE DRIVE en
+       app.js. defer para no bloquear el render; ambas se cargan solas antes
+       de que el usuario llegue a usar "Conectar Google Drive". -->
+  <script src="https://accounts.google.com/gsi/client" defer></script>
+  <script src="https://apis.google.com/js/api.js" defer></script>
   <!-- Configuración Firebase (editar con tus datos) -->
-  <script src="firebase-config.js?v=19.74"></script>
+  <script src="firebase-config.js?v=19.87"></script>
   <script>
     // La version real vive en version.json (fuente unica de verdad) -- ver
     // el campo _instrucciones_ia de ese archivo antes de tocar numeros de version.
@@ -11225,9 +11259,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.86"></script>
+  <script src="app.js?v=19.87"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.86"></script>
+  <script src="auth.js?v=19.87"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

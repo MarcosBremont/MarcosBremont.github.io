@@ -7603,6 +7603,180 @@ function _generarInstTablaXml(inst) {
   return xml;
 }
 
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO: GOOGLE DRIVE
+// ════════════════════════════════════════════════════════════════════
+// Sube copias de los Word (RA/Diarias) a una carpeta de Drive elegida por
+// el docente -- ej. una carpeta que su coordinadora le compartió con
+// permiso de Editor. Esto es un AGREGADO, nunca reemplaza el botón de
+// descarga a la PC, que sigue funcionando exactamente igual.
+//
+// Usa Google Identity Services para pedir un token OAuth de sesión (no se
+// guarda contraseña ni token de refresco -- si el docente cierra el
+// navegador, hay que volver a conectar) con el scope drive.file, que SOLO
+// deja ver/crear los archivos que esta app suba, nunca el resto del Drive
+// del docente. La carpeta destino se elige con el selector visual oficial
+// de Google (Picker), que sí muestra carpetas compartidas con el docente.
+const DRIVE_FOLDER_KEY = 'tinclass_drive_folder_v1';
+let _driveTokenClient = null;
+let _driveAccessToken = null;  // string, o null si no hay sesión activa en este momento
+let _driveTokenExpiraEn = 0;   // timestamp ms
+window._driveModoSubida = false; // bandera de "una sola vez": la pone el botón "Subir a Drive" antes de reusar la función de exportar normal, para que esa función suba en vez de descargar
+
+function _driveCarpetaGuardada() {
+  try { return JSON.parse(localStorage.getItem(DRIVE_FOLDER_KEY) || 'null'); } catch { return null; }
+}
+
+function _driveGuardarCarpeta(folder) {
+  localStorage.setItem(DRIVE_FOLDER_KEY, JSON.stringify(folder));
+  if (window._syncFirebase) _syncFirebase('drive_folder', folder);
+}
+
+function _driveTieneSesionValida() {
+  return !!(_driveAccessToken && Date.now() < _driveTokenExpiraEn - 30000);
+}
+
+/** Pide un access token de Drive vía Google Identity Services. `interactivo`
+ *  fuerza el popup de consentimiento (usado al conectar por primera vez);
+ *  sin eso, reusa el token en memoria si sigue vigente o pide uno nuevo en
+ *  silencio cuando el navegador todavía recuerda el consentimiento. */
+function _driveObtenerToken(interactivo) {
+  return new Promise((resolve, reject) => {
+    if (typeof google === 'undefined' || !google.accounts?.oauth2) {
+      reject(new Error('Google Identity Services no cargó todavía. Revisa tu conexión e intenta de nuevo en un momento.'));
+      return;
+    }
+    if (!interactivo && _driveTieneSesionValida()) { resolve(_driveAccessToken); return; }
+    if (!_driveTokenClient) {
+      _driveTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_DRIVE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: () => {} // se sobrescribe en cada llamada, ver abajo
+      });
+    }
+    _driveTokenClient.callback = (resp) => {
+      if (resp.error) { reject(new Error(resp.error)); return; }
+      _driveAccessToken = resp.access_token;
+      _driveTokenExpiraEn = Date.now() + (parseInt(resp.expires_in, 10) || 3600) * 1000;
+      resolve(_driveAccessToken);
+    };
+    _driveTokenClient.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+  });
+}
+
+async function conectarGoogleDrive() {
+  try {
+    await _driveObtenerToken(true);
+    mostrarToast('Google Drive conectado ✓', 'success');
+  } catch (e) {
+    console.error('Error conectando Google Drive:', e);
+    mostrarToast('No se pudo conectar con Google Drive: ' + (e.message || e), 'error');
+  }
+  _actualizarEstadoDrive();
+}
+
+function desconectarGoogleDrive() {
+  if (_driveAccessToken && typeof google !== 'undefined' && google.accounts?.oauth2) {
+    google.accounts.oauth2.revoke(_driveAccessToken, () => {});
+  }
+  _driveAccessToken = null;
+  _driveTokenExpiraEn = 0;
+  mostrarToast('Google Drive desconectado', 'info');
+  _actualizarEstadoDrive();
+}
+
+function _cargarPickerLib() {
+  return new Promise((resolve, reject) => {
+    if (typeof google !== 'undefined' && google.picker) { resolve(); return; }
+    if (typeof gapi === 'undefined') { reject(new Error('La librería de Google no cargó todavía. Revisa tu conexión.')); return; }
+    gapi.load('picker', { callback: resolve, onerror: () => reject(new Error('No se pudo cargar el selector de Drive.')) });
+  });
+}
+
+/** Abre el selector visual de Google para elegir la carpeta destino --
+ *  incluye carpetas que otras personas (ej. la coordinadora) compartieron
+ *  con el docente. Conecta automáticamente primero si hace falta. */
+async function elegirCarpetaDrive() {
+  try {
+    const token = await _driveObtenerToken(!_driveTieneSesionValida());
+    await _cargarPickerLib();
+    const picker = new google.picker.PickerBuilder()
+      .addView(new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+        .setSelectFolderEnabled(true)
+        .setIncludeFolders(true)
+        .setMode(google.picker.DocsViewMode.LIST))
+      .setOAuthToken(token)
+      .setDeveloperKey(GOOGLE_PICKER_API_KEY)
+      .setCallback((data) => {
+        if (data.action === google.picker.Action.PICKED && data.docs?.[0]) {
+          const doc = data.docs[0];
+          _driveGuardarCarpeta({ id: doc.id, name: doc.name });
+          mostrarToast('Carpeta de Drive seleccionada: "' + doc.name + '"', 'success');
+          _actualizarEstadoDrive();
+        }
+      })
+      .setTitle('Elige la carpeta de destino en Drive')
+      .build();
+    picker.setVisible(true);
+  } catch (e) {
+    console.error('Error abriendo el selector de Drive:', e);
+    mostrarToast('No se pudo abrir el selector de Drive: ' + (e.message || e), 'error');
+  }
+}
+
+/** Sube un Blob a la carpeta de Drive ya elegida. Nunca lanza -- devuelve
+ *  true/false, para que quien la llame pueda seguir funcionando igual
+ *  (ej. seguir permitiendo la descarga normal) sin importar si esto falla. */
+async function _subirArchivoADrive(blob, nombre) {
+  const carpeta = _driveCarpetaGuardada();
+  if (!carpeta || !carpeta.id) {
+    mostrarToast('Primero conecta Google Drive y elige una carpeta (Mis datos → Google Drive).', 'warning');
+    return false;
+  }
+  try {
+    const token = await _driveObtenerToken(false);
+    const metadata = { name: nombre, parents: [carpeta.id] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+    mostrarToast('Subiendo "' + nombre + '" a Drive...', 'info');
+    const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: form
+    });
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      throw new Error('HTTP ' + resp.status + (txt ? ': ' + txt.substring(0, 150) : ''));
+    }
+    mostrarToast('☁ Subido a Drive: ' + nombre, 'success');
+    return true;
+  } catch (e) {
+    console.error('Error subiendo a Drive:', e);
+    mostrarToast('No se pudo subir a Drive: ' + (e.message || e), 'error');
+    return false;
+  }
+}
+
+/** Refresca la tarjeta de estado de Drive en "Mis datos" (abrirBackup). */
+function _actualizarEstadoDrive() {
+  const wrap = document.getElementById('drive-estado-wrap');
+  if (!wrap) return;
+  const carpeta = _driveCarpetaGuardada();
+  const conectado = _driveTieneSesionValida();
+  wrap.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+      '<span class="material-icons" style="color:' + (conectado ? '#2E7D32' : '#9E9E9E') + ';">cloud</span>' +
+      '<span style="font-size:0.85rem;color:' + (conectado ? '#2E7D32' : '#616161') + ';font-weight:600;">' + (conectado ? 'Conectado' : 'No conectado') + '</span>' +
+      '<button onclick="' + (conectado ? 'desconectarGoogleDrive' : 'conectarGoogleDrive') + '()" style="margin-left:auto;background:' + (conectado ? '#FFEBEE' : '#1565C0') + ';color:' + (conectado ? '#C62828' : '#fff') + ';border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;">' + (conectado ? 'Desconectar' : 'Conectar Google Drive') + '</button>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+      '<span class="material-icons" style="color:#7C4DFF;">folder</span>' +
+      '<span style="font-size:0.82rem;color:#424242;">' + (carpeta ? escapeHTML(carpeta.name) : 'Sin carpeta elegida todavía') + '</span>' +
+      '<button onclick="elegirCarpetaDrive()" style="margin-left:auto;background:#F5F5F5;color:#424242;border:1px solid #E0E0E0;border-radius:8px;padding:5px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;">' + (carpeta ? 'Cambiar carpeta' : 'Elegir carpeta') + '</button>' +
+    '</div>';
+}
+
 /** Exporta planificaciones diarias usando la plantilla .docx del centro con
  *  docxtemplater. Si se pasa `soloActividadId`, exporta solo esa actividad en
  *  vez de todas (usado por el botón "Descargar" de una sesión individual). */
@@ -7887,11 +8061,20 @@ async function _exportarDiariaConPlantillaCentro(soloActividadId) {
     const nombre = soloActividadId
       ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (_actNumLabel ? _actNumLabel + '_' : '') + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
       : 'PlanificacionDiaria_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = nombre;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    // Botón "Subir a Drive": pone la bandera window._driveModoSubida ANTES de
+    // llamar a esta misma función de exportar -- aquí se detecta y se sube
+    // en vez de descargar. La descarga normal a la PC (rama else de abajo)
+    // nunca cambia.
+    if (window._driveModoSubida) {
+      window._driveModoSubida = false;
+      await _subirArchivoADrive(blob, nombre);
+    } else {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = nombre;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
   } else {
     // Descargar cada sesión como archivo separado en un ZIP si JSZip available, otherwise download first
     if (typeof JSZip !== 'undefined') {
@@ -33139,6 +33322,9 @@ function renderizarDiarias() {
           <button class="btn-pd-index" onclick="event.stopPropagation();exportarDiariasWord('${act.id}')" title="Descargar solo esta planificación diaria en Word">
             <span class="material-icons">download</span> Descargar
           </button>
+          <button class="btn-pd-index" onclick="event.stopPropagation();window._driveModoSubida=true;exportarDiariasWord('${act.id}')" title="Subir esta planificación diaria a la carpeta de Drive elegida (Mis datos → Google Drive)" style="background:#E8F0FE;color:#1967D2;border-color:#AECBFA;">
+            <span class="material-icons">cloud_upload</span> Drive
+          </button>
           <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
             <span class="material-icons">html</span> Index.html
           </button>
@@ -34064,16 +34250,23 @@ async function exportarDiariasWord(soloActividadId) {
       sections: sections
     });
 
-    Packer.toBlob(docObj).then(function (blob) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
+    Packer.toBlob(docObj).then(async function (blob) {
       const _actsFullFallback = planificacion.actividades || [];
       const _actIdxFullFallback = soloActividadId ? _actsFullFallback.findIndex(a => a.id === soloActividadId) : -1;
       const _actNumLabelFallback = _actIdxFullFallback >= 0 ? _getActNumero(actividades[0].ecCodigo, _actIndexInEC(_actsFullFallback, _actIdxFullFallback)) : '';
-      a.download = soloActividadId
+      const nombreFallback = soloActividadId
         ? 'PlanificacionDiaria_' + (actividades[0].ecCodigo || 'EC') + '_' + (_actNumLabelFallback ? _actNumLabelFallback + '_' : '') + (actividades[0].fechaStr || '').replace(/\//g, '-') + '.docx'
         : 'PlanificacionesDiarias_' + (dg.moduloFormativo || 'modulo').replace(/\s+/g, '_') + '.docx';
+      // Bot\u00f3n "Subir a Drive": ver el mismo patr\u00f3n en _exportarDiariaConPlantillaCentro.
+      if (window._driveModoSubida) {
+        window._driveModoSubida = false;
+        await _subirArchivoADrive(blob, nombreFallback);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombreFallback;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
       mostrarToast(soloActividadId ? '\u00a1Planificaci\u00f3n exportada!' : '\u00a1Planificaciones exportadas con la plantilla del centro!', 'success');
@@ -38960,6 +39153,8 @@ function abrirBackup() {
     '<span><strong>' + nSesiones + '</strong> sesion' + (nSesiones !== 1 ? 'es' : '') + ' diarias</span>' +
     '<span>' + (tieneKey ? '✓ API Key guardada' : 'Sin API Key') + '</span>' +
     '</div>';
+
+  if (typeof _actualizarEstadoDrive === 'function') _actualizarEstadoDrive();
 
   // Backups automáticos de calificaciones
   const backups = JSON.parse(localStorage.getItem(CAL_BACKUP_KEY) || '[]');
