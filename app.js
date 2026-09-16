@@ -30000,15 +30000,16 @@ async function _obtenerDatosPresentacion(actId) {
     'INICIO PLANEADO: ' + _tc(inicio, 250) + '\n' +
     'DESARROLLO PLANEADO: ' + _tc(desarrollo, 500) + '\n' +
     'CIERRE PLANEADO: ' + _tc(cierre, 150) + '\n\n' +
-    'TAREA: vas a armar una PRESENTACION DE CLASE en diapositivas para EXPLICAR el tema desde cero, no una actividad ni una evaluacion (eso ya existe aparte). ' +
-    'Empieza desde el concepto MAS BASICO que un estudiante necesite repasar para entender el tema de la actividad, y sube progresivamente, un concepto por diapositiva, hasta llegar al concepto especifico de la actividad. Como si fuera la primera vez que lo ven -- no asumas conocimiento previo salvo lo obviamente elemental para el nivel del modulo.\n' +
-    'Espanol con tildes. Ejemplos dominicanos donde aplique. Rellena TODOS los [placeholders] con contenido REAL y especifico al tema, nunca generico.\n' +
-    'Genera SOLO este JSON, con un arreglo "slides" de 5 a 7 diapositivas (ni menos ni mas):\n' +
+    'TAREA: vas a armar una PRESENTACION DE CLASE completa y detallada, en diapositivas, para EXPLICAR el tema desde cero, no una actividad ni una evaluacion (eso ya existe aparte). ' +
+    'Empieza desde el concepto MAS BASICO que un estudiante necesite repasar para entender el tema de la actividad, y sube progresivamente, un concepto por diapositiva, hasta llegar al concepto especifico de la actividad y su aplicacion practica. Como si fuera la primera vez que lo ven -- no asumas conocimiento previo salvo lo obviamente elemental para el nivel del modulo.\n' +
+    'Quiero una presentacion RICA en contenido, no minimalista: cada "punto" debe ser una explicacion completa de 1 a 2 oraciones (nunca una palabra suelta ni una frase de 3-4 palabras), incluyendo un ejemplo concreto (preferiblemente dominicano) cuando aplique. Usa entre 4 y 6 puntos por diapositiva de tipo "puntos", no 2 o 3. Las descripciones de "tarjetas" tambien deben ser de 1-2 oraciones desarrolladas, no una frase suelta.\n' +
+    'Espanol con tildes. Ejemplos dominicanos donde aplique. Rellena TODOS los [placeholders] con contenido REAL, especifico al tema y bien desarrollado -- nunca generico ni superficial.\n' +
+    'Genera SOLO este JSON, con un arreglo "slides" de 8 a 11 diapositivas (ni menos ni mas):\n' +
     '{"slides":[' +
-    '{"eyebrow":"[ej: 01 / conceptos]","titulo":"[titulo corto de la diapositiva]","tipo":"puntos","puntos":["[punto 1 concreto]","[punto 2]","[punto 3]"],"codigo":"[ejemplo de codigo/sintaxis REAL con saltos de linea \\n si el tema lo amerita (ej: HTML, formulas, comandos), o cadena vacia \\"\\" si el tema no usa codigo]"},' +
-    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tarjetas","tarjetas":[{"nombre":"[termino corto]","desc":"[definicion 1 linea]"},{"nombre":"[t2]","desc":"[d2]"},{"nombre":"[t3]","desc":"[d3]"}]},' +
-    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tabla","tabla":{"cols":["[col1]","[col2]"],"filas":[["[a1]","[a2]"],["[b1]","[b2]"]]}}' +
-    '] -- repite variando "tipo" entre "puntos" (explicacion progresiva, con o sin "codigo"), "tarjetas" (3 a 6 terminos relacionados a enumerar) y "tabla" (para comparar opciones o clasificar) segun lo que mejor comunique cada concepto. No uses "tarjetas" ni "tabla" si el tema no tiene terminos/comparaciones que enumerar -- en ese caso usa "puntos".}';
+    '{"eyebrow":"[ej: 01 / conceptos]","titulo":"[titulo corto de la diapositiva]","tipo":"puntos","puntos":["[punto 1: explicacion de 1-2 oraciones, con ejemplo concreto si aplica]","[punto 2, igual de desarrollado]","[punto 3]","[punto 4]"],"codigo":"[ejemplo de codigo/sintaxis REAL y completo (varias lineas), con saltos de linea \\n si el tema lo amerita (ej: HTML, formulas, comandos), o cadena vacia \\"\\" si el tema no usa codigo]"},' +
+    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tarjetas","tarjetas":[{"nombre":"[termino corto]","desc":"[definicion de 1-2 oraciones desarrollada, no una frase suelta]"},{"nombre":"[t2]","desc":"[d2]"},{"nombre":"[t3]","desc":"[d3]"},{"nombre":"[t4]","desc":"[d4]"}]},' +
+    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tabla","tabla":{"cols":["[col1]","[col2]"],"filas":[["[a1]","[a2]"],["[b1]","[b2]"],["[c1]","[c2]"]]}}' +
+    '] -- repite variando "tipo" entre "puntos" (explicacion progresiva y desarrollada, con o sin "codigo"), "tarjetas" (3 a 6 terminos relacionados a enumerar, con descripciones desarrolladas) y "tabla" (para comparar opciones o clasificar, con al menos 3 filas) segun lo que mejor comunique cada concepto. No uses "tarjetas" ni "tabla" si el tema no tiene terminos/comparaciones que enumerar -- en ese caso usa "puntos".}';
 
   function _parseJson(raw) {
     if (!raw) return null;
@@ -30017,7 +30018,10 @@ async function _obtenerDatosPresentacion(actId) {
     try { return JSON.parse(raw.substring(s, e + 1)); } catch(x) { return null; }
   }
 
-  const raw = await _llamarIATextoLibre(prompt, 4096, _jsonSysMsg, '{');
+  // Más diapositivas y puntos más desarrollados = más tokens de salida --
+  // con el límite viejo (4096) el JSON se cortaba a mitad de generar
+  // ("JSON invalido") apenas la presentación creció un poco.
+  const raw = await _llamarIATextoLibre(prompt, 8000, _jsonSysMsg, '{');
   if (!raw) throw new Error('Sin respuesta del AI.');
   const data = _parseJson(raw);
   if (!data || !Array.isArray(data.slides) || !data.slides.length) throw new Error('JSON invalido. AI respondio: ' + raw.substring(0, 80).replace(/[<>]/g, ''));
@@ -30269,10 +30273,10 @@ async function generarPresentacionPptx(actId) {
         const gap = 0.3, wCard = (11.9 - gap * (cols - 1)) / cols;
         sl.tarjetas.slice(0, 6).forEach((t, idx) => {
           const col = idx % cols, row = Math.floor(idx / cols);
-          const x = 0.7 + col * (wCard + gap), y = 2.1 + row * 1.9;
-          s.addShape('roundRect', { x, y, w: wCard, h: 1.7, fill: { color: COL.bgPanel }, line: { color: COL.line, width: 1 }, rectRadius: 0.08 });
+          const x = 0.7 + col * (wCard + gap), y = 2.1 + row * 2.3;
+          s.addShape('roundRect', { x, y, w: wCard, h: 2.1, fill: { color: COL.bgPanel }, line: { color: COL.line, width: 1 }, rectRadius: 0.08 });
           s.addText(t.nombre || '', { x: x + 0.15, y: y + 0.12, w: wCard - 0.3, h: 0.5, fontSize: 15, bold: true, color: COL.tag, fontFace: 'Consolas' });
-          s.addText(t.desc || '', { x: x + 0.15, y: y + 0.62, w: wCard - 0.3, h: 1, fontSize: 11, color: COL.textDim, fontFace: 'Arial' });
+          s.addText(t.desc || '', { x: x + 0.15, y: y + 0.62, w: wCard - 0.3, h: 1.35, fontSize: 11, color: COL.textDim, fontFace: 'Arial', valign: 'top', autoFit: true });
         });
       } else if (sl.tipo === 'tabla' && sl.tabla && Array.isArray(sl.tabla.cols)) {
         const header = sl.tabla.cols.map(c => ({ text: String(c), options: { bold: true, color: COL.attr, fill: { color: COL.bgPanel } } }));
@@ -30283,11 +30287,11 @@ async function generarPresentacionPptx(actId) {
         const tieneCodigo = sl.codigo && String(sl.codigo).trim();
         const wPuntos = tieneCodigo ? 5.6 : 11.9;
         if (puntos.length) {
-          s.addText(puntos.map(p => ({ text: p, options: { bullet: { code: '25A0', color: COL.tag }, color: COL.text, fontSize: 15, breakLine: true, paraSpaceAfter: 12 } })), { x: 0.7, y: 2.1, w: wPuntos, h: 4.5, valign: 'top' });
+          s.addText(puntos.map(p => ({ text: p, options: { bullet: { code: '25A0', color: COL.tag }, color: COL.text, fontSize: 14, breakLine: true, paraSpaceAfter: 8 } })), { x: 0.7, y: 2.1, w: wPuntos, h: 5.2, valign: 'top', autoFit: true });
         }
         if (tieneCodigo) {
-          s.addShape('roundRect', { x: 6.6, y: 2.1, w: 6, h: 4.3, fill: { color: COL.bgCode }, line: { color: COL.line, width: 1 }, rectRadius: 0.06 });
-          s.addText(_resaltarCodigoRuns(sl.codigo), { x: 6.85, y: 2.3, w: 5.5, h: 3.9, valign: 'top', lineSpacing: 20 });
+          s.addShape('roundRect', { x: 6.6, y: 2.1, w: 6, h: 5.2, fill: { color: COL.bgCode }, line: { color: COL.line, width: 1 }, rectRadius: 0.06 });
+          s.addText(_resaltarCodigoRuns(sl.codigo), { x: 6.85, y: 2.3, w: 5.5, h: 4.8, valign: 'top', lineSpacing: 18 });
         }
       }
     });
