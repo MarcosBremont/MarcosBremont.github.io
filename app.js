@@ -29964,10 +29964,15 @@ async function generarIndexHtml(actId) {
 // Construye el concepto progresivamente (de lo más básico a lo específico
 // de la actividad) en vez de asumir que el estudiante ya lo sabe.
 // ════════════════════════════════════════════════════════════════════
-async function generarPresentacionHtml(actId) {
+/** Arma el prompt y obtiene de la IA el array de diapositivas (data.slides)
+ *  para la Presentación de una actividad -- compartido entre la Presentación
+ *  HTML y la Presentación PPTX, para que ambas generen el MISMO contenido y
+ *  solo cambie cómo se "pinta" cada una. Lanza si la actividad no existe o
+ *  si la IA no responde con JSON válido. */
+async function _obtenerDatosPresentacion(actId) {
   const acts = planificacion.actividades || [];
   const act = acts.find(a => a.id === actId);
-  if (!act) return;
+  if (!act) throw new Error('Actividad no encontrada.');
 
   const dg = planificacion.datosGenerales || {};
   const ra = planificacion.ra || {};
@@ -29986,6 +29991,41 @@ async function generarPresentacionHtml(actId) {
   const raDesc = ra.descripcion || 'No especificado';
 
   const _tc = function(s, max) { return s && s.length > max ? s.substring(0, max) + '...' : (s || ''); };
+
+  const _jsonSysMsg = 'Eres un generador de contenido educativo. Responde UNICAMENTE con JSON valido. Sin markdown, sin HTML, sin CSS, sin texto extra. El primer y ultimo caracter de tu respuesta deben ser { y }.';
+  const prompt =
+    'MATERIA: ' + _tc(materia, 60) + '\n' +
+    'TEMA DE LA ACTIVIDAD: ' + _tc(act.ecCodigo || '', 30) + ' - ' + _tc(act.enunciado, 120) + '\n' +
+    'RA: ' + _tc(raDesc, 180) + '\n' +
+    'INICIO PLANEADO: ' + _tc(inicio, 250) + '\n' +
+    'DESARROLLO PLANEADO: ' + _tc(desarrollo, 500) + '\n' +
+    'CIERRE PLANEADO: ' + _tc(cierre, 150) + '\n\n' +
+    'TAREA: vas a armar una PRESENTACION DE CLASE en diapositivas para EXPLICAR el tema desde cero, no una actividad ni una evaluacion (eso ya existe aparte). ' +
+    'Empieza desde el concepto MAS BASICO que un estudiante necesite repasar para entender el tema de la actividad, y sube progresivamente, un concepto por diapositiva, hasta llegar al concepto especifico de la actividad. Como si fuera la primera vez que lo ven -- no asumas conocimiento previo salvo lo obviamente elemental para el nivel del modulo.\n' +
+    'Espanol con tildes. Ejemplos dominicanos donde aplique. Rellena TODOS los [placeholders] con contenido REAL y especifico al tema, nunca generico.\n' +
+    'Genera SOLO este JSON, con un arreglo "slides" de 5 a 7 diapositivas (ni menos ni mas):\n' +
+    '{"slides":[' +
+    '{"eyebrow":"[ej: 01 / conceptos]","titulo":"[titulo corto de la diapositiva]","tipo":"puntos","puntos":["[punto 1 concreto]","[punto 2]","[punto 3]"],"codigo":"[ejemplo de codigo/sintaxis REAL con saltos de linea \\n si el tema lo amerita (ej: HTML, formulas, comandos), o cadena vacia \\"\\" si el tema no usa codigo]"},' +
+    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tarjetas","tarjetas":[{"nombre":"[termino corto]","desc":"[definicion 1 linea]"},{"nombre":"[t2]","desc":"[d2]"},{"nombre":"[t3]","desc":"[d3]"}]},' +
+    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tabla","tabla":{"cols":["[col1]","[col2]"],"filas":[["[a1]","[a2]"],["[b1]","[b2]"]]}}' +
+    '] -- repite variando "tipo" entre "puntos" (explicacion progresiva, con o sin "codigo"), "tarjetas" (3 a 6 terminos relacionados a enumerar) y "tabla" (para comparar opciones o clasificar) segun lo que mejor comunique cada concepto. No uses "tarjetas" ni "tabla" si el tema no tiene terminos/comparaciones que enumerar -- en ese caso usa "puntos".}';
+
+  function _parseJson(raw) {
+    if (!raw) return null;
+    var s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    if (s === -1 || e <= s) return null;
+    try { return JSON.parse(raw.substring(s, e + 1)); } catch(x) { return null; }
+  }
+
+  const raw = await _llamarIATextoLibre(prompt, 4096, _jsonSysMsg, '{');
+  if (!raw) throw new Error('Sin respuesta del AI.');
+  const data = _parseJson(raw);
+  if (!data || !Array.isArray(data.slides) || !data.slides.length) throw new Error('JSON invalido. AI respondio: ' + raw.substring(0, 80).replace(/[<>]/g, ''));
+
+  return { act, acts, dg, ra, materia, centro, docente, raDesc, data };
+}
+
+async function generarPresentacionHtml(actId) {
   const _e = function(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 
   /* Resalta código HTML/código genérico ya escapado (_e ya corrió antes) --
@@ -30045,56 +30085,6 @@ async function generarPresentacionHtml(actId) {
     '@media(max-width:820px){.content-row{grid-template-columns:1fr;gap:24px}.grid-tags{grid-template-columns:repeat(2,1fr)}.hint{display:none}.hud{padding:14px 6vw}}' +
     '@media(prefers-reduced-motion:reduce){.slide{transition:none}}';
 
-  var _htmlTop =
-    '<!DOCTYPE html>\n<html lang="es">\n<head>\n' +
-    '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">\n' +
-    '<title>' + _e(act.ecCodigo || 'Actividad') + ': ' + _e(act.enunciado) + '</title>\n' +
-    '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
-    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
-    '<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n' +
-    '<style>\n' + _CSS + '\n</style>\n</head>\n<body>\n' +
-    '<div class="hint">&larr; &rarr; para navegar</div>\n<div class="deck" id="deck">\n' +
-    '<section class="slide">\n<div class="eyebrow"><span class="punct">&lt;</span>' + _e(materia) + '<span class="punct">&gt;</span></div>\n' +
-    '<h1>' + _e(act.ecCodigo || '') + '</h1>\n<p class="subtitle">' + _e(act.enunciado) + '</p>\n</section>\n';
-
-  var _htmlBottom =
-    '\n<section class="slide closing">\n<div class="tag-badge"><span class="punct">&lt;/</span>fin<span class="punct">&gt;</span></div>\n' +
-    '<h1>Ahora a <span class="hl">practicar</span></h1>\n' +
-    '<p class="subtitle">Con esto ya tienen lo necesario para la actividad de hoy. Docente: ' + _e(docente) + ' &middot; ' + _e(centro) + '</p>\n</section>\n' +
-    '</div>\n' +
-    '<div class="hud"><button class="nav-btn" id="prevBtn" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>' +
-    '<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>' +
-    '<div class="counter"><b id="curNum">01</b> / <span id="totalNum"></span></div>' +
-    '<button class="nav-btn" id="nextBtn" aria-label="Siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></div>\n' +
-    '<script>\n' +
-    'var slides=document.querySelectorAll(".slide"),total=slides.length,current=0;\n' +
-    'document.getElementById("totalNum").textContent=String(total).padStart(2,"0");\n' +
-    'function render(){slides.forEach(function(s,i){s.classList.toggle("active",i===current);});document.getElementById("curNum").textContent=String(current+1).padStart(2,"0");document.getElementById("progressFill").style.width=((current+1)/total*100)+"%";}\n' +
-    'function goTo(i){current=Math.max(0,Math.min(total-1,i));render();}\n' +
-    'document.getElementById("prevBtn").addEventListener("click",function(){goTo(current-1);});\n' +
-    'document.getElementById("nextBtn").addEventListener("click",function(){goTo(current+1);});\n' +
-    'window.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();goTo(current+1);}if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();goTo(current-1);}if(e.key==="Home")goTo(0);if(e.key==="End")goTo(total-1);});\n' +
-    'var tX=0;window.addEventListener("touchstart",function(e){tX=e.changedTouches[0].clientX;});window.addEventListener("touchend",function(e){var dx=e.changedTouches[0].clientX-tX;if(Math.abs(dx)>50)goTo(dx<0?current+1:current-1);});\n' +
-    'render();\n</script>\n</body>\n</html>';
-
-  const _jsonSysMsg = 'Eres un generador de contenido educativo. Responde UNICAMENTE con JSON valido. Sin markdown, sin HTML, sin CSS, sin texto extra. El primer y ultimo caracter de tu respuesta deben ser { y }.';
-  const prompt =
-    'MATERIA: ' + _tc(materia, 60) + '\n' +
-    'TEMA DE LA ACTIVIDAD: ' + _tc(act.ecCodigo || '', 30) + ' - ' + _tc(act.enunciado, 120) + '\n' +
-    'RA: ' + _tc(raDesc, 180) + '\n' +
-    'INICIO PLANEADO: ' + _tc(inicio, 250) + '\n' +
-    'DESARROLLO PLANEADO: ' + _tc(desarrollo, 500) + '\n' +
-    'CIERRE PLANEADO: ' + _tc(cierre, 150) + '\n\n' +
-    'TAREA: vas a armar una PRESENTACION DE CLASE en diapositivas para EXPLICAR el tema desde cero, no una actividad ni una evaluacion (eso ya existe aparte). ' +
-    'Empieza desde el concepto MAS BASICO que un estudiante necesite repasar para entender el tema de la actividad, y sube progresivamente, un concepto por diapositiva, hasta llegar al concepto especifico de la actividad. Como si fuera la primera vez que lo ven -- no asumas conocimiento previo salvo lo obviamente elemental para el nivel del modulo.\n' +
-    'Espanol con tildes. Ejemplos dominicanos donde aplique. Rellena TODOS los [placeholders] con contenido REAL y especifico al tema, nunca generico.\n' +
-    'Genera SOLO este JSON, con un arreglo "slides" de 5 a 7 diapositivas (ni menos ni mas):\n' +
-    '{"slides":[' +
-    '{"eyebrow":"[ej: 01 / conceptos]","titulo":"[titulo corto de la diapositiva]","tipo":"puntos","puntos":["[punto 1 concreto]","[punto 2]","[punto 3]"],"codigo":"[ejemplo de codigo/sintaxis REAL con saltos de linea \\n si el tema lo amerita (ej: HTML, formulas, comandos), o cadena vacia \\"\\" si el tema no usa codigo]"},' +
-    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tarjetas","tarjetas":[{"nombre":"[termino corto]","desc":"[definicion 1 linea]"},{"nombre":"[t2]","desc":"[d2]"},{"nombre":"[t3]","desc":"[d3]"}]},' +
-    '{"eyebrow":"[...]","titulo":"[...]","tipo":"tabla","tabla":{"cols":["[col1]","[col2]"],"filas":[["[a1]","[a2]"],["[b1]","[b2]"]]}}' +
-    '] -- repite variando "tipo" entre "puntos" (explicacion progresiva, con o sin "codigo"), "tarjetas" (3 a 6 terminos relacionados a enumerar) y "tabla" (para comparar opciones o clasificar) segun lo que mejor comunique cada concepto. No uses "tarjetas" ni "tabla" si el tema no tiene terminos/comparaciones que enumerar -- en ese caso usa "puntos".}';
-
   function _buildSlides(data) {
     var slides = (data && Array.isArray(data.slides)) ? data.slides : [];
     var h = '';
@@ -30136,18 +30126,40 @@ async function generarPresentacionHtml(actId) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
   mostrarToast('Generando presentación de clase...', 'info');
 
-  function _parseJson(raw) {
-    if (!raw) return null;
-    var s = raw.indexOf('{'), e = raw.lastIndexOf('}');
-    if (s === -1 || e <= s) return null;
-    try { return JSON.parse(raw.substring(s, e + 1)); } catch(x) { return null; }
-  }
-
   try {
-    const raw = await _llamarIATextoLibre(prompt, 4096, _jsonSysMsg, '{');
-    if (!raw) throw new Error('Sin respuesta del AI.');
-    const data = _parseJson(raw);
-    if (!data || !Array.isArray(data.slides) || !data.slides.length) throw new Error('JSON invalido. AI respondio: ' + raw.substring(0, 80).replace(/[<>]/g, ''));
+    const { act, acts, materia, centro, docente, data } = await _obtenerDatosPresentacion(actId);
+
+    var _htmlTop =
+      '<!DOCTYPE html>\n<html lang="es">\n<head>\n' +
+      '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">\n' +
+      '<title>' + _e(act.ecCodigo || 'Actividad') + ': ' + _e(act.enunciado) + '</title>\n' +
+      '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
+      '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
+      '<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n' +
+      '<style>\n' + _CSS + '\n</style>\n</head>\n<body>\n' +
+      '<div class="hint">&larr; &rarr; para navegar</div>\n<div class="deck" id="deck">\n' +
+      '<section class="slide">\n<div class="eyebrow"><span class="punct">&lt;</span>' + _e(materia) + '<span class="punct">&gt;</span></div>\n' +
+      '<h1>' + _e(act.ecCodigo || '') + '</h1>\n<p class="subtitle">' + _e(act.enunciado) + '</p>\n</section>\n';
+
+    var _htmlBottom =
+      '\n<section class="slide closing">\n<div class="tag-badge"><span class="punct">&lt;/</span>fin<span class="punct">&gt;</span></div>\n' +
+      '<h1>Ahora a <span class="hl">practicar</span></h1>\n' +
+      '<p class="subtitle">Con esto ya tienen lo necesario para la actividad de hoy. Docente: ' + _e(docente) + ' &middot; ' + _e(centro) + '</p>\n</section>\n' +
+      '</div>\n' +
+      '<div class="hud"><button class="nav-btn" id="prevBtn" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+      '<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>' +
+      '<div class="counter"><b id="curNum">01</b> / <span id="totalNum"></span></div>' +
+      '<button class="nav-btn" id="nextBtn" aria-label="Siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></div>\n' +
+      '<script>\n' +
+      'var slides=document.querySelectorAll(".slide"),total=slides.length,current=0;\n' +
+      'document.getElementById("totalNum").textContent=String(total).padStart(2,"0");\n' +
+      'function render(){slides.forEach(function(s,i){s.classList.toggle("active",i===current);});document.getElementById("curNum").textContent=String(current+1).padStart(2,"0");document.getElementById("progressFill").style.width=((current+1)/total*100)+"%";}\n' +
+      'function goTo(i){current=Math.max(0,Math.min(total-1,i));render();}\n' +
+      'document.getElementById("prevBtn").addEventListener("click",function(){goTo(current-1);});\n' +
+      'document.getElementById("nextBtn").addEventListener("click",function(){goTo(current+1);});\n' +
+      'window.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();goTo(current+1);}if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();goTo(current-1);}if(e.key==="Home")goTo(0);if(e.key==="End")goTo(total-1);});\n' +
+      'var tX=0;window.addEventListener("touchstart",function(e){tX=e.changedTouches[0].clientX;});window.addEventListener("touchend",function(e){var dx=e.changedTouches[0].clientX-tX;if(Math.abs(dx)>50)goTo(dx<0?current+1:current-1);});\n' +
+      'render();\n</script>\n</body>\n</html>';
 
     const slidesHtml = _buildSlides(data);
     if (!slidesHtml || slidesHtml.length < 100) throw new Error('Contenido insuficiente generado.');
@@ -30163,6 +30175,139 @@ async function generarPresentacionHtml(actId) {
     mostrarToast('Presentación descargada: ' + nombre, 'success');
   } catch (e) {
     mostrarToast('Error al generar: ' + e.message, 'error');
+  } finally {
+    _restaurarBtn();
+  }
+}
+
+/** Genera la misma Presentación de clase que generarPresentacionHtml, pero
+ *  como archivo .pptx real (PowerPoint/Google Slides/LibreOffice) en vez del
+ *  .html interactivo -- un agregado, no reemplaza el botón "Presentación".
+ *  El diseño (colores/tema oscuro, igual paleta que la versión HTML) está
+ *  fijo en código: a diferencia de los .docx con docxtemplater, no existe
+ *  una forma confiable de reutilizar un .pptx real subido por el centro como
+ *  plantilla -- PptxGenJS arma la presentación desde cero, no rellena un
+ *  archivo existente. */
+async function generarPresentacionPptx(actId) {
+  if (typeof PptxGenJS === 'undefined') {
+    mostrarToast('La librería de PowerPoint no cargó todavía. Revisa tu conexión e intenta de nuevo en un momento.', 'error');
+    return;
+  }
+
+  const btn = document.querySelector('[onclick*="generarPresentacionPptx(\'' + actId + '\')"]');
+  const _restaurarBtn = function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons" style="font-size:14px;">slideshow</span> PPTX'; }
+  };
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:14px;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
+  mostrarToast('Generando presentación PowerPoint...', 'info');
+
+  // Misma paleta que la Presentación HTML (deck oscuro, tema de editor de código)
+  const COL = { bg: '12121C', bgPanel: '191926', bgCode: '0D0D15', line: '2A2A3D', text: 'EAE8F2', textDim: '8D8AA3', tag: 'FF7B8B', attr: '7FD0FF', val: 'B8F78A', accent: 'FFB454', punct: '6B6885' };
+
+  /* Misma idea que _resaltarCodigo() de la versión HTML, pero en vez de
+   * envolver en spans, devuelve un array de {text,options} -- el formato
+   * que addText() de PptxGenJS necesita para pintar cada tramo de un
+   * párrafo con un color distinto (tag/attr/valor/puntuación). */
+  function _resaltarCodigoRuns(raw) {
+    const s = String(raw || '');
+    const runs = [];
+    const push = (text, color, extra) => { if (text) runs.push({ text: text, options: Object.assign({ color: color, fontFace: 'Consolas', fontSize: 13 }, extra || {}) }); };
+    const re = /(<!--[\s\S]*?-->)|(<\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s+[a-zA-Z-]+(?:="[^"]*")?)*)(\s*\/?>)/g;
+    let last = 0, m;
+    while ((m = re.exec(s))) {
+      if (m.index > last) push(s.substring(last, m.index), COL.text);
+      if (m[1]) {
+        push(m[1], COL.textDim, { italic: true });
+      } else {
+        push(m[2], COL.punct);
+        push(m[3], COL.tag);
+        const attrs = m[4] || '';
+        const attrRe = /([a-zA-Z-]+)(=)("[^"]*")/g;
+        let al = 0, am;
+        while ((am = attrRe.exec(attrs))) {
+          if (am.index > al) push(attrs.substring(al, am.index), COL.text);
+          push(am[1], COL.attr);
+          push(am[2], COL.textDim);
+          push(am[3], COL.val);
+          al = am.index + am[0].length;
+        }
+        if (al < attrs.length) push(attrs.substring(al), COL.text);
+        push(m[5], COL.punct);
+      }
+      last = re.lastIndex;
+    }
+    if (last < s.length) push(s.substring(last), COL.text);
+    return runs.length ? runs : [{ text: s, options: { color: COL.text, fontFace: 'Consolas', fontSize: 13 } }];
+  }
+
+  try {
+    const { act, acts, materia, centro, docente, data } = await _obtenerDatosPresentacion(actId);
+
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9'; // 13.33 x 7.5 in
+
+    const fondoOscuro = (slide) => { slide.background = { color: COL.bg }; };
+
+    // Portada
+    const s0 = pptx.addSlide();
+    fondoOscuro(s0);
+    s0.addText(String(materia).toUpperCase(), { x: 0.7, y: 0.6, w: 11.9, h: 0.5, fontSize: 14, color: COL.accent, fontFace: 'Consolas', charSpacing: 1 });
+    s0.addText(act.ecCodigo || '', { x: 0.7, y: 1.6, w: 11.9, h: 1.6, fontSize: 44, bold: true, color: COL.text, fontFace: 'Arial' });
+    s0.addText(act.enunciado || '', { x: 0.7, y: 3.3, w: 10.5, h: 1.2, fontSize: 18, color: COL.textDim, fontFace: 'Arial' });
+
+    // Diapositivas de contenido -- mismo array "slides" que usa la versión HTML
+    const slides = Array.isArray(data.slides) ? data.slides : [];
+    slides.forEach((sl, i) => {
+      const s = pptx.addSlide();
+      fondoOscuro(s);
+      const eyebrow = (sl.eyebrow || '').replace(/^\d+\s*\/\s*/, '');
+      s.addText(String(i + 1).padStart(2, '0') + ' / ' + eyebrow, { x: 0.7, y: 0.5, w: 11.9, h: 0.4, fontSize: 12, color: COL.accent, fontFace: 'Consolas' });
+      s.addText(sl.titulo || '', { x: 0.7, y: 0.95, w: 11.9, h: 0.9, fontSize: 30, bold: true, color: COL.text, fontFace: 'Arial' });
+
+      if (sl.tipo === 'tarjetas' && Array.isArray(sl.tarjetas) && sl.tarjetas.length) {
+        const cols = Math.min(3, sl.tarjetas.length);
+        const gap = 0.3, wCard = (11.9 - gap * (cols - 1)) / cols;
+        sl.tarjetas.slice(0, 6).forEach((t, idx) => {
+          const col = idx % cols, row = Math.floor(idx / cols);
+          const x = 0.7 + col * (wCard + gap), y = 2.1 + row * 1.9;
+          s.addShape('roundRect', { x, y, w: wCard, h: 1.7, fill: { color: COL.bgPanel }, line: { color: COL.line, width: 1 }, rectRadius: 0.08 });
+          s.addText(t.nombre || '', { x: x + 0.15, y: y + 0.12, w: wCard - 0.3, h: 0.5, fontSize: 15, bold: true, color: COL.tag, fontFace: 'Consolas' });
+          s.addText(t.desc || '', { x: x + 0.15, y: y + 0.62, w: wCard - 0.3, h: 1, fontSize: 11, color: COL.textDim, fontFace: 'Arial' });
+        });
+      } else if (sl.tipo === 'tabla' && sl.tabla && Array.isArray(sl.tabla.cols)) {
+        const header = sl.tabla.cols.map(c => ({ text: String(c), options: { bold: true, color: COL.attr, fill: { color: COL.bgPanel } } }));
+        const filas = (sl.tabla.filas || []).map(row => (Array.isArray(row) ? row : []).map(cell => ({ text: String(cell), options: { color: COL.text } })));
+        s.addTable([header, ...filas], { x: 0.7, y: 2.1, w: 11.9, fontSize: 13, fontFace: 'Arial', border: { color: COL.line, pt: 1 }, autoPage: false });
+      } else {
+        const puntos = Array.isArray(sl.puntos) ? sl.puntos : [];
+        const tieneCodigo = sl.codigo && String(sl.codigo).trim();
+        const wPuntos = tieneCodigo ? 5.6 : 11.9;
+        if (puntos.length) {
+          s.addText(puntos.map(p => ({ text: p, options: { bullet: { code: '25A0', color: COL.tag }, color: COL.text, fontSize: 15, breakLine: true, paraSpaceAfter: 12 } })), { x: 0.7, y: 2.1, w: wPuntos, h: 4.5, valign: 'top' });
+        }
+        if (tieneCodigo) {
+          s.addShape('roundRect', { x: 6.6, y: 2.1, w: 6, h: 4.3, fill: { color: COL.bgCode }, line: { color: COL.line, width: 1 }, rectRadius: 0.06 });
+          s.addText(_resaltarCodigoRuns(sl.codigo), { x: 6.85, y: 2.3, w: 5.5, h: 3.9, valign: 'top', lineSpacing: 20 });
+        }
+      }
+    });
+
+    // Cierre
+    const sF = pptx.addSlide();
+    fondoOscuro(sF);
+    sF.addText('</ fin >', { x: 0.7, y: 2.3, w: 11.9, h: 1, fontSize: 40, bold: true, color: COL.tag, fontFace: 'Consolas' });
+    sF.addText('Ahora a practicar', { x: 0.7, y: 3.2, w: 11.9, h: 1, fontSize: 34, bold: true, color: COL.text, fontFace: 'Arial' });
+    sF.addText('Docente: ' + docente + '  ·  ' + centro, { x: 0.7, y: 4.15, w: 11, h: 0.6, fontSize: 15, color: COL.textDim, fontFace: 'Arial' });
+
+    const _actIdxPres = acts.findIndex(a => a.id === actId);
+    const _actNumLabelPres = _actIdxPres >= 0 ? _getActNumero(act.ecCodigo, _actIndexInEC(acts, _actIdxPres)) : (act.ecCodigo || 'Actividad');
+    const nombre = 'Presentacion - ' + _actNumLabelPres.replace(/\s+/g, ' ') + '.pptx';
+
+    await pptx.writeFile({ fileName: nombre });
+    mostrarToast('Presentación PowerPoint descargada: ' + nombre, 'success');
+  } catch (e) {
+    console.error('[PresentacionPptx] Error:', e);
+    mostrarToast('Error al generar PowerPoint: ' + e.message, 'error');
   } finally {
     _restaurarBtn();
   }
@@ -33357,8 +33502,11 @@ function renderizarDiarias() {
           <button class="btn-pd-index" onclick="event.stopPropagation();generarIndexHtml('${act.id}')" title="Generar hoja de trabajo HTML para el estudiante">
             <span class="material-icons">html</span> Index.html
           </button>
-          <button class="btn-pd-index" onclick="event.stopPropagation();generarPresentacionHtml('${act.id}')" title="Generar presentación de diapositivas para explicar el tema en clase">
+          <button class="btn-pd-index" onclick="event.stopPropagation();generarPresentacionHtml('${act.id}')" title="Generar presentación de diapositivas (HTML) para explicar el tema en clase">
             <span class="material-icons">slideshow</span> Presentación
+          </button>
+          <button class="btn-pd-index" onclick="event.stopPropagation();generarPresentacionPptx('${act.id}')" title="Generar la misma presentación de clase como archivo PowerPoint (.pptx)" style="background:#FFF3E0;color:#E65100;border-color:#FFCC80;">
+            <span class="material-icons">slideshow</span> PPTX
           </button>
           <button class="pd-sesion-expand-btn" id="pd-toggle-${act.id}"
                   onclick="event.stopPropagation();toggleSesion('${act.id}')">

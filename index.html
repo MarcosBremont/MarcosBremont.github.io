@@ -3709,6 +3709,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#E65100;">v19.90<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: Presentación de clase también en PowerPoint (.pptx)</div>
+              <ul class="about-ver-items">
+                <li>Nuevo botón "PPTX" junto a "Presentación" en cada sesión de Planificación Diaria: genera la misma presentación de clase (mismo contenido que arma la IA) pero como archivo .pptx real, abrible en PowerPoint, Google Slides o LibreOffice.</li>
+                <li>El diseño (tema oscuro, colores) está hecho a la medida en código, igual que la versión HTML -- es un agregado, la Presentación en HTML sigue funcionando exactamente igual.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v19.89<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11253,6 +11268,8 @@
   <!-- PizZip + Docxtemplater — para plantillas Word personalizadas -->
   <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
+  <!-- PptxGenJS — genera la Presentación de clase como .pptx real -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgenjs.bundle.js"></script>
   <!-- PDF.js — extraer texto de un PDF en el navegador, base de "Cargar Currículo"
        (100% local, sin IA): solo pdfjs-dist@6+ publica build ESM, por eso va como
        script type="module" en vez del <script src> clásico del resto de libs -->
@@ -11293,9 +11310,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=19.89"></script>
+  <script src="app.js?v=19.90"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=19.89"></script>
+  <script src="auth.js?v=19.90"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
