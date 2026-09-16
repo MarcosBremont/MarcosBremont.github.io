@@ -6270,7 +6270,13 @@ function renderizarVistaPrevia() {
 
 
 
-  acts.forEach(a => {
+  // Los ítems complementarios (Actitudes y Valores, Cuaderno, Participación...)
+  // no tienen un instrumento de evaluación real con criterios propios -- se
+  // generan desde el paso 4 solo para las actividades ligadas a un EC. Antes
+  // se colaban aquí igual (con "instrumento" fallback vacío) y aparecían como
+  // tarjetas de instrumento sin criterios, con un mensaje que no aplica a
+  // ellos ("Usa el botón Ver en el paso 4...").
+  acts.filter(a => !a.esComplementario).forEach(a => {
 
 
 
