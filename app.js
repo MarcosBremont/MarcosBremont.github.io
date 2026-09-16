@@ -26932,33 +26932,44 @@ function cargarPlanEnPaso5(planId) {
   if (!registro) { mostrarToast('Planificación no encontrada', 'error'); return; }
   console.log('[PlanDebug] cargarPlanEnPaso5 -> registro.id=', registro.id, 'nombre=', registro.nombre, 'EC en biblioteca=', registro.planificacion?.elementosCapacidad?.length, 'actividades en biblioteca=', registro.planificacion?.actividades?.length);
 
-  planificacion = JSON.parse(JSON.stringify(registro.planificacion));
-  planificacion._id = registro.id;
+  // Si algo de esto lanza una excepción (ej. datos de la planificación
+  // corruptos/incompletos), antes fallaba en silencio: el panel "Mis
+  // Planificaciones" se quedaba abierto sin ningún aviso y parecía que el
+  // botón "no hacía nada". Ahora se avisa con un toast y el error queda en
+  // consola para poder diagnosticarlo.
+  try {
+    planificacion = JSON.parse(JSON.stringify(registro.planificacion));
+    planificacion._id = registro.id;
 
-  if (planificacion.actividades) {
-    planificacion.actividades.forEach(a => {
-      if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
-    });
+    if (planificacion.actividades) {
+      planificacion.actividades.forEach(a => {
+        if (a.fecha && typeof a.fecha === 'string') a.fecha = new Date(a.fecha);
+      });
+    }
+    if (planificacion.fechasClase) {
+      planificacion.fechasClase.forEach(f => {
+        if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha);
+      });
+    }
+
+    poblarFormularioDesdeEstado();
+    console.log('[PlanDebug] cargarPlanEnPaso5 -> tras poblarFormularioDesdeEstado, EC=', planificacion.elementosCapacidad?.length, 'actividades=', planificacion.actividades?.length);
+
+    if (planificacion.elementosCapacidad?.length) {
+      renderizarEC(planificacion.elementosCapacidad);
+      renderizarActividades(planificacion.actividades);
+      const btnP2 = document.getElementById('btn-paso2-siguiente');
+      if (btnP2) btnP2.disabled = false;
+    }
+
+    guardarBorrador();
+    _ocultarPaneles();
+    irAlPaso(5, false);
+    mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
+  } catch (e) {
+    console.error('[PlanDebug] cargarPlanEnPaso5 -> ERROR:', e);
+    mostrarToast('No se pudo cargar la planificación: ' + e.message, 'error');
   }
-  if (planificacion.fechasClase) {
-    planificacion.fechasClase.forEach(f => {
-      if (f.fecha && typeof f.fecha === 'string') f.fecha = new Date(f.fecha);
-    });
-  }
-
-  poblarFormularioDesdeEstado();
-  console.log('[PlanDebug] cargarPlanEnPaso5 -> tras poblarFormularioDesdeEstado, EC=', planificacion.elementosCapacidad?.length, 'actividades=', planificacion.actividades?.length);
-
-  if (planificacion.elementosCapacidad?.length) {
-    renderizarEC(planificacion.elementosCapacidad);
-    renderizarActividades(planificacion.actividades);
-    document.getElementById('btn-paso2-siguiente').disabled = false;
-  }
-
-  guardarBorrador();
-  _ocultarPaneles();
-  irAlPaso(5, false);
-  mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
 }
 
 
@@ -27999,7 +28010,7 @@ function renderizarBiblioteca() {
         ${archivada ? '' : `<button onclick="archivarPlanificacion('${reg.id}')" title="Archivar planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#F5F5F5;color:#546E7A;border:1px solid #E0E0E0;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
           <span class="material-icons" style="font-size:15px;">archive</span> Archivar</button>`}
         ${esAcademica ? '' : `
-        <button onclick="cerrarPanelBiblioteca?.();cargarPlanEnPaso5('${reg.id}')" title="Ver planificaciones diarias de esta planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#E0F2F1;color:#00695C;border:1.5px solid #80CBC4;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
+        <button onclick="cargarPlanEnPaso5('${reg.id}')" title="Ver planificaciones diarias de esta planificación" style="width:100%;justify-content:center;grid-column:1/-1;background:#E0F2F1;color:#00695C;border:1.5px solid #80CBC4;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;">
           <span class="material-icons" style="font-size:15px;">today</span> Ver Planificaciones Diarias
         </button>`}
         <button class="btn-pln-del" onclick="eliminarPlanificacionGuardada('${reg.id}')" title="Eliminar" style="width:100%;justify-content:center;grid-column:1/-1;">
