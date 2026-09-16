@@ -3730,19 +3730,94 @@ function _moverActividad(idx, dir) {
   mostrarToast(`Actividad movida ${dir < 0 ? 'arriba' : 'abajo'} ✓`, 'success');
 }
 
+/** Abre un modal para regenerar una actividad, con un campo opcional de
+ *  instrucciones (ej. "enfócate en C#, usa MySQL en vez de MongoDB") que se
+ *  le da PRIORIDAD al generar una versión nueva con IA. Sin instrucciones,
+ *  mantiene el comportamiento de siempre: rota entre las plantillas fijas
+ *  sin gastar IA. */
 function _regenerarActividad(idx) {
   const act = (planificacion.actividades || [])[idx];
   if (!act) return;
   const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
   if (!ec) return;
-  const plantillas = obtenerPlantillasActividad(ec);
-  const actualIdx = plantillas.indexOf(act.enunciado);
-  const siguiente = (actualIdx + 1) % plantillas.length;
-  act.enunciado = plantillas[siguiente];
-  act.instrumento = generarInstrumento(act, act.ecNivel || ec.nivel);
-  guardarBorrador();
-  renderizarActividades(planificacion.actividades);
-  mostrarToast('Actividad regenerada', 'success');
+
+  document.getElementById('modal-title').textContent = 'Regenerar actividad';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <p style="font-size:0.85rem;color:#546E7A;margin:0;">
+        Actividad actual: <strong>${escapeHTML((act.enunciado || '').substring(0, 90))}…</strong>
+      </p>
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#424242;display:block;margin-bottom:5px;">
+          Instrucciones para esta regeneración <span style="font-weight:400;color:#9E9E9E;">(opcional)</span>
+        </label>
+        <textarea id="regen-act-instrucciones" rows="3" placeholder="Ej: enfócate en C#, usa MySQL en vez de MongoDB, que sea una actividad grupal..."
+          style="width:100%;padding:10px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.88rem;font-family:inherit;resize:vertical;">${escapeHTML(act.instruccionesRegenIA || '')}</textarea>
+        <p style="font-size:0.76rem;color:#7C4DFF;margin:4px 2px 0;">Si escribes algo aquí, se genera una nueva versión con IA que le da prioridad a tu instrucción. Si lo dejas vacío, se usa el generador rápido sin IA (rota entre plantillas fijas), como antes.</p>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" id="btn-confirmar-regen-act" onclick="_confirmarRegenerarActividad(${idx})">
+          <span class="material-icons">refresh</span> Regenerar
+        </button>
+      </div>
+    </div>`;
+  _usarFooterDinamico('');
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+async function _confirmarRegenerarActividad(idx) {
+  const act = (planificacion.actividades || [])[idx];
+  if (!act) return;
+  const ec = (planificacion.elementosCapacidad || []).find(e => e.codigo === act.ecCodigo);
+  if (!ec) return;
+
+  const instrucciones = (document.getElementById('regen-act-instrucciones')?.value || '').trim();
+  act.instruccionesRegenIA = instrucciones;
+
+  if (!instrucciones) {
+    const plantillas = obtenerPlantillasActividad(ec);
+    const actualIdx = plantillas.indexOf(act.enunciado);
+    const siguiente = (actualIdx + 1) % plantillas.length;
+    act.enunciado = plantillas[siguiente];
+    act.instrumento = generarInstrumento(act, act.ecNivel || ec.nivel);
+    guardarBorrador();
+    cerrarModalBtn();
+    renderizarActividades(planificacion.actividades);
+    mostrarToast('Actividad regenerada', 'success');
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirmar-regen-act');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons" style="font-size:16px;vertical-align:middle;animation:spin 1s linear infinite;">hourglass_top</span> Generando...'; }
+
+  try {
+    const dg = planificacion.datosGenerales || {};
+    const ra = planificacion.ra || {};
+    const nivelLabelMap = { conocimiento: 'Recordar', comprension: 'Comprensión', aplicacion: 'Aplicación', analisis: 'Análisis', sintesis: 'Síntesis', evaluacion: 'Evaluación', actitudinal: 'Actitudinal' };
+    const nivelEC = act.ecNivel || ec.nivel;
+    const prompt =
+      'MATERIA: ' + (dg.moduloFormativo || '') + '\n' +
+      'RA: ' + (ra.descripcion || '') + '\n' +
+      'ELEMENTO DE CAPACIDAD (EC): ' + ec.codigo + ' - ' + (ec.enunciado || '') + '\n' +
+      'NIVEL DE DOMINIO DEL EC: ' + (nivelLabelMap[nivelEC] || nivelEC) + '\n' +
+      'ACTIVIDAD ACTUAL (a reemplazar): ' + (act.enunciado || '') + '\n\n' +
+      '⚠️ INSTRUCCIONES DEL DOCENTE PARA ESTA REGENERACIÓN (tienen PRIORIDAD ABSOLUTA sobre cualquier otro criterio):\n' + instrucciones + '\n\n' +
+      'TAREA: escribe UNA nueva actividad de enseñanza/aprendizaje para este EC, coherente con su nivel de dominio, que cumpla estrictamente las instrucciones del docente de arriba. Español con tildes. Responde SOLO con el enunciado de la actividad, en un único párrafo, sin numeración, sin comillas, sin explicación adicional.';
+
+    const raw = await _llamarIATextoLibre(prompt, 300, 'Eres un experto en diseño de actividades de enseñanza para educación técnico-profesional dominicana. Responde solo con el enunciado de la actividad solicitada, en un párrafo, sin markdown, sin comillas, sin texto adicional.');
+    if (!raw) throw new Error('Sin respuesta del AI.');
+    act.enunciado = raw.trim().replace(/^["“”]+|["“”]+$/g, '');
+    act.instrumento = generarInstrumento(act, nivelEC);
+    guardarBorrador();
+    cerrarModalBtn();
+    renderizarActividades(planificacion.actividades);
+    mostrarToast('Actividad regenerada con IA ✓', 'success');
+  } catch (e) {
+    mostrarToast('Error al regenerar con IA: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons">refresh</span> Regenerar'; }
+  }
 }
 
 function _eliminarActividad(idx) {
