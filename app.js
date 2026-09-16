@@ -40981,7 +40981,14 @@ function abrirModalClase(encodedData) {
         const sIni = ses.inicio || {};
         const sDev = ses.desarrollo || {};
         const sCie = ses.cierre || {};
-        const hasDiaria = sIni.apertura || sDev.procedimental || sCie.sintesis;
+        // El "2do Momento" solo miraba sDev.procedimental -- si una sesión
+        // quedó generada solo con sDev.conceptual (pasa con algunas
+        // respuestas de IA), esa sesión se veía con Inicio y Cierre pero sin
+        // ningún contenido de Desarrollo, aunque sí tuviera algo generado.
+        // Mismo patrón de unir ambos campos que ya usa
+        // _obtenerDatosPresentacion/generarPresentacionHtml para "Desarrollo".
+        const devTexto = [sDev.procedimental, sDev.conceptual].filter(Boolean).join('\n\n');
+        const hasDiaria = sIni.apertura || devTexto || sCie.sintesis;
         return `
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada${allSesiones.length > 1 ? ' (' + (idx+1) + '/' + allSesiones.length + ')' : ''}</div>
@@ -41017,10 +41024,10 @@ function abrirModalClase(encodedData) {
                 <div class="mcl-momento-hdr" style="color:#2E7D32;"><span class="material-icons">play_circle_filled</span>1er Momento — Inicio (${t.ini} min)</div>
                 <div class="mcl-momento-txt">${sIni.apertura.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
-              ${sDev.procedimental ? `
+              ${devTexto ? `
               <div class="mcl-momento" style="border-left:3px solid #2196F3;">
                 <div class="mcl-momento-hdr" style="color:#1565C0;"><span class="material-icons">play_circle_filled</span>2do Momento — Desarrollo (${t.des} min)</div>
-                <div class="mcl-momento-txt">${sDev.procedimental.replace(/\n/g, '<br>')}</div>
+                <div class="mcl-momento-txt">${devTexto.replace(/\n/g, '<br>')}</div>
               </div>` : ''}
               ${sCie.sintesis ? `
               <div class="mcl-momento" style="border-left:3px solid #FF9800;">
