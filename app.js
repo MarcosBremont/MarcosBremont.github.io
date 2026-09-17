@@ -40942,6 +40942,16 @@ function abrirModalClase(encodedData) {
   try { d = JSON.parse(decodeURIComponent(encodedData)); } catch { return; }
   const color = d.color || '#1565C0';
 
+  // Releer estadoDiarias de localStorage justo antes de usarlo -- el
+  // reporte real de un docente mostró que, si la fusión con Firestore al
+  // iniciar sesión falla en silencio por falta de espacio en localStorage
+  // (ver _setItemQuotaSafe en auth.js), la copia en memoria de
+  // estadoDiarias se queda vieja/vacía para esa sesión puntual, y este
+  // modal la mostraba en blanco hasta que el docente entraba manualmente
+  // al Paso 5 de esa planificación (lo que sí la recargaba bien). Esto
+  // evita depender de esa visita manual.
+  cargarDiarias();
+
   const FORM_EVAL = [
     { id: 'exposicion', icono: 'mic', label: 'Exposición oral' },
     { id: 'cuaderno', icono: 'menu_book', label: 'Cuaderno / Portafolio' },

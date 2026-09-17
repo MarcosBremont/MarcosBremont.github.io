@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#00695C;">v20.12<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: sesión diaria aparecía vacía en la tarjeta de clase hasta abrir el plan</div>
+              <ul class="about-ver-items">
+                <li>Los logs de diagnóstico revelaron la causa: si al iniciar sesión la fusión de Planificaciones Diarias con la nube falla en silencio por falta de espacio en el almacenamiento local, la copia en memoria se queda vieja para esa sesión puntual -- el modal de una clase la mostraba en blanco (sin el detalle de Inicio/Desarrollo/Cierre) hasta que el docente entraba manualmente a esa planificación en el Paso 5, lo que sí la recargaba bien.</li>
+                <li>Ahora el modal de detalle de clase recarga esta información justo antes de mostrarla, en vez de depender de esa copia en memoria que puede quedar desactualizada.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#78909C;">v20.11<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11618,9 +11633,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.11"></script>
+  <script src="app.js?v=20.12"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.11"></script>
+  <script src="auth.js?v=20.12"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
