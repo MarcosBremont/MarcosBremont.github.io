@@ -40721,15 +40721,6 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
         }
       }
     }
-    // Diagnóstico temporal -- ayuda a ver, en un caso real donde la tarjeta
-    // pierde la actividad entre una entrada al Dashboard y otra, si el
-    // problema está en el emparejamiento (sesiones.length llega en 0) o en
-    // el desempate entre planes (sesiones.length>1, ver qué planId gana).
-    console.log('[ClaseDebug]', offsetDias, e.materia, '|', e.seccion,
-      '-> sesiones=', sesiones.length,
-      'planIds=', sesiones.map(s => s.planId),
-      'coursePlanActivaId=', sesiones.map(s => s.coursePlanActivaId),
-      'fechas=', sesiones.map(s => ({ actId: s.act.id, fecha: s.act.fecha, fechaFin: s.act.fechaFin })));
     const inicioMin = horasPer[e.periodo] || 0;
     const finMin = inicioMin + 50;
     const estado = horaActual < 0 ? 'futura'
@@ -40987,7 +40978,6 @@ function abrirModalClase(encodedData) {
   const nTard = Object.values(asistDia).filter(v => v === 'T').length;
   const asistRegistrada = nPres + nAus + nTard > 0;
 
-  console.log('[ModalDebug] abrirModalClase -> d.fecha=', d.fecha, 'd.sesiones=', d.sesiones);
   const allSesiones = (d.sesiones && d.sesiones.length) ? d.sesiones : [];
   const sesionInfo = allSesiones[0] || null;
   const recursoActId = sesionInfo ? sesionInfo.actId : `recurso_${d.fecha}_${d.seccion}_${d.periodo}`;
@@ -41025,7 +41015,6 @@ function abrirModalClase(encodedData) {
         // _obtenerDatosPresentacion/generarPresentacionHtml para "Desarrollo".
         const devTexto = [sDev.procedimental, sDev.conceptual].filter(Boolean).join('\n\n');
         const hasDiaria = sIni.apertura || devTexto || sCie.sintesis;
-        console.log('[ModalDebug] sesión idx=', idx, 'si.actId=', si.actId, 'si.planId=', si.planId, 'ses=', ses, 'hasDiaria=', !!hasDiaria);
         return `
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada${allSesiones.length > 1 ? ' (' + (idx+1) + '/' + allSesiones.length + ')' : ''}</div>
@@ -41082,9 +41071,9 @@ function abrirModalClase(encodedData) {
           <button onclick="cerrarModalBtn();cargarPlanEnPaso1('${si.planId}');" class="mcl-btn-link" style="color:#1565C0;border-color:#90CAF9;">
             <span class="material-icons" style="font-size:14px;">edit_note</span> Ver planificación
           </button>
-          ${!hasDiaria ? `<button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
-            <span class="material-icons" style="font-size:14px;">open_in_new</span> Planificación diaria
-          </button>` : ''}
+          <button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+            <span class="material-icons" style="font-size:14px;">open_in_new</span> ${hasDiaria ? 'Ver planificación diaria' : 'Planificación diaria'}
+          </button>
           ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
             <span class="material-icons" style="font-size:14px;">link</span> Recurso
           </a>` : ''}

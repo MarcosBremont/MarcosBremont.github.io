@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.13<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: faltaba el botón para ir a editar una planificación diaria ya generada</div>
+              <ul class="about-ver-items">
+                <li>En el detalle de una clase (dashboard), el botón "Planificación diaria" (que lleva al Paso 5 a editarla) solo se mostraba cuando esa sesión NO tenía contenido generado todavía -- en cuanto la sesión ya tenía Inicio/Desarrollo/Cierre, ese botón desaparecía por completo, reemplazado solo por una vista previa de solo lectura, sin ninguna forma de ir a editarla desde ahí.</li>
+                <li>Ahora el botón siempre está disponible ("Ver planificación diaria" cuando ya tiene contenido, "Planificación diaria" cuando aún no).</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#00695C;">v20.12<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11633,9 +11648,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.12"></script>
+  <script src="app.js?v=20.13"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.12"></script>
+  <script src="auth.js?v=20.13"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
