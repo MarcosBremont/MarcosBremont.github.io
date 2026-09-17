@@ -40721,6 +40721,15 @@ function _renderizarClasesDia(contId, fechaLabelId, offsetDias) {
         }
       }
     }
+    // Diagnóstico temporal -- ayuda a ver, en un caso real donde la tarjeta
+    // pierde la actividad entre una entrada al Dashboard y otra, si el
+    // problema está en el emparejamiento (sesiones.length llega en 0) o en
+    // el desempate entre planes (sesiones.length>1, ver qué planId gana).
+    console.log('[ClaseDebug]', offsetDias, e.materia, '|', e.seccion,
+      '-> sesiones=', sesiones.length,
+      'planIds=', sesiones.map(s => s.planId),
+      'coursePlanActivaId=', sesiones.map(s => s.coursePlanActivaId),
+      'fechas=', sesiones.map(s => ({ actId: s.act.id, fecha: s.act.fecha, fechaFin: s.act.fechaFin })));
     const inicioMin = horasPer[e.periodo] || 0;
     const finMin = inicioMin + 50;
     const estado = horaActual < 0 ? 'futura'
