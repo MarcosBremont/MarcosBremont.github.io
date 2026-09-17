@@ -15167,7 +15167,14 @@ function activarPlanEnCurso(planId) {
  *  Si ninguna incluye hoy, se queda la que ya estaba. */
 function _actualizarPlanActivaPorFechas() {
   const biblio = cargarBiblioteca();
-  const hoy = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // new Date().toISOString() convierte a UTC -- en República Dominicana
+  // (UTC-4), después de las 8 PM hora local eso ya cae en el día SIGUIENTE
+  // en UTC, así que "hoy" quedaba calculado como mañana. Esta función corre
+  // cada vez que se abre/refresca el dashboard y puede cambiar en silencio
+  // cuál planificación es la "activa" de un curso según esa fecha -- mismo
+  // tipo de bug ya visto antes con el botón "Mover" (ver _isoDate, que sí
+  // usa los componentes de fecha LOCALES).
+  const hoy = _isoDate(new Date()); // YYYY-MM-DD, hora local
   let cambio = false;
   Object.values(calState.cursos || {}).forEach(curso => {
     const planIds = curso.planIds || [];

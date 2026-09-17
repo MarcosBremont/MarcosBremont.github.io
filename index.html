@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#C62828;">v20.09<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: la planificación "activa" de un curso podía cambiar sola después de las 8 PM</div>
+              <ul class="about-ver-items">
+                <li>Cada vez que se abre o refresca el Dashboard, el sistema revisa si hay que actualizar cuál planificación es la "activa" de cada curso según la fecha de hoy -- pero calculaba "hoy" convirtiendo a UTC, lo que en República Dominicana (UTC-4) hace que después de las 8 PM hora local el sistema piense que ya es el día siguiente. Esto podía cambiar en silencio cuál planificación se considera activa justo al volver al Dashboard, afectando qué aparece en la tarjeta de "Actividad planificada" de una clase.</li>
+                <li>Mismo tipo de error de zona horaria ya corregido antes para el botón "Mover". Ahora usa la fecha local real.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#C62828;">v20.08<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11575,9 +11590,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.08"></script>
+  <script src="app.js?v=20.09"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.08"></script>
+  <script src="auth.js?v=20.09"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
