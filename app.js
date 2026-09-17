@@ -10002,7 +10002,16 @@ function irAlPaso(nuevoPaso, validar = true) {
   if (nuevoPaso === 1) _mostrarCursoAsignado();
   if (nuevoPaso === 4) renderizarActividades(planificacion.actividades);
   if (nuevoPaso === 6) {
-    renderizarVistaPrevia();
+    // Si renderizarVistaPrevia() lanza una excepción (datos inesperados,
+    // presión de memoria por almacenamiento lleno, etc.), antes fallaba en
+    // silencio: el paso 6 quedaba completamente en blanco, sin ningún
+    // aviso, dando la impresión de que "no abre". Ahora se avisa.
+    try {
+      renderizarVistaPrevia();
+    } catch (e) {
+      console.error('[VistaPrevia] Error al renderizar:', e);
+      mostrarToast('Error al generar la Vista Previa: ' + e.message, 'error');
+    }
     // Auto-guardar en biblioteca al llegar a Vista Previa
     const dgCheck = planificacion.datosGenerales || {};
     const raCheck = planificacion.ra || {};
@@ -39413,6 +39422,7 @@ function abrirBackup() {
     '</div>';
 
   if (typeof _actualizarEstadoDrive === 'function') _actualizarEstadoDrive();
+  _actualizarUsoAlmacenamiento();
 
   // Backups automáticos de calificaciones
   const backups = JSON.parse(localStorage.getItem(CAL_BACKUP_KEY) || '[]');
@@ -39440,6 +39450,94 @@ function abrirBackup() {
 
 function cerrarBackup() {
   document.getElementById('backup-overlay').classList.add('hidden');
+}
+
+// ── Uso de almacenamiento local ──────────────────────────────────
+// Nombres amigables para las claves más grandes que suele tener TinClass en
+// localStorage -- para que el docente entienda QUÉ es cada cosa en vez de
+// ver solo el nombre técnico de la clave.
+const _STORAGE_LABELS = {
+  planificadorRA_biblioteca_v1: 'Mis Planificaciones (todas)',
+  planificadorRA_diarias_v1: 'Planificaciones Diarias (todas las sesiones)',
+  planificadorRA_calificaciones_v1: 'Libro de Calificaciones',
+  planificadorRA_cal_backups_v1: 'Copias de seguridad automáticas de calificaciones',
+  planificadorRA_blog_v1: 'Blog del docente (incluye publicaciones archivadas)',
+  planificadorRA_borrador_v1: 'Borrador de la planificación actual',
+  planificadorRA_reportes_v1: 'Reportes guardados',
+  planificadorRA_bitacora_v1: 'Bitácora de cambios',
+  planificadorRA_asistencia_v1: 'Asistencia',
+  planificadorRA_participacion_v1: 'Participación',
+};
+
+/** true si esta clave se puede borrar sin perder nada importante (se
+ *  regenera sola, o es una copia redundante) -- solo estas muestran botón
+ *  de borrar directo; el resto solo se lista para que el docente sepa qué
+ *  está pesando, pero requiere su propio flujo (ej. archivar/eliminar
+ *  planificaciones una por una) en vez de un borrado ciego de todo. */
+function _claveStorageEsSegura(key) {
+  // Ojo: "borrador" NO es seguro de borrar a ciegas aquí -- es el borrador
+  // de la planificación que el docente pueda tener a medio editar ahora
+  // mismo; borrarlo desde este botón le haría perder ese trabajo en
+  // progreso si aún no lo guardó. Mismo criterio que LS_QUOTA_SACRIFICIO
+  // en auth.js: solo cal_backups es una copia verdaderamente redundante.
+  return key === 'planificadorRA_cal_backups_v1';
+}
+
+function _actualizarUsoAlmacenamiento() {
+  const wrap = document.getElementById('storage-usage-wrap');
+  if (!wrap) return;
+  const items = [];
+  let total = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k) || '';
+      const size = (k || '').length + v.length;
+      total += size;
+      items.push({ key: k, size });
+    }
+  } catch (e) { wrap.innerHTML = '<p style="color:#9E9E9E;font-size:0.82rem;">No se pudo leer el almacenamiento.</p>'; return; }
+  items.sort((a, b) => b.size - a.size);
+
+  const fmtKB = n => (n / 1024).toFixed(0) + ' KB';
+  const totalMB = (total / 1024 / 1024).toFixed(1);
+
+  let html = '<div style="font-size:0.85rem;font-weight:700;color:#E65100;margin-bottom:8px;">Total usado: ~' + totalMB + ' MB</div>';
+  items.slice(0, 8).forEach(it => {
+    if (it.size < 3000) return; // no listar claves chicas, no valen la pena
+    const label = _STORAGE_LABELS[it.key] || it.key;
+    const esSegura = _claveStorageEsSegura(it.key);
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #FFE0B2;">' +
+      '<span style="flex:1;font-size:0.82rem;color:#424242;">' + escapeHTML(label) + '</span>' +
+      '<span style="font-size:0.78rem;color:#9E9E9E;font-weight:600;">' + fmtKB(it.size) + '</span>' +
+      (esSegura ? '<button onclick="_borrarClaveStorage(\'' + it.key + '\')" style="background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button>' : '') +
+      (it.key === 'planificadorRA_blog_v1' ? '<button onclick="_vaciarBlogArchivado()" style="background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:700;cursor:pointer;">Vaciar archivados</button>' : '') +
+      '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function _borrarClaveStorage(key) {
+  if (!confirm('¿Borrar "' + (_STORAGE_LABELS[key] || key) + '"? No se puede deshacer.')) return;
+  localStorage.removeItem(key);
+  mostrarToast('Borrado ✓', 'success');
+  _actualizarUsoAlmacenamiento();
+}
+
+function _vaciarBlogArchivado() {
+  if (!confirm('¿Vaciar las publicaciones archivadas del blog? Las publicaciones activas no se tocan.')) return;
+  try {
+    const raw = localStorage.getItem('planificadorRA_blog_v1');
+    if (raw) {
+      const blog = JSON.parse(raw);
+      blog.postsArchivados = {};
+      localStorage.setItem('planificadorRA_blog_v1', JSON.stringify(blog));
+    }
+    mostrarToast('Publicaciones archivadas vaciadas ✓', 'success');
+  } catch (e) {
+    mostrarToast('No se pudo vaciar: ' + e.message, 'error');
+  }
+  _actualizarUsoAlmacenamiento();
 }
 
 // ── Forzar sincronización con la nube ────────────────────────────

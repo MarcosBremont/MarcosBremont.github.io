@@ -3710,6 +3710,21 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#E65100;">v20.14<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: ver qué está ocupando tu almacenamiento, y Vista Previa blindada</div>
+              <ul class="about-ver-items">
+                <li>Nueva sección "Uso de almacenamiento local" en Mis Datos: muestra qué está ocupando espacio en este dispositivo (con nombre claro, no solo el nombre técnico) y deja borrar de un clic lo que sea seguro (copias de seguridad automáticas, publicaciones archivadas del blog) en vez de solo decir "limpia Mis Datos" sin más detalle.</li>
+                <li>Fix: si la Vista Previa (Paso 6) fallaba al generarse por cualquier motivo, antes se quedaba en blanco sin ningún aviso. Ahora muestra un error visible en vez de una pantalla vacía sin explicación.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v20.13<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11495,6 +11510,16 @@
       </div>
       <div class="modal-body" style="padding:20px 24px;">
 
+        <!-- Uso de almacenamiento -->
+        <div class="backup-section" style="background:#FFF3E0;border:1px solid #FFCC80;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+          <div class="backup-section-title">
+            <span class="material-icons" style="color:#E65100;">storage</span>
+            Uso de almacenamiento local
+          </div>
+          <p class="backup-desc">Si ves avisos de "sin espacio", usa esto para ver exactamente qué está ocupando tu almacenamiento y borrar lo que no necesites.</p>
+          <div id="storage-usage-wrap" style="margin-top:8px;"></div>
+        </div>
+
         <!-- Exportar -->
         <div class="backup-section">
           <div class="backup-section-title">
@@ -11648,9 +11673,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.13"></script>
+  <script src="app.js?v=20.14"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.13"></script>
+  <script src="auth.js?v=20.14"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
