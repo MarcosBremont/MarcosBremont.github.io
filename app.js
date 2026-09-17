@@ -40977,6 +40977,7 @@ function abrirModalClase(encodedData) {
   const nTard = Object.values(asistDia).filter(v => v === 'T').length;
   const asistRegistrada = nPres + nAus + nTard > 0;
 
+  console.log('[ModalDebug] abrirModalClase -> d.fecha=', d.fecha, 'd.sesiones=', d.sesiones);
   const allSesiones = (d.sesiones && d.sesiones.length) ? d.sesiones : [];
   const sesionInfo = allSesiones[0] || null;
   const recursoActId = sesionInfo ? sesionInfo.actId : `recurso_${d.fecha}_${d.seccion}_${d.periodo}`;
@@ -41014,6 +41015,7 @@ function abrirModalClase(encodedData) {
         // _obtenerDatosPresentacion/generarPresentacionHtml para "Desarrollo".
         const devTexto = [sDev.procedimental, sDev.conceptual].filter(Boolean).join('\n\n');
         const hasDiaria = sIni.apertura || devTexto || sCie.sintesis;
+        console.log('[ModalDebug] sesión idx=', idx, 'si.actId=', si.actId, 'si.planId=', si.planId, 'ses=', ses, 'hasDiaria=', !!hasDiaria);
         return `
       <div class="mcl-seccion">
         <div class="mcl-titulo"><span class="material-icons">description</span>Actividad planificada${allSesiones.length > 1 ? ' (' + (idx+1) + '/' + allSesiones.length + ')' : ''}</div>
