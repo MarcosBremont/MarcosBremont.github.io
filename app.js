@@ -6209,15 +6209,19 @@ function renderizarVistaPrevia() {
   const fechaHoy = new Date().toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
 
   // Tabla de Priorización y Ponderación de los RA -- mismos datos (dg.priorizacion,
-  // un {tiempo,valor} por cada uno de los 10 RA posibles del módulo) que ya usa
+  // un {tiempo,valor} por cada RA del módulo) que ya usa
   // _exportarConPlantillaCentro() para el Word, pero no se mostraba en la Vista
-  // Previa en pantalla.
+  // Previa en pantalla. La cantidad de columnas RA debe ser la misma que
+  // "Cantidad de RA del MF" (dg.cantidadRA) que el docente puso en el Paso 1
+  // -- antes siempre mostraba las 10 columnas posibles (el máximo permitido),
+  // aunque el módulo tuviera menos, dejando el resto vacías sin necesidad.
   let tablaPriorizacion = '';
   {
     const prio = dg.priorizacion || [];
+    const cantRA = parseInt(dg.cantidadRA, 10) || prio.length || 10;
     let totalTiempo = 0, totalValor = 0, tiempoAllNum = true;
     const filaTiempo = [], filaValor = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < cantRA; i++) {
       const t = (prio[i] && prio[i].tiempo) || '';
       const v = (prio[i] && prio[i].valor) || '';
       filaTiempo.push(t);
@@ -6227,7 +6231,7 @@ function renderizarVistaPrevia() {
       totalValor += parseFloat(v) || 0;
     }
     tablaPriorizacion = `<div class="vp-table-wrap"><div class="vp-table-scroll"><table class="vp-table vp-table-priorizacion">
-      <thead><tr><th>No. del RA</th>${Array.from({ length: 10 }, (_, i) => `<th>RA${i + 1}</th>`).join('')}<th>Total</th></tr></thead>
+      <thead><tr><th>No. del RA</th>${Array.from({ length: cantRA }, (_, i) => `<th>RA${i + 1}</th>`).join('')}<th>Total</th></tr></thead>
       <tbody>
         <tr><td>Tiempo</td>${filaTiempo.map(t => `<td>${escapeHTML(String(t || '—'))}</td>`).join('')}<td><strong>${tiempoAllNum && totalTiempo ? totalTiempo : '—'}</strong></td></tr>
         <tr><td>Valor</td>${filaValor.map(v => `<td>${escapeHTML(String(v || '—'))}</td>`).join('')}<td><strong>${totalValor || '—'}</strong></td></tr>
