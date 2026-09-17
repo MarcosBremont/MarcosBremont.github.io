@@ -21573,20 +21573,48 @@ function _limpiarDia() {
 }
 
 // ── Vista: Historial ─────────────────────────────────────────────
+// Mes mostrado en la vista Historial ('YYYY-MM', o 'todos' para el
+// comportamiento viejo de mostrar todas las fechas a la vez) -- con 3 meses
+// de clase la tabla llegaba a 30-40+ columnas de fecha y se volvía
+// ilegible. El % de cada estudiante SIEMPRE se calcula sobre TODO el
+// historial (ver _statsAsistencia, que no filtra por mes) -- este filtro
+// solo acota qué columnas de fecha se muestran, nunca el cálculo del %.
+let _asistHistMes = null;
+
 function _renderHistorial(body) {
   const cursoId = calState.cursoActivoId;
   const curso = calState.cursos[cursoId];
   const data = cargarAsistencia();
   const byDate = data[cursoId] || {};
-  const fechas = Object.keys(byDate).sort().reverse(); // más reciente primero
+  const todasFechas = Object.keys(byDate).sort().reverse(); // más reciente primero
 
-  if (fechas.length === 0) {
+  if (todasFechas.length === 0) {
     body.innerHTML = `<div class="asist-empty"><span class="material-icons">event_note</span><p>Sin registros de asistencia aún. Pasa lista en la vista de hoy.</p></div>`;
     return;
   }
 
+  // Meses con al menos un registro, más reciente primero
+  const mesesDisponibles = [...new Set(todasFechas.map(f => f.slice(0, 7)))];
+  const mesActualISO = new Date().toISOString().slice(0, 7);
+  if (!_asistHistMes) _asistHistMes = mesesDisponibles.includes(mesActualISO) ? mesActualISO : mesesDisponibles[0];
+  if (_asistHistMes !== 'todos' && !mesesDisponibles.includes(_asistHistMes)) _asistHistMes = mesesDisponibles[0];
+
+  const fechas = _asistHistMes === 'todos' ? todasFechas : todasFechas.filter(f => f.slice(0, 7) === _asistHistMes);
+
+  const MESES_LABEL = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const _mesLabel = m => { const [y, mm] = m.split('-'); return MESES_LABEL[parseInt(mm, 10) - 1] + ' ' + y; };
+  const selectorMes = `
+    <div class="asist-hist-mes-selector" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <label style="font-size:0.78rem;font-weight:700;color:#546E7A;">Mes:</label>
+      <select onchange="_asistHistMes=this.value;_renderizarVistaAsistencia();" style="padding:6px 10px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.85rem;font-weight:600;">
+        ${mesesDisponibles.map(m => `<option value="${m}" ${m === _asistHistMes ? 'selected' : ''}>${_mesLabel(m)}</option>`).join('')}
+        <option value="todos" ${_asistHistMes === 'todos' ? 'selected' : ''}>Todos los meses (${todasFechas.length} fechas)</option>
+      </select>
+    </div>`;
+
   const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   body.innerHTML = `
+    ${selectorMes}
     <div class="asist-hist-wrap">
       <table class="asist-hist-tabla">
         <thead>
