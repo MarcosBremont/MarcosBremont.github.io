@@ -19527,7 +19527,13 @@ function cargarAsistencia() {
   try { return JSON.parse(localStorage.getItem(ASIST_KEY) || '{}'); } catch { return {}; }
 }
 function guardarAsistencia(data) {
-  localStorage.setItem(ASIST_KEY, JSON.stringify(data));
+  // _setItemQuotaSafe (no localStorage.setItem directo): con el
+  // almacenamiento lleno, un setItem directo lanza QuotaExceededError sin
+  // capturar, que el listener global de firebase-config.js confunde con
+  // Firestore roto y fuerza un location.reload() -- eso es lo que sacaba al
+  // docente de en medio de pasar lista y lo mandaba de vuelta al dashboard.
+  const ok = _setItemQuotaSafe(ASIST_KEY, JSON.stringify(data));
+  if (!ok) mostrarToast('Sin espacio para guardar la asistencia. Ve a "Mis Datos" y libera espacio.', 'error');
   if (window._syncFirebase) _syncFirebase('asistencia', data);
   setTimeout(actualizarBadgeNotificaciones, 100);
 }

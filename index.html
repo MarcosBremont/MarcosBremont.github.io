@@ -3710,6 +3710,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.17<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: pasar lista podía reiniciar la app y mandar al dashboard</div>
+              <ul class="about-ver-items">
+                <li>Con el almacenamiento del dispositivo lleno, marcar asistencia lanzaba un error sin capturar (guardarAsistencia guardaba directo en localStorage) que el sistema de recuperación de Firestore confundía con una falla suya, forzando una recarga automática de la página -- eso sacaba al docente de en medio de pasar lista y lo devolvía al dashboard. Ahora ese guardado usa el mismo mecanismo seguro que el resto del sistema: si no hay espacio, muestra un aviso claro en vez de recargar la página.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v20.16<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11702,9 +11716,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.16"></script>
+  <script src="app.js?v=20.17"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.16"></script>
+  <script src="auth.js?v=20.17"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
