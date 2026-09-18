@@ -39505,6 +39505,7 @@ const _STORAGE_LABELS = {
   planificadorRA_bitacora_v1: 'Bitácora de cambios',
   planificadorRA_asistencia_v1: 'Asistencia',
   planificadorRA_participacion_v1: 'Participación',
+  planificadorRA_biblio_papelera_v1: 'Papelera de reciclaje (planificaciones eliminadas)',
 };
 
 /** true si esta clave se puede borrar sin perder nada importante (se
@@ -39550,6 +39551,7 @@ function _actualizarUsoAlmacenamiento() {
       '<span style="font-size:0.78rem;color:#9E9E9E;font-weight:600;">' + fmtKB(it.size) + '</span>' +
       (esSegura ? '<button onclick="_borrarClaveStorage(\'' + it.key + '\')" style="background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button>' : '') +
       (it.key === 'planificadorRA_blog_v1' ? '<button onclick="_vaciarBlogArchivado()" style="background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:700;cursor:pointer;">Vaciar archivados</button>' : '') +
+      (it.key === 'planificadorRA_biblio_papelera_v1' ? '<button onclick="_vaciarPapeleraPlanificaciones()" style="background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:700;cursor:pointer;">Vaciar papelera</button>' : '') +
       '</div>';
   });
   wrap.innerHTML = html;
@@ -39575,6 +39577,13 @@ function _vaciarBlogArchivado() {
   } catch (e) {
     mostrarToast('No se pudo vaciar: ' + e.message, 'error');
   }
+  _actualizarUsoAlmacenamiento();
+}
+
+function _vaciarPapeleraPlanificaciones() {
+  if (!confirm('¿Vaciar la papelera de reciclaje? Las planificaciones que estén ahí ya no se podrán recuperar. Las planificaciones activas no se tocan.')) return;
+  _guardarPapelera({ items: [] });
+  mostrarToast('Papelera vaciada ✓', 'success');
   _actualizarUsoAlmacenamiento();
 }
 
