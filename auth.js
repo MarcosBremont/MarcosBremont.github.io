@@ -591,6 +591,16 @@ async function _cargarDesdeFirestore(uid) {
           try { localSesiones = JSON.parse(localRaw || '{}').sesiones || {}; } catch(e) {}
           const merged = { sesiones: { ...fbSesiones, ...localSesiones } };
           _setItemQuotaSafe(key, JSON.stringify(merged));
+          // Reflejar el merge en la memoria de la app YA MISMO, sin depender de
+          // que algo vuelva a leer localStorage después. _arrancarApp() nunca
+          // llama a cargarDiarias() por su cuenta -- solo se recarga cuando el
+          // docente entra a una pantalla puntual (Diarias, Paso 5, el modal de
+          // clase). Si para entonces el setItem de arriba falló por falta de
+          // espacio (dispositivo con localStorage lleno), estadoDiarias se
+          // quedaba con lo que hubiera antes -- a veces vacío -- aunque
+          // Firestore SÍ tuviera las sesiones diarias completas. Esto es lo que
+          // causaba "entro al sistema y las diarias no están generadas".
+          try { if (typeof estadoDiarias !== 'undefined') estadoDiarias = merged; } catch (e) {}
           return;
         }
 

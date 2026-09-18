@@ -3710,6 +3710,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.19<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Fix: a veces al entrar las Planificaciones Diarias no aparecían generadas</div>
+              <ul class="about-ver-items">
+                <li>Al iniciar sesión, el sistema trae las sesiones diarias de Firestore, las fusiona con las del dispositivo, y guarda el resultado en el almacenamiento local -- pero si ese guardado fallaba (dispositivo con almacenamiento lleno, ver v20.17/v20.18), la fusión se perdía por completo: la memoria de la app se quedaba con lo que hubiera antes, a veces vacío, aunque Firestore sí tuviera las sesiones. Ahora la fusión se refleja en memoria de inmediato, sin depender de que el guardado local haya funcionado.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v20.18<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11730,9 +11744,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.18"></script>
+  <script src="app.js?v=20.19"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.18"></script>
+  <script src="auth.js?v=20.19"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
