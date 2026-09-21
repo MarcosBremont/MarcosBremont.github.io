@@ -27032,7 +27032,7 @@ function cargarPlanEnPaso1(planId) {
   mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
 }
 
-function cargarPlanEnPaso5(planId) {
+function cargarPlanEnPaso5(planId, actId) {
   const biblio = cargarBiblioteca();
   const registro = biblio.items.find(i => i.id === planId);
   if (!registro) { mostrarToast('Planificación no encontrada', 'error'); return; }
@@ -27072,6 +27072,21 @@ function cargarPlanEnPaso5(planId) {
     _ocultarPaneles();
     irAlPaso(5, false);
     mostrarToast('Planificación "' + registro.nombre + '" cargada', 'success');
+
+    // Expandir y hacer scroll a la actividad seleccionada (mismo patrón que
+    // abrirDiariasConPlan) -- para que el botón "Planificación diaria" del
+    // modal de clase no solo lleve al Paso 5 en general, sino directo a la
+    // sesión del día que el docente venía a ver/editar.
+    if (actId) {
+      setTimeout(() => {
+        const body = document.getElementById(`pd-body-${actId}`);
+        if (body) {
+          body.classList.add('open');
+          const card = body.closest('.pd-sesion-card');
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    }
   } catch (e) {
     console.error('[PlanDebug] cargarPlanEnPaso5 -> ERROR:', e);
     mostrarToast('No se pudo cargar la planificación: ' + e.message, 'error');
@@ -41216,7 +41231,7 @@ function abrirModalClase(encodedData) {
           <button onclick="cerrarModalBtn();cargarPlanEnPaso1('${si.planId}');" class="mcl-btn-link" style="color:#1565C0;border-color:#90CAF9;">
             <span class="material-icons" style="font-size:14px;">edit_note</span> Ver planificación
           </button>
-          <button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
+          <button onclick="cerrarModalBtn();cargarPlanEnPaso5('${si.planId}','${si.actId}');" class="mcl-btn-link" style="color:${color};border-color:${color}44;">
             <span class="material-icons" style="font-size:14px;">open_in_new</span> ${hasDiaria ? 'Ver planificación diaria' : 'Planificación diaria'}
           </button>
           ${rUrl ? `<a href="${rUrl}" target="_blank" rel="noopener" class="mcl-btn-link" style="color:#0277BD;border-color:#B3E5FC;text-decoration:none;">
