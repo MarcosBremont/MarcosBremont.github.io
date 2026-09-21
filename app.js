@@ -33538,7 +33538,7 @@ function renderizarDiarias() {
 
     const color = nivColores[nivel] || '#1565C0';
 
-
+    const actNumLabel = _getActNumero(act.ecCodigo, _actIndexInEC(actividades, actividades.indexOf(act)));
 
     const s = estadoDiarias.sesiones[act.id] || {};
     // Si esta sesión todavía no se generó/guardó (s.tiempos vacío), el default
@@ -33622,6 +33622,8 @@ function renderizarDiarias() {
             <span><span class="material-icons">schedule</span>${total} min</span>
 
 
+
+            <span class="pd-ec-chip" style="background:${color};color:#fff;font-weight:700;">${actNumLabel}</span>
 
             <span class="pd-ec-chip" style="background:${color}22;color:${color};">${act.ecCodigo || ''}</span>
 
