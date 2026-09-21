@@ -26638,6 +26638,13 @@ async function guardarPlanificacionActual(silencioso = false) {
   });
   // Si hubo migraciones, persistir diarias con los nuevos IDs
   persistirDiarias();
+  // Si el Paso 5 está en pantalla ahora mismo, sus tarjetas quedaron con el
+  // id VIEJO en el DOM (pd-body-<idViejo>) aunque estadoDiarias ya se migró
+  // al id nuevo -- sin este refresco, el docente seguía viendo el contenido
+  // que ya estaba pintado (por eso no parecía "perderse" al instante), pero
+  // cualquier acción posterior sobre esa tarjeta (editar, expandir de nuevo)
+  // quedaba huérfana del id real. Redibujar aquí mismo evita ese desfase.
+  if (typeof renderizarDiarias === 'function') renderizarDiarias();
 
   const biblio = cargarBiblioteca();
 
@@ -36345,7 +36352,18 @@ function aplicarRespuestaIA(aiData, fechasClase) {
     }
 
     return {
-      id: `act_${i}`,
+      // id ÚNICO globalmente, no solo dentro de esta planificación -- antes era
+      // `act_${i}` (act_0, act_1, act_2...), igual en CUALQUIER planificación
+      // generada por este mismo camino. Como guardarPlanificacionActual()
+      // detecta colisiones de id contra TODAS las demás planificaciones de la
+      // biblioteca y regenera el id sobre la marcha para resolverlas (migrando
+      // la sesión diaria a la nueva clave), cada plan nuevo del docente disparaba
+      // esa regeneración en su primer guardado -- y cualquier otra parte de la
+      // app que ya tuviera cacheado el id viejo (el calendario del dashboard,
+      // una pestaña abierta sin recargar, etc.) se quedaba apuntando a una
+      // sesión diaria "fantasma" bajo la clave anterior. Mismo patrón que ya
+      // usan los otros generadores de actividades (Modo Académico, más arriba).
+      id: 'act-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) + '-' + i,
       ecCodigo: act.ecCodigo || ecObj.codigo,
       enunciado: act.enunciado,
       fecha: fechaAct,

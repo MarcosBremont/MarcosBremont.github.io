@@ -3710,6 +3710,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.21<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Causa raíz encontrada: por qué las Planificaciones Diarias "se perdían"</div>
+              <ul class="about-ver-items">
+                <li>Las actividades generadas con IA (Paso 4) recibían un id genérico basado solo en su posición ("act_0", "act_1", "act_2"...) -- exactamente el mismo id en CUALQUIER planificación del docente, ya que no dependía del módulo ni del RA. Al guardar una planificación, el sistema detecta colisiones de id contra el resto de la biblioteca y regenera uno nuevo automáticamente para resolverlas -- pero esto prácticamente se disparaba en cada planificación nueva (sus "act_0", "act_1"... siempre colisionaban con las de otras), migrando la sesión diaria a una clave nueva cada vez. Si el Paso 5 seguía en pantalla, las tarjetas no se refrescaban con el id nuevo, así que cualquier edición posterior en esa sesión quedaba huérfana del id real -- lo que se sentía como que "las diarias se borran solas". Ahora las actividades reciben un id único desde el momento en que se generan (igual que ya hacía Modo Académico), y además el Paso 5 se redibuja automáticamente si hubo alguna migración de id al guardar.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v20.20<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11758,9 +11772,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.20"></script>
+  <script src="app.js?v=20.21"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.20"></script>
+  <script src="auth.js?v=20.21"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
