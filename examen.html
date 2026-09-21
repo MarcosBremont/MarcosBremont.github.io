@@ -346,11 +346,20 @@
 
     var preguntas = ex.preguntas || [];
     var lista = document.getElementById('preguntas-lista');
-    lista.innerHTML = preguntas.map(function(p, i) { return renderPregunta(p, i + 1); }).join('');
+    var qn = 0;
+    lista.innerHTML = preguntas.map(function(p) {
+      if (p.tipo === 'titulo') return renderSubtitulo(p);
+      qn++;
+      return renderPregunta(p, qn);
+    }).join('');
 
     document.getElementById('st-loading').classList.add('hidden');
     document.getElementById('st-exam').classList.remove('hidden');
     examenVisible = true;
+  }
+
+  function renderSubtitulo(p) {
+    return '<div class="q-subtitle" style="font-weight:700;font-size:1.05em;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #1565C0;">' + esc(p.enunciado) + '</div>';
   }
 
   function renderPregunta(p, num) {
@@ -419,8 +428,12 @@
     var preguntas = examenData.preguntas || [];
     var respuestas = {};
     var sinRes = [];
+    var qn = 0;
 
-    preguntas.forEach(function(p, i) {
+    preguntas.forEach(function(p) {
+      if (p.tipo === 'titulo') return; // divisor de sección, no se responde ni se cuenta
+      qn++;
+      var i = qn - 1;
       var r = '';
       if (p.tipo === 'mc') {
         var ch = document.querySelector('input[name="p_' + p.id + '"]:checked');

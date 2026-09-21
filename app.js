@@ -30605,7 +30605,7 @@ function renderizarExamenes() {
   }
   lista.innerHTML = _examenesCache.map(ex => {
     const fecha = ex.createdAt && ex.createdAt.toDate ? ex.createdAt.toDate().toLocaleDateString('es-DO') : '';
-    const nP = (ex.preguntas || []).length;
+    const nP = (ex.preguntas || []).filter(p => p.tipo !== 'titulo').length;
     const activo = !!ex.activo;
     const bS = 'border:none;padding:6px 12px;border-radius:6px;font-size:.76rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;';
     return `<div style="background:#fff;border:1.5px solid ${activo ? '#90CAF9' : '#E0E0E0'};border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
@@ -30636,13 +30636,23 @@ async function imprimirExamen(examenId) {
   const ex = _examenesCache.find(e => e.id === examenId);
   if (!ex) { mostrarToast('Examen no encontrado', 'error'); return; }
   const preguntas = ex.preguntas || [];
-  if (!preguntas.length) { mostrarToast('Este examen no tiene preguntas', 'error'); return; }
+  if (!preguntas.filter(p => p.tipo !== 'titulo').length) { mostrarToast('Este examen no tiene preguntas', 'error'); return; }
 
   const centroInfo = await _portafolioCargarIdentidadCentro();
 
-  const totalPuntos = preguntas.reduce((s, p) => s + (p.puntos || 1), 0);
+  const totalPuntos = preguntas.filter(p => p.tipo !== 'titulo').reduce((s, p) => s + (p.puntos || 1), 0);
 
-  const preguntasHTML = preguntas.map((p, i) => {
+  let _qn = 0;
+  const preguntasHTML = preguntas.map((p) => {
+    // Un "Subtítulo" es un divisor de sección, no una pregunta -- se imprime
+    // como encabezado, sin número, puntos ni casillas/líneas de respuesta, y
+    // no consume un número de pregunta para las que sí lo son.
+    if (p.tipo === 'titulo') {
+      return `<div class="pregunta" style="border:none;padding-top:10px;">
+        <div style="font-weight:700;font-size:1.02em;border-bottom:1.5px solid #333;padding-bottom:4px;">${_eHtml(p.enunciado)}</div>
+      </div>`;
+    }
+    _qn++;
     let cuerpo = '';
     if (p.tipo === 'mc') {
       const letras = ['A', 'B', 'C', 'D'];
@@ -30657,7 +30667,7 @@ async function imprimirExamen(examenId) {
     }
     const imagen = p.imagen ? `<img src="${_eHtml(p.imagen)}" class="preg-img">` : '';
     return `<div class="pregunta">
-        <div class="preg-enunciado"><span class="preg-num">${i + 1}.</span>${_eHtml(p.enunciado)}
+        <div class="preg-enunciado"><span class="preg-num">${_qn}.</span>${_eHtml(p.enunciado)}
           <span class="preg-pts">(${p.puntos || 1} pt${(p.puntos || 1) !== 1 ? 's' : ''})</span>
         </div>
         ${imagen}
@@ -30783,11 +30793,12 @@ function _renderEditorExamen() {
       </div>
     </div>
     <div style="border-top:1px solid #ECEFF1;padding-top:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <span style="font-size:.87rem;font-weight:700;color:#1A1A2E;">Preguntas (${ex.preguntas.length})</span>
+      <span style="font-size:.87rem;font-weight:700;color:#1A1A2E;">Preguntas (${ex.preguntas.filter(p => p.tipo !== 'titulo').length})</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button type="button" onclick="_addPreguntaExamen('mc')" style="background:#E3F2FD;color:#1565C0;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Sel. múltiple</button>
         <button type="button" onclick="_addPreguntaExamen('vf')" style="background:#E8F5E9;color:#2E7D32;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Verdadero/Falso</button>
         <button type="button" onclick="_addPreguntaExamen('abierta')" style="background:#FFF3E0;color:#E65100;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Resp. abierta</button>
+        <button type="button" onclick="_addPreguntaExamen('titulo')" style="background:#ECEFF1;color:#455A64;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;">+ Subtítulo</button>
         <button type="button" onclick="abrirImportarPreguntas()" style="background:#EDE7F6;color:#5E35B1;border:none;padding:6px 11px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
           <span class="material-icons" style="font-size:14px;">content_paste</span>Importar preguntas
         </button>
@@ -30801,11 +30812,34 @@ function _renderEditorExamen() {
 }
 
 function _renderPreguntaEditorItem(p, idx) {
-  const tipoLabel = { mc: 'Sel. Múltiple', vf: 'Verdadero/Falso', abierta: 'Resp. Abierta' };
-  const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0' };
-  const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100' };
+  const tipoLabel = { mc: 'Sel. Múltiple', vf: 'Verdadero/Falso', abierta: 'Resp. Abierta', titulo: 'Subtítulo (sin puntos)' };
+  const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0', titulo: '#ECEFF1' };
+  const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100', titulo: '#455A64' };
   const total = _examenEditor.preguntas.length;
   const inputS = 'width:100%;padding:7px 9px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:.82rem;outline:none;font-family:inherit;';
+
+  // Un "Subtítulo" es solo un divisor de sección dentro del examen -- no es
+  // una pregunta real: no tiene opciones, imagen ni puntos, y el estudiante
+  // no le responde nada ni se cuenta como pregunta sin responder. Se
+  // reutiliza el mismo mecanismo de reordenar/eliminar que el resto.
+  if (p.tipo === 'titulo') {
+    return `<div style="background:#F5F7F9;border:1.5px dashed #B0BEC5;border-radius:9px;padding:13px 14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-size:.69rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${tipoBg.titulo};color:${tipoCol.titulo};display:inline-flex;align-items:center;gap:4px;">
+          <span class="material-icons" style="font-size:13px;">segment</span>${tipoLabel.titulo}</span>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          ${idx > 0 ? `<button type="button" onclick="_moverPreguntaExamen(${idx},-1)" title="Subir" style="background:none;border:1px solid #E0E0E0;border-radius:5px;cursor:pointer;padding:3px 7px;font-size:12px;">↑</button>` : ''}
+          ${idx < total - 1 ? `<button type="button" onclick="_moverPreguntaExamen(${idx},1)" title="Bajar" style="background:none;border:1px solid #E0E0E0;border-radius:5px;cursor:pointer;padding:3px 7px;font-size:12px;">↓</button>` : ''}
+          <button type="button" onclick="_removePreguntaExamen(${idx})" title="Eliminar" style="background:#FFEBEE;color:#C62828;border:none;border-radius:5px;cursor:pointer;padding:3px 7px;display:flex;align-items:center;">
+            <span class="material-icons" style="font-size:14px;">delete</span>
+          </button>
+        </div>
+      </div>
+      <label style="display:block;font-size:.71rem;font-weight:600;color:#546E7A;margin-bottom:3px;">Texto del subtítulo / sección *</label>
+      <textarea rows="2" style="${inputS}resize:vertical;" placeholder="Ej: Sección II — Comprensión lectora" oninput="_examenEditor.preguntas[${idx}].enunciado=this.value">${_eHtml(p.enunciado)}</textarea>
+      <div style="margin-top:5px;font-size:.7rem;color:#9E9E9E;">Se muestra como un encabezado dentro del examen -- no tiene puntos ni el estudiante debe responderlo.</div>
+    </div>`;
+  }
 
   let extraHtml = '';
   if (p.tipo === 'mc') {
@@ -30861,7 +30895,7 @@ function _renderPreguntaEditorItem(p, idx) {
 function _addPreguntaExamen(tipo) {
   if (!_examenEditor) return;
   const id = 'p' + Date.now() + '_' + Math.floor(Math.random() * 9999);
-  _examenEditor.preguntas.push({ id, tipo, enunciado: '', imagen: '', opciones: tipo === 'mc' ? ['', '', '', ''] : [], puntos: 1, respuestaCorrecta: '' });
+  _examenEditor.preguntas.push({ id, tipo, enunciado: '', imagen: '', opciones: tipo === 'mc' ? ['', '', '', ''] : [], puntos: tipo === 'titulo' ? 0 : 1, respuestaCorrecta: '' });
   _renderEditorExamen();
   setTimeout(() => {
     const cont = document.getElementById('examenes-editor-body');
@@ -31114,7 +31148,7 @@ async function guardarExamen() {
   ex.instrucciones = (document.getElementById('ex-ed-instrucciones')?.value || '').trim();
 
   if (!ex.titulo) { mostrarToast('Escribe un título para el examen', 'error'); return; }
-  if (ex.preguntas.length === 0) { mostrarToast('Agrega al menos una pregunta', 'error'); return; }
+  if (ex.preguntas.filter(p => p.tipo !== 'titulo').length === 0) { mostrarToast('Agrega al menos una pregunta', 'error'); return; }
 
   const sinEnunciado = ex.preguntas.findIndex(p => !p.enunciado.trim());
   if (sinEnunciado !== -1) { mostrarToast('La pregunta P' + (sinEnunciado + 1) + ' no tiene enunciado', 'error'); return; }
@@ -31167,7 +31201,7 @@ async function guardarExamen() {
       _crearEvidenciaPortafolioAuto({
         categoria: 'otro',
         titulo: ex.titulo,
-        descripcion: ex.preguntas.length + ' pregunta' + (ex.preguntas.length !== 1 ? 's' : '') + (ex.instrucciones ? '\n\n' + ex.instrucciones : ''),
+        descripcion: (() => { const n = ex.preguntas.filter(p => p.tipo !== 'titulo').length; return n + ' pregunta' + (n !== 1 ? 's' : ''); })() + (ex.instrucciones ? '\n\n' + ex.instrucciones : ''),
         origen: 'Exámenes y Pruebas · ' + [ex.materia, ex.curso].filter(Boolean).join(' · ')
       });
     }
@@ -31291,7 +31325,10 @@ async function verResultadosExamen(examenId) {
       return;
     }
     const respuestas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const preguntas = ex.preguntas || [];
+    // Los "Subtítulo" son divisores de sección, no preguntas -- no se le
+    // pidió respuesta al estudiante, así que no deben aparecer acá como
+    // "Sin respuesta" ni contar en ningún cálculo de este informe.
+    const preguntas = (ex.preguntas || []).filter(p => p.tipo !== 'titulo');
     const tipoLabel = { mc: 'Sel. múltiple', vf: 'V/F', abierta: 'Abierta' };
     const tipoBg = { mc: '#E3F2FD', vf: '#E8F5E9', abierta: '#FFF3E0' };
     const tipoCol = { mc: '#1565C0', vf: '#2E7D32', abierta: '#E65100' };
