@@ -3841,6 +3841,87 @@ async function _confirmarRegenerarActividad(idx) {
   }
 }
 
+/** Abre un modal para elegir a cuáles cursos hermanos (planificaciones
+ *  duplicadas de esta misma, ver confirmarDuplicarPlan) empujar el
+ *  enunciado y el instrumento de esta actividad. No toca fechas (cada
+ *  curso tiene su propio calendario) ni lo ya generado en Planificación
+ *  Diaria del curso hermano -- eso vive aparte, en estadoDiarias, indexado
+ *  por el id de CADA planificación, así que esta función nunca lo alcanza. */
+let _hermanosActualizarIds = [];
+function _abrirActualizarActividadHermanos(idx) {
+  const act = (planificacion.actividades || [])[idx];
+  if (!act || !planificacion._grupoDuplicadoId || !act._duplicadoId) return;
+
+  const biblio = cargarBiblioteca();
+  const hermanos = (biblio.items || [])
+    .filter(it => it.id !== planificacion._id && it.planificacion?._grupoDuplicadoId === planificacion._grupoDuplicadoId)
+    .map(it => ({ it, actHermana: (it.planificacion?.actividades || []).find(a => a._duplicadoId === act._duplicadoId) }))
+    .filter(x => x.actHermana);
+
+  if (hermanos.length === 0) {
+    mostrarToast('No se encontró esta actividad en ningún curso hermano (puede que la hayan eliminado allá).', 'error');
+    return;
+  }
+
+  _hermanosActualizarIds = hermanos.map(h => h.it.id);
+
+  document.getElementById('modal-title').textContent = 'Actualizar en otros cursos';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <p style="font-size:0.85rem;color:#546E7A;margin:0;">
+        Copia el enunciado y el instrumento de evaluación de esta actividad a los cursos marcados abajo.
+        <strong>No cambia la fecha</strong> de la actividad en esos cursos, ni toca su Planificación Diaria ya generada.
+      </p>
+      <div style="background:#F5F7F9;border-radius:8px;padding:6px 4px;">
+        ${hermanos.map((h, i) => `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;">
+            <input type="checkbox" class="act-sync-hermano" data-i="${i}" checked style="width:17px;height:17px;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:0.85rem;color:#1A1A2E;">${escapeHTML(h.it.nombre || 'Sin nombre')}</span>
+          </label>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_confirmarActualizarActividadHermanos(${idx})">
+          <span class="material-icons">sync</span> Actualizar
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function _confirmarActualizarActividadHermanos(idx) {
+  const act = (planificacion.actividades || [])[idx];
+  if (!act || !act._duplicadoId) return;
+
+  const seleccionados = Array.from(document.querySelectorAll('.act-sync-hermano:checked')).map(chk => parseInt(chk.dataset.i, 10));
+  const idsElegidos = seleccionados.map(i => _hermanosActualizarIds[i]).filter(Boolean);
+  if (idsElegidos.length === 0) { mostrarToast('Marca al menos un curso', 'error'); return; }
+
+  const biblio = cargarBiblioteca();
+  let actualizados = 0;
+  const nombresActualizados = [];
+  idsElegidos.forEach(id => {
+    const hermano = (biblio.items || []).find(it => it.id === id);
+    const actHermana = hermano?.planificacion?.actividades?.find(a => a._duplicadoId === act._duplicadoId);
+    if (!actHermana) return;
+    // Solo contenido, nunca lo específico de CADA curso (fecha/id/duración).
+    actHermana.enunciado = act.enunciado;
+    actHermana.instrumento = JSON.parse(JSON.stringify(act.instrumento));
+    actHermana.ecCodigo = act.ecCodigo;
+    actHermana.ecNivel = act.ecNivel;
+    actHermana.contenidos = act.contenidos;
+    actualizados++;
+    nombresActualizados.push(hermano.nombre || 'Sin nombre');
+  });
+
+  if (actualizados === 0) { mostrarToast('No se pudo actualizar ningún curso hermano', 'error'); return; }
+
+  persistirBiblioteca(biblio);
+  cerrarModalBtn();
+  mostrarToast('Actividad actualizada en ' + actualizados + ' curso' + (actualizados !== 1 ? 's' : '') + ': ' + nombresActualizados.join(', '), 'success');
+}
+
 function _eliminarActividad(idx) {
   const act = planificacion.actividades[idx];
   if (!act) return;
@@ -4833,6 +4914,9 @@ function renderizarActividades(listaActividades) {
               <button class="act-action-btn act-action--regen" onclick="_regenerarActividad(${idx})" title="Generar otra versión de esta actividad">
                 <span class="material-icons">refresh</span> Regenerar
               </button>
+              ${(planificacion._grupoDuplicadoId && act._duplicadoId) ? `<button class="act-action-btn act-action--sync" onclick="_abrirActualizarActividadHermanos(${idx})" title="Copiar el enunciado y el instrumento de esta actividad a las planificaciones duplicadas de otros cursos">
+                <span class="material-icons">sync</span> Actualizar en otros cursos
+              </button>` : ''}
               <button class="act-action-btn act-action--delete" onclick="_eliminarActividad(${idx})">
                 <span class="material-icons">delete_outline</span>
               </button>
@@ -27589,6 +27673,22 @@ async function confirmarDuplicarPlan() {
   const biblio = cargarBiblioteca();
   const original = (biblio.items || []).find(i => i.id === _dupPlanId);
   if (!original) { mostrarToast('Planificación no encontrada', 'error'); return; }
+
+  // Vínculo ESTABLE para "Actualizar en otros cursos" (ver
+  // _actualizarActividadEnHermanos) -- a diferencia de planificacion._id y
+  // act.id (que SÍ se reasignan, ver v20.21: guardarPlanificacionActual
+  // regenera cualquier id que colisione con otra planificación de la
+  // biblioteca, y dos duplicados nacen con los mismos ids), este par de
+  // campos se asigna UNA SOLA VEZ y se copia intacto en cada duplicado, así
+  // que sirve para encontrar "la misma actividad" en un curso hermano sin
+  // importar cuántas veces se haya reasignado el id de almacenamiento de
+  // cualquiera de los dos lados.
+  if (!original.planificacion._grupoDuplicadoId) {
+    original.planificacion._grupoDuplicadoId = 'grp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+  (original.planificacion.actividades || []).forEach(a => {
+    if (!a._duplicadoId) a._duplicadoId = 'dup-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  });
 
   // Clonar profundamente
   const copia = JSON.parse(JSON.stringify(original));
