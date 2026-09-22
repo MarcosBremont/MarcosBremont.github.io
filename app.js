@@ -10703,7 +10703,10 @@ function _renderTablaPriorizacion(cantRA, datos) {
   tbody.innerHTML = trTiempo + trValor;
 
   // Recalcular totales en tiempo real
-  tbody.querySelectorAll('.prio-valor').forEach(inp => inp.addEventListener('input', _calcTotalesPriorizacion));
+  tbody.querySelectorAll('.prio-valor').forEach(inp => {
+    inp.addEventListener('input', _calcTotalesPriorizacion);
+    inp.addEventListener('input', _actualizarValorRaHint);
+  });
   tbody.querySelectorAll('.prio-tiempo').forEach(inp => {
     inp.addEventListener('input', _actualizarSugerenciaFechaTermino);
     inp.addEventListener('focus', _actualizarSugerenciaFechaTermino);
@@ -10711,6 +10714,7 @@ function _renderTablaPriorizacion(cantRA, datos) {
   });
   _calcTotalesPriorizacion();
   _actualizarSugerenciaFechaTermino();
+  if (typeof _actualizarValorRaHint === 'function') _actualizarValorRaHint();
 }
 
 let _prioSugerenciaFecha = null;
@@ -10836,6 +10840,47 @@ function _calcTotalesPriorizacion() {
   });
   const tdTiempo = document.getElementById('prio-total-tiempo');
   if (tdTiempo) tdTiempo.textContent = allNumeric && totalTiempo ? totalTiempo : '—';
+}
+
+/** "Valor del RA (puntos)" (dg.valorRA, Paso 1) y la fila "Valor" de la
+ *  tabla de Priorización (dg.priorizacion, misma pantalla pero por columna
+ *  RA1..RAn) son dos campos que el docente llena por separado -- nada los
+ *  sincroniza, así que con el tiempo terminan desencontrados (ej. el
+ *  docente copia la tabla de otra planificación del mismo módulo con
+ *  "Copiar ponderación y horario" después de haber escrito el valor
+ *  individual, o al revés). No hay forma confiable de saber a cuál columna
+ *  RA1..RAn corresponde ESTE plan específico (no se guarda ese número en
+ *  ningún lado), así que en vez de adivinar y autocompletar mal, esto solo
+ *  avisa si el valor escrito no coincide con NINGUNA columna de la tabla, y
+ *  ofrece un botón por columna para copiar ese valor con un clic. */
+function _actualizarValorRaHint() {
+  const hint = document.getElementById('valor-ra-hint');
+  const inputVal = document.getElementById('valor-ra');
+  if (!hint || !inputVal) return;
+
+  const prioValores = Array.from(document.querySelectorAll('.prio-valor'))
+    .map((inp, i) => ({ ra: i + 1, valor: parseFloat(inp.value) }))
+    .filter(x => !isNaN(x.valor) && x.valor > 0);
+
+  if (prioValores.length === 0) { hint.innerHTML = ''; return; }
+
+  const chip = (p, bg, bd, col) => '<button type="button" onclick="document.getElementById(\'valor-ra\').value=' + p.valor + ';_actualizarValorRaHint();" '
+    + 'style="margin:2px 3px 0 0;padding:2px 8px;border:1px solid ' + bd + ';border-radius:12px;background:' + bg + ';color:' + col + ';font-size:0.72rem;font-weight:600;cursor:pointer;">RA' + p.ra + ' (' + p.valor + ' pts)</button>';
+
+  const valorActual = parseFloat(inputVal.value);
+  if (isNaN(valorActual) || valorActual <= 0) {
+    hint.innerHTML = '<div style="font-size:0.74rem;color:#78909C;margin-top:3px;">Puedes copiarlo de la tabla de Priorización: '
+      + prioValores.map(p => chip(p, '#E3F2FD', '#90CAF9', '#1565C0')).join('') + '</div>';
+    return;
+  }
+
+  const coincide = prioValores.filter(p => Math.abs(p.valor - valorActual) < 0.01);
+  if (coincide.length > 0) {
+    hint.innerHTML = '<div style="font-size:0.74rem;color:#2E7D32;margin-top:3px;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">check_circle</span> Coincide con ' + coincide.map(c => 'RA' + c.ra).join(', ') + ' de la tabla de Priorización.</div>';
+  } else {
+    hint.innerHTML = '<div style="font-size:0.74rem;color:#E65100;margin-top:3px;"><span class="material-icons" style="font-size:13px;vertical-align:middle;">warning</span> No coincide con ninguna columna de la tabla de Priorización. '
+      + prioValores.map(p => chip(p, '#FFF3E0', '#FFCC80', '#E65100')).join('') + '</div>';
+  }
 }
 
 /** Recoge los datos de la tabla de priorización */

@@ -950,7 +950,8 @@
           <!-- Valor del RA (puntos) -->
           <div class="form-group">
             <label for="valor-ra">Valor del RA (puntos) *</label>
-            <input type="number" id="valor-ra" min="1" max="100" placeholder="Ej: 20" required />
+            <input type="number" id="valor-ra" min="1" max="100" placeholder="Ej: 20" required oninput="_actualizarValorRaHint()" />
+            <div id="valor-ra-hint"></div>
           </div>
 
           <!-- Horas por semana -->
@@ -3706,6 +3707,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.25<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Aviso si "Valor del RA" no coincide con la tabla de Priorización</div>
+              <ul class="about-ver-items">
+                <li>"Valor del RA (puntos)" (Paso 1) y la fila "Valor" de la tabla de Priorización y Ponderación son dos campos separados que nadie sincronizaba -- con el tiempo terminaban desencontrados (ej. Coordinadora veía "18 pts" en un lado y "20 pts" en la tabla, sin saber de dónde salía cada número). Ahora, debajo de "Valor del RA", aparece un aviso si el número no coincide con ninguna columna de la tabla de Priorización, con un botón por cada RA para copiar ese valor con un clic.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11814,9 +11829,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.24"></script>
+  <script src="app.js?v=20.25"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.24"></script>
+  <script src="auth.js?v=20.25"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
