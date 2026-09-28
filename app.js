@@ -8585,7 +8585,7 @@ function _buildExportSnapshot() {
       exportadoLabel: now.toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       schoolYear: localStorage.getItem(ACTIVE_YEAR_KEY) || _getSchoolYearKey(now)
     },
-    biblioteca: localStorage.getItem(BIBLIO_KEY) || '{"items":[]}',
+    biblioteca: JSON.stringify(cargarBiblioteca()), // no leer BIBLIO_KEY directo -- puede vivir en IndexedDB ahora, ver _bibliotecaStoreInit
     calificaciones: localStorage.getItem(CAL_STORAGE_KEY) || '{"cursos":{}}',
     horario: localStorage.getItem(HORARIO_KEY) || '[]',
     tareas: localStorage.getItem(TAREAS_KEY) || '[]',
@@ -25182,34 +25182,138 @@ function _registrarPlanEliminado(id) {
 
 
 
-/** Carga todas las planificaciones guardadas */
+// ── Biblioteca en IndexedDB (para no chocar con el techo de localStorage) ──
+// "Mis Planificaciones" es, con diferencia, lo más grande que TinClass guarda
+// en localStorage (un caso real llegó a ~3.3 MB) -- el cupo de localStorage
+// por origen ronda los 5 MB en la mayoría de navegadores, así que este solo
+// store puede consumir más de la mitad del límite total del docente y es la
+// causa más común del aviso "sin espacio". IndexedDB, en el mismo navegador,
+// no tiene ese techo tan bajo (normalmente cientos de MB o más), así que se
+// usa como almacén real de la biblioteca -- SIN tocar el orden de carga de
+// la página ni la firma de cargarBiblioteca()/persistirBiblioteca(), que
+// siguen siendo síncronas para sus ~15 llamadores repartidos por app.js;
+// solo cambia de dónde sacan el dato internamente.
+//
+// _bibliotecaCache vive en memoria durante toda la sesión (lectura
+// síncrona, instantánea). Se "calienta" UNA sola vez, al arrancar la app
+// (ver _bibliotecaStoreInit, esperado dentro de _arrancarApp ANTES de que
+// cualquier pantalla pueda pedir la biblioteca) leyendo IndexedDB -- la
+// primera vez que un dispositivo usa esta versión, migra lo que ya hubiera
+// en el localStorage viejo (BIBLIO_KEY) una sola vez, y solo libera ese
+// espacio si logra RELEER de vuelta la misma cantidad de planificaciones
+// desde IndexedDB. Si IndexedDB no está disponible por cualquier razón
+// (algunos modos de navegación privada lo bloquean), _bibliotecaIdbDisponible
+// se queda en false y todo sigue funcionando exactamente como antes, leyendo
+// y escribiendo localStorage sin ninguna diferencia de comportamiento.
+const _BIBLIO_IDB_DB = 'tinclass_idb';
+const _BIBLIO_IDB_STORE = 'biblioteca';
+let _bibliotecaCache = null;
+let _bibliotecaIdbDisponible = false;
 
+function _abrirBibliotecaIdb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('IndexedDB no soportado')); return; }
+    let req;
+    try { req = indexedDB.open(_BIBLIO_IDB_DB, 1); } catch (e) { reject(e); return; }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(_BIBLIO_IDB_STORE)) db.createObjectStore(_BIBLIO_IDB_STORE, { keyPath: 'id' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('No se pudo abrir IndexedDB'));
+  });
+}
 
+function _bibliotecaIdbGet(db) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(_BIBLIO_IDB_STORE, 'readonly');
+      const req = tx.objectStore(_BIBLIO_IDB_STORE).get('main');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    } catch (e) { reject(e); }
+  });
+}
 
-function cargarBiblioteca() {
+function _bibliotecaIdbPut(db, datos) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(_BIBLIO_IDB_STORE, 'readwrite');
+      tx.objectStore(_BIBLIO_IDB_STORE).put({ id: 'main', datos });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    } catch (e) { reject(e); }
+  });
+}
 
-
-
+/** Se llama UNA vez, al inicio de _arrancarApp(), antes de que cualquier
+ *  pantalla pueda leer la biblioteca. Deja _bibliotecaCache listo en
+ *  memoria (desde IndexedDB si se pudo, si no null -- cargarBiblioteca()
+ *  cae entonces a localStorage exactamente como antes). Nunca lanza. */
+async function _bibliotecaStoreInit() {
   try {
+    const db = await _abrirBibliotecaIdb();
+    let registro = await _bibliotecaIdbGet(db);
 
+    if (!registro) {
+      // Primera vez en este dispositivo con esta versión: migrar lo que
+      // hubiera en el localStorage viejo (si algo hay -- _cargarDesdeFirestore
+      // ya corrió antes que esto en el flujo normal de login, así que si el
+      // docente tenía planificaciones en la nube, para este punto ya están
+      // fusionadas ahí).
+      let desdeLocal = null;
+      try { desdeLocal = JSON.parse(localStorage.getItem(BIBLIO_KEY) || 'null'); } catch (e) {}
+      const datos = desdeLocal || { items: [] };
+      await _bibliotecaIdbPut(db, datos);
 
+      // No confiar en IndexedDB como única fuente sin antes releer y
+      // confirmar que trajo la misma cantidad de planificaciones -- si algo
+      // salió mal, no se borra nada del localStorage viejo.
+      const relectura = await _bibliotecaIdbGet(db);
+      const itemsEsperados = (datos.items || []).length;
+      const itemsReleidos = (relectura && (relectura.datos.items || []).length) || 0;
+      if (relectura && itemsReleidos === itemsEsperados) {
+        registro = relectura;
+        try { localStorage.removeItem(BIBLIO_KEY); } catch (e) {}
+      } else {
+        console.warn('[BibliotecaIDB] La migración no se pudo verificar, se sigue usando localStorage.');
+        return;
+      }
+    }
 
-    return JSON.parse(localStorage.getItem(BIBLIO_KEY) || '{"items":[]}');
-
-
-
+    _bibliotecaCache = registro.datos;
+    _bibliotecaIdbDisponible = true;
   } catch (e) {
-
-
-
-    return { items: [] };
-
-
-
+    console.warn('[BibliotecaIDB] No se pudo usar IndexedDB, se sigue usando localStorage:', e.message);
   }
+}
 
+/** Guarda la biblioteca en donde corresponda (IndexedDB si está disponible,
+ *  si no localStorage a prueba de cupo) -- punto único usado por
+ *  persistirBiblioteca() y por los guardados directos de
+ *  guardarPlanificacionActual/confirmarDuplicarPlan/restauración de backup,
+ *  que antes escribían a localStorage cada uno por su cuenta. */
+function _guardarBibliotecaLocal(biblio) {
+  _bibliotecaCache = biblio;
+  if (_bibliotecaIdbDisponible) {
+    _abrirBibliotecaIdb()
+      .then(db => _bibliotecaIdbPut(db, biblio))
+      .catch(e => console.warn('[BibliotecaIDB] No se pudo guardar en IndexedDB:', e.message));
+    return;
+  }
+  const biblioJSON = JSON.stringify(biblio);
+  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(BIBLIO_KEY, biblioJSON);
+  else { try { localStorage.setItem(BIBLIO_KEY, biblioJSON); } catch (e) { console.warn('No se pudo guardar la biblioteca localmente:', e); } }
+}
 
-
+/** Carga todas las planificaciones guardadas */
+function cargarBiblioteca() {
+  if (_bibliotecaIdbDisponible && _bibliotecaCache) return _bibliotecaCache;
+  try {
+    return JSON.parse(localStorage.getItem(BIBLIO_KEY) || '{"items":[]}');
+  } catch (e) {
+    return { items: [] };
+  }
 }
 
 
@@ -26671,9 +26775,7 @@ function _confirmarImportCurriculo(idx) {
 
 
 function persistirBiblioteca(biblio) {
-  const biblioJSON = JSON.stringify(biblio);
-  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(BIBLIO_KEY, biblioJSON);
-  else { try { localStorage.setItem(BIBLIO_KEY, biblioJSON); } catch (e) { console.warn('No se pudo guardar la biblioteca localmente:', e); } }
+  _guardarBibliotecaLocal(biblio);
   return _syncBibliotecaFirebase(biblio);
 }
 
@@ -26859,14 +26961,13 @@ async function guardarPlanificacionActual(silencioso = false) {
   }
   planificacion._id = registro.id;
 
-  // Guardar localmente primero (síncrono). Si el dispositivo no tiene espacio, NO debe
-  // interrumpir el guardado -- _syncBibliotecaFirebase (justo abajo) es lo que de verdad
-  // importa (sube a la nube en chunks, sin el límite de tamaño de localStorage). Antes
-  // esto tiraba un QuotaExceededError sin atrapar que abortaba la función entera, así
-  // que la planificación recién generada nunca llegaba a subirse a Firestore.
-  const bibliotecaJSON = JSON.stringify(biblio);
-  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe('planificadorRA_biblioteca_v1', bibliotecaJSON);
-  else { try { localStorage.setItem('planificadorRA_biblioteca_v1', bibliotecaJSON); } catch (e) { console.warn('No se pudo guardar la biblioteca localmente:', e); } }
+  // Guardar localmente primero (síncrono, vía _guardarBibliotecaLocal -- IndexedDB si
+  // está disponible, si no localStorage a prueba de cupo). Nunca debe interrumpir el
+  // guardado -- _syncBibliotecaFirebase (justo abajo) es lo que de verdad importa (sube
+  // a la nube en chunks, sin el límite de tamaño de localStorage). Antes esto tiraba un
+  // QuotaExceededError sin atrapar que abortaba la función entera, así que la
+  // planificación recién generada nunca llegaba a subirse a Firestore.
+  _guardarBibliotecaLocal(biblio);
 
   // Asignar al curso (o cursos) seleccionado en Paso 1 -- ANTES del await de
   // sincronización con Firebase (justo abajo), no después. La subida a
@@ -27894,8 +27995,8 @@ async function confirmarDuplicarPlan() {
   // Guardar la copia en la biblioteca (al inicio de la lista)
   biblio.items.unshift(copia);
 
-  // Guardar localmente primero
-  localStorage.setItem('planificadorRA_biblioteca_v1', JSON.stringify(biblio));
+  // Guardar localmente primero (IndexedDB si está disponible, si no localStorage a prueba de cupo)
+  _guardarBibliotecaLocal(biblio);
 
   // Mostrar indicador mientras guarda en Firebase
   const btnConfirmar = document.getElementById('btn-confirmar-duplicar');
@@ -37661,9 +37762,15 @@ setTimeout(() => {
   if (!navigator.onLine) texto.textContent = 'Sin conexión -- puede tardar un poco más...';
 }, 8000);
 
-function _arrancarApp() {
+async function _arrancarApp() {
   if (window._appArranada) return;
   window._appArranada = true;
+  // Calentar la biblioteca desde IndexedDB (si está disponible) ANTES de
+  // ocultar el splash y de que cualquier pantalla pida cargarBiblioteca() --
+  // ver _bibliotecaStoreInit. En la práctica toma bien poco (unos ms), pero
+  // conviene que el splash lo cubra en vez de arriesgar un parpadeo de "sin
+  // planificaciones" en el dashboard.
+  await _bibliotecaStoreInit();
   _ocultarSplash();
 
   _purgarPapeleraVencida();
@@ -39759,6 +39866,13 @@ function _actualizarUsoAlmacenamiento() {
   const totalMB = (total / 1024 / 1024).toFixed(1);
 
   let html = '<div style="font-size:0.85rem;font-weight:700;color:#E65100;margin-bottom:8px;">Total usado: ~' + totalMB + ' MB</div>';
+  if (_bibliotecaIdbDisponible) {
+    const nPlanes = (_bibliotecaCache?.items || []).length;
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #FFE0B2;">'
+      + '<span class="material-icons" style="font-size:16px;color:#2E7D32;">check_circle</span>'
+      + '<span style="flex:1;font-size:0.82rem;color:#2E7D32;">Mis Planificaciones (' + nPlanes + ') -- en almacenamiento ampliado, ya no ocupa espacio aquí</span>'
+      + '</div>';
+  }
   items.slice(0, 8).forEach(it => {
     if (it.size < 3000) return; // no listar claves chicas, no valen la pena
     const label = _STORAGE_LABELS[it.key] || it.key;
@@ -40400,7 +40514,7 @@ function onBackupFileSelected(input) {
  *  forcedSchoolYear: si el snapshot no trae _meta.schoolYear, usar este como respaldo
  *  (p.ej. el yearId del ciclo archivado que se está restaurando). */
 function _aplicarSnapshotBackup(d, forcedSchoolYear) {
-  if (d.biblioteca) _setItemQuotaSafe(BIBLIO_KEY, d.biblioteca);
+  if (d.biblioteca) { try { _guardarBibliotecaLocal(JSON.parse(d.biblioteca)); } catch (e) { console.warn('No se pudo restaurar la biblioteca del backup:', e); } }
   if (d.calificaciones) _setItemQuotaSafe(CAL_STORAGE_KEY, d.calificaciones);
   if (d.horario) _setItemQuotaSafe(HORARIO_KEY, d.horario);
   if (d.tareas) _setItemQuotaSafe(TAREAS_KEY, d.tareas);

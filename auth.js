@@ -513,7 +513,20 @@ async function _cargarDesdeFirestore(uid) {
         // Biblioteca: sistema de chunks con fusión local
         if (store === 'biblioteca') {
           const payload = await _cargarBibliotecaChunks(base);
-          const localRaw = localStorage.getItem(key);
+
+          // "Local" puede vivir en IndexedDB (una vez migrado, ver
+          // _bibliotecaStoreInit en app.js -- para entonces ES la fuente
+          // real) o todavía en localStorage (dispositivo que nunca migró, o
+          // este es justo su primer arranque con esta versión). Se intenta
+          // IndexedDB primero y se cae a localStorage si no hay nada ahí.
+          let localRaw = null;
+          let idbDb = null;
+          try {
+            idbDb = await _abrirBibliotecaIdb();
+            const registroIdb = await _bibliotecaIdbGet(idbDb);
+            if (registroIdb) localRaw = JSON.stringify(registroIdb.datos);
+          } catch (e) {}
+          if (localRaw === null) localRaw = localStorage.getItem(key);
 
           // Fusionar Firebase + localStorage para no perder planes
           let firebaseItems = [];
@@ -547,13 +560,26 @@ async function _cargarDesdeFirestore(uid) {
           if (itemsFusionados.length) {
             const merged = { items: itemsFusionados };
             const huboDiferenciaConFirebase = JSON.stringify(itemsFusionados) !== JSON.stringify(firebaseItems);
-            _setItemQuotaSafe(key, JSON.stringify(merged));
+            if (idbDb) {
+              try {
+                await _bibliotecaIdbPut(idbDb, merged);
+                // Ya está guardada en IndexedDB -- liberar el espacio que
+                // ocupaba en localStorage, que es justo el problema que
+                // esta migración quiere resolver.
+                try { localStorage.removeItem(key); } catch (e) {}
+              } catch (e) {
+                console.warn('[BibliotecaIDB] No se pudo guardar la fusión en IndexedDB, se usa localStorage:', e.message);
+                _setItemQuotaSafe(key, JSON.stringify(merged));
+              }
+            } else {
+              _setItemQuotaSafe(key, JSON.stringify(merged));
+            }
             if (huboDiferenciaConFirebase && typeof _escribirChunksBiblioteca === 'function') {
               // Subir fusión a Firebase (sin await para no bloquear la carga)
               _escribirChunksBiblioteca(base, merged).catch(e => console.warn('Error subiendo fusión:', e));
             }
           }
-          // Si ni Firebase ni local tienen datos, no tocar localStorage
+          // Si ni Firebase ni local tienen datos, no tocar nada
           return;
         }
 

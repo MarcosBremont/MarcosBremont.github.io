@@ -3711,6 +3711,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.26<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">"Mis Planificaciones" se muda a almacenamiento ampliado (IndexedDB)</div>
+              <ul class="about-ver-items">
+                <li>"Mis Planificaciones" era, con diferencia, lo más grande que TinClass guardaba en el cupo de ~5 MB de localStorage (en un caso real, ~3.3 MB de los ~5 MB totales) -- la causa más común del aviso "sin espacio". Ahora vive en IndexedDB, otro almacenamiento del mismo navegador sin ese techo tan bajo, sin cambiar cómo se ve ni se usa nada del sistema. La migración es automática al abrir la app: se copia una vez, se verifica que se pudo releer completa, y solo entonces se libera el espacio que ocupaba antes -- si algo fallara, sigue funcionando con localStorage exactamente como hasta ahora, sin perder ninguna planificación.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v20.25<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11829,9 +11843,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.25"></script>
+  <script src="app.js?v=20.26"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.25"></script>
+  <script src="auth.js?v=20.26"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
