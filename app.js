@@ -16485,6 +16485,25 @@ function renderizarTabsPlanesDelCurso() {
   const curso = calState.cursos[calState.cursoActivoId];
   if (!curso) { area.innerHTML = ''; return; }
 
+  // Cursos "sin planificación por RA" no tienen nada que asignar aquí -- en
+  // vez del aviso "Ir a Mis Planificaciones", dejamos siempre a la vista el
+  // acceso para editar/agregar/quitar categorías y columnas de su tabla
+  // libre, sin depender de bajar hasta el pie de una tabla larga.
+  if (curso.sinPlanificacion) {
+    const nCats = (curso.tablaLibre?.categorias || []).length;
+    area.innerHTML = `
+      <div style="padding:8px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:0.82rem;color:#546E7A;display:flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:17px;color:#2E7D32;">table_chart</span>
+          Materia sin planificación por RA -- tabla de notas propia${nCats ? ` (${nCats} categoría${nCats !== 1 ? 's' : ''})` : ''}
+        </span>
+        <button onclick="_abrirConfigurarTablaLibre('${curso.id}')" style="background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;border-radius:8px;padding:6px 12px;font-size:0.8rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+          <span class="material-icons" style="font-size:15px;">settings</span> ${nCats ? 'Editar' : 'Configurar'} categorías y columnas
+        </button>
+      </div>`;
+    return;
+  }
+
   const planIds = curso.planIds || [];
   const biblio = cargarBiblioteca();
   const regsVisibles = planIds.map(pid => biblio.items.find(i => i.id === pid)).filter(reg => reg && !reg.archivada);
