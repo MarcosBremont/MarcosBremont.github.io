@@ -17184,11 +17184,11 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
   let hdr2 = '<tr>';
   categorias.forEach(cat => {
     const cols = cat.columnas || [];
-    hdr1 += '<th colspan="' + (cols.length + 1) + '" style="text-align:center;background:#C8E6C9;color:#1B5E20;font-size:0.78rem;padding:6px 4px;">' + escapeHTML(cat.nombre) + '</th>';
+    hdr1 += '<th colspan="' + (cols.length + 1) + '" style="text-align:center;background:#C8E6C9;color:#1B5E20;font-size:0.78rem;padding:6px 4px;white-space:normal;line-height:1.25;">' + escapeHTML(cat.nombre) + '</th>';
     cols.forEach(col => {
-      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;">' + escapeHTML(col.nombre) + '</th>';
+      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;background:#1565C0;color:#fff;">' + escapeHTML(col.nombre) + '</th>';
     });
-    hdr2 += '<th style="min-width:60px;text-align:center;font-size:0.72rem;padding:4px;background:#E8F5E9;">TOTAL</th>';
+    hdr2 += '<th style="min-width:60px;text-align:center;font-size:0.72rem;padding:4px;background:#A5D6A7;color:#1B5E20;font-weight:700;">TOTAL</th>';
   });
   hdr1 += '<th rowspan="2" style="min-width:70px;text-align:center;background:#1565C0;color:#fff;font-size:0.75rem;">NOTA FINAL</th></tr>';
   hdr2 += '</tr>';
