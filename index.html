@@ -3711,6 +3711,20 @@
 
           <div class="about-version-row">
             <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.32<span class="about-ver-fecha">Sep
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Tabla de notas libre: cada categoría vale 100 pts, repartidos entre sus columnas</div>
+              <ul class="about-ver-items">
+                <li>El TOTAL de una categoría podía pasar de 100 (ej. 137.5, 200) porque cada columna se calificaba sobre 100 sin importar cuántas columnas hubiera en su bloque. Ahora el máximo de cada columna es 100 dividido entre la cantidad de columnas de su categoría (1 columna = hasta 100, 2 columnas = hasta 50 c/u, etc.), mostrado junto al nombre de cada columna en el encabezado. Aplica tanto al campo manual como a la nota calculada por un instrumento. Nota: valores ya guardados antes de esta versión que superen el nuevo máximo no se recortan solos -- hay que volver a escribirlos o volver a llenar el instrumento para que se ajusten.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="about-version-row">
+            <div>
               <div class="about-ver-badge" style="background:#1565C0;">v20.31<span class="about-ver-fecha">Sep
                   2026</span>
               </div>
@@ -11913,9 +11927,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.31"></script>
+  <script src="app.js?v=20.32"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.31"></script>
+  <script src="auth.js?v=20.32"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

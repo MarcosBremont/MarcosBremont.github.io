@@ -17197,9 +17197,11 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
   let hdr2 = '<tr>';
   categorias.forEach(cat => {
     const cols = cat.columnas || [];
+    const maxCol = Math.round((100 / Math.max(1, cols.length)) * 100) / 100;
     hdr1 += '<th colspan="' + (cols.length + 1) + '" style="text-align:center;background:#C8E6C9;color:#1B5E20;font-size:0.78rem;padding:6px 4px;white-space:normal;line-height:1.25;">' + escapeHTML(cat.nombre) + '</th>';
     cols.forEach(col => {
-      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;background:#1565C0;color:#fff;">' + escapeHTML(col.nombre)
+      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;background:#1565C0;color:#fff;" title="Vale hasta ' + maxCol + ' pts">' + escapeHTML(col.nombre)
+        + '<br><span style="font-weight:400;opacity:0.85;font-size:0.65rem;">/' + maxCol + '</span>'
         + (col.instrumentoId ? ' <span class="material-icons" style="font-size:11px;vertical-align:middle;">checklist</span>' : '') + '</th>';
     });
     hdr2 += '<th style="min-width:60px;text-align:center;font-size:0.72rem;padding:4px;background:#A5D6A7;color:#1B5E20;font-weight:700;">TOTAL</th>';
@@ -17214,6 +17216,7 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
     let fila = '<tr><td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;">' + (idx + 1) + '</td>'
       + '<td class="td-nombre">' + escapeHTML(est.nombre) + '</td>';
     categorias.forEach(cat => {
+      const maxCol = Math.round((100 / Math.max(1, (cat.columnas || []).length)) * 100) / 100;
       (cat.columnas || []).forEach(col => {
         const v = notasEst[col.id];
         if (col.instrumentoId) {
@@ -17222,7 +17225,7 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
           // la nota la calcula _calcNotaDesdeInstrumento al llenar el instrumento.
           fila += '<td>' + _renderCeldaLibreBotonHTML(curso, col, est, v) + '</td>';
         } else {
-          fila += '<td><input type="number" min="0" max="100" step="0.5" value="' + (v != null ? v : '') + '" '
+          fila += '<td><input type="number" min="0" max="' + maxCol + '" step="0.5" value="' + (v != null ? v : '') + '" title="Máx: ' + maxCol + ' pts" '
             + 'onchange="_guardarNotaLibre(\'' + curso.id + '\',\'' + est.id + '\',\'' + col.id + '\',this.value)" '
             + 'style="width:60px;text-align:center;padding:4px;border:1px solid #CFD8DC;border-radius:5px;font-size:0.82rem;"></td>';
         }
@@ -17252,7 +17255,16 @@ function _guardarNotaLibre(cursoId, estId, colId, valor) {
   if (!curso) return;
   if (!curso.tablaLibreNotas) curso.tablaLibreNotas = {};
   if (!curso.tablaLibreNotas[estId]) curso.tablaLibreNotas[estId] = {};
-  const num = valor === '' ? null : parseFloat(valor);
+  let num = valor === '' ? null : parseFloat(valor);
+  let fueRecortado = false;
+  // El máx="X" del input es solo una sugerencia visual del navegador -- no
+  // bloquea escribir más -- así que el tope real de esta columna (100 ÷
+  // columnas de su categoría, ver _tablaLibreColMax) se aplica aquí también.
+  if (num !== null && !isNaN(num)) {
+    const maxCol = _tablaLibreColMax(curso, colId);
+    if (num > maxCol) { num = maxCol; fueRecortado = true; }
+    if (num < 0) { num = 0; fueRecortado = true; }
+  }
   if (num === null || isNaN(num)) delete curso.tablaLibreNotas[estId][colId];
   else curso.tablaLibreNotas[estId][colId] = num;
   guardarCalificaciones();
@@ -17284,6 +17296,15 @@ function _guardarNotaLibre(cursoId, estId, colId, valor) {
   const notaFinal = conAlgunDato ? (totalesPorCategoria.reduce((a, b) => a + b, 0) / categorias.length).toFixed(1) : '';
   const finalEl = document.getElementById('tl-final-' + cursoId + '-' + estId);
   if (finalEl) finalEl.textContent = notaFinal;
+
+  // Si se recortó el valor al máximo de la columna, el <input> todavía
+  // muestra lo que el docente escribió (el máx="" del HTML es solo visual) --
+  // se avisa y se repinta la tabla completa para que el campo muestre el
+  // valor real que quedó guardado.
+  if (fueRecortado) {
+    mostrarToast('Esta columna vale hasta ' + _tablaLibreColMax(curso, colId) + ' pts (' + cat.nombre + ' se reparte entre sus ' + (cat.columnas || []).length + ' columna(s))', 'warning');
+    renderizarTablaCalificaciones();
+  }
 }
 
 // ── Constructor de la tabla libre (categorías y columnas a la medida) ──────
@@ -17513,6 +17534,17 @@ function _tablaLibreColPorId(curso, colId) {
   return null;
 }
 
+/** Cada categoría vale 100 pts en total, repartidos en partes iguales entre
+ *  sus columnas -- con 1 columna vale 100, con 2 columnas 50 c/u, con 3
+ *  columnas 33.3 c/u, etc. Así la suma de una categoría nunca puede pasar
+ *  de 100 sin importar cuántas columnas tenga (confirmado con el docente:
+ *  reparto parejo, no ponderación distinta por columna). */
+function _tablaLibreColMax(curso, colId) {
+  const cat = (curso?.tablaLibre?.categorias || []).find(c => (c.columnas || []).some(col => col.id === colId));
+  const n = cat ? (cat.columnas || []).length : 1;
+  return n > 0 ? Math.round((100 / n) * 100) / 100 : 100;
+}
+
 function _tablaLibreExtra(curso, colId, estId, crear) {
   if (crear) {
     if (!curso.tablaLibreExtra) curso.tablaLibreExtra = {};
@@ -17615,7 +17647,7 @@ function _renderInstrumentoLibreFill() {
   const ins = s.instrumento;
   const esCotejo = ins.tipo === 'cotejo';
   const resp = curso.tablaLibreRespuestas?.[s.colId]?.[s.estId] || {};
-  const maxValor = 100; // misma escala 0-100 que el resto de la tabla libre
+  const maxValor = _tablaLibreColMax(curso, s.colId); // 100 repartido entre las columnas de esta categoría
   const nota = _calcNotaDesdeInstrumento(ins, resp, maxValor);
 
   document.getElementById('modal-title').textContent = ins.nombre + ' — ' + est.nombre;
@@ -17678,7 +17710,7 @@ function _instrLibreMarcarCriterio(numero, valor) {
   respEst[numero] = (respEst[numero] === valor) ? undefined : valor;
   if (respEst[numero] === undefined) delete respEst[numero];
 
-  const nota = _calcNotaDesdeInstrumento(s.instrumento, respEst, 100);
+  const nota = _calcNotaDesdeInstrumento(s.instrumento, respEst, _tablaLibreColMax(curso, s.colId));
   _guardarNotaLibre(s.cursoId, s.estId, s.colId, nota === null ? '' : String(nota));
   _renderInstrumentoLibreFill();
 }
