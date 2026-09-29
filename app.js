@@ -15185,12 +15185,18 @@ function abrirModalNuevoCurso() {
     <div class="modal-curso-content">
       <label for="input-nombre-curso">Nombre del curso</label>
       <input type="text" id="input-nombre-curso" placeholder="Ej: 2do B – Turno Matutino" maxlength="60" autofocus>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:#F5F7F9;border-radius:8px;cursor:pointer;font-size:0.85rem;color:#37474F;">
+        <input type="checkbox" id="chk-sin-planificacion" onchange="document.getElementById('wrap-sel-plan-curso')?.classList.toggle('hidden', this.checked)" style="width:17px;height:17px;cursor:pointer;flex-shrink:0;">
+        Esta materia no lleva planificación por RA (me la entregan hecha; evalúo con mi propia tabla de notas)
+      </label>
+      <div id="wrap-sel-plan-curso">
       ${planes.length ? `
       <label style="margin-top:12px;" for="sel-plan-curso">Planificación a asignar (opcional)</label>
       <select id="sel-plan-curso" style="padding:8px 12px;border:1.5px solid #90CAF9;border-radius:8px;font-size:0.9rem;">
         <option value="">— Sin planificación por ahora —</option>
         ${optsPlanes}
       </select>` : '<p style="margin-top:10px;font-size:0.82rem;color:#78909C;">Podrás asignar planificaciones desde la Biblioteca luego.</p>'}
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
         <button class="btn-siguiente" onclick="crearCurso()">
@@ -15210,9 +15216,10 @@ function abrirModalNuevoCurso() {
 function crearCurso() {
   const nombre = document.getElementById('input-nombre-curso')?.value?.trim();
   if (!nombre) { mostrarToast('Escribe un nombre para el curso', 'error'); return; }
-  const planId = document.getElementById('sel-plan-curso')?.value || '';
+  const sinPlanificacion = document.getElementById('chk-sin-planificacion')?.checked || false;
+  const planId = sinPlanificacion ? '' : (document.getElementById('sel-plan-curso')?.value || '');
   const id = uid();
-  calState.cursos[id] = { id, nombre, estudiantes: [], notas: {}, planIds: planId ? [planId] : [], planActivaId: planId || null };
+  calState.cursos[id] = { id, nombre, estudiantes: [], notas: {}, planIds: planId ? [planId] : [], planActivaId: planId || null, sinPlanificacion };
   calState.cursoActivoId = id;
   guardarCalificaciones();
   cerrarModalBtn();
@@ -15229,6 +15236,10 @@ function renombrarCurso(id) {
     <div class="modal-curso-content">
       <label for="input-renombre-curso">Nuevo nombre del curso</label>
       <input type="text" id="input-renombre-curso" value="${escapeHTML(curso.nombre)}" maxlength="60" autofocus>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:#F5F7F9;border-radius:8px;cursor:pointer;font-size:0.85rem;color:#37474F;">
+        <input type="checkbox" id="chk-sin-planificacion-edit" ${curso.sinPlanificacion ? 'checked' : ''} style="width:17px;height:17px;cursor:pointer;flex-shrink:0;">
+        Esta materia no lleva planificación por RA (evalúo con mi propia tabla de notas)
+      </label>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #E0E0E0;">
         <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
         <button class="btn-siguiente" onclick="guardarRenombreCurso('${id}')">
@@ -15254,9 +15265,11 @@ function guardarRenombreCurso(id) {
   if (!curso) return;
   const nombreAnterior = curso.nombre;
   curso.nombre = nombre;
+  curso.sinPlanificacion = document.getElementById('chk-sin-planificacion-edit')?.checked || false;
   guardarCalificaciones();
   cerrarModalBtn();
   renderizarTabsCursos();
+  if (calState.cursoActivoId === id) renderizarTablaCalificaciones();
   registrarCambio(`Curso renombrado: "${nombreAnterior}" → "${nombre}"`);
   mostrarToast(`Curso renombrado a "${nombre}"`, 'success');
 }
@@ -17117,6 +17130,170 @@ async function _fotoGrupalGuardarYSiguiente() {
   }
 }
 
+// ── Tabla libre de calificaciones (materias sin planificación por RA) ──────
+// Algunas materias "académicas" no se planifican dentro de TinClass -- al
+// docente se la entregan ya armada, y lo único que necesita es un lugar
+// para registrar notas con SU PROPIA estructura de columnas (cada materia
+// trae la suya: distintas categorías, distintas sub-columnas, distintos
+// nombres -- no hay una estructura única para todas). curso.tablaLibre
+// guarda esa estructura (categorías -> columnas, definida por el docente
+// con _abrirConfigurarTablaLibre); curso.tablaLibreNotas guarda los valores
+// por estudiante y columna. El TOTAL de cada categoría es la suma directa
+// de sus columnas, y la nota final es el promedio de los TOTAL de cada
+// categoría -- sin ponderación, confirmado con el docente.
+
+function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
+  const tabla = curso.tablaLibre || { categorias: [] };
+  const categorias = tabla.categorias || [];
+
+  if (categorias.length === 0) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="text-align:center;padding:2rem;color:#9E9E9E;">'
+      + 'Esta materia no lleva planificación por RA. Configura tu propia tabla de columnas para empezar a registrar notas.'
+      + '<br><br><button class="btn-siguiente" onclick="_abrirConfigurarTablaLibre(\'' + curso.id + '\')" style="display:inline-flex;">'
+      + '<span class="material-icons">table_chart</span> Configurar tabla de notas</button>'
+      + '</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  const notas = curso.tablaLibreNotas || {};
+
+  // ─── Encabezados: fila de categorías + fila de columnas ───
+  let hdr1 = '<tr><th rowspan="2" style="min-width:32px;width:32px;text-align:center;background:var(--color-primario);color:#fff;font-size:0.75rem;">#</th>'
+    + '<th rowspan="2" class="th-nombre">Estudiante</th>';
+  let hdr2 = '<tr>';
+  categorias.forEach(cat => {
+    const cols = cat.columnas || [];
+    hdr1 += '<th colspan="' + (cols.length + 1) + '" style="text-align:center;background:#C8E6C9;color:#1B5E20;font-size:0.78rem;padding:6px 4px;">' + escapeHTML(cat.nombre) + '</th>';
+    cols.forEach(col => {
+      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;">' + escapeHTML(col.nombre) + '</th>';
+    });
+    hdr2 += '<th style="min-width:60px;text-align:center;font-size:0.72rem;padding:4px;background:#E8F5E9;">TOTAL</th>';
+  });
+  hdr1 += '<th rowspan="2" style="min-width:70px;text-align:center;background:#1565C0;color:#fff;font-size:0.75rem;">NOTA FINAL</th></tr>';
+  hdr2 += '</tr>';
+  thead.innerHTML = hdr1 + hdr2;
+
+  // ─── Filas de estudiantes ───
+  tbody.innerHTML = (curso.estudiantes || []).map((est, idx) => {
+    const notasEst = notas[est.id] || {};
+    let fila = '<tr><td style="text-align:center;font-size:0.8rem;color:#78909C;font-weight:600;">' + (idx + 1) + '</td>'
+      + '<td class="td-nombre">' + escapeHTML(est.nombre) + '</td>';
+    categorias.forEach(cat => {
+      (cat.columnas || []).forEach(col => {
+        const v = notasEst[col.id];
+        fila += '<td><input type="number" min="0" max="100" step="0.5" value="' + (v != null ? v : '') + '" '
+          + 'onchange="_guardarNotaLibre(\'' + curso.id + '\',\'' + est.id + '\',\'' + col.id + '\',this.value)" '
+          + 'style="width:60px;text-align:center;padding:4px;border:1px solid #CFD8DC;border-radius:5px;font-size:0.82rem;"></td>';
+      });
+      const total = (cat.columnas || []).reduce((s, col) => s + (parseFloat(notasEst[col.id]) || 0), 0);
+      fila += '<td id="tl-total-' + curso.id + '-' + est.id + '-' + cat.id + '" style="text-align:center;font-weight:700;background:#F1F8E9;">' + (total || '') + '</td>';
+    });
+    const totalesPorCategoria = categorias.map(cat => (cat.columnas || []).reduce((s, col) => s + (parseFloat(notasEst[col.id]) || 0), 0));
+    const conAlgunDato = totalesPorCategoria.some(t => t > 0);
+    const notaFinal = conAlgunDato ? (totalesPorCategoria.reduce((a, b) => a + b, 0) / categorias.length).toFixed(1) : '';
+    fila += '<td id="tl-final-' + curso.id + '-' + est.id + '" style="text-align:center;font-weight:700;background:#E3F2FD;color:#0D47A1;">' + notaFinal + '</td></tr>';
+    return fila;
+  }).join('') || '<tr><td colspan="99" style="text-align:center;padding:2rem;color:#9E9E9E;">Agrega estudiantes a este curso para empezar.</td></tr>';
+
+  tfoot.innerHTML = '<tr><td colspan="99" style="text-align:right;padding:8px 12px;">'
+    + '<button class="btn-secundario" onclick="_abrirConfigurarTablaLibre(\'' + curso.id + '\')" style="font-size:0.78rem;">'
+    + '<span class="material-icons" style="font-size:14px;">settings</span> Configurar columnas</button>'
+    + '</td></tr>';
+}
+
+/** Guarda una nota de la tabla libre y actualiza en pantalla solo el TOTAL de
+ *  su categoría y la NOTA FINAL de esa fila -- sin re-renderizar toda la
+ *  tabla, para no perder el foco del input (mismo patrón que el resto del
+ *  Libro de Calificaciones). */
+function _guardarNotaLibre(cursoId, estId, colId, valor) {
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  if (!curso.tablaLibreNotas) curso.tablaLibreNotas = {};
+  if (!curso.tablaLibreNotas[estId]) curso.tablaLibreNotas[estId] = {};
+  const num = valor === '' ? null : parseFloat(valor);
+  if (num === null || isNaN(num)) delete curso.tablaLibreNotas[estId][colId];
+  else curso.tablaLibreNotas[estId][colId] = num;
+  guardarCalificaciones();
+
+  const categorias = curso.tablaLibre?.categorias || [];
+  const cat = categorias.find(c => (c.columnas || []).some(col => col.id === colId));
+  if (!cat) return;
+  const notasEst = curso.tablaLibreNotas[estId] || {};
+  const total = (cat.columnas || []).reduce((s, col) => s + (parseFloat(notasEst[col.id]) || 0), 0);
+  const totalEl = document.getElementById('tl-total-' + cursoId + '-' + estId + '-' + cat.id);
+  if (totalEl) totalEl.textContent = total || '';
+
+  const totalesPorCategoria = categorias.map(c => (c.columnas || []).reduce((s, col) => s + (parseFloat(notasEst[col.id]) || 0), 0));
+  const conAlgunDato = totalesPorCategoria.some(t => t > 0);
+  const notaFinal = conAlgunDato ? (totalesPorCategoria.reduce((a, b) => a + b, 0) / categorias.length).toFixed(1) : '';
+  const finalEl = document.getElementById('tl-final-' + cursoId + '-' + estId);
+  if (finalEl) finalEl.textContent = notaFinal;
+}
+
+// ── Constructor de la tabla libre (categorías y columnas a la medida) ──────
+let _tablaLibreEditor = null;
+let _tablaLibreEditorCursoId = null;
+
+function _abrirConfigurarTablaLibre(cursoId) {
+  const curso = calState.cursos[cursoId];
+  if (!curso) return;
+  // Copia de trabajo -- no se toca curso.tablaLibre hasta confirmar "Guardar",
+  // para poder Cancelar sin dejar categorías a medio escribir.
+  _tablaLibreEditor = JSON.parse(JSON.stringify(curso.tablaLibre || { categorias: [] }));
+  _tablaLibreEditorCursoId = cursoId;
+  _renderConfigurarTablaLibre();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function _renderConfigurarTablaLibre() {
+  const t = _tablaLibreEditor;
+  document.getElementById('modal-title').textContent = 'Configurar tabla de notas';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;">
+      <p style="font-size:0.82rem;color:#546E7A;margin:0;">Arma las categorías y columnas tal como te las entregaron. El "TOTAL" de cada categoría se calcula solo (suma de sus columnas), y la nota final es el promedio de esos TOTAL.</p>
+      ${t.categorias.length === 0 ? '<p style="text-align:center;color:#BDBDBD;font-size:0.85rem;padding:12px;">Todavía no hay categorías.</p>' : ''}
+      ${t.categorias.map((cat, ci) => `
+        <div style="border:1.5px solid #C8E6C9;border-radius:10px;padding:10px 12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <input type="text" value="${escapeHTML(cat.nombre)}" placeholder="Nombre de la categoría" oninput="_tablaLibreEditor.categorias[${ci}].nombre=this.value" style="flex:1;padding:6px 10px;border:1.5px solid #A5D6A7;border-radius:6px;font-weight:700;font-size:0.85rem;">
+            <button onclick="_tablaLibreEditor.categorias.splice(${ci},1);_renderConfigurarTablaLibre();" style="background:#FFEBEE;color:#C62828;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;"><span class="material-icons" style="font-size:15px;">delete</span></button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            ${(cat.columnas || []).map((col, coi) => `
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="text" value="${escapeHTML(col.nombre)}" placeholder="Nombre de la columna" oninput="_tablaLibreEditor.categorias[${ci}].columnas[${coi}].nombre=this.value" style="flex:1;padding:5px 8px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.8rem;">
+                <button onclick="_tablaLibreEditor.categorias[${ci}].columnas.splice(${coi},1);_renderConfigurarTablaLibre();" style="background:none;border:none;color:#C62828;cursor:pointer;display:flex;"><span class="material-icons" style="font-size:15px;">close</span></button>
+              </div>`).join('')}
+          </div>
+          <button onclick="_tablaLibreEditor.categorias[${ci}].columnas.push({id:uid(),nombre:''});_renderConfigurarTablaLibre();" style="margin-top:6px;background:#E8F5E9;color:#2E7D32;border:none;border-radius:6px;padding:4px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;">+ Columna</button>
+        </div>`).join('')}
+      <button onclick="_tablaLibreEditor.categorias.push({id:uid(),nombre:'',columnas:[]});_renderConfigurarTablaLibre();" style="background:#E3F2FD;color:#1565C0;border:none;border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">+ Agregar categoría</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:12px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="cerrarModalBtn()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_guardarConfigurarTablaLibre()"><span class="material-icons">check</span> Guardar</button>
+      </div>
+    </div>`;
+}
+
+function _guardarConfigurarTablaLibre() {
+  const curso = calState.cursos[_tablaLibreEditorCursoId];
+  if (!curso) return;
+  // Descartar categorías/columnas sin nombre -- evita columnas fantasma por clics accidentales.
+  const limpio = {
+    categorias: (_tablaLibreEditor.categorias || [])
+      .map(c => ({ ...c, columnas: (c.columnas || []).filter(col => col.nombre.trim()) }))
+      .filter(c => c.nombre.trim())
+  };
+  curso.tablaLibre = limpio;
+  guardarCalificaciones();
+  cerrarModalBtn();
+  renderizarTablaCalificaciones();
+  mostrarToast('Tabla de notas actualizada', 'success');
+}
+
 function renderizarTablaCalificaciones() {
   const thead = document.getElementById('cal-thead');
   const tbody = document.getElementById('cal-tbody');
@@ -17130,6 +17307,15 @@ function renderizarTablaCalificaciones() {
   if (!curso) {
     sinActs?.classList.remove('hidden');
     thead.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = '';
+    return;
+  }
+
+  // Materias que no llevan planificación por RA (se las entregan hechas) usan
+  // su propia tabla libre de categorías/columnas en vez de la matriz de
+  // Elementos de Capacidad -- ver _renderizarTablaLibre.
+  if (curso.sinPlanificacion) {
+    sinActs?.classList.add('hidden');
+    _renderizarTablaLibre(curso, thead, tbody, tfoot);
     return;
   }
 
@@ -22953,7 +23139,7 @@ function _generarNotificaciones() {
   // ── 4. Cursos sin planificación asignada ────────────────────────
   const _biblioIds = new Set((cargarBiblioteca().items || []).map(i => i.id));
   const sinPlan = Object.values(calState.cursos).filter(c =>
-    !(c.planIds || []).some(pid => _biblioIds.has(pid))
+    !c.sinPlanificacion && !(c.planIds || []).some(pid => _biblioIds.has(pid))
   );
   if (sinPlan.length) {
     notifs.push({
@@ -40992,7 +41178,7 @@ function _renderizarAlertas() {
   // Cursos sin planificación asignada
   const _bibIds = new Set((cargarBiblioteca().items || []).map(i => i.id));
   const cursosSinPlan = Object.values(calState.cursos).filter(c =>
-    !(c.planIds || []).some(pid => _bibIds.has(pid))
+    !c.sinPlanificacion && !(c.planIds || []).some(pid => _bibIds.has(pid))
   );
   if (cursosSinPlan.length > 0) {
     alertas.push({ tipo: 'info', icono: 'link_off', msg: `${cursosSinPlan.length} curso(s) sin planificación asignada: ${cursosSinPlan.map(c => c.nombre).join(', ')}`, accion: 'abrirPlanificaciones()', label: 'Asignar' });
