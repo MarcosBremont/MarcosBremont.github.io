@@ -17161,6 +17161,19 @@ async function _fotoGrupalGuardarYSiguiente() {
 // de sus columnas, y la nota final es el promedio de los TOTAL de cada
 // categoría -- sin ponderación, confirmado con el docente.
 
+/** Botón de celda para una columna instrumentada -- compartido entre el
+ *  render inicial de la fila y _guardarNotaLibre (que lo reconstruye en
+ *  vivo por id cada vez que se marca un criterio), para que ambos queden
+ *  siempre pintando exactamente lo mismo. */
+function _renderCeldaLibreBotonHTML(curso, col, est, v) {
+  const tieneComentario = !!(curso.tablaLibreExtra?.[col.id]?.[est.id]?.comentario);
+  return '<button id="tl-cell-' + curso.id + '-' + col.id + '-' + est.id + '" onclick="_abrirMenuCeldaLibre(\'' + curso.id + '\',\'' + col.id + '\',\'' + est.id + '\')" '
+    + 'style="width:60px;min-height:30px;text-align:center;padding:4px;border:1.5px solid ' + (v != null ? '#90CAF9' : '#CFD8DC') + ';border-radius:5px;font-size:0.82rem;background:' + (v != null ? '#E3F2FD' : '#fff') + ';color:#0D47A1;font-weight:700;cursor:pointer;">'
+    + (v != null ? v : '—')
+    + (tieneComentario ? '<span class="material-icons" style="font-size:10px;vertical-align:top;color:#1565C0;">comment</span>' : '')
+    + '</button>';
+}
+
 function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
   const tabla = curso.tablaLibre || { categorias: [] };
   const categorias = tabla.categorias || [];
@@ -17207,12 +17220,7 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
           // Columna con instrumento asignado: la celda es un botón que abre el
           // menú (Llenar instrumento / Comentario) en vez de un input libre --
           // la nota la calcula _calcNotaDesdeInstrumento al llenar el instrumento.
-          const tieneComentario = !!(curso.tablaLibreExtra?.[col.id]?.[est.id]?.comentario);
-          fila += '<td><button onclick="_abrirMenuCeldaLibre(\'' + curso.id + '\',\'' + col.id + '\',\'' + est.id + '\')" '
-            + 'style="width:60px;min-height:30px;text-align:center;padding:4px;border:1.5px solid ' + (v != null ? '#90CAF9' : '#CFD8DC') + ';border-radius:5px;font-size:0.82rem;background:' + (v != null ? '#E3F2FD' : '#fff') + ';color:#0D47A1;font-weight:700;cursor:pointer;">'
-            + (v != null ? v : '—')
-            + (tieneComentario ? '<span class="material-icons" style="font-size:10px;vertical-align:top;color:#1565C0;">comment</span>' : '')
-            + '</button></td>';
+          fila += '<td>' + _renderCeldaLibreBotonHTML(curso, col, est, v) + '</td>';
         } else {
           fila += '<td><input type="number" min="0" max="100" step="0.5" value="' + (v != null ? v : '') + '" '
             + 'onchange="_guardarNotaLibre(\'' + curso.id + '\',\'' + est.id + '\',\'' + col.id + '\',this.value)" '
@@ -17253,6 +17261,20 @@ function _guardarNotaLibre(cursoId, estId, colId, valor) {
   const cat = categorias.find(c => (c.columnas || []).some(col => col.id === colId));
   if (!cat) return;
   const notasEst = curso.tablaLibreNotas[estId] || {};
+
+  // Si la columna tiene instrumento asignado, su celda es un botón (no un
+  // input reactivo) -- reconstruirlo aquí es lo que hace que la nota
+  // calculada por el instrumento se vea en la tabla de inmediato, sin
+  // depender de que el modal se cierre por el camino que sí re-renderiza
+  // todo (antes, cerrar con la "X" del modal -- que no pasa por ese
+  // camino -- dejaba la celda mostrando el valor viejo).
+  const colDef = cat.columnas.find(c => c.id === colId);
+  if (colDef && colDef.instrumentoId) {
+    const est = curso.estudiantes?.find(e => e.id === estId);
+    const btnEl = document.getElementById('tl-cell-' + cursoId + '-' + colId + '-' + estId);
+    if (btnEl && est) btnEl.outerHTML = _renderCeldaLibreBotonHTML(curso, colDef, est, notasEst[colId] != null ? notasEst[colId] : null);
+  }
+
   const total = (cat.columnas || []).reduce((s, col) => s + (parseFloat(notasEst[col.id]) || 0), 0);
   const totalEl = document.getElementById('tl-total-' + cursoId + '-' + estId + '-' + cat.id);
   if (totalEl) totalEl.textContent = total || '';
