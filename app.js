@@ -17186,7 +17186,8 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
     const cols = cat.columnas || [];
     hdr1 += '<th colspan="' + (cols.length + 1) + '" style="text-align:center;background:#C8E6C9;color:#1B5E20;font-size:0.78rem;padding:6px 4px;white-space:normal;line-height:1.25;">' + escapeHTML(cat.nombre) + '</th>';
     cols.forEach(col => {
-      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;background:#1565C0;color:#fff;">' + escapeHTML(col.nombre) + '</th>';
+      hdr2 += '<th style="min-width:70px;text-align:center;font-size:0.72rem;padding:4px;background:#1565C0;color:#fff;">' + escapeHTML(col.nombre)
+        + (col.instrumentoId ? ' <span class="material-icons" style="font-size:11px;vertical-align:middle;">checklist</span>' : '') + '</th>';
     });
     hdr2 += '<th style="min-width:60px;text-align:center;font-size:0.72rem;padding:4px;background:#A5D6A7;color:#1B5E20;font-weight:700;">TOTAL</th>';
   });
@@ -17202,9 +17203,21 @@ function _renderizarTablaLibre(curso, thead, tbody, tfoot) {
     categorias.forEach(cat => {
       (cat.columnas || []).forEach(col => {
         const v = notasEst[col.id];
-        fila += '<td><input type="number" min="0" max="100" step="0.5" value="' + (v != null ? v : '') + '" '
-          + 'onchange="_guardarNotaLibre(\'' + curso.id + '\',\'' + est.id + '\',\'' + col.id + '\',this.value)" '
-          + 'style="width:60px;text-align:center;padding:4px;border:1px solid #CFD8DC;border-radius:5px;font-size:0.82rem;"></td>';
+        if (col.instrumentoId) {
+          // Columna con instrumento asignado: la celda es un botón que abre el
+          // menú (Llenar instrumento / Comentario) en vez de un input libre --
+          // la nota la calcula _calcNotaDesdeInstrumento al llenar el instrumento.
+          const tieneComentario = !!(curso.tablaLibreExtra?.[col.id]?.[est.id]?.comentario);
+          fila += '<td><button onclick="_abrirMenuCeldaLibre(\'' + curso.id + '\',\'' + col.id + '\',\'' + est.id + '\')" '
+            + 'style="width:60px;min-height:30px;text-align:center;padding:4px;border:1.5px solid ' + (v != null ? '#90CAF9' : '#CFD8DC') + ';border-radius:5px;font-size:0.82rem;background:' + (v != null ? '#E3F2FD' : '#fff') + ';color:#0D47A1;font-weight:700;cursor:pointer;">'
+            + (v != null ? v : '—')
+            + (tieneComentario ? '<span class="material-icons" style="font-size:10px;vertical-align:top;color:#1565C0;">comment</span>' : '')
+            + '</button></td>';
+        } else {
+          fila += '<td><input type="number" min="0" max="100" step="0.5" value="' + (v != null ? v : '') + '" '
+            + 'onchange="_guardarNotaLibre(\'' + curso.id + '\',\'' + est.id + '\',\'' + col.id + '\',this.value)" '
+            + 'style="width:60px;text-align:center;padding:4px;border:1px solid #CFD8DC;border-radius:5px;font-size:0.82rem;"></td>';
+        }
       });
       const total = (cat.columnas || []).reduce((s, col) => s + (parseFloat(notasEst[col.id]) || 0), 0);
       fila += '<td id="tl-total-' + curso.id + '-' + est.id + '-' + cat.id + '" style="text-align:center;font-weight:700;background:#F1F8E9;">' + (total || '') + '</td>';
@@ -17269,10 +17282,14 @@ function _abrirConfigurarTablaLibre(cursoId) {
 
 function _renderConfigurarTablaLibre() {
   const t = _tablaLibreEditor;
+  const instrumentos = _cargarInstrumentosLibres();
   document.getElementById('modal-title').textContent = 'Configurar tabla de notas';
   document.getElementById('modal-body').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;">
       <p style="font-size:0.82rem;color:#546E7A;margin:0;">Arma las categorías y columnas tal como te las entregaron. El "TOTAL" de cada categoría se calcula solo (suma de sus columnas), y la nota final es el promedio de esos TOTAL.</p>
+      <button onclick="_abrirBibliotecaInstrumentos('${_tablaLibreEditorCursoId}')" style="align-self:flex-start;background:#EDE7F6;color:#5E35B1;border:none;border-radius:8px;padding:6px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+        <span class="material-icons" style="font-size:15px;">checklist</span> Mis instrumentos de evaluación
+      </button>
       ${t.categorias.length === 0 ? '<p style="text-align:center;color:#BDBDBD;font-size:0.85rem;padding:12px;">Todavía no hay categorías.</p>' : ''}
       ${t.categorias.map((cat, ci) => `
         <div style="border:1.5px solid #C8E6C9;border-radius:10px;padding:10px 12px;">
@@ -17282,12 +17299,16 @@ function _renderConfigurarTablaLibre() {
           </div>
           <div style="display:flex;flex-direction:column;gap:5px;">
             ${(cat.columnas || []).map((col, coi) => `
-              <div style="display:flex;align-items:center;gap:6px;">
-                <input type="text" value="${escapeHTML(col.nombre)}" placeholder="Nombre de la columna" oninput="_tablaLibreEditor.categorias[${ci}].columnas[${coi}].nombre=this.value" style="flex:1;padding:5px 8px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.8rem;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <input type="text" value="${escapeHTML(col.nombre)}" placeholder="Nombre de la columna" oninput="_tablaLibreEditor.categorias[${ci}].columnas[${coi}].nombre=this.value" style="flex:1;min-width:110px;padding:5px 8px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.8rem;">
+                <select onchange="_tablaLibreEditor.categorias[${ci}].columnas[${coi}].instrumentoId=this.value||null;" style="padding:5px 6px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.75rem;max-width:150px;">
+                  <option value="">Sin instrumento</option>
+                  ${instrumentos.map(ins => `<option value="${ins.id}" ${col.instrumentoId === ins.id ? 'selected' : ''}>${escapeHTML(ins.nombre)}</option>`).join('')}
+                </select>
                 <button onclick="_tablaLibreEditor.categorias[${ci}].columnas.splice(${coi},1);_renderConfigurarTablaLibre();" style="background:none;border:none;color:#C62828;cursor:pointer;display:flex;"><span class="material-icons" style="font-size:15px;">close</span></button>
               </div>`).join('')}
           </div>
-          <button onclick="_tablaLibreEditor.categorias[${ci}].columnas.push({id:uid(),nombre:''});_renderConfigurarTablaLibre();" style="margin-top:6px;background:#E8F5E9;color:#2E7D32;border:none;border-radius:6px;padding:4px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;">+ Columna</button>
+          <button onclick="_tablaLibreEditor.categorias[${ci}].columnas.push({id:uid(),nombre:'',instrumentoId:null});_renderConfigurarTablaLibre();" style="margin-top:6px;background:#E8F5E9;color:#2E7D32;border:none;border-radius:6px;padding:4px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;">+ Columna</button>
         </div>`).join('')}
       <button onclick="_tablaLibreEditor.categorias.push({id:uid(),nombre:'',columnas:[]});_renderConfigurarTablaLibre();" style="background:#E3F2FD;color:#1565C0;border:none;border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">+ Agregar categoría</button>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:12px;border-top:1px solid #E0E0E0;">
@@ -17311,6 +17332,333 @@ function _guardarConfigurarTablaLibre() {
   cerrarModalBtn();
   renderizarTablaCalificaciones();
   mostrarToast('Tabla de notas actualizada', 'success');
+}
+
+// ── Biblioteca de instrumentos personalizados ───────────────────────────
+// Instrumentos (lista de cotejo / rúbrica) creados por el docente desde cero,
+// guardados una sola vez y reutilizables en CUALQUIER columna de CUALQUIER
+// tabla libre -- separados por completo del sistema de instrumentos ligado a
+// actividades de una planificación por RA (abrirInstrumentoActividad y
+// compañía), que asume act.id/raKey/raInfo.valores por todos lados y no
+// aplica aquí. Sí se reutiliza _calcNotaDesdeInstrumento (función pura, sin
+// dependencias de RA) para calcular la nota exactamente con la misma lógica.
+const INSTR_LIBRES_KEY = 'planificadorRA_instrumentos_libres_v1';
+
+function _cargarInstrumentosLibres() {
+  try { return JSON.parse(localStorage.getItem(INSTR_LIBRES_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function _guardarInstrumentosLibres(lista) {
+  const json = JSON.stringify(lista);
+  if (typeof _setItemQuotaSafe === 'function') _setItemQuotaSafe(INSTR_LIBRES_KEY, json);
+  else { try { localStorage.setItem(INSTR_LIBRES_KEY, json); } catch (e) {} }
+  if (window._syncFirebase) _syncFirebase('instrumentos_libres', lista);
+}
+
+let _instrLibreEditor = null;     // copia de trabajo: {id, tipo, nombre, criterios:[{numero,texto}], niveles:[{nombre,puntos}]}
+let _instrLibreVolverACurso = null; // cursoId de origen, para volver a "Configurar tabla" al terminar
+
+function _abrirBibliotecaInstrumentos(cursoId) {
+  _instrLibreVolverACurso = cursoId || null;
+  _renderBibliotecaInstrumentos();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function _volverDeInstrumentosLibres() {
+  if (_instrLibreVolverACurso) _renderConfigurarTablaLibre();
+  else cerrarModalBtn();
+}
+
+function _renderBibliotecaInstrumentos() {
+  const lista = _cargarInstrumentosLibres();
+  const tipoLabel = { cotejo: 'Lista de Cotejo', rubrica: 'Rúbrica' };
+  document.getElementById('modal-title').textContent = 'Mis instrumentos de evaluación';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;">
+      <p style="font-size:0.82rem;color:#546E7A;margin:0;">Crea tus propios instrumentos (lista de cotejo o rúbrica) una sola vez y aplícalos a cualquier columna de tus tablas de notas.</p>
+      ${lista.length === 0 ? '<p style="text-align:center;color:#BDBDBD;font-size:0.85rem;padding:14px;">Todavía no tienes instrumentos creados.</p>' : ''}
+      ${lista.map(ins => `
+        <div style="display:flex;align-items:center;gap:8px;border:1.5px solid #E8EDF2;border-radius:8px;padding:8px 12px;">
+          <span style="font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;background:${ins.tipo === 'cotejo' ? '#E3F2FD' : '#F3E5F5'};color:${ins.tipo === 'cotejo' ? '#1565C0' : '#6A1B9A'};">${tipoLabel[ins.tipo] || ins.tipo}</span>
+          <span style="flex:1;font-size:0.85rem;font-weight:600;color:#1A1A2E;">${escapeHTML(ins.nombre)}</span>
+          <span style="font-size:0.72rem;color:#9E9E9E;">${(ins.criterios || []).length} criterio${(ins.criterios || []).length !== 1 ? 's' : ''}</span>
+          <button onclick="_abrirEditorInstrumentoLibre('${ins.id}')" style="background:#F5F5F5;color:#424242;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;"><span class="material-icons" style="font-size:15px;">edit</span></button>
+          <button onclick="_eliminarInstrumentoLibre('${ins.id}')" style="background:#FFEBEE;color:#C62828;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;"><span class="material-icons" style="font-size:15px;">delete</span></button>
+        </div>`).join('')}
+      <div style="display:flex;gap:8px;">
+        <button onclick="_abrirEditorInstrumentoLibre(null,'cotejo')" style="flex:1;background:#E3F2FD;color:#1565C0;border:none;border-radius:8px;padding:9px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">+ Nueva Lista de Cotejo</button>
+        <button onclick="_abrirEditorInstrumentoLibre(null,'rubrica')" style="flex:1;background:#F3E5F5;color:#6A1B9A;border:none;border-radius:8px;padding:9px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">+ Nueva Rúbrica</button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px;padding-top:10px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="_volverDeInstrumentosLibres()">${_instrLibreVolverACurso ? '← Volver a la tabla' : 'Cerrar'}</button>
+      </div>
+    </div>`;
+}
+
+function _eliminarInstrumentoLibre(id) {
+  if (!confirm('¿Eliminar este instrumento? Las columnas que ya lo tengan asignado quedarán sin instrumento (las notas ya puestas no se borran).')) return;
+  _guardarInstrumentosLibres(_cargarInstrumentosLibres().filter(i => i.id !== id));
+  _renderBibliotecaInstrumentos();
+  mostrarToast('Instrumento eliminado', 'success');
+}
+
+function _abrirEditorInstrumentoLibre(id, tipoNuevo) {
+  if (id) {
+    const existente = _cargarInstrumentosLibres().find(i => i.id === id);
+    _instrLibreEditor = existente ? JSON.parse(JSON.stringify(existente)) : null;
+  } else {
+    _instrLibreEditor = {
+      id: uid(), tipo: tipoNuevo || 'cotejo', nombre: '', criterios: [],
+      niveles: tipoNuevo === 'rubrica' ? [{ nombre: 'Excelente', puntos: 4 }, { nombre: 'Bueno', puntos: 3 }, { nombre: 'En proceso', puntos: 2 }, { nombre: 'Insuficiente', puntos: 1 }] : []
+    };
+  }
+  if (!_instrLibreEditor) return;
+  _renderEditorInstrumentoLibre();
+}
+
+function _renderEditorInstrumentoLibre() {
+  const ins = _instrLibreEditor;
+  const esRubrica = ins.tipo === 'rubrica';
+  document.getElementById('modal-title').textContent = (esRubrica ? 'Rúbrica' : 'Lista de Cotejo') + ' personalizada';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;max-height:62vh;overflow-y:auto;">
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Nombre del instrumento</label>
+        <input type="text" value="${escapeHTML(ins.nombre)}" placeholder="Ej: Cotejo de lectura en voz alta" oninput="_instrLibreEditor.nombre=this.value" style="width:100%;padding:8px 10px;border:1.5px solid #CFD8DC;border-radius:6px;font-size:0.85rem;box-sizing:border-box;">
+      </div>
+      ${esRubrica ? `
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Niveles de desempeño</label>
+        ${ins.niveles.map((n, ni) => `
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+            <input type="text" value="${escapeHTML(n.nombre)}" placeholder="Nombre del nivel" oninput="_instrLibreEditor.niveles[${ni}].nombre=this.value" style="flex:1;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.8rem;">
+            <input type="number" min="0" value="${n.puntos}" oninput="_instrLibreEditor.niveles[${ni}].puntos=parseFloat(this.value)||0" style="width:60px;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.8rem;text-align:center;">
+            <span style="font-size:0.72rem;color:#9E9E9E;">pts</span>
+            <button onclick="_instrLibreEditor.niveles.splice(${ni},1);_renderEditorInstrumentoLibre();" style="background:none;border:none;color:#C62828;cursor:pointer;"><span class="material-icons" style="font-size:15px;">close</span></button>
+          </div>`).join('')}
+        <button onclick="_instrLibreEditor.niveles.push({nombre:'',puntos:0});_renderEditorInstrumentoLibre();" style="background:#F3E5F5;color:#6A1B9A;border:none;border-radius:6px;padding:4px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;">+ Nivel</button>
+      </div>` : ''}
+      <div>
+        <label style="font-size:0.78rem;font-weight:700;color:#546E7A;display:block;margin-bottom:4px;">Criterios a evaluar</label>
+        ${ins.criterios.length === 0 ? '<p style="font-size:0.8rem;color:#BDBDBD;margin:0 0 6px;">Agrega al menos un criterio.</p>' : ''}
+        ${ins.criterios.map((c, ci) => `
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+            <span style="font-size:0.75rem;color:#9E9E9E;min-width:16px;">${ci + 1}.</span>
+            <input type="text" value="${escapeHTML(c.texto)}" placeholder="Ej: Lee con fluidez y entonación adecuada" oninput="_instrLibreEditor.criterios[${ci}].texto=this.value" style="flex:1;padding:6px 8px;border:1.5px solid #CFD8DC;border-radius:5px;font-size:0.8rem;">
+            <button onclick="_instrLibreEditor.criterios.splice(${ci},1);_renderEditorInstrumentoLibre();" style="background:none;border:none;color:#C62828;cursor:pointer;"><span class="material-icons" style="font-size:15px;">close</span></button>
+          </div>`).join('')}
+        <button onclick="_instrLibreEditor.criterios.push({numero:_instrLibreEditor.criterios.length+1,texto:''});_renderEditorInstrumentoLibre();" style="background:#E8F5E9;color:#2E7D32;border:none;border-radius:6px;padding:4px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;">+ Criterio</button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;padding-top:10px;border-top:1px solid #E0E0E0;">
+        <button class="btn-secundario" onclick="_renderBibliotecaInstrumentos()">Cancelar</button>
+        <button class="btn-siguiente" onclick="_guardarEditorInstrumentoLibre()"><span class="material-icons">check</span> Guardar instrumento</button>
+      </div>
+    </div>`;
+}
+
+function _guardarEditorInstrumentoLibre() {
+  const ins = _instrLibreEditor;
+  if (!ins.nombre.trim()) { mostrarToast('Dale un nombre al instrumento', 'error'); return; }
+  const criteriosLimpios = ins.criterios.map((c, i) => ({ numero: i + 1, texto: c.texto.trim() })).filter(c => c.texto);
+  if (criteriosLimpios.length === 0) { mostrarToast('Agrega al menos un criterio con texto', 'error'); return; }
+  ins.criterios = criteriosLimpios;
+  if (ins.tipo === 'rubrica') {
+    ins.niveles = (ins.niveles || []).filter(n => n.nombre.trim());
+    if (ins.niveles.length === 0) { mostrarToast('Agrega al menos un nivel de desempeño', 'error'); return; }
+  }
+  const lista = _cargarInstrumentosLibres();
+  const idx = lista.findIndex(i => i.id === ins.id);
+  if (idx >= 0) lista[idx] = ins; else lista.push(ins);
+  _guardarInstrumentosLibres(lista);
+  mostrarToast('Instrumento guardado', 'success');
+  _renderBibliotecaInstrumentos();
+}
+
+// ── Menú de celda de la tabla libre (Instrumento / Comentario) ─────────
+// Mismo concepto que abrirMenuCeldaActividad (RA), pero indexado por
+// colId en vez de actId/raKey -- se mantiene separado a propósito, para no
+// arriesgar el flujo de calificación por RA que ya está en producción.
+let _celdaLibreMenuState = null; // {cursoId, colId, estId, vista:'menu'|'comentario'}
+let _instrLibreFillState = null; // {cursoId, colId, estId, instrumento}
+
+function _tablaLibreColPorId(curso, colId) {
+  for (const cat of (curso?.tablaLibre?.categorias || [])) {
+    const col = (cat.columnas || []).find(c => c.id === colId);
+    if (col) return col;
+  }
+  return null;
+}
+
+function _tablaLibreExtra(curso, colId, estId, crear) {
+  if (crear) {
+    if (!curso.tablaLibreExtra) curso.tablaLibreExtra = {};
+    if (!curso.tablaLibreExtra[colId]) curso.tablaLibreExtra[colId] = {};
+    if (!curso.tablaLibreExtra[colId][estId]) curso.tablaLibreExtra[colId][estId] = {};
+    return curso.tablaLibreExtra[colId][estId];
+  }
+  return curso?.tablaLibreExtra?.[colId]?.[estId] || {};
+}
+
+function _abrirMenuCeldaLibre(cursoId, colId, estId) {
+  _celdaLibreMenuState = { cursoId, colId, estId, vista: 'menu' };
+  _renderMenuCeldaLibre();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+/** Cierra cualquiera de las pantallas del menú de celda / llenado de
+ *  instrumento y repinta la tabla -- las celdas instrumentadas son botones,
+ *  no inputs reactivos, así que necesitan un re-render para mostrar el
+ *  valor recién guardado (mismo motivo que cerrarInstrumentoModal en RA). */
+function _cerrarMenuCeldaLibre() {
+  cerrarModalBtn();
+  _celdaLibreMenuState = null;
+  _instrLibreFillState = null;
+  renderizarTablaCalificaciones();
+}
+
+function _renderMenuCeldaLibre() {
+  const s = _celdaLibreMenuState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  const est = curso?.estudiantes?.find(e => e.id === s.estId);
+  const col = _tablaLibreColPorId(curso, s.colId);
+  if (!curso || !est || !col) { _cerrarMenuCeldaLibre(); return; }
+
+  document.getElementById('modal-title').textContent = col.nombre + ' — ' + est.nombre;
+
+  if (s.vista === 'comentario') {
+    const extra = _tablaLibreExtra(curso, s.colId, s.estId, false);
+    document.getElementById('modal-body').innerHTML = `
+      <textarea id="tl-comentario-input" rows="5" placeholder="Escribe un comentario..." style="width:100%;border:1.5px solid #90CAF9;border-radius:8px;padding:10px 12px;font-size:0.88rem;box-sizing:border-box;resize:vertical;font-family:inherit;">${escapeHTML(extra.comentario || '')}</textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px;">
+        <button class="btn-secundario" onclick="_celdaLibreMenuState.vista='menu';_renderMenuCeldaLibre();">← Volver</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secundario" onclick="_guardarComentarioCeldaLibre('')">Quitar</button>
+          <button class="btn-siguiente" onclick="_guardarComentarioCeldaLibre(document.getElementById('tl-comentario-input').value.trim())">Guardar</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const ins = col.instrumentoId ? _cargarInstrumentosLibres().find(i => i.id === col.instrumentoId) : null;
+  const extra = _tablaLibreExtra(curso, s.colId, s.estId, false);
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${ins
+        ? `<button onclick="_abrirInstrumentoLibreLlenar()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid #90CAF9;border-radius:10px;background:#E3F2FD;color:#0D47A1;font-weight:700;font-size:0.88rem;cursor:pointer;text-align:left;">
+            <span class="material-icons">checklist</span> Llenar instrumento — ${escapeHTML(ins.nombre)}
+          </button>`
+        : `<p style="font-size:0.82rem;color:#9E9E9E;margin:0;">Esta columna no tiene instrumento asignado. Configúralo en "Editar categorías y columnas".</p>`}
+      <button onclick="_celdaLibreMenuState.vista='comentario';_renderMenuCeldaLibre();" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid #E0E0E0;border-radius:10px;background:#fff;color:#424242;font-weight:700;font-size:0.88rem;cursor:pointer;text-align:left;">
+        <span class="material-icons">comment</span> Comentario${extra.comentario ? ' <span class="material-icons" style="font-size:13px;color:#1565C0;">circle</span>' : ''}
+      </button>
+      <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+        <button class="btn-secundario" onclick="_cerrarMenuCeldaLibre()">Cerrar</button>
+      </div>
+    </div>`;
+}
+
+function _guardarComentarioCeldaLibre(valor) {
+  const s = _celdaLibreMenuState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  if (!curso) return;
+  const extra = _tablaLibreExtra(curso, s.colId, s.estId, true);
+  if (valor) extra.comentario = valor; else delete extra.comentario;
+  guardarCalificaciones();
+  registrarCambio('Comentario de celda (tabla libre) actualizado');
+  mostrarToast(valor ? 'Comentario guardado' : 'Comentario quitado', 'success');
+  _cerrarMenuCeldaLibre();
+}
+
+function _abrirInstrumentoLibreLlenar() {
+  const s = _celdaLibreMenuState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  const col = _tablaLibreColPorId(curso, s.colId);
+  const ins = col ? _cargarInstrumentosLibres().find(i => i.id === col.instrumentoId) : null;
+  if (!ins) return;
+  _instrLibreFillState = { cursoId: s.cursoId, colId: s.colId, estId: s.estId, instrumento: ins };
+  _renderInstrumentoLibreFill();
+}
+
+function _renderInstrumentoLibreFill() {
+  const s = _instrLibreFillState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  const est = curso.estudiantes.find(e => e.id === s.estId);
+  const ins = s.instrumento;
+  const esCotejo = ins.tipo === 'cotejo';
+  const resp = curso.tablaLibreRespuestas?.[s.colId]?.[s.estId] || {};
+  const maxValor = 100; // misma escala 0-100 que el resto de la tabla libre
+  const nota = _calcNotaDesdeInstrumento(ins, resp, maxValor);
+
+  document.getElementById('modal-title').textContent = ins.nombre + ' — ' + est.nombre;
+
+  const pct = maxValor > 0 ? ((nota || 0) / maxValor * 100) : 0;
+  const colorNota = nota === null ? '#BDBDBD' : (pct >= 70 ? '#2E7D32' : (pct >= 60 ? '#E65100' : '#C62828'));
+
+  const filas = ins.criterios.map(c => {
+    const seleccion = resp[c.numero];
+    let opciones;
+    if (esCotejo) {
+      opciones = ['si', 'no'].map(v => {
+        const activo = seleccion === v;
+        const color = v === 'si' ? '#2E7D32' : '#C62828';
+        return '<button onclick="_instrLibreMarcarCriterio(' + c.numero + ',\'' + v + '\')" '
+          + 'style="flex:1;padding:10px;border:1.5px solid ' + (activo ? color : '#E0E0E0') + ';border-radius:8px;background:' + (activo ? color : '#F5F5F5') + ';color:' + (activo ? '#fff' : '#616161') + ';font-weight:700;font-size:0.85rem;cursor:pointer;">'
+          + (v === 'si' ? 'SÍ' : 'NO') + '</button>';
+      }).join('');
+    } else {
+      opciones = (ins.niveles || []).map((n, ni) => {
+        const activo = seleccion === ni;
+        return '<button onclick="_instrLibreMarcarCriterio(' + c.numero + ',' + ni + ')" '
+          + 'style="flex:1;padding:8px 4px;border:1.5px solid ' + (activo ? '#1565C0' : '#E0E0E0') + ';border-radius:8px;background:' + (activo ? '#1565C0' : '#F5F5F5') + ';color:' + (activo ? '#fff' : '#616161') + ';font-weight:700;font-size:0.75rem;cursor:pointer;">'
+          + escapeHTML(n.nombre) + '<br><span style="font-weight:400;opacity:0.85;">' + n.puntos + ' pts</span></button>';
+      }).join('');
+    }
+    return '<div style="border:1px solid #E8EDF2;border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
+      + '<div style="font-weight:700;font-size:0.85rem;color:#1A1A2E;margin-bottom:8px;">' + c.numero + '. ' + escapeHTML(c.texto) + '</div>'
+      + '<div style="display:flex;gap:8px;">' + opciones + '</div></div>';
+  }).join('');
+
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;">
+      <div style="font-weight:800;font-size:1.05rem;color:#1A1A2E;">${escapeHTML(est.nombre)}</div>
+      <div style="text-align:center;">
+        <div style="font-size:0.72rem;color:#9E9E9E;">Nota</div>
+        <div style="font-weight:800;font-size:1.3rem;color:${colorNota};">${nota !== null ? nota.toFixed(1) : '—'}</div>
+      </div>
+    </div>
+    ${filas}
+    <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+      <button class="btn-siguiente" onclick="_celdaLibreMenuState.vista='menu';_renderMenuCeldaLibre();">Listo</button>
+    </div>`;
+}
+
+/** Marca/desmarca la respuesta de un criterio (mismo toggle que el sistema
+ *  de RA: click de nuevo en lo ya elegido lo desmarca), recalcula la nota
+ *  con _calcNotaDesdeInstrumento y la guarda vía _guardarNotaLibre -- así
+ *  reutiliza el mismo camino de persistencia y actualización de
+ *  TOTAL/NOTA FINAL en pantalla que ya usa la celda manual. */
+function _instrLibreMarcarCriterio(numero, valor) {
+  const s = _instrLibreFillState;
+  if (!s) return;
+  const curso = calState.cursos[s.cursoId];
+  if (!curso) return;
+  if (!curso.tablaLibreRespuestas) curso.tablaLibreRespuestas = {};
+  if (!curso.tablaLibreRespuestas[s.colId]) curso.tablaLibreRespuestas[s.colId] = {};
+  if (!curso.tablaLibreRespuestas[s.colId][s.estId]) curso.tablaLibreRespuestas[s.colId][s.estId] = {};
+  const respEst = curso.tablaLibreRespuestas[s.colId][s.estId];
+  respEst[numero] = (respEst[numero] === valor) ? undefined : valor;
+  if (respEst[numero] === undefined) delete respEst[numero];
+
+  const nota = _calcNotaDesdeInstrumento(s.instrumento, respEst, 100);
+  _guardarNotaLibre(s.cursoId, s.estId, s.colId, nota === null ? '' : String(nota));
+  _renderInstrumentoLibreFill();
 }
 
 function renderizarTablaCalificaciones() {
