@@ -3715,21 +3715,21 @@
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1565C0;">v20.34<span class="about-ver-fecha">Oct
+              <div class="about-ver-badge" style="background:#1565C0;">v20.35<span class="about-ver-fecha">Oct
                   2026</span>
               </div>
             </div>
             <div>
-              <div class="about-ver-titulo">Nuevo: exportar comentarios, reportes, horario y notas personales</div>
+              <div class="about-ver-titulo">Exportar mis datos: un solo archivo con todo</div>
               <ul class="about-ver-items">
-                <li>En "Mis Datos → Exportar mis datos" hay un botón nuevo que descarga un .json con tus comentarios y observaciones de estudiantes, reportes de comportamiento e incidencias, tu horario, calendario escolar, notas del docente, notas rápidas y libreta. Solo incluye tus datos.</li>
+                <li>Los dos botones de exportación de Mis Datos se combinaron en uno: "Exportar mis datos (.json)". El archivo incluye tus planificaciones con sus calificaciones, las tablas de notas de materias sin planificación, y tus comentarios, reportes, incidencias, horario, calendario, notas y libreta. Solo contiene tus datos.</li>
               </ul>
             </div>
           </div>
 
           <div class="about-version-row">
             <div>
-              <div class="about-ver-badge" style="background:#1565C0;">v20.33<span class="about-ver-fecha">Oct
+              <div class="about-ver-badge" style="background:#1565C0;">v20.34<span class="about-ver-fecha">Oct
                   2026</span>
               </div>
             </div>
@@ -11818,11 +11818,8 @@
           <button class="btn-siguiente" onclick="exportarDatos()" style="width:100%;justify-content:center;">
             <span class="material-icons">download</span> Descargar backup completo
           </button>
-          <button class="btn-siguiente" onclick="exportarPlanificacionesYCalificaciones()" style="width:100%;justify-content:center;margin-top:8px;background:#2E7D32;">
-            <span class="material-icons">file_download</span> Exportar planificaciones y calificaciones (.json)
-          </button>
-          <button class="btn-siguiente" onclick="exportarMisDatosPersonales()" style="width:100%;justify-content:center;margin-top:8px;background:#6A1B9A;">
-            <span class="material-icons">file_download</span> Exportar comentarios, reportes, horario y notas (.json)
+          <button class="btn-siguiente" onclick="exportarMisDatosCompletos()" style="width:100%;justify-content:center;margin-top:8px;background:#2E7D32;">
+            <span class="material-icons">file_download</span> Exportar mis datos (.json)
           </button>
           <button class="btn-siguiente" onclick="_forzarSincronizacionNube()" id="btn-forzar-sync" style="width:100%;justify-content:center;margin-top:8px;background:#1565C0;">
             <span class="material-icons">cloud_sync</span> Forzar sincronización con la nube
@@ -11965,9 +11962,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.34"></script>
+  <script src="app.js?v=20.35"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.34"></script>
+  <script src="auth.js?v=20.35"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

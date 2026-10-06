@@ -41069,11 +41069,16 @@ function exportarDatos() {
   mostrarToast('Backup descargado correctamente', 'success');
 }
 
-/** Exporta solo tus planificaciones con sus calificaciones (datos del propio
- *  docente, no de otros). Cada planificación incluye los cursos a los que
- *  está asignada y las notas de sus estudiantes en esos cursos. */
-function exportarPlanificacionesYCalificaciones() {
+/** Exporta en un solo JSON tus datos propios: planificaciones con sus
+ *  calificaciones, y comentarios, reportes, horario, calendario y notas
+ *  personales. No incluye datos de otros docentes. */
+function exportarMisDatosCompletos() {
   const ahora = new Date();
+  const leerJSON = (clave, defecto) => {
+    try { return JSON.parse(localStorage.getItem(clave) || JSON.stringify(defecto)); }
+    catch (e) { return defecto; }
+  };
+
   const items = cargarBiblioteca().items || [];
   const cursos = Object.values(calState.cursos || {});
 
@@ -41111,10 +41116,23 @@ function exportarPlanificacionesYCalificaciones() {
       app: 'TinClass',
       exportado: ahora.toISOString(),
       docente: window.currentUser?.email || '',
-      tipo: 'planificaciones_y_calificaciones'
+      tipo: 'mis_datos_completos'
     },
-    planificaciones,
-    cursosSinPlanificacion
+    planificacionesYCalificaciones: {
+      planificaciones,
+      cursosSinPlanificacion
+    },
+    datosPersonales: {
+      comentarios: cargarComentarios(),
+      incidencias: leerJSON(INCID_KEY, []),
+      reportesComportamiento: leerJSON(REPORTES_KEY, []),
+      horario: leerJSON(HORARIO_KEY, []),
+      horarioColores: leerJSON(HORARIO_COLORES_KEY, {}),
+      calendarioEscolar: leerJSON(CAL_ESC_KEY, {}),
+      notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
+      notasRapidas: leerJSON(STICKIES_KEY, []),
+      libreta: leerJSON(LIBRETA_KEY, {})
+    }
   };
 
   const json = JSON.stringify(payload, null, 2);
@@ -41122,51 +41140,12 @@ function exportarPlanificacionesYCalificaciones() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'planificaciones-calificaciones-' + ahora.toISOString().slice(0, 10) + '.json';
+  a.download = 'mis-datos-' + ahora.toISOString().slice(0, 10) + '.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   mostrarToast('Exportación lista: ' + planificaciones.length + ' planificación(es)', 'success');
-}
-
-/** Exporta tus comentarios, reportes/incidencias y tu horario, calendario y
- *  notas personales. Solo datos del propio docente. */
-function exportarMisDatosPersonales() {
-  const ahora = new Date();
-  const leerJSON = (clave, defecto) => {
-    try { return JSON.parse(localStorage.getItem(clave) || JSON.stringify(defecto)); }
-    catch (e) { return defecto; }
-  };
-  const payload = {
-    _meta: {
-      app: 'TinClass',
-      exportado: ahora.toISOString(),
-      docente: window.currentUser?.email || '',
-      tipo: 'datos_personales'
-    },
-    comentarios: cargarComentarios(),
-    incidencias: leerJSON(INCID_KEY, []),
-    reportesComportamiento: leerJSON(REPORTES_KEY, []),
-    horario: leerJSON(HORARIO_KEY, []),
-    horarioColores: leerJSON(HORARIO_COLORES_KEY, {}),
-    calendarioEscolar: leerJSON(CAL_ESC_KEY, {}),
-    notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
-    notasRapidas: leerJSON(STICKIES_KEY, []),
-    libreta: leerJSON(LIBRETA_KEY, {})
-  };
-
-  const json = JSON.stringify(payload, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'mis-datos-personales-' + ahora.toISOString().slice(0, 10) + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  mostrarToast('Exportación de datos personales lista', 'success');
 }
 
 function onBackupFileSelected(input) {
