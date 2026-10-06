@@ -45156,6 +45156,39 @@ function _calEscDatosActuales() {
     : (_calEsc.adminDatos || _calEscDatosVacios());
 }
 
+/** Exporta el calendario escolar completo tal como está cargado en pantalla:
+ *  el calendario del centro (actividades, efemérides y festivos de cada mes),
+ *  el calendario personal de este docente, y las asignaciones de responsables
+ *  de efemérides. Mismos datos que ve el docente en la pantalla de calendario. */
+function exportarCalendarioEscolar() {
+  const ahora = new Date();
+  let personal = null;
+  try { personal = JSON.parse(localStorage.getItem(CAL_ESC_KEY) || 'null'); } catch (e) {}
+  const payload = {
+    _meta: {
+      app: 'TinClass',
+      exportado: ahora.toISOString(),
+      docente: window.currentUser?.email || '',
+      tipo: 'calendario_escolar',
+      centroId: _calEsc.centroId || null
+    },
+    calendarioCentro: _calEsc.adminDatos || null,
+    calendarioPersonal: personal,
+    efemeridesResponsables: _calEsc.responsables || {}
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'calendario-escolar-' + ahora.toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Calendario exportado', 'success');
+}
+
 function _calEscDatosVacios() {
   const d = {};
   CAL_ESC_MESES.forEach(m => { d[m] = { actividades: [], efemerides: [] }; });

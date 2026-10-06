@@ -2598,6 +2598,9 @@
           <span id="cal-escolar-admin-badge" style="display:none;margin-left:8px;background:#1565C0;color:#fff;
             font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:12px;vertical-align:middle;">ADMIN</span>
         </h2>
+        <button onclick="exportarCalendarioEscolar()" style="margin-left:auto;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          <span class="material-icons" style="font-size:16px;">file_download</span> Exportar calendario (.json)
+        </button>
       </div>
 
       <!-- Banner modo (admin/personal) -->
@@ -3711,6 +3714,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.36<span class="about-ver-fecha">Oct
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Calendario Escolar: botón para exportar a JSON</div>
+              <ul class="about-ver-items">
+                <li>En el Calendario Escolar hay un botón "Exportar calendario (.json)" que descarga las actividades, efemérides y festivos del calendario del centro, tu calendario personal y las asignaciones de responsables de efemérides, tal como los ves en pantalla.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11962,9 +11979,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.35"></script>
+  <script src="app.js?v=20.36"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.35"></script>
+  <script src="auth.js?v=20.36"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->
