@@ -3093,6 +3093,10 @@
           style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
           <span class="material-icons" style="font-size:14px;vertical-align:middle;">bug_report</span> Bugs
         </button>
+        <button class="ra-tab" id="tab-sa-exportar" onclick="switchTabSuperadmin('exportar')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #E0E0E0;background:#F5F5F5;color:#616161;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle;">download</span> Exportar todo
+        </button>
       </div>
 
       <!-- Contenido dinámico -->
@@ -3707,6 +3711,20 @@
           <div
             style="font-size:0.78rem;font-weight:800;color:#1565C0;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
             Historial de versiones
+          </div>
+
+          <div class="about-version-row">
+            <div>
+              <div class="about-ver-badge" style="background:#1565C0;">v20.33<span class="about-ver-fecha">Oct
+                  2026</span>
+              </div>
+            </div>
+            <div>
+              <div class="about-ver-titulo">Nuevo: exportar planificaciones y calificaciones a JSON</div>
+              <ul class="about-ver-items">
+                <li>En "Mis Datos → Exportar mis datos" hay un botón nuevo que descarga un .json solo con tus planificaciones, los cursos a los que están asignadas y las notas de cada estudiante. También incluye las tablas de notas de las materias sin planificación. Es solo de tu cuenta, no incluye datos de otros docentes.</li>
+              </ul>
+            </div>
           </div>
 
           <div class="about-version-row">
@@ -11786,6 +11804,9 @@
           <button class="btn-siguiente" onclick="exportarDatos()" style="width:100%;justify-content:center;">
             <span class="material-icons">download</span> Descargar backup completo
           </button>
+          <button class="btn-siguiente" onclick="exportarPlanificacionesYCalificaciones()" style="width:100%;justify-content:center;margin-top:8px;background:#2E7D32;">
+            <span class="material-icons">file_download</span> Exportar planificaciones y calificaciones (.json)
+          </button>
           <button class="btn-siguiente" onclick="_forzarSincronizacionNube()" id="btn-forzar-sync" style="width:100%;justify-content:center;margin-top:8px;background:#1565C0;">
             <span class="material-icons">cloud_sync</span> Forzar sincronización con la nube
           </button>
@@ -11927,9 +11948,9 @@
   <script src="qrcode.min.js?v=18.68"></script>
   <!-- Script principal -->
   <script src="docx.js"></script>
-  <script src="app.js?v=20.32"></script>
+  <script src="app.js?v=20.33"></script>
   <!-- Autenticación -->
-  <script src="auth.js?v=20.32"></script>
+  <script src="auth.js?v=20.33"></script>
 
   <!-- ===== MODAL MI CUENTA ===== -->
   <!-- ===== MODAL HISTORIAL DE SESIONES ===== -->

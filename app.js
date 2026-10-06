@@ -41069,6 +41069,67 @@ function exportarDatos() {
   mostrarToast('Backup descargado correctamente', 'success');
 }
 
+/** Exporta solo tus planificaciones con sus calificaciones (datos del propio
+ *  docente, no de otros). Cada planificación incluye los cursos a los que
+ *  está asignada y las notas de sus estudiantes en esos cursos. */
+function exportarPlanificacionesYCalificaciones() {
+  const ahora = new Date();
+  const items = cargarBiblioteca().items || [];
+  const cursos = Object.values(calState.cursos || {});
+
+  const planificaciones = items.map(reg => {
+    const cursosAsignados = cursos
+      .filter(c => (c.planIds || []).includes(reg.id))
+      .map(c => ({
+        cursoId: c.id,
+        nombre: c.nombre,
+        estudiantes: (c.estudiantes || []).map(e => ({ id: e.id, nombre: e.nombre, notas: (c.notas || {})[e.id] || {} }))
+      }));
+    return {
+      id: reg.id,
+      nombre: reg.nombre,
+      fechaGuardado: reg.fechaGuardado || null,
+      archivada: !!reg.archivada,
+      planificacion: reg.planificacion || null,
+      cursosAsignados
+    };
+  });
+
+  const cursosSinPlanificacion = cursos
+    .filter(c => c.sinPlanificacion)
+    .map(c => ({
+      cursoId: c.id,
+      nombre: c.nombre,
+      tablaLibre: c.tablaLibre || null,
+      tablaLibreNotas: c.tablaLibreNotas || {},
+      tablaLibreRespuestas: c.tablaLibreRespuestas || {},
+      estudiantes: (c.estudiantes || []).map(e => ({ id: e.id, nombre: e.nombre }))
+    }));
+
+  const payload = {
+    _meta: {
+      app: 'TinClass',
+      exportado: ahora.toISOString(),
+      docente: window.currentUser?.email || '',
+      tipo: 'planificaciones_y_calificaciones'
+    },
+    planificaciones,
+    cursosSinPlanificacion
+  };
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'planificaciones-calificaciones-' + ahora.toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Exportación lista: ' + planificaciones.length + ' planificación(es)', 'success');
+}
+
 function onBackupFileSelected(input) {
   const file = input.files[0];
   if (!file) return;
@@ -47843,7 +47904,7 @@ function abrirSuperadmin() {
 
 /** Tabs del superadmin */
 function switchTabSuperadmin(tab) {
-  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', emailjs: 'tab-sa-emailjs', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', sesiones: 'tab-sa-sesiones', bugs: 'tab-sa-bugs' };
+  const tabs = { solicitudes: 'tab-sa-solicitudes', centros: 'tab-sa-centros', admins: 'tab-sa-admins', emailjs: 'tab-sa-emailjs', opciones: 'tab-sa-opciones', opciones_coord: 'tab-sa-opciones-coord', opciones_psico: 'tab-sa-opciones-psico', prompts: 'tab-sa-prompts', monitoreo_ia: 'tab-sa-monitoreo-ia', sesiones: 'tab-sa-sesiones', bugs: 'tab-sa-bugs', exportar: 'tab-sa-exportar' };
   Object.entries(tabs).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
