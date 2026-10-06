@@ -41130,6 +41130,45 @@ function exportarPlanificacionesYCalificaciones() {
   mostrarToast('Exportación lista: ' + planificaciones.length + ' planificación(es)', 'success');
 }
 
+/** Exporta tus comentarios, reportes/incidencias y tu horario, calendario y
+ *  notas personales. Solo datos del propio docente. */
+function exportarMisDatosPersonales() {
+  const ahora = new Date();
+  const leerJSON = (clave, defecto) => {
+    try { return JSON.parse(localStorage.getItem(clave) || JSON.stringify(defecto)); }
+    catch (e) { return defecto; }
+  };
+  const payload = {
+    _meta: {
+      app: 'TinClass',
+      exportado: ahora.toISOString(),
+      docente: window.currentUser?.email || '',
+      tipo: 'datos_personales'
+    },
+    comentarios: cargarComentarios(),
+    incidencias: leerJSON(INCID_KEY, []),
+    reportesComportamiento: leerJSON(REPORTES_KEY, []),
+    horario: leerJSON(HORARIO_KEY, []),
+    horarioColores: leerJSON(HORARIO_COLORES_KEY, {}),
+    calendarioEscolar: leerJSON(CAL_ESC_KEY, {}),
+    notasDocente: localStorage.getItem(NOTAS_DOCENTE_KEY) || '',
+    notasRapidas: leerJSON(STICKIES_KEY, []),
+    libreta: leerJSON(LIBRETA_KEY, {})
+  };
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mis-datos-personales-' + ahora.toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Exportación de datos personales lista', 'success');
+}
+
 function onBackupFileSelected(input) {
   const file = input.files[0];
   if (!file) return;
